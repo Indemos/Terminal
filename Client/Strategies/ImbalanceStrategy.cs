@@ -281,7 +281,6 @@ namespace Client.StrategySpace
         },
         new ChartModel
         {
-          ValueCenter = 0,
           Name = _imbalanceIndicator.ChartData.Area,
           ChartData = new NameCollection<string, IChartDataModel> { _imbalanceIndicator.ChartData }
         },

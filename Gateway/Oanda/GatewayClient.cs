@@ -205,7 +205,6 @@ namespace Gateway.Oanda
 
       Account.Currency = inputAccount.Currency.ToUpper();
       Account.Balance = ConversionManager.To<double>(inputAccount.Balance);
-      Account.Leverage = inputAccount.MarginRate == 0 ? 1 : 1 / inputAccount.MarginRate;
     }
 
     /// <summary>
@@ -380,6 +379,46 @@ namespace Gateway.Oanda
       return variables == null ? 
         await _serviceClient.Get<T>(Source + endpoint + "?" + ConversionManager.GetQuery(inputs), null, headers) : 
         await _serviceClient.Post<T>(Source + endpoint + "?" + ConversionManager.GetQuery(inputs), variables, headers);
+    }
+
+    public override Task<IList<IPointModel>> GetPoints(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IAccountModel>> GetAccounts(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IInstrumentModel>> GetInstruments(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionOrderModel>> GetOrders(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionPositionModel>> GetPositions(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<double>> GetOptionPrices(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<DateTime>> GetOptionDates(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IInstrumentOptionModel>> GetOptionChains(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
     }
   }
 }

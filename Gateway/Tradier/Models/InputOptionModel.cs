@@ -14,6 +14,9 @@ namespace Gateway.Tradier.ModelSpace
     [JsonProperty("underlying")]
     public string Symbol { get; set; }
 
+    [JsonProperty("option_type")]
+    public string OptionType { get; set; }
+
     [JsonProperty("strike")]
     public double? Strike { get; set; }
 
@@ -24,7 +27,7 @@ namespace Gateway.Tradier.ModelSpace
     public double? Change { get; set; }
 
     [JsonProperty("volume")]
-    public double? Volune { get; set; }
+    public double? Volume { get; set; }
 
     [JsonProperty("bid")]
     public double? Bid { get; set; }
@@ -42,7 +45,7 @@ namespace Gateway.Tradier.ModelSpace
     public double? OpenInterest { get; set; }
 
     [JsonProperty("contract_size")]
-    public double? Leverage { get; set; }
+    public double? ContractSize { get; set; }
 
     [JsonProperty("bid_date")]
     public long? BidDate { get; set; }
@@ -52,5 +55,8 @@ namespace Gateway.Tradier.ModelSpace
 
     [JsonProperty("expiration_date")]
     public DateTime? ExpirationDate { get; set; }
+
+    [JsonProperty("greeks")]
+    public InputOptionVarianceModel Greeks { get; set; } = new InputOptionVarianceModel();
   }
 }

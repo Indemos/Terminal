@@ -1,10 +1,9 @@
 using Core.EnumSpace;
 using Core.ModelSpace;
-using ScoreSpace;
+using ExScore.ModelSpace;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Windows.Controls;
 
 namespace Client.ControlSpace

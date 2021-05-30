@@ -200,19 +200,141 @@ namespace Gateway.Tradier
       return Task.FromResult(0);
     }
 
+    public override Task<IList<IAccountModel>> GetAccounts(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override async Task<IList<IInstrumentModel>> GetInstruments(IDictionary<dynamic, dynamic> inputs)
+    {
+      var instruments = new List<IInstrumentModel>();
+      var response = await GetResponse<InputInstrumentDataModel>($"/v1/markets/quotes", inputs);
+
+      foreach (var inputPoint in response?.Quotes?.Quote ?? new List<InputInstrumentModel>())
+      {
+        var pointModel = new PointModel
+        {
+          Ask = inputPoint.Ask,
+          Bid = inputPoint.Bid,
+          AskSize = inputPoint.AskSize,
+          BidSize = inputPoint.BidSize,
+          Price = inputPoint.Price
+        };
+
+        var instrumentModel = new InstrumentModel
+        {
+          Point = pointModel,
+          Name = inputPoint.Symbol,
+          Volume = inputPoint.Volume
+        };
+
+        instruments.Add(instrumentModel);
+      }
+
+      return instruments;
+    }
+
+    public override Task<IList<IPointModel>> GetPoints(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionOrderModel>> GetOrders(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionPositionModel>> GetPositions(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
     public override Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
     {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
+      throw new NotImplementedException();
     }
 
     public override Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders)
     {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
+      throw new NotImplementedException();
     }
 
     public override Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders)
     {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
+      throw new NotImplementedException();
+    }
+
+    /// <summary>
+    /// Get options strikes
+    /// </summary>
+    /// <param name="inputs"></param>
+    /// <returns></returns>
+    public override async Task<IList<double>> GetOptionPrices(IDictionary<dynamic, dynamic> inputs)
+    {
+      var response = await GetResponse<InputOptionStrikeDataModel>($"/v1/markets/options/strikes", inputs);
+
+      return response?.Strikes?.Strike ?? new List<double>();
+    }
+
+    /// <summary>
+    /// Get options expiration dates
+    /// </summary>
+    /// <param name="inputs"></param>
+    /// <returns></returns>
+    public override async Task<IList<DateTime>> GetOptionDates(IDictionary<dynamic, dynamic> inputs)
+    {
+      var response = await GetResponse<InputOptionDateDataModel>($"/v1/markets/options/expirations", inputs);
+
+      return response?.Dates?.Date ?? new List<DateTime>();
+    }
+
+    /// <summary>
+    /// Get options chain
+    /// </summary>
+    /// <param name="inputs"></param>
+    /// <returns></returns>
+    public override async Task<IList<IInstrumentOptionModel>> GetOptionChains(IDictionary<dynamic, dynamic> inputs)
+    {
+      var options = new List<IInstrumentOptionModel>();
+      var response = await GetResponse<InputOptionChainDataModel>($"/v1/markets/options/chains", inputs);
+
+      foreach (var inputOption in response?.Chains?.Chain ?? new List<InputOptionModel>())
+      {
+        var pointModel = new PointModel
+        {
+          Bid = inputOption.Bid,
+          Ask = inputOption.Ask,
+          Price = inputOption.Last,
+          BidSize = inputOption.BidSize,
+          AskSize = inputOption.AskSize
+        };
+
+        var optionModel = new InstrumentOptionModel
+        {
+          Point = pointModel,
+          Strike = inputOption.Strike,
+          Volume = inputOption.Volume,
+          ContractSize = inputOption.ContractSize,
+          OpenInterest = inputOption.OpenInterest,
+          Side = OptionTypeMap.Input(inputOption.OptionType),
+          Variance = new InstrumentOptionVarianceModel
+          {
+            Vega = inputOption.Greeks.Vega,
+            Delta = inputOption.Greeks.Delta,
+            Gamma = inputOption.Greeks.Gamma,
+            Theta = inputOption.Greeks.Theta,
+            Interest = inputOption.Greeks.Rho,
+            Distribution = inputOption.Greeks.Phi,
+            AskIv = inputOption.Greeks.AskIv,
+            BidIv = inputOption.Greeks.BidIv,
+            Iv = inputOption.Greeks.Iv
+          }
+        };
+
+        options.Add(optionModel);
+      }
+
+      return options;
     }
 
     /// <summary>
@@ -255,32 +377,6 @@ namespace Gateway.Tradier
     }
 
     /// <summary>
-    /// Get options chain
-    /// </summary>
-    /// <param name="inputs"></param>
-    /// <returns></returns>
-    protected async Task<IList<IInstrumentOptionModel>> GetOptionsChain(dynamic inputs)
-    {
-      var options = new List<IInstrumentOptionModel>();
-      var response = await GetResponse<InputOptionItemModel>($"/v1/markets/options/chains");
-
-      foreach (var inputOption in response.Options)
-      {
-        var optionModel = new InstrumentOptionModel
-        {
-          Bid = inputOption.Bid,
-          Ask = inputOption.Ask,
-          Price = inputOption.Last,
-          Strike = inputOption.Strike
-        };
-
-        options.Add(optionModel);
-      }
-
-      return options;
-    }
-
-    /// <summary>
     /// Create session to start streaming
     /// </summary>
     /// <returns></returns>
@@ -319,8 +415,8 @@ namespace Gateway.Tradier
       };
 
       return variables == null ?
-        await _serviceClient.Get<T>(Source + endpoint + "?" + ConversionManager.GetQuery(inputs), null, headers) :
-        await _serviceClient.Post<T>(Source + endpoint + "?" + ConversionManager.GetQuery(inputs), variables, headers);
+        await _serviceClient.Get<T>(Source + endpoint, inputs, headers) :
+        await _serviceClient.Post<T>(Source + endpoint, inputs, headers);
     }
   }
 }

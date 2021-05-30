@@ -430,5 +430,45 @@ namespace Gateway.Alpaca
     protected void OnInputTrade(dynamic input)
     {
     }
+
+    public override Task<IList<IPointModel>> GetPoints(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IAccountModel>> GetAccounts(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IInstrumentModel>> GetInstruments(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionOrderModel>> GetOrders(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<ITransactionPositionModel>> GetPositions(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<double>> GetOptionPrices(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<DateTime>> GetOptionDates(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<IList<IInstrumentOptionModel>> GetOptionChains(IDictionary<dynamic, dynamic> inputs)
+    {
+      throw new NotImplementedException();
+    }
   }
 }

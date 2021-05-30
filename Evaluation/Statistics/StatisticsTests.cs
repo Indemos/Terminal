@@ -1,5 +1,6 @@
 using Core.ManagerSpace;
-using ScoreSpace;
+using ExScore.ModelSpace;
+using ExScore.ScoreSpace;
 using System;
 using System.Collections.Generic;
 using System.Linq;

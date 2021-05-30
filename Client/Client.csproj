@@ -16,7 +16,6 @@
   </PropertyGroup>
   
   <ItemGroup>
-    <PackageReference Include="Canvas" Version="1.0.0-RC" />
     <PackageReference Include="MahApps.Metro" Version="2.3.4" />
     <PackageReference Include="MahApps.Metro.IconPacks.FontAwesome" Version="4.8.0" />
     <PackageReference Include="MaterialDesignColors" Version="2.0.0-ci2273" />
@@ -25,13 +24,13 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\..\Packages\Canvas\Chart.csproj" />
+    <ProjectReference Include="..\..\Packages\ExScore\Score.csproj" />
     <ProjectReference Include="..\Gateway\Alpaca\Gateway.Alpaca.csproj" />
     <ProjectReference Include="..\Gateway\Gemini\Gateway.Gemini.csproj" />
     <ProjectReference Include="..\Gateway\Oanda\Gateway.Oanda.csproj" />
     <ProjectReference Include="..\Gateway\Simulation\Gateway.Simulation.csproj" />
     <ProjectReference Include="..\Gateway\Tradier\Gateway.Tradier.csproj" />
-    <ProjectReference Include="..\Score\Score.csproj" />
   </ItemGroup>
 
   <ItemGroup>

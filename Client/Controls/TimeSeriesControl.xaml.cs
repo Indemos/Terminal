@@ -21,11 +21,11 @@ namespace Client.ControlSpace
   /// </summary>
   public partial class TimeSeriesControl : UserControl
   {
-    private IList<IInputModel> _points = new List<IInputModel>();
     private IList<IChartModel> _groups = new List<IChartModel>();
     private IList<IDisposable> _disposables = new List<IDisposable>();
     private IList<ComponentComposer> _composers = new List<ComponentComposer>();
-    private IDictionary<long, IInputModel> _cache = new Dictionary<long, IInputModel>();
+    private IList<Chart.ModelSpace.IPointModel> _points = new List<Chart.ModelSpace.IPointModel>();
+    private IDictionary<long, Chart.ModelSpace.IPointModel> _cache = new Dictionary<long, Chart.ModelSpace.IPointModel>();
 
     /// <summary>
     /// Constructor
@@ -92,15 +92,15 @@ namespace Client.ControlSpace
             case nameof(ShapeEnum.Candle): shape = new CandleSeries(); break;
           }
 
-          return new InputSeriesModel
+          return new SeriesModel
           {
             Name = o.Value.Name,
             Shape = shape
 
-          } as IInputSeriesModel;
+          } as ISeriesModel;
         });
 
-        var inputAreaModel = new InputAreaModel
+        var inputAreaModel = new AreaModel
         {
           Name = areaModel.Name,
           Series = seriesModels
@@ -119,7 +119,6 @@ namespace Client.ControlSpace
           Group = inputAreaModel,
           Name = areaModel.Name,
           Control = chartControl,
-          ValueCenter = areaModel.ValueCenter,
           ShowIndexAction = (i) =>
           {
             var date = _points.ElementAtOrDefault(0)?.Time;
@@ -263,7 +262,7 @@ namespace Client.ControlSpace
                 case OrderSideEnum.Sell: direction = -1.0; break;
               }
 
-              var pointModel = new PointModel
+              var pointModel = new Core.ModelSpace.PointModel
               {
                 Last = order.Price,
                 ChartData = chartData,
@@ -286,7 +285,7 @@ namespace Client.ControlSpace
     /// </summary>
     /// <param name="pointModel"></param>
     /// <param name="direction"></param>
-    private void UpdatePoint(IPointModel pointModel, double direction = 0.0)
+    private void UpdatePoint(Core.ModelSpace.IPointModel pointModel, double direction = 0.0)
     {
       if (pointModel.ChartData.Area == null || pointModel.ChartData.Name == null)
       {
@@ -324,7 +323,7 @@ namespace Client.ControlSpace
 
       // Update
 
-      if (_cache.TryGetValue(pointModel.Time.Value.Ticks, out IInputModel updateModel))
+      if (_cache.TryGetValue(pointModel.Time.Value.Ticks, out Chart.ModelSpace.IPointModel updateModel))
       {
         updateModel
           .Areas[pointModel.ChartData.Area]
@@ -336,10 +335,10 @@ namespace Client.ControlSpace
 
       // Create
 
-      var createModel = new InputModel
+      var createModel = new Chart.ModelSpace.PointModel
       {
         Time = pointModel.Time.Value,
-        Areas = new Dictionary<string, IInputAreaModel>()
+        Areas = new Dictionary<string, IAreaModel>()
       };
 
       foreach (var area in _groups)
@@ -347,10 +346,10 @@ namespace Client.ControlSpace
         createModel.Areas[area.Name] =
           createModel.Areas.ContainsKey(area.Name) ?
           createModel.Areas[area.Name] :
-          new InputAreaModel
+          new AreaModel
           {
             Name = area.Name,
-            Series = new Dictionary<string, IInputSeriesModel>()
+            Series = new Dictionary<string, ISeriesModel>()
           };
 
         foreach (var series in area.ChartData)
@@ -358,7 +357,7 @@ namespace Client.ControlSpace
           createModel.Areas[area.Name].Series[series.Key] =
             createModel.Areas[area.Name].Series.ContainsKey(series.Key) ?
             createModel.Areas[area.Name].Series[series.Key] :
-            new InputSeriesModel
+            new SeriesModel
             {
               Name = series.Key,
               Model = null
