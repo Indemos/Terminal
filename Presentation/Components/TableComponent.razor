@@ -1,0 +1,27 @@
+@if (_items.Any())
+{
+  <table class="table table-sm table-borderless">
+    @if (_columns.Any())
+    {
+      <thead class="blue-grey darken-4 text-light">
+        <tr>
+          @foreach (var column in _columns)
+          {
+            <th class="px-2">@column</th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @foreach (var item in _items.ToList())
+        {
+          <tr>
+            @foreach (var column in _columns)
+            {
+              <td class="px-2">@item[column]</td>
+            }
+          </tr>
+        }
+      </tbody>
+    }
+  </table>
+}

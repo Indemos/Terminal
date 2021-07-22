@@ -1,0 +1,81 @@
+#chartTemplate {
+  display: none;
+}
+
+#chartContainer {
+  display: flex;
+  flex: auto;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.chart-container-item {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  flex: auto;
+  position: relative;
+}
+
+.chart-container-item .chart-caption {
+  position: absolute;
+  width: 200px;
+  opacity: 0.5;
+  z-index: 1;
+}
+
+.chart-container-item:first-child {
+  margin-top: 0 !important;
+}
+
+.chart-cover {
+  z-index: 5;
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 15px;
+  height: 100%;
+  background: #fff;
+}
+
+.chart-max {
+  display: flex;
+  position: fixed;
+  width: 100%;
+  height: 100%;
+  z-index: 255;
+  left: 0;
+  top: 0;
+}
+
+.chart-group {
+  flex: auto;
+  display: grid;
+  grid-template-rows: auto 1rem;
+  grid-template-columns: auto 3rem;
+  grid-template-areas: "Canvas AxisYR" "AxisXB .";
+}
+
+.chart-group .axis-x {
+  cursor: ew-resize;
+}
+
+.chart-group .axis-y {
+  cursor: ns-resize;
+}
+
+.chart-group .x-axis-x-bottom {
+  grid-area: AxisXB;
+}
+
+.chart-group .axis-y-right {
+  grid-area: AxisYR;
+}
+
+.chart-group .plot-area {
+  grid-area: Canvas;
+}
+
+.chart-controls i {
+  cursor: pointer;
+}

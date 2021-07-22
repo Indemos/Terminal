@@ -1,0 +1,22 @@
+* {
+  border-radius: 0 !important;
+  box-sizing: border-box;
+}
+
+html, body {
+  color: #555;
+  font-family: sans-serif;
+  height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+body, .crm-content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.dropdown-menu {
+  line-height: 0;
+}

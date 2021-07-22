@@ -1,0 +1,22 @@
+@if (_stats.Any())
+{ 
+  <div class="accordion" id="statsContainer">
+    @foreach (var group in _stats)
+    {
+      <div class="card mb-3">
+        <div class="card-header blue-grey darken-4 text-light" id="@(group.Key + "caption")" type="button" data-toggle="collapse" data-target="@("#" + group.Key + "content")" aria-expanded="true" aria-controls="@(group.Key + "content")">
+          @group.Key
+        </div>
+        <div id="@(group.Key + "content")" class="collapse" aria-labelledby="@(group.Key + "caption")" data-parent="#statsContainer">
+          <div class="card-body">
+            @foreach (var data in group.Value)
+            {
+              <div class="cell-name p-2 text-right">@data.Name</div>
+              <div class="cell-value p-2 mr-3">@ShowDouble(data.Value)</div>
+            }
+          </div>
+        </div>
+      </div>
+    }
+  </div>
+}

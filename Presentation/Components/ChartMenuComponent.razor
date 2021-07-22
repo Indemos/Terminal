@@ -1,0 +1,37 @@
+<div class="side-menu">
+  <div class="menu-item py-2 px-3 text-nowrap blue-grey darken-4">
+    <i class="text-light fas fa-power-off"></i>
+    <a class="text-muted" href="#" @onclick:stopPropagation="true">
+      Controls
+    </a>
+    @if (MenuState)
+    {
+      <div class="internal-menu pt-2 pb-2 mt-2">
+        <a class="internal-menu-item text-muted" href="#" @onclick="ConnectProcessors" @onclick:preventDefault="true" @onclick:stopPropagation="true">Connect</a>
+        <a class="internal-menu-item text-muted" href="#" @onclick="DisconnectProcessors" @onclick:preventDefault="true" @onclick:stopPropagation="true">Disconnect</a>
+        <a class="internal-menu-item text-muted" href="#" @onclick="UnsubscribeProcessors" @onclick:preventDefault="true" @onclick:stopPropagation="true">Pause</a>
+        <a class="internal-menu-item text-muted" href="#" @onclick="SubscribeProcessors" @onclick:preventDefault="true" @onclick:stopPropagation="true">Resume</a>
+      </div>
+    }
+  </div>
+  <div class="menu-item py-2 px-3 text-nowrap blue-grey darken-4">
+    <i class="text-light fas fa-receipt"></i>
+    <a class="text-muted" @onclick:stopPropagation="true">
+      Records
+    </a>
+    @if (MenuState)
+    {
+      <div class="internal-menu pt-2 pb-2 mt-2">
+        <a class="internal-menu-item text-muted" target="_blank" href="/positions" @onclick:stopPropagation="true">Positions</a>
+        <a class="internal-menu-item text-muted" target="_blank" href="/orders" @onclick:stopPropagation="true">Orders</a>
+        <a class="internal-menu-item text-muted" target="_blank" href="/deals" @onclick:stopPropagation="true">Deals</a>
+      </div>
+    }
+    </div>
+  <div class="menu-item py-2 px-3 text-nowrap blue-grey darken-4 border-0">
+    <i class="text-light fas fa-poll" target="_blank"></i>
+    <a class="text-muted" target="_blank" href="/statements" @onclick:stopPropagation="true">
+      Statements
+    </a>
+  </div>
+</div>

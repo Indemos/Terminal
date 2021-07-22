@@ -1,0 +1,33 @@
+@layout ChartTemplate
+@page "/"
+
+<div class="side-menu-container blue-grey darken-3 m-3" style="@_menuChange" @onclick="ShowMenu">
+  <ChartMenuComponent MenuState="@_menuState" />
+</div>
+
+<div class="d-flex flex-grow-1 flex-column pl-3" style="@_contentChange">
+  <ChartComponent />
+</div>
+
+@code
+{
+  protected bool _menuState = false;
+  protected string _menuChange = "width: 45px; overflow: hidden";
+  protected string _contentChange = "margin-left: 45px";
+
+  protected void ShowMenu()
+  {
+    var state = _menuState;
+
+    _menuState = false;
+    _menuChange = "width: 45px; overflow: hidden";
+    _contentChange = "margin-left: 45px";
+
+    if (state == false)
+    {
+      _menuState = true;
+      _menuChange = "width: 200px; overflow: visible";
+      _contentChange = "margin-left: 200px";
+    }
+  }
+}

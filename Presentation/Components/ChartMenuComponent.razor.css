@@ -1,0 +1,24 @@
+.side-menu .fas {
+  width: 15px;
+  cursor: pointer;
+  text-align: center;
+  display: inline-block;
+}
+
+.side-menu a:hover {
+  color: #fff !important;
+}
+
+.side-menu .fas {
+  margin: 0 10px 0 0;
+}
+
+.side-menu .internal-menu {
+  margin: 0 0 0 30px;
+  border-top: 1px solid #555;
+  border-bottom: 1px solid #555;
+}
+
+.side-menu .internal-menu-item {
+  display: block;
+}

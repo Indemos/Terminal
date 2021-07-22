@@ -1,0 +1,12 @@
+th {
+  border: 1px dashed #555 !important;
+}
+
+td {
+  background: #FFF;
+  border: 1px dashed #ccc !important;
+}
+
+tr:nth-child(even) td {
+  background-color: #EEE;
+}

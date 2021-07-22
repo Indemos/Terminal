@@ -1,0 +1,21 @@
+<div id="@Id">
+
+  @foreach (var chart in _charts)
+  {
+    <div class="@(chart.Value ? "chart-container-item chart-max" : "chart-container-item mt-3")" id="@chart.Key">
+      <div class="chart-cover"></div>
+      <div class="chart-caption blue-grey darken-4 p-2 pl-3 m-3 text-light">
+        <span class="chart-name">@chart.Key</span>
+        <span class="chart-controls float-right">
+          <i class="text-light fas fa-expand-arrows-alt mr-2" @onclick="() => ExpandChart(chart.Key)"></i>
+        </span>
+      </div>
+      <d3fc-group class="chart-group p-3" auto-resize>
+        <d3fc-canvas use-device-pixel-ratio class="plot-area"></d3fc-canvas>
+        <d3fc-svg class="axis axis-y axis-y-right"></d3fc-svg>
+        <d3fc-svg class="axis axis-x axis-x-bottom pb-4"></d3fc-svg>
+      </d3fc-group>
+    </div>
+  }
+
+</div>
