@@ -1,0 +1,8 @@
+<div class="views">
+
+  @foreach (var group in Groups)
+  {
+    <CanvasWebView @ref="@Views[group.Key]"></CanvasWebView>
+  }
+
+</div>

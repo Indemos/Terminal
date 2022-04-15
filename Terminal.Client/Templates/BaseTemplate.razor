@@ -1,0 +1,24 @@
+@inherits LayoutComponentBase
+
+<PageTitle>Terminal</PageTitle>
+
+<MudThemeProvider Theme="_theme" IsDarkMode="true" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge">
+  @Body
+</MudContainer>
+
+@code {
+
+  public DashboardTheme _theme = new();
+
+  protected override void OnAfterRender(bool setup)
+  {
+    if (setup)
+    {
+      StateHasChanged();
+    }
+  }
+}

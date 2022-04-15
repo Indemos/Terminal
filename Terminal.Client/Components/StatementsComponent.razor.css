@@ -1,0 +1,14 @@
+.card-body {
+  display: grid;
+  grid-template-columns: repeat(2, auto 1fr);
+  align-items: center;
+  grid-gap: 5px 0;
+}
+
+.cell-name {
+  background: #EEE;
+}
+
+.cell-value {
+  border-bottom: 1px dashed #EEE;
+}

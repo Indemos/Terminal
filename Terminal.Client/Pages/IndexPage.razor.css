@@ -1,0 +1,4 @@
+.card-item {
+  width: calc(min(100vw, 100vh) / 3);
+  height: calc(min(100vw, 100vh) / 3);
+}
