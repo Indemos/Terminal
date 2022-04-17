@@ -43,3 +43,7 @@ html, body {
 .canvas-container {
   grid-template-columns: 5rem 1fr 5rem !important;
 }
+
+.canvas-view {
+  background-color: #fff !important;
+}

@@ -1,11 +1,10 @@
-using Terminal.Core.EnumSpace;
-using Terminal.Core.MessageSpace;
-using Terminal.Core.ModelSpace;
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Subjects;
+using Terminal.Core.EnumSpace;
+using Terminal.Core.MessageSpace;
+using Terminal.Core.ModelSpace;
 
 namespace Terminal.Core.CollectionSpace
 {
@@ -95,14 +94,14 @@ namespace Terminal.Core.CollectionSpace
       Items = new List<T>();
       ItemStream = new Subject<ITransactionMessage<T>>();
       CollectionStream = new Subject<ITransactionMessage<IEnumerable<T>>>();
-  }
+    }
 
-  /// <summary>
-  /// Get item by index
-  /// </summary>
-  /// <param name="index"></param>
-  /// <returns></returns>
-  public virtual T this[int index]
+    /// <summary>
+    /// Get item by index
+    /// </summary>
+    /// <param name="index"></param>
+    /// <returns></returns>
+    public virtual T this[int index]
     {
       get => Items[index];
       set

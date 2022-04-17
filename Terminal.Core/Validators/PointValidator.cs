@@ -16,7 +16,7 @@ namespace Terminal.Core.ValidatorSpace
       RuleFor(o => o.AskSize).NotNull().WithMessage("No offer size");
       RuleFor(o => o.Account).NotNull().WithMessage("No account");
       RuleFor(o => o.Instrument).NotNull().WithMessage("No instrument");
-      RuleFor(o => o.Series).NotNull().WithMessage("No series");
+      RuleFor(o => o.Groups).NotNull().WithMessage("No series");
     }
   }
 }

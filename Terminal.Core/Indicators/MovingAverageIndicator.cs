@@ -3,13 +3,14 @@ using Terminal.Core.ModelSpace;
 using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ServiceSpace;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Terminal.Core.IndicatorSpace
 {
   /// <summary>
   /// Calculation mode
   /// </summary>
-  public enum MovingAverageEnum : byte
+  public enum AveragePriceEnum : byte
   {
     Bid = 1,
     Ask = 2,
@@ -30,12 +31,12 @@ namespace Terminal.Core.IndicatorSpace
     /// <summary>
     /// Calculation mode
     /// </summary>
-    public MovingAverageEnum Mode { get; set; }
+    public AveragePriceEnum Mode { get; set; }
 
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IIndexCollection<IPointModel> Values { get; private set; } = new IndexCollection<IPointModel>();
+    public IList<double> Values { get; protected set; } = new List<double>();
 
     /// <summary>
     /// Calculate single value
@@ -44,50 +45,32 @@ namespace Terminal.Core.IndicatorSpace
     /// <returns></returns>
     public override MovingAverageIndicator Calculate(IIndexCollection<IPointModel> collection)
     {
-      var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
+      var currentPoint = collection.LastOrDefault();
 
-      if (currentPoint == null)
+      if (currentPoint is null)
       {
         return this;
       }
 
-      var pointPrice = currentPoint.Bar.Close;
-      var compService = InstanceService<ComputationService>.Instance;
+      var value = currentPoint.Last.Value;
+      var comService = InstanceService<ComputationService>.Instance;
 
       switch (Mode)
       {
-        case MovingAverageEnum.Bid: pointPrice = currentPoint.Bid; break;
-        case MovingAverageEnum.Ask: pointPrice = currentPoint.Ask; break;
+        case AveragePriceEnum.Bid: value = currentPoint.Bid.Value; break;
+        case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
       }
 
-      var nextIndicatorPoint = new PointModel
+      switch (Values.Count < collection.Count)
       {
-        Last = pointPrice,
-        Time = currentPoint.Time,
-        TimeFrame = currentPoint.TimeFrame,
-        Bar = new PointBarModel
-        {
-          Close = pointPrice
-        }
-      };
-
-      var previousIndicatorPoint = Values.ElementAtOrDefault(collection.Count - 1);
-
-      if (previousIndicatorPoint == null)
-      {
-        Values.Add(nextIndicatorPoint);
+        case true: Values.Add(value); break;
+        case false: Values[collection.Count - 1] = value; break;
       }
 
-      Values[collection.Count - 1] = nextIndicatorPoint;
+      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new MovingAverageIndicator();
+      var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
-      var average = compService.LinearWeightAverage(Values.Select(o => o.Bar.Close.Value), Values.Count - 1, Interval);
-
-      currentPoint.Series[Name] = currentPoint.Series.TryGetValue(Name, out IPointModel seriesItem) ? seriesItem : new MovingAverageIndicator();
-      currentPoint.Series[Name].Bar.Close = currentPoint.Series[Name].Last = average.IsEqual(0) ? nextIndicatorPoint.Bar.Close : average;
-      currentPoint.Series[Name].Time = currentPoint.Time;
-      currentPoint.Series[Name].View = View;
-
-      Last = Bar.Close = currentPoint.Series[Name].Bar.Close;
+      Last = series.Last = series.Group.Close = average.IsEqual(0) ? value : average;
 
       return this;
     }

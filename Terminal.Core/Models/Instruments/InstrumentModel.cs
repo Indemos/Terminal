@@ -96,7 +96,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    IIndexCollection<IPointModel> PointGroups { get; set; }
+    ITimeCollection<IPointModel> PointGroups { get; set; }
   }
 
   /// <summary>
@@ -192,7 +192,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public virtual IIndexCollection<IPointModel> PointGroups { get; set; }
+    public virtual ITimeCollection<IPointModel> PointGroups { get; set; }
 
     /// <summary>
     /// Constructor
@@ -206,8 +206,8 @@ namespace Terminal.Core.ModelSpace
       Commission = 0.0;
       ContractSize = 1.0;
 
-      Points = new TimeSpanCollection<IPointModel>();
-      PointGroups = new TimeSpanCollection<IPointModel>();
+      Points = new IndexCollection<IPointModel>();
+      PointGroups = new TimeGroupCollection<IPointModel>();
     }
   }
 }

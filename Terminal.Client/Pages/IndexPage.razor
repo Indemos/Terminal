@@ -9,7 +9,7 @@
 
     @if (IsConnection)
     {
-      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.OnlinePrediction" Class="ml-4" @onclick="OnSubscribe"></MudIconButton>
+      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.Loop" Class="ml-4" @onclick="OnSubscribe"></MudIconButton>
       <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.PauseCircle" Class="ml-4" @onclick="OnUnsubscribe"></MudIconButton>
     }
 

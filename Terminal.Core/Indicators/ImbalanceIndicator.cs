@@ -1,6 +1,7 @@
-using Terminal.Core.CollectionSpace;
-using Terminal.Core.ModelSpace;
 using System.Linq;
+using Terminal.Core.CollectionSpace;
+using Terminal.Core.ExtensionSpace;
+using Terminal.Core.ModelSpace;
 
 namespace Terminal.Core.IndicatorSpace
 {
@@ -11,64 +12,31 @@ namespace Terminal.Core.IndicatorSpace
   public class ImbalanceIndicator : IndicatorModel<IPointModel, ImbalanceIndicator>
   {
     /// <summary>
-    /// Preserve last calculated value
-    /// </summary>
-    public IIndexCollection<IPointModel> Values { get; private set; } = new IndexCollection<IPointModel>();
-
-    /// <summary>
     /// Calculate indicator value
     /// </summary>
-    /// <param name="currentPoint"></param>
+    /// <param name="collection"></param>
+    /// <param name="side"></param>
     /// <returns></returns>
-    public ImbalanceIndicator Calculate(IIndexCollection<IPointModel> collection, int direction = 0)
+    public ImbalanceIndicator Calculate(IIndexCollection<IPointModel> collection, int side = 0)
     {
-      var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
+      var currentPoint = collection.LastOrDefault();
 
-      if (currentPoint == null)
+      if (currentPoint is null)
       {
         return this;
       }
 
-      currentPoint.Series[Name] = currentPoint.Series.TryGetValue(Name, out IPointModel seriesItem) ? seriesItem : new ImbalanceIndicator();
-      currentPoint.Series[Name].Time = currentPoint.Time;
-      currentPoint.Series[Name].TimeFrame = currentPoint.TimeFrame;
-      currentPoint.Series[Name].View = View;
-
       var value = 0.0;
+      var seriesItem = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new ImbalanceIndicator();
 
-      switch (direction)
+      switch (side)
       {
         case 0: value = currentPoint.AskSize.Value - currentPoint.BidSize.Value; break;
         case 1: value = currentPoint.AskSize.Value; break;
         case -1: value = currentPoint.BidSize.Value; break;
       }
 
-      currentPoint.Series[Name].Last = value;
-      currentPoint.Series[Name].Bar.Close = value;
-
-      Last = Bar.Close = currentPoint.Series[Name].Bar.Close;
-
-      // Save values
-
-      var nextIndicatorPoint = new PointModel
-      {
-        Last = Last,
-        Time = currentPoint.Time,
-        TimeFrame = currentPoint.TimeFrame,
-        Bar = new PointBarModel
-        {
-          Close = Last
-        }
-      };
-
-      var previousIndicatorPoint = Values.ElementAtOrDefault(collection.Count - 1);
-
-      if (previousIndicatorPoint == null)
-      {
-        Values.Add(nextIndicatorPoint);
-      }
-
-      Values[collection.Count - 1] = nextIndicatorPoint;
+      Last = Group.Close = seriesItem.Last = seriesItem.Group.Close = value;
 
       return this;
     }

@@ -2,6 +2,8 @@ using Terminal.Core.CollectionSpace;
 using Terminal.Core.ModelSpace;
 using System;
 using System.Linq;
+using Terminal.Core.ExtensionSpace;
+using System.Collections.Generic;
 
 namespace Terminal.Core.IndicatorSpace
 {
@@ -19,7 +21,7 @@ namespace Terminal.Core.IndicatorSpace
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IIndexCollection<IPointModel> Values { get; private set; } = new IndexCollection<IPointModel>();
+    public IList<double> Values { get; protected set; } = new List<double>();
 
     /// <summary>
     /// Calculate single value
@@ -31,46 +33,29 @@ namespace Terminal.Core.IndicatorSpace
       var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
       var previousPoint = collection.ElementAtOrDefault(collection.Count - 2);
 
-      if (currentPoint == null || previousPoint == null)
+      if (currentPoint is null || previousPoint is null)
       {
         return this;
       }
 
-      var variance =
-        Math.Max(currentPoint.Bar.High.Value, previousPoint.Bar.Close.Value) -
-        Math.Min(currentPoint.Bar.Low.Value, previousPoint.Bar.Close.Value);
-
-      var nextIndicatorPoint = new PointModel
-      {
-        Time = currentPoint.Time,
-        TimeFrame = currentPoint.TimeFrame,
-        Last = variance,
-        Bar = new PointBarModel
-        {
-          Close = variance
-        }
-      };
+      var value =
+        Math.Max(currentPoint.Group.High.Value, previousPoint.Group.Close.Value) -
+        Math.Min(currentPoint.Group.Low.Value, previousPoint.Group.Close.Value);
 
       if (Values.Count > Interval)
       {
-        nextIndicatorPoint.Bar.Close = nextIndicatorPoint.Last = (Values.ElementAtOrDefault(Values.Count - 1).Bar.Close * Math.Max(Interval - 1, 0) + variance) / Interval;
+        value = (Values.Last() * Math.Max(Interval - 1, 0) + value) / Interval; 
       }
 
-      var previousIndicatorPoint = Values.ElementAtOrDefault(collection.Count - 1);
-
-      if (previousIndicatorPoint == null)
+      switch (Values.Count < collection.Count)
       {
-        Values.Add(nextIndicatorPoint);
+        case true: Values.Add(value); break;
+        case false: Values[collection.Count - 1] = value; break;
       }
 
-      Values[collection.Count - 1] = nextIndicatorPoint;
+      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new AverageTrueRangeIndicator();
 
-      currentPoint.Series[Name] = currentPoint.Series.TryGetValue(Name, out IPointModel o) ? o : new AverageTrueRangeIndicator();
-      currentPoint.Series[Name].Bar.Close = currentPoint.Series[Name].Last = nextIndicatorPoint.Bar.Close;
-      currentPoint.Series[Name].Time = currentPoint.Time;
-      currentPoint.Series[Name].View = View;
-
-      Last = Bar.Close = currentPoint.Series[Name].Bar.Close;
+      Last = series.Last = series.Group.Close = value;
 
       return this;
     }

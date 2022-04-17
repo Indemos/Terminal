@@ -33,7 +33,7 @@ namespace Terminal.Connector.Simulation
           Time = DateTime.Now.AddDays(-days),
           TimeFrame = instrument.Value.TimeFrame,
           //ChartData = instrument.Value.ChartData,
-          Bar = new PointBarModel
+          Group = new PointGroupModel
           {
             Low = price,
             High = price,
@@ -62,17 +62,17 @@ namespace Terminal.Connector.Simulation
         var model = new PointModel();
         var point = _points[instrument.Key];
 
-        point.Bar ??= new PointBarModel();
+        point.Group ??= new PointGroupModel();
 
         model.Instrument = instrument.Value;
-        model.Ask = point.Bar.Close + generator.NextDouble() * (10.0 - 1.0) + 1.0 - 5.0;
+        model.Ask = point.Group.Close + generator.NextDouble() * (10.0 - 1.0) + 1.0 - 5.0;
         model.Bid = model.Ask - generator.NextDouble() * 5.0;
         model.Time = point.Time;
 
         // Next values
 
         point.Time = point.Time.Value.AddTicks(span.Ticks);
-        point.Bar.Close = model.Ask;
+        point.Group.Close = model.Ask;
 
         UpdatePointProps(model);
       }

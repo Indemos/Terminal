@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
@@ -18,14 +17,14 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Internal dictionary to keep dynamic properties
     /// </summary>
-    protected ConcurrentDictionary<string, dynamic> _items = null;
+    protected IDictionary<string, dynamic> _items = null;
 
     /// <summary>
     /// Constructor
     /// </summary>
     public ExpandoModel()
     {
-      _items = new ConcurrentDictionary<string, dynamic>();
+      _items = new Dictionary<string, dynamic>();
     }
 
     /// <summary>

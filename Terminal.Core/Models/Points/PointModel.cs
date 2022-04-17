@@ -35,7 +35,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    IPointBarModel Bar { get; set; }
+    IPointGroupModel Group { get; set; }
 
     /// <summary>
     /// Reference to the account
@@ -50,7 +50,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Values from related series synced with the current bar, e.g. averaged indicator calculations for the charts
     /// </summary>
-    Dictionary<string, IPointModel> Series { get; set; }
+    IDictionary<string, IPointModel> Groups { get; set; }
   }
 
   /// <summary>
@@ -84,14 +84,14 @@ namespace Terminal.Core.ModelSpace
     public virtual IViewModel View { get; set; }
 
     /// <summary>
-    /// Reference to the complex data point
-    /// </summary>
-    public virtual IPointBarModel Bar { get; set; }
-
-    /// <summary>
     /// Reference to the account
     /// </summary>
     public virtual IAccountModel Account { get; set; }
+
+    /// <summary>
+    /// Reference to the complex data point
+    /// </summary>
+    public virtual IPointGroupModel Group { get; set; }
 
     /// <summary>
     /// Reference to the instrument
@@ -101,16 +101,29 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Values from related series synced with the current data point, e.g. averaged indicator calculations for the charts
     /// </summary>
-    public virtual Dictionary<string, IPointModel> Series { get; set; }
+    public virtual IDictionary<string, IPointModel> Groups { get; set; }
 
     /// <summary>
     /// Constructor
     /// </summary>
     public PointModel()
     {
-      Bar = new PointBarModel();
       View = new ViewModel();
-      Series = new Dictionary<string, IPointModel>();
+      Group = new PointGroupModel();
+      Groups = new Dictionary<string, IPointModel>();
+    }
+
+    /// <summary>
+    /// Clone
+    /// </summary>
+    /// <returns></returns>
+    public override object Clone()
+    {
+      var clone = MemberwiseClone() as IPointModel;
+
+      clone.Group = Group.Clone() as IPointGroupModel;
+
+      return clone;
     }
   }
 }

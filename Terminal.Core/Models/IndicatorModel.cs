@@ -26,7 +26,7 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public IndicatorModel()
     {
-      Bar = new PointBarModel();
+      Group = new PointGroupModel();
       Name = Guid.NewGuid().ToString("N");
     }
 

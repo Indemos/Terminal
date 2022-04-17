@@ -12,7 +12,7 @@ namespace Terminal.Core.ValidatorSpace
     {
       Include(new PointValidator());
 
-      RuleFor(o => o.Series).NotNull().NotEmpty().WithMessage("No series");
+      RuleFor(o => o.Groups).NotNull().NotEmpty().WithMessage("No series");
     }
   }
 }

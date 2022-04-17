@@ -5,12 +5,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Terminal.Core.MessageSpace;
+using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ModelSpace;
-using Model = Canvas.Core.ModelSpace.Model;
 using GroupModel = Canvas.Core.ModelSpace.GroupModel;
-using IGroupModel = Canvas.Core.ModelSpace.IGroupModel;
 using ICanvasModel = Canvas.Core.ModelSpace.IPointModel;
+using IGroupModel = Canvas.Core.ModelSpace.IGroupModel;
+using Model = Canvas.Core.ModelSpace.Model;
 
 namespace Terminal.Client.Components
 {
@@ -19,22 +19,27 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Points
     /// </summary>
-    protected IList<ICanvasModel> Points { get; set; } = new List<ICanvasModel>();
+    public IList<ICanvasModel> Points { get; set; } = new List<ICanvasModel>();
 
     /// <summary>
     /// Cache
     /// </summary>
-    protected IDictionary<long, IGroupModel> Indices { get; set; } = new Dictionary<long, IGroupModel>();
+    public IDictionary<long, IGroupModel> Indices { get; set; } = new Dictionary<long, IGroupModel>();
 
     /// <summary>
     /// Views
     /// </summary>
-    protected IDictionary<string, CanvasWebView> Views { get; set; } = new Dictionary<string, CanvasWebView>();
+    public IDictionary<string, CanvasWebView> Views { get; set; } = new Dictionary<string, CanvasWebView>();
 
     /// <summary>
-    /// Chart structure
+    /// Chart cache
     /// </summary>
-    public IDictionary<string, IDictionary<string, IGroupModel>> Groups { get; set; } = new Dictionary<string, IDictionary<string, IGroupModel>>();
+    protected IDictionary<string, string> Cache { get; set; } = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Chart model
+    /// </summary>
+    protected IGroupModel Map { get; set; } = new GroupModel { Groups = new Dictionary<string, IGroupModel>() };
 
     /// <summary>
     /// Dispose
@@ -44,63 +49,78 @@ namespace Terminal.Client.Components
     }
 
     /// <summary>
-    /// Dispose
+    /// Define chart model
     /// </summary>
-    public void OnConnect()
+    /// <param name="map"></param>
+    public void CreateMap(IGroupModel map)
     {
-      Points.Clear();
+      (Map = map)
+        .Groups
+        .ForEach(view => view.Value.Groups
+        .ForEach(series => Cache[series.Key] = view.Key));
     }
 
     /// <summary>
-    /// Quote processor
+    /// Render
     /// </summary>
-    /// <param name="message"></param>
-    public void OnData(ITransactionMessage<IPointModel> message)
+    /// <param name="updates"></param>
+    public void Update()
     {
-      var point = message.Next;
-      var index = point.Time.Value.Ticks;
-
-      if (Indices.TryGetValue(index, out IGroupModel canvasModel) is false)
+      foreach (var view in Views)
       {
-        canvasModel = new GroupModel
-        {
-          Index = index,
-          Groups = new Dictionary<string, IGroupModel>()
-        };
-
-        Points.Add(canvasModel);
-        Indices.Add(index, canvasModel);
-      }
-
-      foreach (var viewGroup in Groups)
-      {
-        if (canvasModel.Groups.TryGetValue(viewGroup.Key, out IGroupModel area) is false)
-        {
-          area = canvasModel.Groups[viewGroup.Key] = new GroupModel();
-        }
-
-        foreach (var seriesGroup in viewGroup.Value)
-        {
-          if (area.Groups.TryGetValue(seriesGroup.Key, out IGroupModel series) is false)
-          {
-            series = area.Groups[seriesGroup.Key] = seriesGroup.Value.Clone() as IGroupModel;
-          }
-
-          if (seriesGroup.Key.Equals(point.Name))
-          {
-            series.Value = new Model { ["Point"] = point.Last };
-          }
-        }
-
-        var view = Views[viewGroup.Key];
-        var composer = view.Composer as GroupComposer;
+        var composer = view.Value.Composer;
 
         composer.Points = Points;
         composer.IndexDomain ??= new int[2];
         composer.IndexDomain[0] = composer.Points.Count - composer.IndexCount;
         composer.IndexDomain[1] = composer.Points.Count;
 
-        view.Update();
+        view.Value.Update();
+      }
+    }
+
+    /// <summary>
+    /// Quote processor
+    /// </summary>
+    /// <param name="inputs"></param>
+    public void OnData(ICollection<IPointModel> inputs)
+    {
+      foreach (var input in inputs)
+      {
+        var index = input.Time.Value.Ticks;
+
+        if (Indices.TryGetValue(index, out IGroupModel original) is false)
+        {
+          var model = Map.Clone() as IGroupModel;
+
+          model.Index = index;
+
+          Points.Add(model);
+          Indices.Add(index, model);
+        }
+
+        var currentPoint = Points.Last() as IGroupModel;
+        var previousPoint = Points.ElementAtOrDefault(Points.Count - 2) as IGroupModel;
+
+        foreach (var series in Cache)
+        {
+          var currentSeries = currentPoint?.Groups.Get(Cache[series.Key]).Groups.Get(series.Key);
+          var previousSeries = previousPoint?.Groups.Get(Cache[series.Key]).Groups.Get(series.Key);
+
+          dynamic value = new Model();
+
+          value.Point = input?.Last;
+          value.Low = input?.Group?.Low;
+          value.High = input?.Group?.High;
+          value.Open = input?.Group?.Open;
+          value.Close = input?.Group?.Close;
+
+          switch (series.Key.Equals(input.Name))
+          {
+            case true: currentSeries.Value = value; break;
+            case false: currentSeries.Value ??= previousSeries?.Value?.Clone(); break;
+          }
+        }
       }
     }
 
@@ -115,12 +135,9 @@ namespace Terminal.Client.Components
       {
         await InvokeAsync(StateHasChanged);
 
-        var sources = new List<TaskCompletionSource>();
-
         foreach (var view in Views)
         {
-          sources.Add(new TaskCompletionSource());
-          view.Value.OnSize = view.Value.OnCreate = message => OnCreate(view.Key, message, sources.Last());
+          view.Value.OnSize = view.Value.OnCreate = message => OnCreate(view.Key, message);
           view.Value.OnUpdate = message => Views.ForEach(o =>
           {
             if (Equals(o.Value.Composer.Name, message.View.Composer.Name) is false)
@@ -132,8 +149,6 @@ namespace Terminal.Client.Components
 
           await view.Value.Create();
         }
-
-        await Task.WhenAll(sources.Select(o => o.Task));
       }
 
       await base.OnAfterRenderAsync(setup);
@@ -144,9 +159,8 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="name"></param>
     /// <param name="message"></param>
-    /// <param name="source"></param>
     /// <returns></returns>
-    protected void OnCreate(string name, ViewMessage message, TaskCompletionSource source)
+    protected void OnCreate(string name, ViewMessage message)
     {
       var composer = new GroupComposer
       {
@@ -164,8 +178,6 @@ namespace Terminal.Client.Components
 
       Views[name].Composer = composer;
       Views[name].Update();
-
-      source.TrySetResult();
     }
   }
 }

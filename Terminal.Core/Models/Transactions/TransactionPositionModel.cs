@@ -152,7 +152,7 @@ namespace Terminal.Core.ModelSpace
       {
         var point = Instrument.PointGroups.LastOrDefault();
 
-        if (point != null)
+        if (point is not null)
         {
           switch (Side)
           {
@@ -202,7 +202,7 @@ namespace Terminal.Core.ModelSpace
 
       var estimate = (ClosePriceEstimate - OpenPrice) * direction;
 
-      if (price != null)
+      if (price is not null)
       {
         estimate = (ClosePriceEstimate - price) * direction;
 
@@ -225,13 +225,13 @@ namespace Terminal.Core.ModelSpace
         .Validate(Instrument)
         .Errors;
 
-      if (instrumentErrors.Any() == false)
+      if (instrumentErrors.Any() is false)
       {
         var delta = Instrument.StepValue / Instrument.StepSize;
         var commission = Instrument.Commission * OpenPrices.Count * 2;
         var estimate = Size * (GetGainLossPointsEstimate(price) * delta - commission);
 
-        if (price != null)
+        if (price is not null)
         {
           GainLossMin = Math.Min(GainLossMin ?? 0.0, estimate ?? 0.0);
           GainLossMax = Math.Max(GainLossMax ?? 0.0, estimate ?? 0.0);

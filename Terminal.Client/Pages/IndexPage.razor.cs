@@ -10,9 +10,10 @@ using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
+using AreaGroupModel = Canvas.Core.ModelSpace.AreaGroupModel;
+using GroupModel = Canvas.Core.ModelSpace.GroupModel;
 using IGroupModel = Canvas.Core.ModelSpace.IGroupModel;
 using LineGroupModel = Canvas.Core.ModelSpace.LineGroupModel;
-using AreaGroupModel = Canvas.Core.ModelSpace.AreaGroupModel;
 
 namespace Terminal.Client.Pages
 {
@@ -36,20 +37,27 @@ namespace Terminal.Client.Pages
     {
       if (setup)
       {
-        ChartsView.Groups = new Dictionary<string, IDictionary<string, IGroupModel>>
+        ChartsView.CreateMap(new GroupModel
         {
-          ["Prices"] = new Dictionary<string, IGroupModel>
+          Groups = new Dictionary<string, IGroupModel>
           {
-            ["GOOG"] = new LineGroupModel(),
-            ["GOOGL"] = new LineGroupModel()
-          },
-          ["Performance"] = new Dictionary<string, IGroupModel>
-          {
-            ["Balance"] = new AreaGroupModel()
+            ["Prices"] = new GroupModel
+            {
+              Groups = new Dictionary<string, IGroupModel>
+              {
+                ["GOOG"] = new LineGroupModel(),
+                ["GOOGL"] = new LineGroupModel()
+              }
+            },
+            ["Performance"] = new GroupModel
+            {
+              Groups = new Dictionary<string, IGroupModel>
+              {
+                ["Balance"] = new AreaGroupModel()
+              }
+            }
           }
-        };
-
-        Setup();
+        });
       }
 
       return base.OnAfterRenderAsync(setup);
@@ -57,8 +65,13 @@ namespace Terminal.Client.Pages
 
     protected void OnConnect()
     {
+      Setup();
+
       IsConnection = true;
       IsSubscription = true;
+
+      ChartsView.Points.Clear();
+      ChartsView.Indices.Clear();
 
       _adapter.Connect();
     }
@@ -69,6 +82,10 @@ namespace Terminal.Client.Pages
       IsSubscription = false;
 
       _adapter.Disconnect();
+
+      ChartsView.Points.Clear();
+      ChartsView.Indices.Clear();
+      ChartsView.Update();
     }
 
     protected void OnSubscribe()
@@ -147,19 +164,17 @@ namespace Terminal.Client.Pages
       var instrumentY = point.Account.Instruments[_assetY];
       var seriesX = instrumentX.PointGroups;
       var seriesY = instrumentY.PointGroups;
-      var indicatorX = _scaleIndicatorX.Calculate(seriesX).Bar.Close;
-      var indicatorY = _scaleIndicatorY.Calculate(seriesY).Bar.Close;
-      //var balanceIndicator = _balanceIndicator.Calculate(Gateways.Select(o => o.Account), point).Close;
-
-      ChartsView.OnData(message);
+      var indX = _scaleIndicatorX.Calculate(seriesX);
+      var indY = _scaleIndicatorY.Calculate(seriesY);
+      var performance = _performanceIndicator.Calculate(new[] { account });
 
       if (seriesX.Any() && seriesY.Any())
       {
-        if (account.ActiveOrders.Any() == false &&
-            account.ActivePositions.Any() == false &&
-            Math.Abs(indicatorX.Value - indicatorY.Value) >= 0.5)
+        if (account.ActiveOrders.Any() is false &&
+            account.ActivePositions.Any() is false &&
+            Math.Abs(indX.Last.Value - indY.Last.Value) >= 0.5)
         {
-          if (indicatorX > indicatorY)
+          if (indX.Last.Value > indY.Last.Value)
           {
             _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
             {
@@ -186,7 +201,7 @@ namespace Terminal.Client.Pages
             });
           }
 
-          if (indicatorX < indicatorY)
+          if (indX.Last.Value < indY.Last.Value)
           {
             _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
             {
@@ -214,10 +229,20 @@ namespace Terminal.Client.Pages
           }
         }
 
-        if (account.ActivePositions.Any() && Math.Abs(indicatorX.Value - indicatorY.Value) < 0.05)
+        if (account.ActivePositions.Any() && Math.Abs(indX.Last.Value - indY.Last.Value) < 0.05)
         {
         }
       }
+
+      var points = new[]
+      {
+        new PointModel { Time = point.Time, Name = _assetX, Last = indX.Last },
+        new PointModel { Time = point.Time, Name = _assetY, Last = indY.Last },
+        new PointModel { Time = point.Time, Name = _performanceIndicator.Name, Last = performance.Last }
+      };
+
+      ChartsView.OnData(points);
+      ChartsView.Update();
     }
   }
 }

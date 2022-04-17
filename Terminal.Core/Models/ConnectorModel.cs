@@ -1,6 +1,4 @@
-using FluentValidation;
 using FluentValidation.Results;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
@@ -143,18 +141,18 @@ namespace Terminal.Core.ModelSpace
       return Task.FromResult(0);
     }
 
-  /// <summary>
-  /// Suspend execution
-  /// </summary>
-  public virtual Task Unsubscribe()
+    /// <summary>
+    /// Suspend execution
+    /// </summary>
+    public virtual Task Unsubscribe()
     {
       return Task.FromResult(0);
     }
 
-  /// <summary>
-  /// Continue execution
-  /// </summary>
-  public virtual Task Subscribe()
+    /// <summary>
+    /// Continue execution
+    /// </summary>
+    public virtual Task Subscribe()
     {
       return Task.FromResult(0);
     }
@@ -212,7 +210,7 @@ namespace Terminal.Core.ModelSpace
         InstanceService<LogService>.Instance.Log.Error(error.ErrorMessage);
       }
 
-      return errors.Any() == false;
+      return errors.Any() is false;
     }
 
     /// <summary>
@@ -245,7 +243,7 @@ namespace Terminal.Core.ModelSpace
     protected virtual IPointModel UpdatePoints(IPointModel point)
     {
       point.Instrument.Points.Add(point);
-      point.Instrument.PointGroups.Add(point);
+      point.Instrument.PointGroups.Add(point, point.TimeFrame);
 
       return point;
     }

@@ -14,7 +14,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Update or add item to the collection depending on its date and time 
     /// </summary>
-    void Add(T item, TimeSpan span);
+    void Add(T item, TimeSpan? span);
   }
 
   /// <summary>
@@ -26,11 +26,11 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Update or add item to the collection depending on its date and time 
     /// </summary>
-    public virtual void Add(T item, TimeSpan span)
+    public virtual void Add(T item, TimeSpan? span)
     {
       var previous = this.LastOrDefault();
 
-      if (previous != null)
+      if (previous is not null)
       {
         var nextTime = item.Time.Round(span);
         var previousTime = previous.Time.Round(span);

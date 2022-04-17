@@ -4,6 +4,7 @@ using Terminal.Core.ModelSpace;
 using Terminal.Core.ServiceSpace;
 using System;
 using System.Linq;
+using System.Collections.Generic;
 
 namespace Terminal.Core.IndicatorSpace
 {
@@ -31,7 +32,7 @@ namespace Terminal.Core.IndicatorSpace
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IIndexCollection<IPointModel> Values { get; private set; } = new IndexCollection<IPointModel>();
+    public IList<double> Values { get; protected set; } = new List<double>();
 
     /// <summary>
     /// Preserve last calculated min value
@@ -50,47 +51,33 @@ namespace Terminal.Core.IndicatorSpace
     /// <returns></returns>
     public override ScaleIndicator Calculate(IIndexCollection<IPointModel> collection)
     {
-      var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
+      var currentPoint = collection.LastOrDefault();
 
-      if (currentPoint == null || currentPoint.Series == null)
+      if (currentPoint is null)
       {
         return this;
       }
 
-      var pointValue = currentPoint.Bar.Close ?? 0.0;
-      var compService = InstanceService<ComputationService>.Instance;
+      var value = currentPoint.Last ?? 0.0;
+      var comService = InstanceService<ComputationService>.Instance;
 
-      _min = _min == null ? pointValue : Math.Min(_min.Value, pointValue);
-      _max = _max == null ? pointValue : Math.Max(_max.Value, pointValue);
+      _min = _min is null ? value : Math.Min(_min.Value, value);
+      _max = _max is null ? value : Math.Max(_max.Value, value);
 
-      var nextValue = _min.IsEqual(_max) ? 0.0 : Min + (pointValue - _min.Value) * (Max - Min) / (_max.Value - _min.Value);
-
-      var nextIndicatorPoint = new PointModel
+      if (_min.IsEqual(_max) is false)
       {
-        Time = currentPoint.Time,
-        TimeFrame = currentPoint.TimeFrame,
-        Last = nextValue,
-        Bar = new PointBarModel
-        {
-          Close = nextValue
-        }
-      };
-
-      var previousIndicatorPoint = Values.ElementAtOrDefault(collection.Count - 1);
-
-      if (previousIndicatorPoint == null)
-      {
-        Values.Add(nextIndicatorPoint);
+        value = Min + (value - _min.Value) * (Max - Min) / (_max.Value - _min.Value);
       }
 
-      Values[collection.Count - 1] = nextIndicatorPoint;
+      switch (Values.Count < collection.Count)
+      {
+        case true: Values.Add(value); break;
+        case false: Values[collection.Count - 1] = value; break;
+      }
 
-      currentPoint.Series[Name] = currentPoint.Series.TryGetValue(Name, out IPointModel seriesItem) ? seriesItem : new ScaleIndicator();
-      currentPoint.Series[Name].Bar.Close = currentPoint.Series[Name].Last = compService.LinearWeightAverage(Values.Select(o => o.Bar.Close.Value), Values.Count - 1, Interval);
-      currentPoint.Series[Name].Time = currentPoint.Time;
-      currentPoint.Series[Name].View = View;
+      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new ScaleIndicator();
 
-      Last = Bar.Close = currentPoint.Series[Name].Bar.Close;
+      Last = series.Last = series.Group.Close = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
       return this;
     }

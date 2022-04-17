@@ -14,14 +14,14 @@ namespace Terminal.Core.ModelSpace
     int Count { get; set; }
 
     /// <summary>
-    /// Items per page returned in the request
-    /// </summary>
-    IList<string> Errors { get; set; }
-
-    /// <summary>
     /// List of server errors
     /// </summary>
     IList<T> Items { get; set; }
+
+    /// <summary>
+    /// Items per page returned in the request
+    /// </summary>
+    IList<string> Errors { get; set; }
   }
 
   /// <summary>
