@@ -58,25 +58,12 @@ namespace Terminal.Core.ModelSpace
     ISubject<ITransactionMessage<ITransactionOrderModel>> OrderStream { get; }
 
     /// <summary>
-    /// Create orders
+    /// Send orders
     /// </summary>
+    /// <param name="action"></param>
     /// <param name="orders"></param>
     /// <returns></returns>
-    Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders);
-
-    /// <summary>
-    /// Update orders
-    /// </summary>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders);
-
-    /// <summary>
-    /// Close or cancel orders
-    /// </summary>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders);
+    Task<IEnumerable<ITransactionOrderModel>> SendOrders(ActionEnum action, params ITransactionOrderModel[] orders);
   }
 
   /// <summary>
@@ -158,31 +145,12 @@ namespace Terminal.Core.ModelSpace
     }
 
     /// <summary>
-    /// Create orders
+    /// Send orders
     /// </summary>
+    /// <param name="action"></param>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public virtual Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
-    {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
-    }
-
-    /// <summary>
-    /// Update orders
-    /// </summary>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    public virtual Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders)
-    {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
-    }
-
-    /// <summary>
-    /// Close or cancel orders
-    /// </summary>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    public virtual Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders)
+    public virtual Task<IEnumerable<ITransactionOrderModel>> SendOrders(ActionEnum action, params ITransactionOrderModel[] orders)
     {
       return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
     }
@@ -190,14 +158,14 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Ensure that each series has a name and can be attached to specific area on the chart
     /// </summary>
-    /// <param name="model"></param>
-    protected bool EnsureOrderProps(params ITransactionOrderModel[] models)
+    /// <param name="orders"></param>
+    protected bool ValidateOrders(params ITransactionOrderModel[] orders)
     {
       var errors = new List<ValidationFailure>();
       var orderRules = InstanceService<TransactionOrderPriceValidator>.Instance;
       var instrumentRules = InstanceService<InstrumentCollectionsValidator>.Instance;
 
-      foreach (var model in models)
+      foreach (var model in orders)
       {
         errors.AddRange(orderRules.Validate(model).Errors);
         errors.AddRange(instrumentRules.Validate(model.Instrument).Errors);
@@ -217,13 +185,14 @@ namespace Terminal.Core.ModelSpace
     /// Update missing values of a data point
     /// </summary>
     /// <param name="point"></param>
-    protected virtual IPointModel UpdatePointProps(IPointModel point)
+    protected virtual IPointModel UpdatePoints(IPointModel point)
     {
       point.Account = Account;
       point.Name = point.Instrument.Name;
       point.TimeFrame = point.Instrument.TimeFrame;
 
-      UpdatePoints(point);
+      point.Instrument.Points.Add(point);
+      point.Instrument.PointGroups.Add(point, point.TimeFrame);
 
       var message = new TransactionMessage<IPointModel>
       {
@@ -232,18 +201,6 @@ namespace Terminal.Core.ModelSpace
       };
 
       DataStream.OnNext(message);
-
-      return point;
-    }
-
-    /// <summary>
-    /// Update collection with points
-    /// </summary>
-    /// <param name="point"></param>
-    protected virtual IPointModel UpdatePoints(IPointModel point)
-    {
-      point.Instrument.Points.Add(point);
-      point.Instrument.PointGroups.Add(point, point.TimeFrame);
 
       return point;
     }

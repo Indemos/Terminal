@@ -229,7 +229,7 @@ namespace Terminal.Connector.Simulation
 
       _points[index].Instrument = Account.Instruments[index];
 
-      UpdatePointProps(_points[index]);
+      UpdatePoints(_points[index]);
 
       _points[index] = null;
     }
@@ -238,9 +238,9 @@ namespace Terminal.Connector.Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
+    protected virtual Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
     {
-      if (EnsureOrderProps(orders) == false)
+      if (ValidateOrders(orders) is false)
       {
         return Task.FromResult<IEnumerable<ITransactionOrderModel>>(null);
       }
@@ -260,7 +260,7 @@ namespace Terminal.Connector.Simulation
 
             // Track only independent orders without parent
 
-            if (nextOrder.Container == null)
+            if (nextOrder.Container is null)
             {
               nextOrder.Status = OrderStatusEnum.Placed;
               Account.Orders.Add(nextOrder);
@@ -278,7 +278,7 @@ namespace Terminal.Connector.Simulation
     /// Update order implementation
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders)
+    protected virtual Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
@@ -286,10 +286,10 @@ namespace Terminal.Connector.Simulation
         {
           if (Equals(order.Id, nextOrder.Id))
           {
-            order.Category = nextOrder.Category;
             order.Size = nextOrder.Size;
             order.Price = nextOrder.Price;
             order.Orders = nextOrder.Orders;
+            order.Category = nextOrder.Category;
           }
         }
       }
@@ -301,7 +301,7 @@ namespace Terminal.Connector.Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders)
+    protected virtual Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
@@ -343,7 +343,7 @@ namespace Terminal.Connector.Simulation
 
       foreach (var order in nextOrder.Orders)
       {
-        order.Time = pointModel?.Time;
+        order.Time = pointModel.Time;
         order.Status = OrderStatusEnum.Placed;
         Account.ActiveOrders.Add(order);
       }
@@ -359,7 +359,7 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition != null)
+      if (previousPosition is not null)
       {
         return null;
       }
@@ -371,7 +371,7 @@ namespace Terminal.Connector.Simulation
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = UpdatePositionProps(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.OpenPrices = openPrices;
@@ -392,7 +392,7 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition == null)
+      if (previousPosition is null)
       {
         return null;
       }
@@ -400,7 +400,7 @@ namespace Terminal.Connector.Simulation
       var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
       var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
 
-      if (isSameBuy == false && isSameSell == false)
+      if (isSameBuy is false && isSameSell is false)
       {
         return null;
       }
@@ -412,7 +412,7 @@ namespace Terminal.Connector.Simulation
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = UpdatePositionProps(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.Price = nextOrder.Price;
@@ -443,7 +443,7 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition == null)
+      if (previousPosition is null)
       {
         return null;
       }
@@ -463,7 +463,7 @@ namespace Terminal.Connector.Simulation
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = UpdatePositionProps(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.OpenPrices = openPrices;
@@ -484,7 +484,7 @@ namespace Terminal.Connector.Simulation
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
 
-      if (nextPosition.Size.Equals(0) == false)
+      if (nextPosition.Size.Equals(0) is false)
       {
         Account.ActivePositions.Add(nextPosition);
       }
@@ -495,24 +495,24 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Update position properties based on specified order
     /// </summary>
-    /// <param name="position"></param>
-    /// <param name="order"></param>
-    protected virtual ITransactionPositionModel UpdatePositionProps(ITransactionPositionModel position, ITransactionOrderModel order)
+    /// <param name="nextPosition"></param>
+    /// <param name="nextOrder"></param>
+    protected virtual ITransactionPositionModel GetPosition(ITransactionPositionModel nextPosition, ITransactionOrderModel nextOrder)
     {
-      position.Id = order.Id;
-      position.Name = order.Name;
-      position.Description = order.Description;
-      position.Category = order.Category;
-      position.Size = order.Size;
-      position.Side = order.Side;
-      position.Group = order.Group;
-      position.Price = order.Price;
-      position.OpenPrice = order.Price;
-      position.Instrument = order.Instrument;
-      position.Orders = order.Orders;
-      position.Time = order.Time;
+      nextPosition.Id = nextOrder.Id;
+      nextPosition.Name = nextOrder.Name;
+      nextPosition.Description = nextOrder.Description;
+      nextPosition.Category = nextOrder.Category;
+      nextPosition.Size = nextOrder.Size;
+      nextPosition.Side = nextOrder.Side;
+      nextPosition.Group = nextOrder.Group;
+      nextPosition.Price = nextOrder.Price;
+      nextPosition.OpenPrice = nextOrder.Price;
+      nextPosition.Instrument = nextOrder.Instrument;
+      nextPosition.Orders = nextOrder.Orders;
+      nextPosition.Time = nextOrder.Time;
 
-      return position;
+      return nextPosition;
     }
 
     /// <summary>
@@ -524,9 +524,13 @@ namespace Terminal.Connector.Simulation
       var openPrice = nextOrder.Price;
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
 
-      if (openPrice.Equals(0.0))
+      if (openPrice is null)
       {
-        openPrice = Equals(nextOrder.Side, OrderSideEnum.Buy) ? pointModel.Ask : pointModel.Bid;
+        switch (nextOrder.Side)
+        {
+          case OrderSideEnum.Buy: openPrice = pointModel.Ask; break;
+          case OrderSideEnum.Sell: openPrice = pointModel.Bid; break;
+        }
       }
 
       return new List<ITransactionOrderModel>
@@ -545,12 +549,11 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     protected virtual void ProcessPendingOrders()
     {
-      for (var i = 0; i < Account.ActiveOrders.Count; i++)
+      foreach (var order in Account.ActiveOrders)
       {
-        var order = Account.ActiveOrders[i];
         var pointModel = order.Instrument.PointGroups.LastOrDefault();
 
-        if (pointModel != null)
+        if (pointModel is not null)
         {
           var executable = false;
           var isBuyStop = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Category, OrderCategoryEnum.Stop);

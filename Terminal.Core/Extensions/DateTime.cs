@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 
 namespace Terminal.Core.ExtensionSpace
 {
@@ -6,7 +6,7 @@ namespace Terminal.Core.ExtensionSpace
   {
     public static DateTime? Round(this DateTime? input, TimeSpan? span)
     {
-      if (input == null || span == null)
+      if (input is null || span is null)
       {
         return null;
       }

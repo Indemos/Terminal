@@ -138,6 +138,7 @@ namespace Terminal.Client.Pages
 
       _adapter = new Adapter
       {
+        Speed = 1,
         Name = _account,
         Account = account,
         Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"

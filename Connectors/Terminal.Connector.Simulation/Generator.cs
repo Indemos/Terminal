@@ -74,7 +74,7 @@ namespace Terminal.Connector.Simulation
         point.Time = point.Time.Value.AddTicks(span.Ticks);
         point.Group.Close = model.Ask;
 
-        UpdatePointProps(model);
+        UpdatePoints(model);
       }
     }
   }

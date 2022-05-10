@@ -6,7 +6,7 @@ namespace Terminal.Core.ExtensionSpace
   {
     public static double ToDouble(this double? input, double value = 0)
     {
-      if (input == null)
+      if (input is null)
       {
         return value;
       }

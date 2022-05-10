@@ -152,7 +152,7 @@ namespace Terminal.Core.ServiceSpace
     {
       using (var client = new HttpClient())
       {
-        var cancellation = cts == null ? CancellationToken.None : cts.Token;
+        var cancellation = cts is null ? CancellationToken.None : cts.Token;
 
         if (headers is IEnumerable)
         {
