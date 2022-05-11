@@ -1,64 +1,35 @@
-using Terminal.Core.ModelSpace;
-using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Core.ModelSpace;
 
 namespace Terminal.Client.Components
 {
-  public partial class PositionsComponent : IDisposable
+  public partial class PositionsComponent
   {
     /// <summary>
-    /// Table headers
+    /// Syncer
     /// </summary>
-    protected IEnumerable<string> Columns = new List<string>();
+    protected Task Updater { get; set; }
 
     /// <summary>
     /// Table records
     /// </summary>
-    protected IList<ITransactionPositionModel> Items = new List<ITransactionPositionModel>();
+    protected IEnumerable<ITransactionPositionModel> Items { get; set; } = new List<ITransactionPositionModel>();
 
     /// <summary>
-    /// Component load
+    /// Update table records 
     /// </summary>
-    /// <returns></returns>
-    protected override Task OnAfterRenderAsync(bool setup)
+    /// <param name="items"></param>
+    public Task UpdateItems(IEnumerable<ITransactionPositionModel> items)
     {
-      if (setup)
+      if (Updater?.IsCompleted is false)
       {
-        Columns = new List<string>
-        {
-          "Time",
-          "Instrument",
-          "Size",
-          "Side",
-          "Open Price",
-          "Close Price",
-          "PnL"
-        };
-
-        CreateItems(new AccountModel[0]);
+        return Updater;
       }
 
-      return base.OnAfterRenderAsync(setup);
-    }
+      Items = items;
 
-    /// <summary>
-    /// Generate table records 
-    /// </summary>
-    /// <param name="accounts"></param>
-    protected Task CreateItems(IEnumerable<IAccountModel> accounts)
-    {
-      Items = accounts.SelectMany(account => account.ActivePositions).ToList();
-
-      return InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Dispose subscriptions
-    /// </summary>
-    public void Dispose()
-    {
+      return Updater = InvokeAsync(StateHasChanged);
     }
   }
 }

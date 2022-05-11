@@ -70,8 +70,7 @@ namespace Terminal.Client.Pages
       IsConnection = true;
       IsSubscription = true;
 
-      ChartsView.Points.Clear();
-      ChartsView.Indices.Clear();
+      ChartsView.Clear();
 
       _adapter.Connect();
     }
@@ -83,8 +82,7 @@ namespace Terminal.Client.Pages
 
       _adapter.Disconnect();
 
-      ChartsView.Points.Clear();
-      ChartsView.Indices.Clear();
+      ChartsView.Clear();
       ChartsView.Update();
     }
 
@@ -242,8 +240,9 @@ namespace Terminal.Client.Pages
         new PointModel { Time = point.Time, Name = _performanceIndicator.Name, Last = performance.Last }
       };
 
-      ChartsView.OnData(points);
-      ChartsView.Update();
+      ChartsView.UpdateItems(points);
+      OrdersView.UpdateItems(account.ActiveOrders);
+      PositionsView.UpdateItems(account.ActivePositions);
     }
   }
 }

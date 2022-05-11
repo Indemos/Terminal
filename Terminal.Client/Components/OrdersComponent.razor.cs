@@ -1,67 +1,35 @@
-using Terminal.Core.CollectionSpace;
-using Terminal.Core.EnumSpace;
-using Terminal.Core.ModelSpace;
-using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
+using Terminal.Core.ModelSpace;
 
 namespace Terminal.Client.Components
 {
-  public partial class OrdersComponent : IDisposable
+  public partial class OrdersComponent
   {
     /// <summary>
-    /// Table headers
+    /// Syncer
     /// </summary>
-    protected IEnumerable<string> Columns { get; set; }
+    protected Task Updater { get; set; }
 
     /// <summary>
     /// Table records
     /// </summary>
-    protected IList<ITransactionOrderModel> Items { get; set; }
+    protected IEnumerable<ITransactionOrderModel> Items { get; set; } = new List<ITransactionOrderModel>();
 
     /// <summary>
-    /// Component load
+    /// Update table records 
     /// </summary>
-    /// <returns></returns>
-    protected override Task OnAfterRenderAsync(bool setup)
+    /// <param name="items"></param>
+    public Task UpdateItems(IEnumerable<ITransactionOrderModel> items)
     {
-      if (setup)
+      if (Updater?.IsCompleted is false)
       {
-        Columns = new List<string>
-        {
-          "Time",
-          "Instrument",
-          "Size",
-          "Side",
-          "Open Price"
-        };
-
-        Items = new List<ITransactionOrderModel>();
-
-        CreateItems(new AccountModel[0]);
+        return Updater;
       }
 
-      return base.OnAfterRenderAsync(setup);
-    }
+      Items = items;
 
-    /// <summary>
-    /// Generate table records 
-    /// </summary>
-    /// <param name="accounts"></param>
-    protected Task CreateItems(IEnumerable<IAccountModel> accounts)
-    {
-      Items = accounts.SelectMany(account => account.ActiveOrders).ToList();
-
-      return InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Dispose
-    /// </summary>
-    public void Dispose()
-    {
+      return Updater = InvokeAsync(StateHasChanged);
     }
   }
 }

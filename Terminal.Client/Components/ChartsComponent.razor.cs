@@ -1,7 +1,6 @@
 using Canvas.Core;
 using Canvas.Core.EngineSpace;
 using Canvas.Views.Web;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -14,22 +13,22 @@ using Model = Canvas.Core.ModelSpace.Model;
 
 namespace Terminal.Client.Components
 {
-  public partial class ChartsComponent : IDisposable
+  public partial class ChartsComponent
   {
     /// <summary>
     /// Points
     /// </summary>
-    public IList<ICanvasModel> Points { get; set; } = new List<ICanvasModel>();
+    protected IList<ICanvasModel> Points { get; set; } = new List<ICanvasModel>();
 
     /// <summary>
     /// Cache
     /// </summary>
-    public IDictionary<long, IGroupModel> Indices { get; set; } = new Dictionary<long, IGroupModel>();
+    protected IDictionary<long, IGroupModel> Indices { get; set; } = new Dictionary<long, IGroupModel>();
 
     /// <summary>
     /// Views
     /// </summary>
-    public IDictionary<string, CanvasWebView> Views { get; set; } = new Dictionary<string, CanvasWebView>();
+    protected IDictionary<string, CanvasWebView> Views { get; set; } = new Dictionary<string, CanvasWebView>();
 
     /// <summary>
     /// Chart cache
@@ -42,10 +41,12 @@ namespace Terminal.Client.Components
     protected IGroupModel Map { get; set; } = new GroupModel { Groups = new Dictionary<string, IGroupModel>() };
 
     /// <summary>
-    /// Dispose
+    /// Clear points
     /// </summary>
-    public void Dispose()
+    public void Clear()
     {
+      Points.Clear();
+      Indices.Clear();
     }
 
     /// <summary>
@@ -83,7 +84,7 @@ namespace Terminal.Client.Components
     /// Quote processor
     /// </summary>
     /// <param name="inputs"></param>
-    public void OnData(ICollection<IPointModel> inputs)
+    public void UpdateItems(ICollection<IPointModel> inputs)
     {
       foreach (var input in inputs)
       {
@@ -122,6 +123,8 @@ namespace Terminal.Client.Components
           }
         }
       }
+
+      Update();
     }
 
     /// <summary>
