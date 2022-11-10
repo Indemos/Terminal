@@ -59,7 +59,7 @@ namespace Terminal.Core.IndicatorSpace
       }
 
       var value = currentPoint.Last ?? 0.0;
-      var comService = InstanceService<ComputationService>.Instance;
+      var comService = InstanceService<AverageService>.Instance;
 
       _min = _min is null ? value : Math.Min(_min.Value, value);
       _max = _max is null ? value : Math.Max(_max.Value, value);

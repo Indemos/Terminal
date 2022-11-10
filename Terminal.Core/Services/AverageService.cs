@@ -1,10 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
 namespace Terminal.Core.ServiceSpace
 {
-  public class ComputationService
+  public class AverageService
   {
     /// <summary>
     /// Simple moving average

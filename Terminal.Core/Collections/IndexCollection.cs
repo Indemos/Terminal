@@ -97,6 +97,17 @@ namespace Terminal.Core.CollectionSpace
     }
 
     /// <summary>
+    /// Clear collection
+    /// </summary>
+    public virtual void Clear() => Items.Clear();
+
+    /// <summary>
+    /// Get enumerator
+    /// </summary>
+    /// <returns></returns>
+    public virtual IEnumerator<T> GetEnumerator() => Items.GetEnumerator();
+
+    /// <summary>
     /// Get item by index
     /// </summary>
     /// <param name="index"></param>
@@ -211,29 +222,9 @@ namespace Terminal.Core.CollectionSpace
     }
 
     /// <summary>
-    /// Clear collection
-    /// </summary>
-    public virtual void Clear()
-    {
-      Items.Clear();
-    }
-
-    /// <summary>
     /// Get enumerator
     /// </summary>
     /// <returns></returns>
-    public virtual IEnumerator<T> GetEnumerator()
-    {
-      return Items.GetEnumerator();
-    }
-
-    /// <summary>
-    /// Get enumerator
-    /// </summary>
-    /// <returns></returns>
-    IEnumerator IEnumerable.GetEnumerator()
-    {
-      return Items.GetEnumerator();
-    }
+    IEnumerator IEnumerable.GetEnumerator() => Items.GetEnumerator();
   }
 }

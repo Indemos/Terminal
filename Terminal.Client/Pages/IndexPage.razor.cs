@@ -1,3 +1,6 @@
+using Canvas.Core.ModelSpace;
+using Canvas.Core.ShapeSpace;
+using Distribution.DomainSpace;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -10,10 +13,6 @@ using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
-using AreaGroupModel = Canvas.Core.ModelSpace.AreaGroupModel;
-using GroupModel = Canvas.Core.ModelSpace.GroupModel;
-using IGroupModel = Canvas.Core.ModelSpace.IGroupModel;
-using LineGroupModel = Canvas.Core.ModelSpace.LineGroupModel;
 
 namespace Terminal.Client.Pages
 {
@@ -24,7 +23,7 @@ namespace Terminal.Client.Pages
     /// </summary>
     protected bool IsConnection { get; set; }
     protected bool IsSubscription { get; set; }
-    protected ChartsComponent ChartsView { get; set; }
+    protected ChartsComponent DataView { get; set; }
     protected OrdersComponent OrdersView { get; set; }
     protected PositionsComponent PositionsView { get; set; }
 
@@ -33,46 +32,45 @@ namespace Terminal.Client.Pages
     /// </summary>
     /// <param name="setup"></param>
     /// <returns></returns>
-    protected override Task OnAfterRenderAsync(bool setup)
+    protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
-        ChartsView.CreateMap(new GroupModel
+        await DataView.Create(new GroupShape
         {
-          Groups = new Dictionary<string, IGroupModel>
+          Groups = new Dictionary<string, IGroupShape>
           {
-            ["Prices"] = new GroupModel
+            ["Prices"] = new GroupShape
             {
-              Groups = new Dictionary<string, IGroupModel>
+              Groups = new Dictionary<string, IGroupShape>
               {
-                ["GOOG"] = new LineGroupModel(),
-                ["GOOGL"] = new LineGroupModel()
+                ["GOOG"] = new LineShape(),
+                ["GOOGL"] = new LineShape()
               }
             },
-            ["Performance"] = new GroupModel
+            ["Performance"] = new GroupShape
             {
-              Groups = new Dictionary<string, IGroupModel>
+              Groups = new Dictionary<string, IGroupShape>
               {
-                ["Balance"] = new AreaGroupModel()
+                ["Balance"] = new AreaShape()
               }
             }
           }
         });
       }
 
-      return base.OnAfterRenderAsync(setup);
+      await base.OnAfterRenderAsync(setup);
     }
 
-    protected void OnConnect()
+    protected async Task OnConnect()
     {
+      OnDisconnect();
       Setup();
 
       IsConnection = true;
       IsSubscription = true;
 
-      ChartsView.Clear();
-
-      _adapter.Connect();
+      await _adapter.Connect();
     }
 
     protected void OnDisconnect()
@@ -80,17 +78,17 @@ namespace Terminal.Client.Pages
       IsConnection = false;
       IsSubscription = false;
 
-      _adapter.Disconnect();
+      _adapter?.Disconnect();
 
-      ChartsView.Clear();
-      ChartsView.Update();
+      DataView.Clear();
+      DataView.UpdateItems(Array.Empty<IPointModel>(), 0);
     }
 
-    protected void OnSubscribe()
+    protected async Task OnSubscribe()
     {
       IsSubscription = true;
 
-      _adapter.Subscribe();
+      await _adapter.Subscribe();
     }
 
     protected void OnUnsubscribe()
@@ -138,16 +136,16 @@ namespace Terminal.Client.Pages
       {
         Speed = 1,
         Name = _account,
-        Account = account,
+        Scene = new Scene(),
         Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"
       };
 
       _performanceIndicator = new PerformanceIndicator { Name = "Balance" };
       _scaleIndicatorX = new ScaleIndicator { Max = 1, Min = -1, Interval = 1, Name = "Indicators : " + _assetX };
       _scaleIndicatorY = new ScaleIndicator { Max = 1, Min = -1, Interval = 1, Name = "Indicators : " + _assetY };
+      _adapter.Account = account;
 
-      _adapter
-        .Account
+      account
         .Instruments
         .Values
         .Select(o => o.PointGroups.ItemStream)
@@ -167,69 +165,17 @@ namespace Terminal.Client.Pages
       var indY = _scaleIndicatorY.Calculate(seriesY);
       var performance = _performanceIndicator.Calculate(new[] { account });
 
-      if (seriesX.Any() && seriesY.Any())
+      if (seriesX.Any() is false || seriesY.Any() is false)
       {
-        if (account.ActiveOrders.Any() is false &&
-            account.ActivePositions.Any() is false &&
-            Math.Abs(indX.Last.Value - indY.Last.Value) >= 0.5)
+        return;
+      }
+
+      if (account.ActiveOrders.Any() is false && account.ActivePositions.Any() is false)
+      {
+        switch (true)
         {
-          if (indX.Last.Value > indY.Last.Value)
-          {
-            _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
-            {
-              Action = ActionEnum.Create,
-              Next = new TransactionOrderModel
-              {
-                Size = 1,
-                Side = OrderSideEnum.Sell,
-                Category = OrderCategoryEnum.Market,
-                Instrument = instrumentX
-              }
-            });
-
-            _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
-            {
-              Action = ActionEnum.Create,
-              Next = new TransactionOrderModel
-              {
-                Size = 1,
-                Side = OrderSideEnum.Buy,
-                Category = OrderCategoryEnum.Market,
-                Instrument = instrumentX
-              }
-            });
-          }
-
-          if (indX.Last.Value < indY.Last.Value)
-          {
-            _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
-            {
-              Action = ActionEnum.Create,
-              Next = new TransactionOrderModel
-              {
-                Size = 1,
-                Side = OrderSideEnum.Buy,
-                Category = OrderCategoryEnum.Market,
-                Instrument = instrumentX
-              }
-            });
-
-            _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
-            {
-              Action = ActionEnum.Create,
-              Next = new TransactionOrderModel
-              {
-                Size = 1,
-                Side = OrderSideEnum.Sell,
-                Category = OrderCategoryEnum.Market,
-                Instrument = instrumentY
-              }
-            });
-          }
-        }
-
-        if (account.ActivePositions.Any() && Math.Abs(indX.Last.Value - indY.Last.Value) < 0.05)
-        {
+          case true when indX.Last.Value - indY.Last.Value >= 0.5: OpenPositions(instrumentY, instrumentX); break;
+          case true when indY.Last.Value - indX.Last.Value >= 0.5: OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
@@ -240,9 +186,36 @@ namespace Terminal.Client.Pages
         new PointModel { Time = point.Time, Name = _performanceIndicator.Name, Last = performance.Last }
       };
 
-      ChartsView.UpdateItems(points);
+      DataView.UpdateItems(points, 100);
       OrdersView.UpdateItems(account.ActiveOrders);
       PositionsView.UpdateItems(account.ActivePositions);
+    }
+
+    protected void OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
+    {
+      _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      {
+        Action = ActionEnum.Create,
+        Next = new TransactionOrderModel
+        {
+          Size = 1,
+          Side = OrderSideEnum.Sell,
+          Category = OrderCategoryEnum.Market,
+          Instrument = assetSell
+        }
+      });
+
+      _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      {
+        Action = ActionEnum.Create,
+        Next = new TransactionOrderModel
+        {
+          Size = 1,
+          Side = OrderSideEnum.Buy,
+          Category = OrderCategoryEnum.Market,
+          Instrument = assetBuy
+        }
+      });
     }
   }
 }

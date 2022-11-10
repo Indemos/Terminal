@@ -53,7 +53,7 @@ namespace Terminal.Core.IndicatorSpace
       }
 
       var value = currentPoint.Last.Value;
-      var comService = InstanceService<ComputationService>.Instance;
+      var comService = InstanceService<AverageService>.Instance;
 
       switch (Mode)
       {

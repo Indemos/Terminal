@@ -40,7 +40,7 @@ namespace Terminal.Core.IndicatorSpace
 
       var ups = new List<double>(Interval);
       var downs = new List<double>(Interval);
-      var comService = InstanceService<ComputationService>.Instance;
+      var comService = InstanceService<AverageService>.Instance;
 
       for (var i = 1; i <= Interval; i++)
       {

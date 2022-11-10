@@ -110,6 +110,8 @@ namespace Terminal.Core.ModelSpace
     {
       View = new ViewModel();
       Group = new PointGroupModel();
+      Account = new AccountModel();
+      Instrument = new InstrumentModel();
       Groups = new Dictionary<string, IPointModel>();
     }
 
@@ -119,7 +121,7 @@ namespace Terminal.Core.ModelSpace
     /// <returns></returns>
     public override object Clone()
     {
-      var clone = MemberwiseClone() as IPointModel;
+      var clone = base.Clone() as IPointModel;
 
       clone.Group = Group.Clone() as IPointGroupModel;
 

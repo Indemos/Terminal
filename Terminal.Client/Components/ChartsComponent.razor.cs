@@ -1,186 +1,125 @@
-using Canvas.Core;
 using Canvas.Core.EngineSpace;
-using Canvas.Views.Web;
+using Canvas.Core.ModelSpace;
+using Canvas.Core.ShapeSpace;
+using Canvas.Views.Web.Views;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ModelSpace;
-using GroupModel = Canvas.Core.ModelSpace.GroupModel;
-using ICanvasModel = Canvas.Core.ModelSpace.IPointModel;
-using IGroupModel = Canvas.Core.ModelSpace.IGroupModel;
-using Model = Canvas.Core.ModelSpace.Model;
 
 namespace Terminal.Client.Components
 {
-  public partial class ChartsComponent
+  public partial class ChartsComponent : IDisposable, IAsyncDisposable
   {
+    /// <summary>
+    /// Reference to view control
+    /// </summary>
+    protected CanvasGroupView View { get; set; }
+
     /// <summary>
     /// Points
     /// </summary>
-    protected IList<ICanvasModel> Points { get; set; } = new List<ICanvasModel>();
+    protected IList<IShape> Shapes { get; set; } = new List<IShape>();
 
     /// <summary>
-    /// Cache
+    /// Series
     /// </summary>
-    protected IDictionary<long, IGroupModel> Indices { get; set; } = new Dictionary<long, IGroupModel>();
+    protected IDictionary<string, string> Maps { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
-    /// Views
+    /// Indices
     /// </summary>
-    protected IDictionary<string, CanvasWebView> Views { get; set; } = new Dictionary<string, CanvasWebView>();
+    protected IDictionary<long, IGroupShape> Indices { get; set; } = new Dictionary<long, IGroupShape>();
 
     /// <summary>
-    /// Chart cache
+    /// Define chart model
     /// </summary>
-    protected IDictionary<string, string> Cache { get; set; } = new Dictionary<string, string>();
+    /// <param name="group"></param>
+    public async Task Create(IGroupShape group)
+    {
+      (View.Item = group)
+        .Groups
+        .ForEach(view => view.Value.Groups
+        .ForEach(series => Maps[series.Key] = view.Key));
+
+      await View.CreateViews<CanvasEngine>();
+    }
 
     /// <summary>
-    /// Chart model
+    /// Update
     /// </summary>
-    protected IGroupModel Map { get; set; } = new GroupModel { Groups = new Dictionary<string, IGroupModel>() };
+    /// <param name="inputs"></param>
+    /// <param name="count"></param>
+    public void UpdateItems(IList<IPointModel> inputs, int count)
+    {
+      foreach (var input in inputs)
+      {
+        var index = input.Time.Value.Ticks;
+        var previousPoint = (Shapes.ElementAtOrDefault(Shapes.Count - 2) ?? View.Item.Clone()) as IGroupShape;
+
+        if (Indices.TryGetValue(index, out IGroupShape currentPoint) is false)
+        {
+          currentPoint = previousPoint.Clone() as IGroupShape;
+          currentPoint.X = index;
+
+          Shapes.Add(currentPoint);
+          Indices[index] = currentPoint;
+        }
+
+        var series = currentPoint?.Groups?.Get(Maps[input.Name])?.Groups?.Get(input.Name);
+
+        if (series is not null)
+        {
+          var currentBar = series as CandleShape;
+
+          series.Y = input?.Last ?? 0;
+
+          if (currentBar is not null)
+          {
+            currentBar.L = input?.Group?.Low;
+            currentBar.H = input?.Group?.High;
+            currentBar.O = input?.Group?.Open;
+            currentBar.C = input?.Group?.Close;
+          }
+        }
+      }
+
+      var domain = new DomainModel
+      {
+        IndexDomain = new[] { Shapes.Count - count, Shapes.Count }
+      };
+
+      View.Update(domain, Shapes);
+    }
 
     /// <summary>
     /// Clear points
     /// </summary>
     public void Clear()
     {
-      Points.Clear();
+      Shapes.Clear();
       Indices.Clear();
     }
 
     /// <summary>
-    /// Define chart model
+    /// Dispose
     /// </summary>
-    /// <param name="map"></param>
-    public void CreateMap(IGroupModel map)
-    {
-      (Map = map)
-        .Groups
-        .ForEach(view => view.Value.Groups
-        .ForEach(series => Cache[series.Key] = view.Key));
-    }
-
-    /// <summary>
-    /// Render
-    /// </summary>
-    /// <param name="updates"></param>
-    public void Update()
-    {
-      foreach (var view in Views)
-      {
-        var composer = view.Value.Composer;
-
-        composer.Points = Points;
-        composer.IndexDomain ??= new int[2];
-        composer.IndexDomain[0] = composer.Points.Count - composer.IndexCount;
-        composer.IndexDomain[1] = composer.Points.Count;
-
-        view.Value.Update();
-      }
-    }
-
-    /// <summary>
-    /// Quote processor
-    /// </summary>
-    /// <param name="inputs"></param>
-    public void UpdateItems(ICollection<IPointModel> inputs)
-    {
-      foreach (var input in inputs)
-      {
-        var index = input.Time.Value.Ticks;
-
-        if (Indices.TryGetValue(index, out IGroupModel original) is false)
-        {
-          var model = Map.Clone() as IGroupModel;
-
-          model.Index = index;
-
-          Points.Add(model);
-          Indices.Add(index, model);
-        }
-
-        var currentPoint = Points.Last() as IGroupModel;
-        var previousPoint = Points.ElementAtOrDefault(Points.Count - 2) as IGroupModel;
-
-        foreach (var series in Cache)
-        {
-          var currentSeries = currentPoint?.Groups.Get(Cache[series.Key]).Groups.Get(series.Key);
-          var previousSeries = previousPoint?.Groups.Get(Cache[series.Key]).Groups.Get(series.Key);
-
-          dynamic value = new Model();
-
-          value.Point = input?.Last;
-          value.Low = input?.Group?.Low;
-          value.High = input?.Group?.High;
-          value.Open = input?.Group?.Open;
-          value.Close = input?.Group?.Close;
-
-          switch (series.Key.Equals(input.Name))
-          {
-            case true: currentSeries.Value = value; break;
-            case false: currentSeries.Value ??= previousSeries?.Value?.Clone(); break;
-          }
-        }
-      }
-
-      Update();
-    }
-
-    /// <summary>
-    /// Load
-    /// </summary>
-    /// <param name="setup"></param>
     /// <returns></returns>
-    protected override async Task OnAfterRenderAsync(bool setup)
+    public ValueTask DisposeAsync()
     {
-      if (setup)
-      {
-        await InvokeAsync(StateHasChanged);
+      Dispose();
 
-        foreach (var view in Views)
-        {
-          view.Value.OnSize = view.Value.OnCreate = message => OnCreate(view.Key, message);
-          view.Value.OnUpdate = message => Views.ForEach(o =>
-          {
-            if (Equals(o.Value.Composer.Name, message.View.Composer.Name) is false)
-            {
-              o.Value.Composer.IndexDomain = message.View.Composer.IndexDomain;
-              o.Value.Update();
-            }
-          });
-
-          await view.Value.Create();
-        }
-      }
-
-      await base.OnAfterRenderAsync(setup);
+      return new ValueTask(Task.CompletedTask);
     }
 
     /// <summary>
-    /// On load event for web view
+    /// Dispose
     /// </summary>
-    /// <param name="name"></param>
-    /// <param name="message"></param>
-    /// <returns></returns>
-    protected void OnCreate(string name, ViewMessage message)
+    public void Dispose()
     {
-      var composer = new GroupComposer
-      {
-        Name = name,
-        Engine = new CanvasEngine(message.X, message.Y)
-      };
-
-      if (message?.View?.Composer is not null)
-      {
-        composer.Points = message.View.Composer.Points;
-        composer.IndexDomain = message.View.Composer.IndexDomain;
-        composer.ValueDomain = message.View.Composer.ValueDomain;
-        message.View.Composer.Dispose();
-      }
-
-      Views[name].Composer = composer;
-      Views[name].Update();
+      View?.Dispose();
     }
   }
 }

@@ -15,9 +15,9 @@ namespace Terminal.Core.IndicatorSpace
     /// </summary>
     /// <param name="accounts"></param>
     /// <returns></returns>
-    public PerformanceIndicator Calculate(IEnumerable<IAccountModel> accounts)
+    public PerformanceIndicator Calculate(IList<IAccountModel> accounts)
     {
-      Last = accounts.Sum(o => o.Balance + o.ActivePositions.Sum(v => v.GainLossAverageEstimate));
+      Last = accounts.Sum(o => o.Balance + o.ActivePositions.Sum(v => v.Value.GainLossAverageEstimate));
 
       return this;
     }

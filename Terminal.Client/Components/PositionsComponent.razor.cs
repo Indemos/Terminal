@@ -14,13 +14,13 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected IEnumerable<ITransactionPositionModel> Items { get; set; } = new List<ITransactionPositionModel>();
+    protected IDictionary<string, ITransactionPositionModel> Items { get; set; } = new Dictionary<string, ITransactionPositionModel>();
 
     /// <summary>
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public Task UpdateItems(IEnumerable<ITransactionPositionModel> items)
+    public Task UpdateItems(IDictionary<string, ITransactionPositionModel> items)
     {
       if (Updater?.IsCompleted is false)
       {

@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
@@ -16,12 +17,6 @@ namespace Terminal.Core.CollectionSpace
   /// <typeparam name="TValue"></typeparam>
   public interface INameCollection<TKey, TValue> : IDictionary<TKey, TValue> where TValue : IBaseModel
   {
-    /// <summary>
-    /// Add item using specific index
-    /// </summary>
-    /// <param name="dataItem"></param>
-    void Add(TValue dataItem);
-
     /// <summary>
     /// Observable item changes
     /// </summary>
@@ -60,7 +55,7 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     public NameCollection()
     {
-      Items = new Dictionary<TKey, TValue>();
+      Items = new ConcurrentDictionary<TKey, TValue>();
       ItemStream = new Subject<ITransactionMessage<TValue>>();
       CollectionStream = new Subject<ITransactionMessage<IDictionary<TKey, TValue>>>();
     }
@@ -107,15 +102,6 @@ namespace Terminal.Core.CollectionSpace
     public virtual void Add(TKey index, TValue dataItem)
     {
       Add(index, dataItem, ActionEnum.Create);
-    }
-
-    /// <summary>
-    /// Add item using specific index
-    /// </summary>
-    /// <param name="dataItem"></param>
-    public virtual void Add(TValue dataItem)
-    {
-      Add((TKey)(object)dataItem.Name, dataItem, ActionEnum.Create);
     }
 
     /// <summary>

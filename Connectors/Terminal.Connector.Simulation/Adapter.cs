@@ -1,13 +1,14 @@
+using Distribution.DomainSpace;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
-using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ModelSpace;
-using Terminal.Core.ServiceSpace;
+using Terminal.Core.StoreSpace;
 
 namespace Terminal.Connector.Simulation
 {
@@ -27,12 +28,7 @@ namespace Terminal.Connector.Simulation
     protected IList<IDisposable> _subscriptions = null;
 
     /// <summary>
-    /// Queue of data points synced by time
-    /// </summary>
-    protected IDictionary<string, IPointModel> _points = null;
-
-    /// <summary>
-    /// Source files with quotes
+    /// Streams
     /// </summary>
     protected IDictionary<string, StreamReader> _streams = null;
 
@@ -47,34 +43,36 @@ namespace Terminal.Connector.Simulation
     public virtual string Source { get; set; }
 
     /// <summary>
+    /// Actor space for state preservation and scheduling
+    /// </summary>
+    public virtual IScene Scene { get; set; }
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public Adapter()
     {
+      Speed = 100;
+
       _connections = new List<IDisposable>();
       _subscriptions = new List<IDisposable>();
-      _points = new Dictionary<string, IPointModel>();
       _streams = new Dictionary<string, StreamReader>();
-
-      Speed = 100;
     }
 
     /// <summary>
-    /// Establish connection with a server
+    /// Connect
     /// </summary>
-    /// <param name="docHeader"></param>
-    public override Task Connect()
+    public override async Task Connect()
     {
-      Disconnect();
+      await Disconnect();
 
       _streams = Account
         .Instruments
-        .Select(instrument => KeyValuePair.Create(instrument.Key, new StreamReader(Path.Combine(Source, instrument.Value.Name))))
-        .ToDictionary(o => o.Key, o => o.Value);
+        .ToDictionary(o => o.Key, o => new StreamReader(Path.Combine(Source, o.Value.Name)));
 
-      Subscribe();
+      _streams.ForEach(o => _connections.Add(o.Value));
 
-      return Task.FromResult(0);
+      await Subscribe();
     }
 
     /// <summary>
@@ -84,12 +82,8 @@ namespace Terminal.Connector.Simulation
     {
       Unsubscribe();
 
-      _streams?.ForEach(o => o.Value.Dispose());
       _connections?.ForEach(o => o.Dispose());
-
       _connections?.Clear();
-      _streams?.Clear();
-      _points?.Clear();
 
       return Task.FromResult(0);
     }
@@ -97,36 +91,43 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Subscribe for incoming data
     /// </summary>
-    public override Task Subscribe()
+    public override async Task Subscribe()
     {
-      Unsubscribe();
+      await Unsubscribe();
 
-      var orderStream = OrderStream.Subscribe(message =>
+      var dataStream = Account
+        .Instruments
+        .Select(o => o.Value.Points.ItemStream)
+        .Merge()
+        .Subscribe(async message => await UpdatePendingOrders());
+
+      var orderStream = OrderStream.Subscribe(async message =>
       {
         switch (message.Action)
         {
-          case ActionEnum.Create: CreateOrders(message.Next); break;
-          case ActionEnum.Update: UpdateOrders(message.Next); break;
-          case ActionEnum.Delete: DeleteOrders(message.Next); break;
+          case ActionEnum.Create: await CreateOrders(message.Next); break;
+          case ActionEnum.Update: await UpdateOrders(message.Next); break;
+          case ActionEnum.Delete: await DeleteOrders(message.Next); break;
         }
       });
 
-      var pointStream = Account
-        .Instruments
-        .Select(o => o.Value.PointGroups.ItemStream)
-        .Merge()
-        .Subscribe(message => ProcessPendingOrders());
-
       var span = TimeSpan.FromMilliseconds(Speed);
+      var points = new ConcurrentDictionary<string, IPointModel>();
       var interval = Observable
-        .Interval(span, InstanceService<ScheduleService>.Instance.Scheduler)
-        .Subscribe(o => GeneratePoints());
+        .Interval(span, Scene.Scheduler)
+        .Subscribe(o =>
+        {
+          var point = GetPoint(_streams, points);
+
+          if (point is not null)
+          {
+            UpdatePoints(point);
+          }
+        });
 
       _subscriptions.Add(orderStream);
-      _subscriptions.Add(pointStream);
+      _subscriptions.Add(dataStream);
       _subscriptions.Add(interval);
-
-      return Task.FromResult(0);
     }
 
     /// <summary>
@@ -143,106 +144,39 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Dispose
     /// </summary>
-    public virtual void Dispose()
+    public override void Dispose()
     {
       Disconnect();
     }
 
     /// <summary>
-    /// Parse inputs
+    /// Update points
     /// </summary>
-    /// <param name="input"></param>
+    /// <param name="point"></param>
     /// <returns></returns>
-    protected virtual IPointModel Parse(string input)
+    protected virtual IPointModel UpdatePoints(IPointModel point)
     {
-      var props = input.Split(" ");
+      var instrument = Account.Instruments[point.Name];
 
-      long.TryParse(props.ElementAtOrDefault(0), out long date);
+      point.Account = Account;
+      point.Instrument = instrument;
+      point.TimeFrame = instrument.TimeFrame;
 
-      if (date is 0)
-      {
-        return null;
-      }
+      instrument.Points.Add(point);
+      instrument.PointGroups.Add(point, instrument.TimeFrame);
 
-      double.TryParse(props.ElementAtOrDefault(1), out double bid);
-      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
-      double.TryParse(props.ElementAtOrDefault(3), out double ask);
-      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
-
-      var response = new PointModel
-      {
-        Time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(date),
-        Ask = ask,
-        Bid = bid,
-        Last = ask,
-        AskSize = askSize,
-        BidSize = bidSize
-      };
-
-      if (askSize.IsEqual(0))
-      {
-        response.Last = bid;
-      }
-
-      return response;
-    }
-
-    /// <summary>
-    /// Add data point to the collection
-    /// </summary>
-    /// <returns></returns>
-    protected virtual void GeneratePoints()
-    {
-      var index = string.Empty;
-
-      foreach (var stream in _streams)
-      {
-        _points.TryGetValue(stream.Key, out IPointModel point);
-
-        if (point is null)
-        {
-          var input = stream.Value.ReadLine();
-
-          if (string.IsNullOrEmpty(input) is false)
-          {
-            _points[stream.Key] = Parse(input);
-          }
-        }
-
-        _points.TryGetValue(index, out IPointModel min);
-        _points.TryGetValue(stream.Key, out IPointModel current);
-
-        var isOne = string.IsNullOrEmpty(index);
-        var isMin = current is not null && min is not null && current.Time <= min.Time;
-
-        if (isOne || isMin)
-        {
-          index = stream.Key;
-        }
-      }
-
-      if (string.IsNullOrEmpty(index))
-      {
-        Unsubscribe();
-        return;
-      }
-
-      _points[index].Instrument = Account.Instruments[index];
-
-      UpdatePoints(_points[index]);
-
-      _points[index] = null;
+      return point;
     }
 
     /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual Task<IEnumerable<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
+    protected virtual async Task<IList<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
     {
       if (ValidateOrders(orders) is false)
       {
-        return Task.FromResult<IEnumerable<ITransactionOrderModel>>(null);
+        return null;
       }
 
       foreach (var nextOrder in orders)
@@ -251,7 +185,7 @@ namespace Terminal.Connector.Simulation
         {
           case OrderCategoryEnum.Market:
 
-            CreatePosition(nextOrder);
+            await CreatePosition(nextOrder);
             break;
 
           case OrderCategoryEnum.Stop:
@@ -263,59 +197,62 @@ namespace Terminal.Connector.Simulation
             if (nextOrder.Container is null)
             {
               nextOrder.Status = OrderStatusEnum.Placed;
+
               Account.Orders.Add(nextOrder);
-              Account.ActiveOrders.Add(nextOrder);
+              Account.ActiveOrders.Add(nextOrder.Id, nextOrder);
             }
 
             break;
         }
       }
 
-      return Task.FromResult<IEnumerable<ITransactionOrderModel>>(orders);
+      return orders;
     }
 
     /// <summary>
     /// Update order implementation
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual Task<IEnumerable<ITransactionOrderModel>> UpdateOrders(params ITransactionOrderModel[] orders)
+    protected virtual Task<ITransactionOrderModel[]> UpdateOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
-        foreach (var order in Account.ActiveOrders)
+        var order = Account.ActiveOrders[nextOrder.Id];
+
+        if (order is not null)
         {
-          if (Equals(order.Id, nextOrder.Id))
-          {
-            order.Size = nextOrder.Size;
-            order.Price = nextOrder.Price;
-            order.Orders = nextOrder.Orders;
-            order.Category = nextOrder.Category;
-          }
+          order.Size = nextOrder.Size;
+          order.Price = nextOrder.Price;
+          order.Orders = nextOrder.Orders;
+          order.Category = nextOrder.Category;
         }
       }
 
-      return Task.FromResult<IEnumerable<ITransactionOrderModel>>(orders);
+      return Task.FromResult(orders);
     }
 
     /// <summary>
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual Task<IEnumerable<ITransactionOrderModel>> DeleteOrders(params ITransactionOrderModel[] orders)
+    protected virtual async Task<ITransactionOrderModel[]> DeleteOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
         nextOrder.Status = OrderStatusEnum.Cancelled;
 
-        Account.ActiveOrders.Remove(nextOrder);
+        if (Account.ActiveOrders.ContainsKey(nextOrder.Id))
+        {
+          Account.ActiveOrders.Remove(nextOrder.Id);
+        }
 
         if (nextOrder.Orders.Any())
         {
-          DeleteOrders(nextOrder.Orders.ToArray());
+          await DeleteOrders(nextOrder.Orders.ToArray());
         }
       }
 
-      return Task.FromResult<IEnumerable<ITransactionOrderModel>>(orders);
+      return orders;
     }
 
     /// <summary>
@@ -323,10 +260,11 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel CreatePosition(ITransactionOrderModel nextOrder)
+    protected virtual async Task<ITransactionPositionModel> CreatePosition(ITransactionOrderModel nextOrder)
     {
       var previousPosition = Account
         .ActivePositions
+        .Values
         .FirstOrDefault(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name));
 
       var response =
@@ -345,10 +283,9 @@ namespace Terminal.Connector.Simulation
       {
         order.Time = pointModel.Time;
         order.Status = OrderStatusEnum.Placed;
-        Account.ActiveOrders.Add(order);
       }
 
-      return response;
+      return await response;
     }
 
     /// <summary>
@@ -357,11 +294,11 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual Task<ITransactionPositionModel> OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       if (previousPosition is not null)
       {
-        return null;
+        return Task.FromResult<ITransactionPositionModel>(null);
       }
 
       var openPrices = GetOpenPrices(nextOrder);
@@ -378,10 +315,10 @@ namespace Terminal.Connector.Simulation
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
 
       Account.Orders.Add(nextOrder);
-      Account.ActiveOrders.Remove(nextOrder);
-      Account.ActivePositions.Add(nextPosition);
+      Account.ActiveOrders.Add(nextOrder.Id, nextOrder);
+      Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
-      return nextPosition;
+      return Task.FromResult(nextPosition);
     }
 
     /// <summary>
@@ -390,7 +327,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual async Task<ITransactionPositionModel> IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       if (previousPosition is null)
       {
@@ -425,12 +362,15 @@ namespace Terminal.Connector.Simulation
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
 
-      Account.ActiveOrders.Remove(nextOrder);
-      Account.ActivePositions.Remove(previousPosition);
+      Account.ActiveOrders.Remove(nextOrder.Id);
+      Account.ActivePositions.Remove(previousPosition.Id);
+
+      await DeleteOrders(nextOrder.Orders.ToArray());
+      await DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
-      Account.ActivePositions.Add(nextPosition);
+      Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
       return previousPosition;
     }
@@ -441,7 +381,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual async Task<ITransactionPositionModel> DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       if (previousPosition is null)
       {
@@ -475,18 +415,18 @@ namespace Terminal.Connector.Simulation
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
 
-      Account.Balance += previousPosition.GainLoss;
-      Account.ActiveOrders.Remove(nextOrder);
-      Account.ActivePositions.Remove(previousPosition);
+      Account.ActiveOrders.Remove(nextOrder.Id);
+      Account.ActivePositions.Remove(previousPosition.Id);
 
-      DeleteOrders(previousPosition.Orders.ToArray());
+      await DeleteOrders(nextOrder.Orders.ToArray());
+      await DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
 
       if (nextPosition.Size.Equals(0) is false)
       {
-        Account.ActivePositions.Add(nextPosition);
+        Account.ActivePositions.Add(nextPosition.Id, nextPosition);
       }
 
       return nextPosition;
@@ -545,17 +485,18 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
-    /// Process pending orders implementation
+    /// Process pending orders
     /// </summary>
-    protected virtual void ProcessPendingOrders()
+    protected virtual async Task UpdatePendingOrders()
     {
-      foreach (var order in Account.ActiveOrders)
+      foreach (var orderItem in Account.ActiveOrders)
       {
+        var order = orderItem.Value;
         var pointModel = order.Instrument.PointGroups.LastOrDefault();
 
         if (pointModel is not null)
         {
-          var executable = false;
+          var isExecutable = false;
           var isBuyStop = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Category, OrderCategoryEnum.Stop);
           var isSellStop = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Category, OrderCategoryEnum.Stop);
           var isBuyLimit = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Category, OrderCategoryEnum.Limit);
@@ -563,17 +504,17 @@ namespace Terminal.Connector.Simulation
 
           if (isBuyStop || isSellLimit)
           {
-            executable = pointModel.Ask >= order.Price;
+            isExecutable = pointModel.Ask >= order.Price;
           }
 
           if (isSellStop || isBuyLimit)
           {
-            executable = pointModel.Bid <= order.Price;
+            isExecutable = pointModel.Bid <= order.Price;
           }
 
-          if (executable)
+          if (isExecutable)
           {
-            CreatePosition(order);
+            await CreatePosition(order);
           }
         }
       }

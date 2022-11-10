@@ -1,6 +1,6 @@
 @using Terminal.Core.ModelSpace
 
-<MudTable Items="@Items" Hover="true" MultiSelection="true" SortLabel="Order" Elevation="0">
+<MudTable Items="@Items?.Values" Hover="true" MultiSelection="true" SortLabel="Order" Elevation="0">
   <HeaderContent>
     <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<ITransactionOrderModel, object>(o => o?.Time)">Time</MudTableSortLabel></MudTh>
     <MudTh><MudTableSortLabel SortBy="new Func<ITransactionOrderModel, object>(o => o?.Instrument?.Name)">Instrument</MudTableSortLabel></MudTh>

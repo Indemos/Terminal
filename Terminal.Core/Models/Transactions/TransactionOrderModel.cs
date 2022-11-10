@@ -82,7 +82,6 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public TransactionOrderModel()
     {
-      Id = Guid.NewGuid().ToString("N");
       Orders = new List<ITransactionOrderModel>();
       OrderStream = new Subject<ITransactionMessage<ITransactionOrderModel>>();
     }

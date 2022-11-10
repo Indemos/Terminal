@@ -1,10 +1,14 @@
+using Distribution.DomainSpace;
 using FluentValidation.Results;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
+using Terminal.Core.ExtensionSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ServiceSpace;
 using Terminal.Core.ValidatorSpace;
@@ -12,10 +16,30 @@ using Terminal.Core.ValidatorSpace;
 namespace Terminal.Core.ModelSpace
 {
   /// <summary>
-  /// Generic market data gateway
+  /// Interface that defines input and output processes
   /// </summary>
-  public interface IDataModel
+  public interface IConnectorModel : IBaseModel, IDisposable
   {
+    /// <summary>
+    /// Production or Development mode
+    /// </summary>
+    EnvironmentEnum Mode { get; set; }
+
+    /// <summary>
+    /// Account
+    /// </summary>
+    IAccountModel Account { get; set; }
+
+    /// <summary>
+    /// Send order event
+    /// </summary>
+    ISubject<ITransactionMessage<ITransactionOrderModel>> OrderStream { get; }
+
+    /// <summary>
+    /// Incoming data event
+    /// </summary>
+    ISubject<ITransactionMessage<IPointModel>> DataStream { get; }
+
     /// <summary>
     /// Restore state and initialize
     /// </summary>
@@ -35,46 +59,6 @@ namespace Terminal.Core.ModelSpace
     /// Suspend execution
     /// </summary>
     Task Unsubscribe();
-
-    /// <summary>
-    /// Reference to the account
-    /// </summary>
-    IAccountModel Account { get; set; }
-
-    /// <summary>
-    /// Incoming data event
-    /// </summary>
-    ISubject<ITransactionMessage<IPointModel>> DataStream { get; }
-  }
-
-  /// <summary>
-  /// Generic trading gateway
-  /// </summary>
-  public interface ITradeModel
-  {
-    /// <summary>
-    /// Send order event
-    /// </summary>
-    ISubject<ITransactionMessage<ITransactionOrderModel>> OrderStream { get; }
-
-    /// <summary>
-    /// Send orders
-    /// </summary>
-    /// <param name="action"></param>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    Task<IEnumerable<ITransactionOrderModel>> SendOrders(ActionEnum action, params ITransactionOrderModel[] orders);
-  }
-
-  /// <summary>
-  /// Interface that defines input and output processes
-  /// </summary>
-  public interface IConnectorModel : IBaseModel, IDataModel, ITradeModel
-  {
-    /// <summary>
-    /// Production or Development mode
-    /// </summary>
-    EnvironmentEnum Mode { get; set; }
   }
 
   /// <summary>
@@ -88,7 +72,7 @@ namespace Terminal.Core.ModelSpace
     public virtual EnvironmentEnum Mode { get; set; }
 
     /// <summary>
-    /// Reference to the account
+    /// Account
     /// </summary>
     public virtual IAccountModel Account { get; set; }
 
@@ -115,45 +99,27 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Restore state and initialize
     /// </summary>
-    public virtual Task Connect()
-    {
-      return Task.FromResult(0);
-    }
+    public abstract Task Connect();
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public virtual Task Disconnect()
-    {
-      return Task.FromResult(0);
-    }
+    public abstract Task Disconnect();
 
     /// <summary>
     /// Suspend execution
     /// </summary>
-    public virtual Task Unsubscribe()
-    {
-      return Task.FromResult(0);
-    }
+    public abstract Task Unsubscribe();
 
     /// <summary>
     /// Continue execution
     /// </summary>
-    public virtual Task Subscribe()
-    {
-      return Task.FromResult(0);
-    }
+    public abstract Task Subscribe();
 
     /// <summary>
-    /// Send orders
+    /// Dispose
     /// </summary>
-    /// <param name="action"></param>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    public virtual Task<IEnumerable<ITransactionOrderModel>> SendOrders(ActionEnum action, params ITransactionOrderModel[] orders)
-    {
-      return Task.FromResult(orders as IEnumerable<ITransactionOrderModel>);
-    }
+    public abstract void Dispose();
 
     /// <summary>
     /// Ensure that each series has a name and can be attached to specific area on the chart
@@ -182,27 +148,85 @@ namespace Terminal.Core.ModelSpace
     }
 
     /// <summary>
-    /// Update missing values of a data point
+    /// Get next available point
     /// </summary>
-    /// <param name="point"></param>
-    protected virtual IPointModel UpdatePoints(IPointModel point)
+    /// <returns></returns>
+    protected virtual IPointModel GetPoint(IDictionary<string, StreamReader> streams, IDictionary<string, IPointModel> points)
     {
-      point.Account = Account;
-      point.Name = point.Instrument.Name;
-      point.TimeFrame = point.Instrument.TimeFrame;
+      var index = string.Empty;
 
-      point.Instrument.Points.Add(point);
-      point.Instrument.PointGroups.Add(point, point.TimeFrame);
-
-      var message = new TransactionMessage<IPointModel>
+      foreach (var stream in streams)
       {
-        Action = ActionEnum.Create,
-        Next = point.Instrument.PointGroups.LastOrDefault()
+        points.TryGetValue(stream.Key, out IPointModel point);
+
+        if (point is null)
+        {
+          var input = stream.Value.ReadLine();
+
+          if (string.IsNullOrEmpty(input) is false)
+          {
+            points[stream.Key] = Parse(stream.Key, input);
+          }
+        }
+
+        points.TryGetValue(index, out IPointModel min);
+        points.TryGetValue(stream.Key, out IPointModel current);
+
+        var isOne = string.IsNullOrEmpty(index);
+        var isMin = current is not null && min is not null && current.Time <= min.Time;
+
+        if (isOne || isMin)
+        {
+          index = stream.Key;
+        }
+      }
+
+      var response = points[index];
+
+      points[index] = null;
+
+      return response;
+    }
+
+    /// <summary>
+    /// Parse point
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    protected virtual IPointModel Parse(string name, string input)
+    {
+      var props = input.Split(" ");
+
+      long.TryParse(props.ElementAtOrDefault(0), out long date);
+
+      if (date is 0)
+      {
+        return null;
+      }
+
+      double.TryParse(props.ElementAtOrDefault(1), out double bid);
+      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
+      double.TryParse(props.ElementAtOrDefault(3), out double ask);
+      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
+
+      var response = new PointModel
+      {
+        Name = name,
+        Time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(date),
+        Ask = ask,
+        Bid = bid,
+        Last = ask,
+        AskSize = askSize,
+        BidSize = bidSize
       };
 
-      DataStream.OnNext(message);
+      if (askSize.IsEqual(0))
+      {
+        response.Last = bid;
+      }
 
-      return point;
+      return response;
     }
   }
 }

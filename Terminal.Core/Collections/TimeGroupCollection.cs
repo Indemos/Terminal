@@ -2,6 +2,7 @@ using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ModelSpace;
 using System;
 using System.Collections.Generic;
+using System.Collections.Concurrent;
 
 namespace Terminal.Core.CollectionSpace
 {
@@ -21,7 +22,7 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     public TimeGroupCollection()
     {
-      Indices = new Dictionary<long, int>();
+      Indices = new ConcurrentDictionary<long, int>();
     }
 
     /// <summary>
