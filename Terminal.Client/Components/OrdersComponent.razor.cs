@@ -1,5 +1,8 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Client.Records;
+using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
 
 namespace Terminal.Client.Components
@@ -14,7 +17,7 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected IDictionary<string, ITransactionOrderModel> Items { get; set; } = new Dictionary<string, ITransactionOrderModel>();
+    protected IList<OrderRecord> Items { get; set; } = new List<OrderRecord>();
 
     /// <summary>
     /// Update table records 
@@ -27,7 +30,15 @@ namespace Terminal.Client.Components
         return Updater;
       }
 
-      Items = items;
+      Items = items.Values.Select(o => new OrderRecord
+      {
+        Time = o.Time,
+        Name = o.Instrument.Name,
+        Side = o.Side ?? OrderSideEnum.None,
+        Size = o.Size ?? 0,
+        Price = o.Price ?? 0,
+
+      }).ToList();
 
       return Updater = InvokeAsync(StateHasChanged);
     }

@@ -13,9 +13,6 @@
       <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.PauseCircle" Class="ml-4" @onclick="OnUnsubscribe"></MudIconButton>
     }
 
-    <MudIconButton Color="Color.Info" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.Receipt" Class="ml-4" @onclick="OnOpenDeals"></MudIconButton>
-    <MudIconButton Color="Color.Info" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.Web" Class="ml-4" @onclick="OnOpenStatements"></MudIconButton>
-
   </MudPaper>
 
   <MudExpansionPanels MultiExpansion="true">
@@ -53,6 +50,21 @@
       </TitleContent>
       <ChildContent>
         <PositionsComponent @ref="PositionsView" />
+      </ChildContent>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel>
+      <TitleContent>
+        <div class="d-flex">
+          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudText>Statements</MudText>
+          <MudText>
+            <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OnOpenStatements" class="updater ml-4">Update</a>
+          </MudText>
+        </div>
+      </TitleContent>
+      <ChildContent>
+        <StatementsComponent @ref="StatementsView" />
       </ChildContent>
     </MudExpansionPanel>
 

@@ -1,16 +1,14 @@
-@using Terminal.Core.ModelSpace
-
-<MudTable Items="@Items?.Values" Hover="true" MultiSelection="true" SortLabel="Order" Elevation="0">
+<MudTable Items="@Items" Hover="true" MultiSelection="true" SortLabel="Order" Elevation="0">
   <HeaderContent>
-    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<ITransactionOrderModel, object>(o => o?.Time)">Time</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<ITransactionOrderModel, object>(o => o?.Instrument?.Name)">Instrument</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<ITransactionOrderModel, object>(o => o?.Size)">Size</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<ITransactionOrderModel, object>(o => o?.Side)">Side</MudTableSortLabel></MudTh>
-    <MudTh><MudTableSortLabel SortBy="new Func<ITransactionOrderModel, object>(o => o?.Price)">Price</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<OrderRecord, object>(o => o.Time)">Time</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Name)">Instrument</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Size)">Size</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Side)">Side</MudTableSortLabel></MudTh>
+    <MudTh><MudTableSortLabel SortBy="new Func<OrderRecord, object>(o => o.Price)">Price</MudTableSortLabel></MudTh>
   </HeaderContent>
   <RowTemplate>
-    <MudTd DataLabel="Time">@($"{context?.Time:yyyy-MM-dd HH:mm:ss}")</MudTd>
-    <MudTd DataLabel="Instrument">@context?.Instrument?.Name</MudTd>
+    <MudTd DataLabel="Time">@($"{context.Time:yyyy-MM-dd HH:mm:ss}")</MudTd>
+    <MudTd DataLabel="Instrument">@context.Name</MudTd>
     <MudTd DataLabel="Size">@context.Size</MudTd>
     <MudTd DataLabel="Side">@context.Side</MudTd>
     <MudTd DataLabel="Open Price">@($"{context.Price:0.00}")</MudTd>

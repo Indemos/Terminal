@@ -8,7 +8,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
-using Terminal.Core.StoreSpace;
+using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Connector.Simulation
 {
@@ -41,11 +41,6 @@ namespace Terminal.Connector.Simulation
     /// Location of the files with quotes
     /// </summary>
     public virtual string Source { get; set; }
-
-    /// <summary>
-    /// Actor space for state preservation and scheduling
-    /// </summary>
-    public virtual IScene Scene { get; set; }
 
     /// <summary>
     /// Constructor
@@ -112,9 +107,10 @@ namespace Terminal.Connector.Simulation
       });
 
       var span = TimeSpan.FromMilliseconds(Speed);
+      var scene = InstanceService<Scene>.Instance;
       var points = new ConcurrentDictionary<string, IPointModel>();
       var interval = Observable
-        .Interval(span, Scene.Scheduler)
+        .Interval(span, scene.Scheduler)
         .Subscribe(o =>
         {
           var point = GetPoint(_streams, points);
@@ -267,10 +263,21 @@ namespace Terminal.Connector.Simulation
         .Values
         .FirstOrDefault(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name));
 
-      var response =
-        OpenPosition(nextOrder, previousPosition) ??
-        IncreasePosition(nextOrder, previousPosition) ??
-        DecreasePosition(nextOrder, previousPosition);
+      ITransactionPositionModel response = null;
+
+      if (previousPosition is null)
+      {
+        response = await OpenPosition(nextOrder, previousPosition);
+      }
+      else
+      {
+        var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
+        var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
+
+        response = isSameBuy || isSameSell ?
+          await IncreasePosition(nextOrder, previousPosition) : 
+          await DecreasePosition(nextOrder, previousPosition); 
+      }
 
       // Process bracket orders
 
@@ -285,7 +292,7 @@ namespace Terminal.Connector.Simulation
         order.Status = OrderStatusEnum.Placed;
       }
 
-      return await response;
+      return response;
     }
 
     /// <summary>
@@ -296,11 +303,6 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual Task<ITransactionPositionModel> OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition is not null)
-      {
-        return Task.FromResult<ITransactionPositionModel>(null);
-      }
-
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
 
@@ -315,7 +317,7 @@ namespace Terminal.Connector.Simulation
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
 
       Account.Orders.Add(nextOrder);
-      Account.ActiveOrders.Add(nextOrder.Id, nextOrder);
+      Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
       return Task.FromResult(nextPosition);
@@ -329,19 +331,6 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual async Task<ITransactionPositionModel> IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition is null)
-      {
-        return null;
-      }
-
-      var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
-      var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
-
-      if (isSameBuy is false && isSameSell is false)
-      {
-        return null;
-      }
-
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
 
@@ -383,19 +372,6 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual async Task<ITransactionPositionModel> DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      if (previousPosition is null)
-      {
-        return null;
-      }
-
-      var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
-      var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
-
-      if (isSameBuy || isSameSell)
-      {
-        return null;
-      }
-
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
 

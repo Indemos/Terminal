@@ -26,6 +26,7 @@ namespace Terminal.Client.Pages
     protected ChartsComponent DataView { get; set; }
     protected OrdersComponent OrdersView { get; set; }
     protected PositionsComponent PositionsView { get; set; }
+    protected StatementsComponent StatementsView { get; set; }
 
     /// <summary>
     /// Render
@@ -104,6 +105,10 @@ namespace Terminal.Client.Pages
 
     protected void OnOpenStatements()
     {
+      if (_adapter?.Account is not null)
+      {
+        StatementsView.UpdateItems(new[] { _adapter.Account });
+      }
     }
 
     /// <summary>
@@ -136,7 +141,6 @@ namespace Terminal.Client.Pages
       {
         Speed = 1,
         Name = _account,
-        Scene = new Scene(),
         Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"
       };
 
@@ -168,6 +172,14 @@ namespace Terminal.Client.Pages
       if (seriesX.Any() is false || seriesY.Any() is false)
       {
         return;
+      }
+
+      if (account.ActivePositions.Any())
+      {
+        if (Math.Abs(indX.Last.Value - indY.Last.Value) <= 0.1)
+        {
+          ClosePositions();
+        }
       }
 
       if (account.ActiveOrders.Any() is false && account.ActivePositions.Any() is false)
@@ -217,5 +229,24 @@ namespace Terminal.Client.Pages
         }
       });
     }
+
+    protected void ClosePositions()
+    {
+      foreach (var position in _adapter.Account.ActivePositions.Values)
+      {
+        _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+        {
+          Action = ActionEnum.Create,
+          Next = new TransactionOrderModel
+          {
+            Size = 1,
+            Side = Equals(position.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy,
+            Category = OrderCategoryEnum.Market,
+            Instrument = position.Instrument
+          }
+        });
+      }
+    }
+
   }
 }
