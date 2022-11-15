@@ -13,6 +13,7 @@ using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
+using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Client.Pages
 {
@@ -105,10 +106,13 @@ namespace Terminal.Client.Pages
 
     protected void OnOpenStatements()
     {
-      if (_adapter?.Account is not null)
+      InstanceService<Scene>.Instance.Scheduler.Send(() =>
       {
-        StatementsView.UpdateItems(new[] { _adapter.Account });
-      }
+        if (_adapter?.Account is not null)
+        {
+          StatementsView.UpdateItems(new[] { _adapter.Account });
+        }
+      });
     }
 
     /// <summary>
@@ -139,7 +143,7 @@ namespace Terminal.Client.Pages
 
       _adapter = new Adapter
       {
-        Speed = 1,
+        Speed = 100,
         Name = _account,
         Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"
       };

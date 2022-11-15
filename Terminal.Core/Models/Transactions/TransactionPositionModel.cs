@@ -200,14 +200,14 @@ namespace Terminal.Core.ModelSpace
         case OrderSideEnum.Sell: direction = -1; break;
       }
 
-      var estimate = (ClosePriceEstimate - OpenPrice) * direction;
+      var estimate = (ClosePriceEstimate - OpenPrice) * direction ?? 0.0;
 
       if (price is not null)
       {
-        estimate = (ClosePriceEstimate - price) * direction;
+        estimate = ((ClosePriceEstimate - price) * direction) ?? 0.0;
 
-        GainLossPointsMin = Math.Min(GainLossPointsMin ?? 0.0, estimate ?? 0.0);
-        GainLossPointsMax = Math.Max(GainLossPointsMax ?? 0.0, estimate ?? 0.0);
+        GainLossPointsMin = Math.Min(GainLossPointsMin ?? estimate, estimate);
+        GainLossPointsMax = Math.Max(GainLossPointsMax ?? estimate, estimate);
       }
 
       return estimate;
@@ -229,12 +229,12 @@ namespace Terminal.Core.ModelSpace
       {
         var delta = Instrument.StepValue / Instrument.StepSize;
         var commission = Instrument.Commission * OpenPrices.Count * 2;
-        var estimate = Size * (GetGainLossPointsEstimate(price) * delta - commission);
+        var estimate = Size * (GetGainLossPointsEstimate(price) * delta - commission) ?? 0.0;
 
         if (price is not null)
         {
-          GainLossMin = Math.Min(GainLossMin ?? 0.0, estimate ?? 0.0);
-          GainLossMax = Math.Max(GainLossMax ?? 0.0, estimate ?? 0.0);
+          GainLossMin = Math.Min(GainLossMin ?? estimate, estimate);
+          GainLossMax = Math.Max(GainLossMax ?? estimate, estimate);
         }
 
         return estimate;

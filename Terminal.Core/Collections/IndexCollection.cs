@@ -57,7 +57,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable collection
     /// </summary>
-    ISubject<ITransactionMessage<IEnumerable<T>>> CollectionStream { get; }
+    ISubject<ITransactionMessage<IList<T>>> CollectionStream { get; }
   }
 
   /// <summary>
@@ -84,7 +84,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable collection
     /// </summary>
-    public virtual ISubject<ITransactionMessage<IEnumerable<T>>> CollectionStream { get; protected set; }
+    public virtual ISubject<ITransactionMessage<IList<T>>> CollectionStream { get; protected set; }
 
     /// <summary>
     /// Constructor
@@ -93,7 +93,7 @@ namespace Terminal.Core.CollectionSpace
     {
       Items = new List<T>();
       ItemStream = new Subject<ITransactionMessage<T>>();
-      CollectionStream = new Subject<ITransactionMessage<IEnumerable<T>>>();
+      CollectionStream = new Subject<ITransactionMessage<IList<T>>>();
     }
 
     /// <summary>
@@ -125,7 +125,7 @@ namespace Terminal.Core.CollectionSpace
           Action = ActionEnum.Update
         };
 
-        var collectionMessage = new TransactionMessage<IEnumerable<T>>
+        var collectionMessage = new TransactionMessage<IList<T>>
         {
           Next = Items,
           Action = ActionEnum.Update
@@ -167,7 +167,7 @@ namespace Terminal.Core.CollectionSpace
         ItemStream.OnNext(itemMessage);
       }
 
-      var collectionMessage = new TransactionMessage<IEnumerable<T>>
+      var collectionMessage = new TransactionMessage<IList<T>>
       {
         Next = Items,
         Action = ActionEnum.Create
@@ -188,7 +188,7 @@ namespace Terminal.Core.CollectionSpace
         Action = ActionEnum.Delete
       };
 
-      var collectionMessage = new TransactionMessage<IEnumerable<T>>
+      var collectionMessage = new TransactionMessage<IList<T>>
       {
         Next = Items,
         Action = ActionEnum.Delete
@@ -211,7 +211,7 @@ namespace Terminal.Core.CollectionSpace
         Action = ActionEnum.Update
       };
 
-      var collectionMessage = new TransactionMessage<IEnumerable<T>>
+      var collectionMessage = new TransactionMessage<IList<T>>
       {
         Next = Items,
         Action = ActionEnum.Update

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
+using Terminal.Core.ExtensionSpace;
 using Terminal.Core.ModelSpace;
 using Terminal.Core.ServiceSpace;
 
@@ -60,6 +61,8 @@ namespace Terminal.Connector.Simulation
     public override async Task Connect()
     {
       await Disconnect();
+
+      Account.InitialBalance = Account.Balance;
 
       _streams = Account
         .Instruments
@@ -400,7 +403,7 @@ namespace Terminal.Connector.Simulation
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
 
-      if (nextPosition.Size.Equals(0) is false)
+      if (nextPosition.Size.Value.IsEqual(0) is false)
       {
         Account.ActivePositions.Add(nextPosition.Id, nextPosition);
       }

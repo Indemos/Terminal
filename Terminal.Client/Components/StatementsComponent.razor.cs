@@ -2,6 +2,7 @@ using ExScore.ModelSpace;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
 
@@ -12,13 +13,13 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Common performance statistics
     /// </summary>
-    protected IDictionary<string, IEnumerable<ScoreData>> Stats = new Dictionary<string, IEnumerable<ScoreData>>();
+    protected IDictionary<string, IList<ScoreData>> Stats = new Dictionary<string, IList<ScoreData>>();
 
     /// <summary>
     /// Update UI
     /// </summary>
     /// <param name="accounts"></param>
-    public void UpdateItems(IList<IAccountModel> accounts)
+    public Task UpdateItems(IList<IAccountModel> accounts)
     {
       var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Time).ToList();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
@@ -30,13 +31,14 @@ namespace Terminal.Client.Components
         var previous = positions.ElementAtOrDefault(i - 1);
         var currentPoint = current?.GainLoss ?? 0.0;
         var previousPoint = values.ElementAtOrDefault(i - 1).Value;
+        var setup = i == 0 ? balance : 0;
 
         values.Add(new InputData
         {
           Time = current.Time.Value,
-          Value = previousPoint + currentPoint + (i == 0 ? balance : 0),
-          Min = previousPoint + current.GainLossMin.Value,
-          Max = previousPoint + current.GainLossMax.Value,
+          Value = previousPoint + currentPoint + setup,
+          Min = previousPoint + current.GainLossMin.Value + setup,
+          Max = previousPoint + current.GainLossMax.Value + setup,
           Commission = current.Instrument.Commission.Value,
           Direction = GetDirection(current)
         });
@@ -57,7 +59,7 @@ namespace Terminal.Client.Components
 
       Stats = new Score { Values = values }.Calculate();
 
-      InvokeAsync(StateHasChanged);
+      return InvokeAsync(StateHasChanged);
     }
 
     /// <summary>

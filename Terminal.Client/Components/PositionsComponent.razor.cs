@@ -10,11 +10,6 @@ namespace Terminal.Client.Components
   public partial class PositionsComponent
   {
     /// <summary>
-    /// Syncer
-    /// </summary>
-    protected Task Updater { get; set; }
-
-    /// <summary>
     /// Table records
     /// </summary>
     protected IList<ActiveOrderRecord> Items { get; set; } = new List<ActiveOrderRecord>();
@@ -25,11 +20,6 @@ namespace Terminal.Client.Components
     /// <param name="items"></param>
     public Task UpdateItems(IDictionary<string, ITransactionPositionModel> items)
     {
-      if (Updater?.IsCompleted is false)
-      {
-        return Updater;
-      }
-
       Items = items.Values.Select(o => new ActiveOrderRecord
       {
         Time = o.Time,
@@ -42,7 +32,7 @@ namespace Terminal.Client.Components
 
       }).ToList();
 
-      return Updater = InvokeAsync(StateHasChanged);
+      return InvokeAsync(StateHasChanged);
     }
   }
 }

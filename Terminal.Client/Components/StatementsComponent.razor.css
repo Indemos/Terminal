@@ -1,9 +1,17 @@
 .card-body {
-  display: grid;
-  grid-template-columns: repeat(2, auto 1fr);
-  align-items: center;
+  display: block;
 }
 
-.cell-name, .cell-value {
+.card-row {
+  display: flex;
   border-bottom: 1px dashed #EEE;
+}
+
+.card-row:last-child {
+  border: 0;
+}
+
+.cell-name {
+  text-align: right;
+  width: 50%;
 }

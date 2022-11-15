@@ -14,19 +14,14 @@ namespace Terminal.Core.ExtensionSpace
       return input.Value;
     }
 
-    public static decimal? ToDecimal(this double? input)
+    public static decimal ToDecimal(this double input)
     {
       return (decimal) input;
     }
 
-    public static bool IsEqual(this double? input, double? num, double epsilon = double.Epsilon)
+    public static bool IsEqual(this double input, double num, double epsilon = double.Epsilon)
     {
-      return Math.Abs(input.Value - num.Value) < epsilon;
-    }
-
-    public static bool IsEqual(this double input, double? num, double epsilon = double.Epsilon)
-    {
-      return Math.Abs(input - num.Value) < epsilon;
+      return Math.Abs(input - num) < epsilon;
     }
   }
 }

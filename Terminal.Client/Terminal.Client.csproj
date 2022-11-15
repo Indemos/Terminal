@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Canvas.Views.Web" Version="1.5.9-prerelease" />
-    <PackageReference Include="ExScore" Version="1.0.9-prerelease" />
+    <PackageReference Include="ExScore" Version="1.1.1-prerelease" />
     <PackageReference Include="MudBlazor" Version="6.0.17" />
   </ItemGroup>
 

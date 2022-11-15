@@ -52,7 +52,7 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="inputs"></param>
     /// <param name="count"></param>
-    public void UpdateItems(IList<IPointModel> inputs, int count)
+    public Task UpdateItems(IList<IPointModel> inputs, int count)
     {
       foreach (var input in inputs)
       {
@@ -92,6 +92,8 @@ namespace Terminal.Client.Components
       };
 
       View.Update(domain, Shapes);
+
+      return Task.FromResult(0);
     }
 
     /// <summary>

@@ -9,8 +9,10 @@
       <div class="card-body ma-4">
         @foreach (var data in group.Value)
         {
-          <div class="cell-name py-2 pr-4 text-right">@data.Name</div>
-          <div class="cell-value py-2 mr-3">@ShowDouble(data.Value)</div>
+          <div class="card-row py-2">
+            <div class="cell-name pr-4 text-right">@data.Name</div>
+            <div class="cell-value mr-3">@ShowDouble(data.Value)</div>
+          </div>
         }
       </div>
     </div>

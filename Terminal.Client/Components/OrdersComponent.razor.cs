@@ -1,19 +1,16 @@
+using Distribution.DomainSpace;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Records;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
+using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Client.Components
 {
   public partial class OrdersComponent
   {
-    /// <summary>
-    /// Syncer
-    /// </summary>
-    protected Task Updater { get; set; }
-
     /// <summary>
     /// Table records
     /// </summary>
@@ -25,11 +22,6 @@ namespace Terminal.Client.Components
     /// <param name="items"></param>
     public Task UpdateItems(IDictionary<string, ITransactionOrderModel> items)
     {
-      if (Updater?.IsCompleted is false)
-      {
-        return Updater;
-      }
-
       Items = items.Values.Select(o => new OrderRecord
       {
         Time = o.Time,
@@ -40,7 +32,7 @@ namespace Terminal.Client.Components
 
       }).ToList();
 
-      return Updater = InvokeAsync(StateHasChanged);
+      return InvokeAsync(StateHasChanged);
     }
   }
 }
