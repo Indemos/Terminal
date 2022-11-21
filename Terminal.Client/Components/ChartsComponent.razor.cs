@@ -52,48 +52,49 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="inputs"></param>
     /// <param name="count"></param>
-    public Task UpdateItems(IList<IPointModel> inputs, int count)
+    public Task UpdateItems(IList<IPointModel> inputs, int? count = null)
     {
-      foreach (var input in inputs)
+      return Render(() =>
       {
-        var index = input.Time.Value.Ticks;
-        var previousPoint = (Shapes.ElementAtOrDefault(Shapes.Count - 2) ?? View.Item.Clone()) as IGroupShape;
-
-        if (Indices.TryGetValue(index, out IGroupShape currentPoint) is false)
+        foreach (var input in inputs)
         {
-          currentPoint = previousPoint.Clone() as IGroupShape;
-          currentPoint.X = index;
+          var index = input.Time.Value.Ticks;
+          var previousPoint = (Shapes.ElementAtOrDefault(Shapes.Count - 2) ?? View.Item.Clone()) as IGroupShape;
 
-          Shapes.Add(currentPoint);
-          Indices[index] = currentPoint;
-        }
-
-        var series = currentPoint?.Groups?.Get(Maps[input.Name])?.Groups?.Get(input.Name);
-
-        if (series is not null)
-        {
-          var currentBar = series as CandleShape;
-
-          series.Y = input?.Last ?? 0;
-
-          if (currentBar is not null)
+          if (Indices.TryGetValue(index, out IGroupShape currentPoint) is false)
           {
-            currentBar.L = input?.Group?.Low;
-            currentBar.H = input?.Group?.High;
-            currentBar.O = input?.Group?.Open;
-            currentBar.C = input?.Group?.Close;
+            currentPoint = previousPoint.Clone() as IGroupShape;
+            currentPoint.X = index;
+
+            Shapes.Add(currentPoint);
+            Indices[index] = currentPoint;
+          }
+
+          var series = currentPoint?.Groups?.Get(Maps.Get(input.Name))?.Groups?.Get(input.Name);
+
+          if (series is not null)
+          {
+            var currentBar = series as CandleShape;
+
+            series.Y = input?.Last ?? 0;
+
+            if (currentBar is not null)
+            {
+              currentBar.L = input?.Group?.Low;
+              currentBar.H = input?.Group?.High;
+              currentBar.O = input?.Group?.Open;
+              currentBar.C = input?.Group?.Close;
+            }
           }
         }
-      }
 
-      var domain = new DomainModel
-      {
-        IndexDomain = new[] { Shapes.Count - count, Shapes.Count }
-      };
+        var domain = new DomainModel
+        {
+          IndexDomain = new[] { Shapes.Count - (count ?? Shapes.Count), Shapes.Count }
+        };
 
-      View.Update(domain, Shapes);
-
-      return Task.FromResult(0);
+        View.Update(domain, Shapes);
+      });
     }
 
     /// <summary>
@@ -103,6 +104,7 @@ namespace Terminal.Client.Components
     {
       Shapes.Clear();
       Indices.Clear();
+      UpdateItems(Array.Empty<IPointModel>(), 0);
     }
 
     /// <summary>

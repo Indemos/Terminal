@@ -24,45 +24,11 @@ namespace Terminal.Client.Pages
     /// </summary>
     protected bool IsConnection { get; set; }
     protected bool IsSubscription { get; set; }
-    protected ChartsComponent DataView { get; set; }
+    protected ChartsComponent ChartsView { get; set; }
+    protected ChartsComponent ReportsView { get; set; }
     protected OrdersComponent OrdersView { get; set; }
     protected PositionsComponent PositionsView { get; set; }
     protected StatementsComponent StatementsView { get; set; }
-
-    /// <summary>
-    /// Render
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <returns></returns>
-    protected override async Task OnAfterRenderAsync(bool setup)
-    {
-      if (setup)
-      {
-        await DataView.Create(new GroupShape
-        {
-          Groups = new Dictionary<string, IGroupShape>
-          {
-            ["Prices"] = new GroupShape
-            {
-              Groups = new Dictionary<string, IGroupShape>
-              {
-                ["GOOG"] = new LineShape(),
-                ["GOOGL"] = new LineShape()
-              }
-            },
-            ["Performance"] = new GroupShape
-            {
-              Groups = new Dictionary<string, IGroupShape>
-              {
-                ["Balance"] = new AreaShape()
-              }
-            }
-          }
-        });
-      }
-
-      await base.OnAfterRenderAsync(setup);
-    }
 
     protected async Task OnConnect()
     {
@@ -82,8 +48,8 @@ namespace Terminal.Client.Pages
 
       _adapter?.Disconnect();
 
-      DataView.Clear();
-      DataView.UpdateItems(Array.Empty<IPointModel>(), 0);
+      ChartsView.Clear();
+      ReportsView.Clear();
     }
 
     protected async Task OnSubscribe()
@@ -116,6 +82,48 @@ namespace Terminal.Client.Pages
     }
 
     /// <summary>
+    /// Render
+    /// </summary>
+    /// <param name="setup"></param>
+    /// <returns></returns>
+    protected override async Task OnAfterRenderAsync(bool setup)
+    {
+      if (setup)
+      {
+        await ChartsView.Create(new GroupShape
+        {
+          Groups = new Dictionary<string, IGroupShape>
+          {
+            ["Prices"] = new GroupShape
+            {
+              Groups = new Dictionary<string, IGroupShape>
+              {
+                ["GOOG"] = new LineShape(),
+                ["GOOGL"] = new LineShape()
+              }
+            }
+          }
+        });
+
+        await ReportsView.Create(new GroupShape
+        {
+          Groups = new Dictionary<string, IGroupShape>
+          {
+            ["Performance"] = new GroupShape
+            {
+              Groups = new Dictionary<string, IGroupShape>
+              {
+                ["Balance"] = new AreaShape()
+              }
+            }
+          }
+        });
+      }
+
+      await base.OnAfterRenderAsync(setup);
+    }
+
+    /// <summary>
     /// Strategy
     /// </summary>
     const string _assetX = "GOOG";
@@ -143,7 +151,7 @@ namespace Terminal.Client.Pages
 
       _adapter = new Adapter
       {
-        Speed = 100,
+        Speed = 1,
         Name = _account,
         Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"
       };
@@ -195,14 +203,19 @@ namespace Terminal.Client.Pages
         }
       }
 
-      var points = new[]
+      var chartPoints = new[]
       {
         new PointModel { Time = point.Time, Name = _assetX, Last = indX.Last },
-        new PointModel { Time = point.Time, Name = _assetY, Last = indY.Last },
+        new PointModel { Time = point.Time, Name = _assetY, Last = indY.Last }
+      };
+
+      var reportPoints = new[]
+      {
         new PointModel { Time = point.Time, Name = _performanceIndicator.Name, Last = performance.Last }
       };
 
-      DataView.UpdateItems(points, 100);
+      ChartsView.UpdateItems(chartPoints, 100);
+      ReportsView.UpdateItems(reportPoints);
       OrdersView.UpdateItems(account.ActiveOrders);
       PositionsView.UpdateItems(account.ActivePositions);
     }
