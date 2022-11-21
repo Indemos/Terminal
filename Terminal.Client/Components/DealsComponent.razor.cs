@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Records;
+using Terminal.Core.CollectionSpace;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
 
@@ -18,7 +19,7 @@ namespace Terminal.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public Task UpdateItems(IList<ITransactionPositionModel> items)
+    public Task UpdateItems(IIndexCollection<ITransactionPositionModel> items)
     {
       return Render(() =>
       {
@@ -29,8 +30,8 @@ namespace Terminal.Client.Components
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.Size ?? 0,
           OpenPrice = o.OpenPrice ?? 0,
-          ClosePrice = o.ClosePriceEstimate ?? 0,
-          Gain = o.GainLossAverageEstimate ?? 0
+          ClosePrice = o.ClosePrice ?? 0,
+          Gain = o.GainLoss ?? 0
 
         }).ToList();
       });

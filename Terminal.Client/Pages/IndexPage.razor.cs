@@ -26,6 +26,7 @@ namespace Terminal.Client.Pages
     protected bool IsSubscription { get; set; }
     protected ChartsComponent ChartsView { get; set; }
     protected ChartsComponent ReportsView { get; set; }
+    protected DealsComponent DealsView { get; set; }
     protected OrdersComponent OrdersView { get; set; }
     protected PositionsComponent PositionsView { get; set; }
     protected StatementsComponent StatementsView { get; set; }
@@ -216,6 +217,7 @@ namespace Terminal.Client.Pages
 
       ChartsView.UpdateItems(chartPoints, 100);
       ReportsView.UpdateItems(reportPoints);
+      DealsView.UpdateItems(account.Positions);
       OrdersView.UpdateItems(account.ActiveOrders);
       PositionsView.UpdateItems(account.ActivePositions);
     }

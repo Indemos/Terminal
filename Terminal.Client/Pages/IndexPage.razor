@@ -69,6 +69,18 @@
       <TitleContent>
         <div class="d-flex">
           <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudText>Deals</MudText>
+        </div>
+      </TitleContent>
+      <ChildContent>
+        <DealsComponent @ref="DealsView" />
+      </ChildContent>
+    </MudExpansionPanel>
+
+    <MudExpansionPanel>
+      <TitleContent>
+        <div class="d-flex">
+          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Statements</MudText>
           <MudText>
             <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OnOpenStatements" class="updater ml-4">Update</a>
