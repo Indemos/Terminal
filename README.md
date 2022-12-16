@@ -25,3 +25,7 @@ In order to create connector for preferable broker, implement interface `IConnec
 # Trading Strategies
 
 [Examples](https://github.com/Indemos/Terminal/tree/main/Terminal.Client/Pages) of simple trading strategies can be found in `Client` catalog.
+
+# Preview 
+
+![](Screens/Preview.gif)

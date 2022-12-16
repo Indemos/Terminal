@@ -16,12 +16,12 @@ namespace Terminal.Client.Components
     /// </summary>
     protected Task Render(Action action)
     {
+      action();
+
       if (Updater?.IsCompleted is false)
       {
         return Updater;
       }
-
-      action();
 
       return Updater = InvokeAsync(StateHasChanged);
     }

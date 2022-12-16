@@ -109,6 +109,11 @@ namespace Terminal.Connector.Simulation
         }
       });
 
+      var balanceStream = Account.Positions.ItemStream.Subscribe(message =>
+      {
+        Account.Balance += message.Next.GainLoss;
+      });
+
       var span = TimeSpan.FromMilliseconds(Speed);
       var scene = InstanceService<Scene>.Instance;
       var points = new ConcurrentDictionary<string, IPointModel>();
@@ -124,6 +129,7 @@ namespace Terminal.Connector.Simulation
           }
         });
 
+      _subscriptions.Add(balanceStream);
       _subscriptions.Add(orderStream);
       _subscriptions.Add(dataStream);
       _subscriptions.Add(interval);
@@ -143,29 +149,7 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Dispose
     /// </summary>
-    public override void Dispose()
-    {
-      Disconnect();
-    }
-
-    /// <summary>
-    /// Update points
-    /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    protected virtual IPointModel UpdatePoints(IPointModel point)
-    {
-      var instrument = Account.Instruments[point.Name];
-
-      point.Account = Account;
-      point.Instrument = instrument;
-      point.TimeFrame = instrument.TimeFrame;
-
-      instrument.Points.Add(point);
-      instrument.PointGroups.Add(point, instrument.TimeFrame);
-
-      return point;
-    }
+    public override void Dispose() => Disconnect();
 
     /// <summary>
     /// Create order and depending on the account, send it to the processing queue
@@ -432,35 +416,6 @@ namespace Terminal.Connector.Simulation
       nextPosition.Time = nextOrder.Time;
 
       return nextPosition;
-    }
-
-    /// <summary>
-    /// Define open price based on order
-    /// </summary>
-    /// <param name="nextOrder"></param>
-    protected virtual IList<ITransactionOrderModel> GetOpenPrices(ITransactionOrderModel nextOrder)
-    {
-      var openPrice = nextOrder.Price;
-      var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
-
-      if (openPrice is null)
-      {
-        switch (nextOrder.Side)
-        {
-          case OrderSideEnum.Buy: openPrice = pointModel.Ask; break;
-          case OrderSideEnum.Sell: openPrice = pointModel.Bid; break;
-        }
-      }
-
-      return new List<ITransactionOrderModel>
-      {
-        new TransactionOrderModel
-        {
-          Price = openPrice,
-          Size = nextOrder.Size,
-          Time = pointModel.Time
-        }
-      };
     }
 
     /// <summary>

@@ -99,8 +99,7 @@ namespace Terminal.Client.Pages
             {
               Groups = new Dictionary<string, IGroupShape>
               {
-                ["GOOG"] = new LineShape(),
-                ["GOOGL"] = new LineShape()
+                ["Delta"] = new BarShape()
               }
             }
           }
@@ -127,13 +126,11 @@ namespace Terminal.Client.Pages
     /// <summary>
     /// Strategy
     /// </summary>
-    const string _assetX = "GOOG";
-    const string _assetY = "GOOGL";
+    const string _assetX = "GOOGL";
+    const string _assetY = "GOOG";
     const string _account = "Simulation";
 
     Adapter _adapter = null;
-    ScaleIndicator _scaleIndicatorX = null;
-    ScaleIndicator _scaleIndicatorY = null;
     PerformanceIndicator _performanceIndicator = null;
 
     protected void Setup()
@@ -158,8 +155,6 @@ namespace Terminal.Client.Pages
       };
 
       _performanceIndicator = new PerformanceIndicator { Name = "Balance" };
-      _scaleIndicatorX = new ScaleIndicator { Max = 1, Min = -1, Interval = 1, Name = "Indicators : " + _assetX };
-      _scaleIndicatorY = new ScaleIndicator { Max = 1, Min = -1, Interval = 1, Name = "Indicators : " + _assetY };
       _adapter.Account = account;
 
       account
@@ -178,18 +173,20 @@ namespace Terminal.Client.Pages
       var instrumentY = point.Account.Instruments[_assetY];
       var seriesX = instrumentX.PointGroups;
       var seriesY = instrumentY.PointGroups;
-      var indX = _scaleIndicatorX.Calculate(seriesX);
-      var indY = _scaleIndicatorY.Calculate(seriesY);
-      var performance = _performanceIndicator.Calculate(new[] { account });
 
       if (seriesX.Any() is false || seriesY.Any() is false)
       {
         return;
       }
 
+      var priceX = seriesX.LastOrDefault().Last;
+      var priceY = seriesY.LastOrDefault().Last;
+      var delta = Math.Abs((priceX - priceY).Value);
+      var performance = _performanceIndicator.Calculate(new[] { account });
+
       if (account.ActivePositions.Any())
       {
-        if (Math.Abs(indX.Last.Value - indY.Last.Value) <= 0.1)
+        if (Math.Abs(delta) <= 0.1)
         {
           ClosePositions();
         }
@@ -199,15 +196,14 @@ namespace Terminal.Client.Pages
       {
         switch (true)
         {
-          case true when indX.Last.Value - indY.Last.Value >= 0.5: OpenPositions(instrumentY, instrumentX); break;
-          case true when indY.Last.Value - indX.Last.Value >= 0.5: OpenPositions(instrumentX, instrumentY); break;
+          case true when priceX - priceY >= 5: OpenPositions(instrumentY, instrumentX); break;
+          case true when priceY - priceX >= 5: OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
-      var chartPoints = new[]
+      var chartPoints = new PointModel[]
       {
-        new PointModel { Time = point.Time, Name = _assetX, Last = indX.Last },
-        new PointModel { Time = point.Time, Name = _assetY, Last = indY.Last }
+        new PointModel { Time = point.Time, Name = "Delta", Last = delta }
       };
 
       var reportPoints = new[]

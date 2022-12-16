@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,36 +13,13 @@ namespace Terminal.Core.CollectionSpace
   /// Definition
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public interface IIndexCollection<T> : IEnumerable<T> where T : IBaseModel
+  public interface IIndexCollection<T> : IList<T> where T : IBaseModel
   {
-    /// <summary>
-    /// Get item by index
-    /// </summary>
-    /// <param name="index"></param>
-    /// <returns></returns>
-    T this[int index] { get; set; }
-
-    /// <summary>
-    /// Count
-    /// </summary>
-    int Count { get; }
-
-    /// <summary>
-    /// Clear collection
-    /// </summary>
-    void Clear();
-
     /// <summary>
     /// Add to the collection
     /// </summary>
     /// <param name="items"></param>
     void Add(params T[] items);
-
-    /// <summary>
-    /// Remove from the collection
-    /// </summary>
-    /// <param name="item"></param>
-    void Remove(T item);
 
     /// <summary>
     /// Update item in the collection
@@ -57,7 +35,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable collection
     /// </summary>
-    ISubject<ITransactionMessage<IList<T>>> CollectionStream { get; }
+    ISubject<ITransactionMessage<IList<T>>> ItemsStream { get; }
   }
 
   /// <summary>
@@ -67,9 +45,14 @@ namespace Terminal.Core.CollectionSpace
   public class IndexCollection<T> : IIndexCollection<T> where T : IBaseModel
   {
     /// <summary>
+    /// Immutable
+    /// </summary>
+    public virtual bool IsReadOnly => false;
+
+    /// <summary>
     /// Count
     /// </summary>
-    public virtual int Count => Items?.Count ?? 0;
+    public virtual int Count => Items.Count;
 
     /// <summary>
     /// Items
@@ -84,7 +67,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable collection
     /// </summary>
-    public virtual ISubject<ITransactionMessage<IList<T>>> CollectionStream { get; protected set; }
+    public virtual ISubject<ITransactionMessage<IList<T>>> ItemsStream { get; protected set; }
 
     /// <summary>
     /// Constructor
@@ -93,13 +76,27 @@ namespace Terminal.Core.CollectionSpace
     {
       Items = new List<T>();
       ItemStream = new Subject<ITransactionMessage<T>>();
-      CollectionStream = new Subject<ITransactionMessage<IList<T>>>();
+      ItemsStream = new Subject<ITransactionMessage<IList<T>>>();
     }
 
     /// <summary>
     /// Clear collection
     /// </summary>
     public virtual void Clear() => Items.Clear();
+
+    /// <summary>
+    /// Search
+    /// </summary>
+    /// <param name="item"></param>
+    /// <returns></returns>
+    public virtual int IndexOf(T item) => Items.IndexOf(item);
+
+    /// <summary>
+    /// Search
+    /// </summary>
+    /// <param name="item"></param>
+    /// <returns></returns>
+    public virtual bool Contains(T item) => Items.Contains(item);
 
     /// <summary>
     /// Get enumerator
@@ -114,31 +111,15 @@ namespace Terminal.Core.CollectionSpace
     /// <returns></returns>
     public virtual T this[int index]
     {
-      get => Items[index];
+      get => Items.ElementAtOrDefault(index);
       set
       {
-        var item = value;
+        var previous = Items[index];
 
-        var itemMessage = new TransactionMessage<T>
-        {
-          Next = item,
-          Action = ActionEnum.Update
-        };
+        Items[index] = value;
 
-        var collectionMessage = new TransactionMessage<IList<T>>
-        {
-          Next = Items,
-          Action = ActionEnum.Update
-        };
-
-        if (Items.Any())
-        {
-          itemMessage.Previous = Items[index];
-        }
-
-        Items[index] = item;
-        ItemStream.OnNext(itemMessage);
-        CollectionStream.OnNext(collectionMessage);
+        SendItemMessage(value, previous, ActionEnum.Update);
+        SendItemsMessage(ActionEnum.Update);
       }
     }
 
@@ -148,56 +129,61 @@ namespace Terminal.Core.CollectionSpace
     /// <param name="items"></param>
     public virtual void Add(params T[] items)
     {
-      foreach (var dataItem in items)
-      {
-        var item = dataItem;
+      items.ForEach(o => Append(o));
+      SendItemsMessage(ActionEnum.Create);
+    }
 
-        var itemMessage = new TransactionMessage<T>
-        {
-          Next = item,
-          Action = ActionEnum.Create
-        };
+    /// <summary>
+    /// Add
+    /// </summary>
+    /// <param name="item"></param>
+    public virtual void Add(T item)
+    {
+      Append(item);
+      SendItemsMessage(ActionEnum.Create);
+    }
 
-        if (Items.Count > 0)
-        {
-          itemMessage.Previous = Items[Items.Count - 1];
-        }
+    /// <summary>
+    /// Copy
+    /// </summary>
+    /// <param name="items"></param>
+    /// <param name="index"></param>
+    public virtual void CopyTo(T[] items, int index)
+    {
+      Items.CopyTo(items, index);
+      SendItemsMessage(ActionEnum.Update);
+    }
 
-        Items.Add(item);
-        ItemStream.OnNext(itemMessage);
-      }
-
-      var collectionMessage = new TransactionMessage<IList<T>>
-      {
-        Next = Items,
-        Action = ActionEnum.Create
-      };
-
-      CollectionStream.OnNext(collectionMessage);
+    /// <summary>
+    /// Insert
+    /// </summary>
+    /// <param name="index"></param>
+    /// <param name="item"></param>
+    public virtual void Insert(int index, T item)
+    {
+      Items.Insert(index, item);
+      SendItemsMessage(ActionEnum.Create);
     }
 
     /// <summary>
     /// Remove from the collection
     /// </summary>
     /// <param name="item"></param>
-    public virtual void Remove(T item)
+    public virtual bool Remove(T item)
     {
-      var itemMessage = new TransactionMessage<T>
-      {
-        Previous = item,
-        Action = ActionEnum.Delete
-      };
+      var response = Items.Remove(item);
 
-      var collectionMessage = new TransactionMessage<IList<T>>
-      {
-        Next = Items,
-        Action = ActionEnum.Delete
-      };
+      SendItemMessage(default, item, ActionEnum.Delete);
+      SendItemsMessage(ActionEnum.Delete);
 
-      Items.Remove(item);
-      ItemStream.OnNext(itemMessage);
-      CollectionStream.OnNext(collectionMessage);
+      return response;
     }
+
+    /// <summary>
+    /// Remove at index
+    /// </summary>
+    /// <param name="index"></param>
+    public virtual void RemoveAt(int index) => Remove(Items[index]);
 
     /// <summary>
     /// Update item in the collection
@@ -205,20 +191,61 @@ namespace Terminal.Core.CollectionSpace
     /// <param name="item"></param>
     public virtual void Update(T item)
     {
+      var index = Items.IndexOf(item);
+
+      if (index >= 0)
+      {
+        var previous = Items[index];
+
+        Items[index] = item;
+        SendItemMessage(item, previous, ActionEnum.Update);
+        SendItemsMessage(ActionEnum.Update);
+      }
+    }
+
+    /// <summary>
+    /// Internal append
+    /// </summary>
+    /// <param name="item"></param>
+    protected virtual void Append(T item)
+    {
+      var previous = Items.LastOrDefault();
+
+      Items.Add(item);
+      SendItemMessage(item, previous, ActionEnum.Create);
+    }
+
+    /// <summary>
+    /// Send item message
+    /// </summary>
+    /// <param name="next"></param>
+    /// <param name="previous"></param>
+    /// <param name="action"></param>
+    protected void SendItemMessage(T next, T previous, ActionEnum action)
+    {
       var itemMessage = new TransactionMessage<T>
       {
-        Next = item,
-        Action = ActionEnum.Update
-      };
-
-      var collectionMessage = new TransactionMessage<IList<T>>
-      {
-        Next = Items,
-        Action = ActionEnum.Update
+        Next = next,
+        Previous = previous,
+        Action = action
       };
 
       ItemStream.OnNext(itemMessage);
-      CollectionStream.OnNext(collectionMessage);
+    }
+
+    /// <summary>
+    /// Send collection message
+    /// </summary>
+    /// <param name="action"></param>
+    protected void SendItemsMessage(ActionEnum action)
+    {
+      var collectionMessage = new TransactionMessage<IList<T>>
+      {
+        Next = Items,
+        Action = action
+      };
+
+      ItemsStream.OnNext(collectionMessage);
     }
 
     /// <summary>

@@ -225,24 +225,23 @@ namespace Terminal.Core.ModelSpace
         .Validate(Instrument)
         .Errors;
 
-      if (instrumentErrors.Any() is false)
+      if (instrumentErrors.Any())
       {
-        var delta = Instrument.StepValue / Instrument.StepSize;
-        var commission = Instrument.Commission * OpenPrices.Count * 2;
-        var estimate = Size * (GetGainLossPointsEstimate(price) * delta - commission) ?? 0.0;
-
-        if (price is not null)
-        {
-          GainLossMin = Math.Min(GainLossMin ?? estimate, estimate);
-          GainLossMax = Math.Max(GainLossMax ?? estimate, estimate);
-        }
-
-        return estimate;
+        InstanceService<LogService>.Instance.Log.Error("Incorrect instrument");
+        return null;
       }
 
-      InstanceService<LogService>.Instance.Log.Error("Incorrect instrument");
+      var step = Instrument.StepValue / Instrument.StepSize;
+      var commission = Instrument.Commission * OpenPrices.Count * 2;
+      var estimate = Size * (GetGainLossPointsEstimate(price) * step - commission) ?? 0.0;
 
-      return null;
+      if (price is not null)
+      {
+        GainLossMin = Math.Min(GainLossMin ?? estimate, estimate);
+        GainLossMax = Math.Max(GainLossMax ?? estimate, estimate);
+      }
+
+      return estimate;
     }
 
     /// <summary>

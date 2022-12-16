@@ -228,5 +228,54 @@ namespace Terminal.Core.ModelSpace
 
       return response;
     }
+
+    /// <summary>
+    /// Define open price based on order
+    /// </summary>
+    /// <param name="nextOrder"></param>
+    protected virtual IList<ITransactionOrderModel> GetOpenPrices(ITransactionOrderModel nextOrder)
+    {
+      var openPrice = nextOrder.Price;
+      var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
+
+      if (openPrice is null)
+      {
+        switch (nextOrder.Side)
+        {
+          case OrderSideEnum.Buy: openPrice = pointModel.Ask; break;
+          case OrderSideEnum.Sell: openPrice = pointModel.Bid; break;
+        }
+      }
+
+      return new List<ITransactionOrderModel>
+      {
+        new TransactionOrderModel
+        {
+          Price = openPrice,
+          Size = nextOrder.Size,
+          Time = pointModel.Time
+        }
+      };
+    }
+
+    /// <summary>
+    /// Update points
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual IPointModel UpdatePoints(IPointModel point)
+    {
+      var instrument = Account.Instruments[point.Name];
+      var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
+
+      point.Account = Account;
+      point.Instrument = instrument;
+      point.TimeFrame = instrument.TimeFrame;
+
+      instrument.Points.Add(point);
+      instrument.PointGroups.Add(point, instrument.TimeFrame);
+
+      return point;
+    }
   }
 }

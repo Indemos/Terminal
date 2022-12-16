@@ -25,7 +25,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable items changes
     /// </summary>
-    ISubject<ITransactionMessage<IDictionary<TKey, TValue>>> CollectionStream { get; }
+    ISubject<ITransactionMessage<IDictionary<TKey, TValue>>> ItemsStream { get; }
   }
 
   /// <summary>
@@ -48,7 +48,7 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Observable items changes
     /// </summary>
-    public virtual ISubject<ITransactionMessage<IDictionary<TKey, TValue>>> CollectionStream { get; protected set; }
+    public virtual ISubject<ITransactionMessage<IDictionary<TKey, TValue>>> ItemsStream { get; protected set; }
 
     /// <summary>
     /// Constructor
@@ -57,7 +57,7 @@ namespace Terminal.Core.CollectionSpace
     {
       Items = new ConcurrentDictionary<TKey, TValue>();
       ItemStream = new Subject<ITransactionMessage<TValue>>();
-      CollectionStream = new Subject<ITransactionMessage<IDictionary<TKey, TValue>>>();
+      ItemsStream = new Subject<ITransactionMessage<IDictionary<TKey, TValue>>>();
     }
 
     /// <summary>
@@ -127,7 +127,7 @@ namespace Terminal.Core.CollectionSpace
 
       Items[index] = item;
       ItemStream.OnNext(itemMessage);
-      CollectionStream.OnNext(itemsMessage);
+      ItemsStream.OnNext(itemsMessage);
     }
 
     /// <summary>
@@ -137,17 +137,17 @@ namespace Terminal.Core.CollectionSpace
     {
       var itemMessage = new TransactionMessage<TValue>
       {
-        Action = ActionEnum.Clear
+        Action = ActionEnum.Delete
       };
 
       var itemsMessage = new TransactionMessage<IDictionary<TKey, TValue>>
       {
-        Action = ActionEnum.Clear
+        Action = ActionEnum.Delete
       };
 
       Items.Clear();
       ItemStream.OnNext(itemMessage);
-      CollectionStream.OnNext(itemsMessage);
+      ItemsStream.OnNext(itemsMessage);
     }
 
     /// <summary>
@@ -179,7 +179,7 @@ namespace Terminal.Core.CollectionSpace
       response = Items.Remove(index);
 
       ItemStream.OnNext(itemMessage);
-      CollectionStream.OnNext(itemsMessage);
+      ItemsStream.OnNext(itemsMessage);
 
       return response;
     }

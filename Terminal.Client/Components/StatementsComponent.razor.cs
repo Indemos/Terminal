@@ -21,39 +21,34 @@ namespace Terminal.Client.Components
     /// <param name="accounts"></param>
     public Task UpdateItems(IList<IAccountModel> accounts)
     {
+      var values = new List<InputData>();
       var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Time).ToList();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
-      var values = new List<InputData>();
 
-      for (var i = 0; i < positions.Count; i++)
+      if (positions.Any())
       {
-        var current = positions.ElementAtOrDefault(i);
-        var previous = positions.ElementAtOrDefault(i - 1);
-        var currentPoint = current?.GainLoss ?? 0.0;
-        var previousPoint = values.ElementAtOrDefault(i - 1).Value;
-        var setup = i == 0 ? balance : 0;
-
         values.Add(new InputData
         {
-          Time = current.Time.Value,
-          Value = previousPoint + currentPoint + setup,
-          Min = previousPoint + current.GainLossMin.Value + setup,
-          Max = previousPoint + current.GainLossMax.Value + setup,
-          Commission = current.Instrument.Commission.Value,
-          Direction = GetDirection(current)
+          Time = positions.First().Time.Value,
+          Value = balance,
+          Min = balance,
+          Max = balance
         });
       }
 
-      if (values.Any())
+      for (var i = 0; i < positions.Count; i++)
       {
-        values.Insert(0, new InputData
+        var position = positions[i];
+        var previousInput = values[i].Value;
+
+        values.Add(new InputData
         {
-          Min = balance,
-          Max = balance,
-          Value = balance,
-          Time = values.First().Time,
-          Commission = 0.0,
-          Direction = 0
+          Time = position.Time.Value,
+          Value = previousInput + position.GainLoss.Value,
+          Min = previousInput + position.GainLossMin.Value,
+          Max = previousInput + position.GainLossMax.Value,
+          Commission = position.Instrument.Commission.Value * 2,
+          Direction = GetDirection(position)
         });
       }
 
