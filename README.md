@@ -28,4 +28,4 @@ In order to create connector for preferable broker, implement interface `IConnec
 
 # Preview 
 
-![](Screens/Preview.gif)
+![](Screens/Preview.png)
