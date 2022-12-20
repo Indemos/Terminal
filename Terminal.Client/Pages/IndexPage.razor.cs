@@ -1,4 +1,3 @@
-using Canvas.Core.ModelSpace;
 using Canvas.Core.ShapeSpace;
 using Distribution.DomainSpace;
 using System;

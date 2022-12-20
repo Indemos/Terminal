@@ -123,7 +123,7 @@ namespace Terminal.Client.Components
     /// </summary>
     public void Dispose()
     {
-      View?.Dispose();
+      View?.DisposeAsync();
     }
   }
 }
