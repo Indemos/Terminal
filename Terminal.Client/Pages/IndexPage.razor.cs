@@ -1,5 +1,4 @@
 using Canvas.Core.ShapeSpace;
-using Distribution.DomainSpace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
@@ -14,7 +13,6 @@ using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
-using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Client.Pages
 {
@@ -23,78 +21,20 @@ namespace Terminal.Client.Pages
     [Inject] IConfiguration Configuration { get; set; }
 
     /// <summary>
-    /// Controls
+    /// Strategy
     /// </summary>
-    protected bool IsConnection { get; set; }
-    protected bool IsSubscription { get; set; }
-    protected ChartsComponent ChartsView { get; set; }
-    protected ChartsComponent ReportsView { get; set; }
-    protected DealsComponent DealsView { get; set; }
-    protected OrdersComponent OrdersView { get; set; }
-    protected PositionsComponent PositionsView { get; set; }
-    protected StatementsComponent StatementsView { get; set; }
+    const string _assetX = "GOOGL";
+    const string _assetY = "GOOG";
+    const string _account = "Simulation";
 
-    protected async Task OnConnect()
-    {
-      OnDisconnect();
-      Setup();
+    protected virtual PageComponent View { get; set; }
+    protected virtual PerformanceIndicator Performer { get; set; }
 
-      IsConnection = true;
-      IsSubscription = true;
-
-      await _adapter.Connect();
-    }
-
-    protected void OnDisconnect()
-    {
-      IsConnection = false;
-      IsSubscription = false;
-
-      _adapter?.Disconnect();
-
-      ChartsView.Clear();
-      ReportsView.Clear();
-    }
-
-    protected async Task OnSubscribe()
-    {
-      IsSubscription = true;
-
-      await _adapter.Subscribe();
-    }
-
-    protected void OnUnsubscribe()
-    {
-      IsSubscription = false;
-
-      _adapter.Unsubscribe();
-    }
-
-    protected void OnOpenDeals()
-    {
-    }
-
-    protected void OnOpenStatements()
-    {
-      InstanceService<Scene>.Instance.Scheduler.Send(() =>
-      {
-        if (_adapter?.Account is not null)
-        {
-          StatementsView.UpdateItems(new[] { _adapter.Account });
-        }
-      });
-    }
-
-    /// <summary>
-    /// Render
-    /// </summary>
-    /// <param name="setup"></param>
-    /// <returns></returns>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
-        await ChartsView.Create(new GroupShape
+        await View.ChartsView.Create(new GroupShape
         {
           Groups = new Dictionary<string, IGroupShape>
           {
@@ -108,7 +48,7 @@ namespace Terminal.Client.Pages
           }
         });
 
-        await ReportsView.Create(new GroupShape
+        await View.ReportsView.Create(new GroupShape
         {
           Groups = new Dictionary<string, IGroupShape>
           {
@@ -121,54 +61,44 @@ namespace Terminal.Client.Pages
             }
           }
         });
+
+        View.Setup = () =>
+        {
+          var span = TimeSpan.FromMinutes(1);
+          var account = new AccountModel
+          {
+            Balance = 50000,
+            Name = _account,
+            Instruments = new NameCollection<string, IInstrumentModel>
+            {
+              [_assetX] = new InstrumentModel { Name = _assetX, TimeFrame = span },
+              [_assetY] = new InstrumentModel { Name = _assetY, TimeFrame = span }
+            }
+          };
+
+          View.Gateway = new Adapter
+          {
+            Speed = 1,
+            Name = _account,
+            Source = Configuration["Inputs:Source"]
+          };
+
+          Performer = new PerformanceIndicator { Name = "Balance" };
+          View.Gateway.Account = account;
+
+          account
+            .Instruments
+            .Values
+            .Select(o => o.PointGroups.ItemStream)
+            .Merge()
+            .Subscribe(OnData);
+        };
       }
 
       await base.OnAfterRenderAsync(setup);
     }
 
-    /// <summary>
-    /// Strategy
-    /// </summary>
-    const string _assetX = "GOOGL";
-    const string _assetY = "GOOG";
-    const string _account = "Simulation";
-
-    Adapter _adapter = null;
-    PerformanceIndicator _performanceIndicator = null;
-
-    protected void Setup()
-    {
-      var span = TimeSpan.FromMinutes(1);
-      var account = new AccountModel
-      {
-        Balance = 50000,
-        Name = _account,
-        Instruments = new NameCollection<string, IInstrumentModel>
-        {
-          [_assetX] = new InstrumentModel { Name = _assetX, TimeFrame = span },
-          [_assetY] = new InstrumentModel { Name = _assetY, TimeFrame = span }
-        }
-      };
-
-      _adapter = new Adapter
-      {
-        Speed = 1,
-        Name = _account,
-        Source = Configuration["Inputs:Source"]
-      };
-
-      _performanceIndicator = new PerformanceIndicator { Name = "Balance" };
-      _adapter.Account = account;
-
-      account
-        .Instruments
-        .Values
-        .Select(o => o.PointGroups.ItemStream)
-        .Merge()
-        .Subscribe(OnData);
-    }
-
-    protected void OnData(ITransactionMessage<IPointModel> message)
+    private void OnData(ITransactionMessage<IPointModel> message)
     {
       var point = message.Next;
       var account = point.Account;
@@ -185,7 +115,7 @@ namespace Terminal.Client.Pages
       var priceX = seriesX.LastOrDefault().Last;
       var priceY = seriesY.LastOrDefault().Last;
       var delta = Math.Abs((priceX - priceY).Value);
-      var performance = _performanceIndicator.Calculate(new[] { account });
+      var performance = Performer.Calculate(new[] { account });
 
       if (account.ActivePositions.Any())
       {
@@ -211,19 +141,19 @@ namespace Terminal.Client.Pages
 
       var reportPoints = new[]
       {
-        new PointModel { Time = point.Time, Name = _performanceIndicator.Name, Last = performance.Last }
+        new PointModel { Time = point.Time, Name = Performer.Name, Last = performance.Last }
       };
 
-      ChartsView.UpdateItems(chartPoints, 100);
-      ReportsView.UpdateItems(reportPoints);
-      DealsView.UpdateItems(account.Positions);
-      OrdersView.UpdateItems(account.ActiveOrders);
-      PositionsView.UpdateItems(account.ActivePositions);
+      View.ChartsView.UpdateItems(chartPoints, 100);
+      View.ReportsView.UpdateItems(reportPoints);
+      View.DealsView.UpdateItems(account.Positions);
+      View.OrdersView.UpdateItems(account.ActiveOrders);
+      View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
-    protected void OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
+    private void OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
     {
-      _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
@@ -235,7 +165,7 @@ namespace Terminal.Client.Pages
         }
       });
 
-      _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
@@ -248,11 +178,11 @@ namespace Terminal.Client.Pages
       });
     }
 
-    protected void ClosePositions()
+    private void ClosePositions()
     {
-      foreach (var position in _adapter.Account.ActivePositions.Values)
+      foreach (var position in View.Gateway.Account.ActivePositions.Values)
       {
-        _adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+        View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
         {
           Action = ActionEnum.Create,
           Next = new TransactionOrderModel
@@ -265,6 +195,5 @@ namespace Terminal.Client.Pages
         });
       }
     }
-
   }
 }
