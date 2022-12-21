@@ -13,9 +13,6 @@ using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Connector.Simulation
 {
-  /// <summary>
-  /// Implementation
-  /// </summary>
   public class Adapter : ConnectorModel, IDisposable
   {
     /// <summary>
@@ -97,15 +94,15 @@ namespace Terminal.Connector.Simulation
         .Instruments
         .Select(o => o.Value.Points.ItemStream)
         .Merge()
-        .Subscribe(async message => await UpdatePendingOrders());
+        .Subscribe(message => UpdatePendingOrders());
 
-      var orderStream = OrderStream.Subscribe(async message =>
+      var orderStream = OrderStream.Subscribe(message =>
       {
         switch (message.Action)
         {
-          case ActionEnum.Create: await CreateOrders(message.Next); break;
-          case ActionEnum.Update: await UpdateOrders(message.Next); break;
-          case ActionEnum.Delete: await DeleteOrders(message.Next); break;
+          case ActionEnum.Create: CreateOrders(message.Next); break;
+          case ActionEnum.Update: UpdateOrders(message.Next); break;
+          case ActionEnum.Delete: DeleteOrders(message.Next); break;
         }
       });
 
@@ -147,19 +144,14 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
-    /// Dispose
-    /// </summary>
-    public override void Dispose() => Disconnect();
-
-    /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual async Task<IList<ITransactionOrderModel>> CreateOrders(params ITransactionOrderModel[] orders)
+    protected virtual void CreateOrders(params ITransactionOrderModel[] orders)
     {
       if (ValidateOrders(orders) is false)
       {
-        return null;
+        return;
       }
 
       foreach (var nextOrder in orders)
@@ -168,7 +160,7 @@ namespace Terminal.Connector.Simulation
         {
           case OrderCategoryEnum.Market:
 
-            await CreatePosition(nextOrder);
+            CreatePosition(nextOrder);
             break;
 
           case OrderCategoryEnum.Stop:
@@ -188,15 +180,13 @@ namespace Terminal.Connector.Simulation
             break;
         }
       }
-
-      return orders;
     }
 
     /// <summary>
     /// Update order implementation
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual Task<ITransactionOrderModel[]> UpdateOrders(params ITransactionOrderModel[] orders)
+    protected virtual ITransactionOrderModel[] UpdateOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
@@ -211,14 +201,14 @@ namespace Terminal.Connector.Simulation
         }
       }
 
-      return Task.FromResult(orders);
+      return orders;
     }
 
     /// <summary>
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual async Task<ITransactionOrderModel[]> DeleteOrders(params ITransactionOrderModel[] orders)
+    protected virtual ITransactionOrderModel[] DeleteOrders(params ITransactionOrderModel[] orders)
     {
       foreach (var nextOrder in orders)
       {
@@ -231,7 +221,7 @@ namespace Terminal.Connector.Simulation
 
         if (nextOrder.Orders.Any())
         {
-          await DeleteOrders(nextOrder.Orders.ToArray());
+          DeleteOrders(nextOrder.Orders.ToArray());
         }
       }
 
@@ -243,7 +233,7 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual async Task<ITransactionPositionModel> CreatePosition(ITransactionOrderModel nextOrder)
+    protected virtual ITransactionPositionModel CreatePosition(ITransactionOrderModel nextOrder)
     {
       var previousPosition = Account
         .ActivePositions
@@ -254,7 +244,7 @@ namespace Terminal.Connector.Simulation
 
       if (previousPosition is null)
       {
-        response = await OpenPosition(nextOrder, previousPosition);
+        response = OpenPosition(nextOrder, previousPosition);
       }
       else
       {
@@ -262,8 +252,8 @@ namespace Terminal.Connector.Simulation
         var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
 
         response = isSameBuy || isSameSell ?
-          await IncreasePosition(nextOrder, previousPosition) : 
-          await DecreasePosition(nextOrder, previousPosition); 
+          IncreasePosition(nextOrder, previousPosition) :
+          DecreasePosition(nextOrder, previousPosition);
       }
 
       // Process bracket orders
@@ -288,7 +278,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual Task<ITransactionPositionModel> OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
@@ -307,7 +297,7 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
-      return Task.FromResult(nextPosition);
+      return nextPosition;
     }
 
     /// <summary>
@@ -316,7 +306,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual async Task<ITransactionPositionModel> IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
@@ -341,8 +331,8 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
 
-      await DeleteOrders(nextOrder.Orders.ToArray());
-      await DeleteOrders(previousPosition.Orders.ToArray());
+      DeleteOrders(nextOrder.Orders.ToArray());
+      DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
@@ -357,7 +347,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual async Task<ITransactionPositionModel> DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
       var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
@@ -381,8 +371,8 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
 
-      await DeleteOrders(nextOrder.Orders.ToArray());
-      await DeleteOrders(previousPosition.Orders.ToArray());
+      DeleteOrders(nextOrder.Orders.ToArray());
+      DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
@@ -421,7 +411,7 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Process pending orders
     /// </summary>
-    protected virtual async Task UpdatePendingOrders()
+    protected virtual void UpdatePendingOrders()
     {
       foreach (var orderItem in Account.ActiveOrders)
       {
@@ -448,7 +438,7 @@ namespace Terminal.Connector.Simulation
 
           if (isExecutable)
           {
-            await CreatePosition(order);
+            CreatePosition(order);
           }
         }
       }

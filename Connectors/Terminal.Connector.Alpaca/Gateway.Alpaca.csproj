@@ -1,13 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net5.0</TargetFramework>
-    <Platforms>AnyCPU;x64</Platforms>
+    <TargetFramework>net7.0</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ExCore" Version="1.0.0-RC" />
-    <PackageReference Include="ExScore" Version="1.0.1-RC" />
+    <PackageReference Include="Alpaca.Markets" Version="7.0.0-alpha1" />
+    <PackageReference Include="Alpaca.Markets.Extensions" Version="7.0.0-alpha1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Terminal.Core\Terminal.Core.csproj" />
   </ItemGroup>
 
 </Project>

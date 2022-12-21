@@ -1,5 +1,7 @@
 using Canvas.Core.ShapeSpace;
 using Distribution.DomainSpace;
+using Microsoft.AspNetCore.Components;
+using Microsoft.Extensions.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +20,8 @@ namespace Terminal.Client.Pages
 {
   public partial class IndexPage
   {
+    [Inject] IConfiguration Configuration { get; set; }
+
     /// <summary>
     /// Controls
     /// </summary>
@@ -150,7 +154,7 @@ namespace Terminal.Client.Pages
       {
         Speed = 1,
         Name = _account,
-        Source = "C:/Users/user/Desktop/Code/NET/Terminal/Data/Quotes"
+        Source = Configuration["Inputs:Source"]
       };
 
       _performanceIndicator = new PerformanceIndicator { Name = "Balance" };

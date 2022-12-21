@@ -11,6 +11,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connectors", "Connectors", 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terminal.Connector.Simulation", "Connectors\Terminal.Connector.Simulation\Terminal.Connector.Simulation.csproj", "{724A7CA0-6657-4570-A5B2-D1444D280A91}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gateway.Alpaca", "Connectors\Terminal.Connector.Alpaca\Gateway.Alpaca.csproj", "{D1733BD4-86AE-4585-9326-570955D0DF58}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -43,12 +45,21 @@ Global
 		{724A7CA0-6657-4570-A5B2-D1444D280A91}.Release|Any CPU.Build.0 = Release|Any CPU
 		{724A7CA0-6657-4570-A5B2-D1444D280A91}.Release|x64.ActiveCfg = Release|x64
 		{724A7CA0-6657-4570-A5B2-D1444D280A91}.Release|x64.Build.0 = Release|x64
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Debug|x64.ActiveCfg = Debug|x64
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Debug|x64.Build.0 = Debug|x64
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|x64.ActiveCfg = Release|x64
+		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{724A7CA0-6657-4570-A5B2-D1444D280A91} = {72095993-86E4-436B-883D-41677C572028}
+		{D1733BD4-86AE-4585-9326-570955D0DF58} = {72095993-86E4-436B-883D-41677C572028}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DF743EB8-FAC2-4496-8A95-66A93CF19B8B}

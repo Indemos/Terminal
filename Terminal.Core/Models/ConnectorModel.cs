@@ -119,7 +119,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Dispose
     /// </summary>
-    public abstract void Dispose();
+    public virtual void Dispose() => Disconnect();
 
     /// <summary>
     /// Ensure that each series has a name and can be attached to specific area on the chart
