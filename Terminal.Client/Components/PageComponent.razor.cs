@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Threading.Tasks;
-using Terminal.Connector.Simulation;
+using Terminal.Core.ModelSpace;
 using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Client.Components
@@ -23,7 +23,7 @@ namespace Terminal.Client.Components
     public virtual OrdersComponent OrdersView { get; set; }
     public virtual PositionsComponent PositionsView { get; set; }
     public virtual StatementsComponent StatementsView { get; set; }
-    public virtual Adapter Gateway { get; set; }
+    public virtual IConnectorModel Adapter { get; set; }
     public virtual Action Setup { get; set; }
 
     public async Task OnConnect()
@@ -34,7 +34,7 @@ namespace Terminal.Client.Components
       IsConnection = true;
       IsSubscription = true;
 
-      await Gateway.Connect();
+      await Adapter.Connect();
     }
 
     public void OnDisconnect()
@@ -42,7 +42,7 @@ namespace Terminal.Client.Components
       IsConnection = false;
       IsSubscription = false;
 
-      Gateway?.Disconnect();
+      Adapter?.Disconnect();
 
       ChartsView.Clear();
       ReportsView.Clear();
@@ -52,23 +52,23 @@ namespace Terminal.Client.Components
     {
       IsSubscription = true;
 
-      await Gateway.Subscribe();
+      await Adapter.Subscribe();
     }
 
     public void OnUnsubscribe()
     {
       IsSubscription = false;
 
-      Gateway.Unsubscribe();
+      Adapter.Unsubscribe();
     }
 
     public void OnOpenStatements()
     {
       InstanceService<Scene>.Instance.Scheduler.Send(() =>
       {
-        if (Gateway?.Account is not null)
+        if (Adapter?.Account is not null)
         {
-          StatementsView.UpdateItems(new[] { Gateway.Account });
+          StatementsView.UpdateItems(new[] { Adapter.Account });
         }
       });
     }

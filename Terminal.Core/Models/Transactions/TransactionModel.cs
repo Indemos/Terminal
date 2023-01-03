@@ -24,11 +24,6 @@ namespace Terminal.Core.ModelSpace
     double? ActivationPrice { get; set; }
 
     /// <summary>
-    /// Parameter that can be used to group a set of transactions
-    /// </summary>
-    string Group { get; set; }
-
-    /// <summary>
     /// Time stamp
     /// </summary>
     DateTime? Time { get; set; }
@@ -70,11 +65,6 @@ namespace Terminal.Core.ModelSpace
     public virtual double? ActivationPrice { get; set; }
 
     /// <summary>
-    /// Parameter that can be used to group a set of orders
-    /// </summary>
-    public virtual string Group { get; set; }
-
-    /// <summary>
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }
@@ -93,13 +83,5 @@ namespace Terminal.Core.ModelSpace
     /// Instrument to buy or sell
     /// </summary>
     public virtual IInstrumentModel Instrument { get; set; }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public TransactionModel()
-    {
-      Id = Guid.NewGuid().ToString("N");
-    }
   }
 }

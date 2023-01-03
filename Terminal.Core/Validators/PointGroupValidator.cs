@@ -6,7 +6,7 @@ namespace Terminal.Core.ValidatorSpace
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class PointGroupValidator : AbstractValidator<IPointGroupModel>
+  public class PointGroupValidator : AbstractValidator<IPointBarModel>
   {
     public PointGroupValidator()
     {

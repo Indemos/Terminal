@@ -27,7 +27,7 @@ namespace Terminal.Core.IndicatorSpace
       }
 
       var value = 0.0;
-      var seriesItem = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new ImbalanceIndicator();
+      var seriesItem = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new ImbalanceIndicator();
 
       switch (side)
       {
@@ -36,7 +36,7 @@ namespace Terminal.Core.IndicatorSpace
         case -1: value = currentPoint.BidSize.Value; break;
       }
 
-      Last = Group.Close = seriesItem.Last = seriesItem.Group.Close = value;
+      Last = Bar.Close = seriesItem.Last = seriesItem.Bar.Close = value;
 
       return this;
     }

@@ -19,7 +19,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Type
     /// </summary>
-    OrderCategoryEnum? Category { get; set; }
+    OrderTypeEnum? Type { get; set; }
 
     /// <summary>
     /// Time in force
@@ -55,7 +55,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Type
     /// </summary>
-    public virtual OrderCategoryEnum? Category { get; set; }
+    public virtual OrderTypeEnum? Type { get; set; }
 
     /// <summary>
     /// Time in force

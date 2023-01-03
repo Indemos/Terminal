@@ -65,9 +65,9 @@ namespace Terminal.Core.IndicatorSpace
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new RelativeStrengthIndicator();
+      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new RelativeStrengthIndicator();
 
-      Last = series.Last = series.Group.Close = value;
+      Last = series.Last = series.Bar.Close = value;
 
       return this;
     }

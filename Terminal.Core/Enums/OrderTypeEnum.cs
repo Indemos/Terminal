@@ -1,6 +1,6 @@
 namespace Terminal.Core.EnumSpace
 {
-  public enum OrderCategoryEnum : byte
+  public enum OrderTypeEnum : byte
   {
     None = 0,
     Stop = 1,

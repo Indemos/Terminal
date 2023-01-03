@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,8 +23,9 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Update item in the collection
     /// </summary>
+    /// <param name="index"></param>
     /// <param name="item"></param>
-    void Update(T item);
+    void Update(int index, T item);
 
     /// <summary>
     /// Observable item
@@ -80,11 +80,6 @@ namespace Terminal.Core.CollectionSpace
     }
 
     /// <summary>
-    /// Clear collection
-    /// </summary>
-    public virtual void Clear() => Items.Clear();
-
-    /// <summary>
     /// Search
     /// </summary>
     /// <param name="item"></param>
@@ -124,6 +119,16 @@ namespace Terminal.Core.CollectionSpace
     }
 
     /// <summary>
+    /// Clear collection
+    /// </summary>
+    public virtual void Clear()
+    {
+      Items.Clear();
+      SendItemMessage(default, default, ActionEnum.Delete);
+      SendItemsMessage(ActionEnum.Delete);
+    }
+
+    /// <summary>
     /// Add to the collection
     /// </summary>
     /// <param name="items"></param>
@@ -151,6 +156,7 @@ namespace Terminal.Core.CollectionSpace
     public virtual void CopyTo(T[] items, int index)
     {
       Items.CopyTo(items, index);
+      SendItemMessage(default, default, ActionEnum.Update);
       SendItemsMessage(ActionEnum.Update);
     }
 
@@ -161,7 +167,10 @@ namespace Terminal.Core.CollectionSpace
     /// <param name="item"></param>
     public virtual void Insert(int index, T item)
     {
+      var previous = Items.ElementAtOrDefault(index);
+
       Items.Insert(index, item);
+      SendItemMessage(item, previous, ActionEnum.Create);
       SendItemsMessage(ActionEnum.Create);
     }
 
@@ -188,15 +197,14 @@ namespace Terminal.Core.CollectionSpace
     /// <summary>
     /// Update item in the collection
     /// </summary>
+    /// <param name="index"></param>
     /// <param name="item"></param>
-    public virtual void Update(T item)
+    public virtual void Update(int index, T item)
     {
-      var index = Items.IndexOf(item);
+      var previous = Items[index];
 
-      if (index >= 0)
+      if (previous is not null)
       {
-        var previous = Items[index];
-
         Items[index] = item;
         SendItemMessage(item, previous, ActionEnum.Update);
         SendItemsMessage(ActionEnum.Update);
@@ -221,7 +229,7 @@ namespace Terminal.Core.CollectionSpace
     /// <param name="next"></param>
     /// <param name="previous"></param>
     /// <param name="action"></param>
-    protected void SendItemMessage(T next, T previous, ActionEnum action)
+    protected virtual void SendItemMessage(T next, T previous, ActionEnum action)
     {
       var itemMessage = new TransactionMessage<T>
       {
@@ -237,7 +245,7 @@ namespace Terminal.Core.CollectionSpace
     /// Send collection message
     /// </summary>
     /// <param name="action"></param>
-    protected void SendItemsMessage(ActionEnum action)
+    protected virtual void SendItemsMessage(ActionEnum action)
     {
       var collectionMessage = new TransactionMessage<IList<T>>
       {

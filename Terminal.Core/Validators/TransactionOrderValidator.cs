@@ -18,7 +18,7 @@ namespace Terminal.Core.ValidatorSpace
     {
       RuleFor(o => o.Instrument).NotNull().NotEmpty().WithMessage("No instrument");
       RuleFor(o => o.Size).NotNull().NotEqual(0).WithMessage("No size");
-      RuleFor(o => o.Category).NotNull().NotEqual(OrderCategoryEnum.None).WithMessage("No side");
+      RuleFor(o => o.Type).NotNull().NotEqual(OrderTypeEnum.None).WithMessage("No side");
       RuleFor(o => o.Orders).NotNull().WithMessage("No orders");
     }
   }

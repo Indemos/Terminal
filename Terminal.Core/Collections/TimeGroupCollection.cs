@@ -3,6 +3,7 @@ using Terminal.Core.ModelSpace;
 using System;
 using System.Collections.Generic;
 using System.Collections.Concurrent;
+using System.Linq;
 
 namespace Terminal.Core.CollectionSpace
 {
@@ -22,8 +23,13 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     public TimeGroupCollection()
     {
-      Indices = new ConcurrentDictionary<long, int>();
+      Indices = new Dictionary<long, int>();
     }
+
+    /// <summary>
+    /// Update or add item to the collection depending on its date and time 
+    /// </summary>
+    public override void Add(T item) => Add(item, item.TimeFrame);
 
     /// <summary>
     /// Update or add item to the collection depending on its date and time 
@@ -34,96 +40,59 @@ namespace Terminal.Core.CollectionSpace
       var previousTime = (item.Time - span.Value).Round(span);
       var currentGroup = Indices.TryGetValue(currentTime.Value.Ticks, out int currentIndex) ? this[currentIndex] : default;
       var previousGroup = Indices.TryGetValue(previousTime.Value.Ticks, out int previousIndex) ? this[previousIndex] : default;
+      var group = CreateGroup(currentGroup, item, previousGroup, span);
 
-      if (currentGroup is not null)
+      if (group is not null)
       {
-        this[currentIndex] = UpdateGroup(item, currentGroup);
-        return;
+        if (currentGroup is not null)
+        {
+          this[currentIndex] = group;
+          return;
+        }
+
+        base.Add(group, span);
+
+        Indices[currentTime.Value.Ticks] = Count - 1;
       }
-
-      base.Add(CreateGroup(item, previousGroup, span));
-
-      Indices[currentTime.Value.Ticks] = Count - 1;
     }
 
     /// <summary>
     /// Group items by time
     /// </summary>
+    /// <param name="currentPoint"></param>
     /// <param name="nextPoint"></param>
     /// <param name="previousPoint"></param>
     /// <param name="span"></param>
     /// <returns></returns>
-    protected T CreateGroup(T nextPoint, T previousPoint, TimeSpan? span)
+    protected virtual T CreateGroup(T currentPoint, T nextPoint, T previousPoint, TimeSpan? span)
     {
       if (nextPoint.Ask is null && nextPoint.Bid is null)
       {
-        return nextPoint;
+        return default;
       }
 
-      var nextGroup = nextPoint.Clone() as IPointModel;
+      var nextGroup = (T)nextPoint.Clone();
 
-      nextGroup.AskSize ??= nextPoint.AskSize ?? 0.0;
-      nextGroup.BidSize ??= nextPoint.BidSize ?? 0.0;
+      if (currentPoint is not null)
+      {
+        nextGroup.AskSize += currentPoint.AskSize ?? 0.0;
+        nextGroup.BidSize += currentPoint.BidSize ?? 0.0;
+        nextGroup.Bar.Open = currentPoint.Bar.Open;
+      }
 
-      nextGroup.Ask ??= nextPoint.Ask ?? nextPoint.Bid;
-      nextGroup.Bid ??= nextPoint.Bid ?? nextPoint.Ask;
+      nextGroup.Ask = nextPoint.Ask ?? nextPoint.Bid;
+      nextGroup.Bid = nextPoint.Bid ?? nextPoint.Ask;
+      nextGroup.Last = nextGroup.Bid ?? nextGroup.Ask;
 
-      nextGroup.Group.Open ??= previousPoint?.Last ?? nextGroup.Ask;
-      nextGroup.Group.Close ??= previousPoint?.Last ?? nextGroup.Bid;
-      nextGroup.Last ??= nextGroup.Group.Close;
+      nextGroup.Bar.Close = nextGroup.Last;
+      nextGroup.Bar.Open = nextGroup.Bar.Open ?? previousPoint?.Last ?? nextGroup.Last;
+      nextGroup.Bar.Low = Math.Min((nextGroup.Bar.Low ?? nextGroup.Last).Value, nextGroup.Last.Value);
+      nextGroup.Bar.High = Math.Max((nextGroup.Bar.High ?? nextGroup.Last).Value, nextGroup.Last.Value);
 
       nextGroup.TimeFrame = span;
       nextGroup.Time = nextPoint.Time.Round(span);
-      nextGroup.Group.Low ??= Math.Min(nextGroup.Bid.Value, nextGroup.Ask.Value);
-      nextGroup.Group.High ??= Math.Max(nextGroup.Ask.Value, nextGroup.Bid.Value);
 
-      return (T)nextGroup;
-    }
-
-    /// <summary>
-    /// Group items by time
-    /// </summary>
-    /// <param name="nextPoint"></param>
-    /// <param name="previousPoint"></param>
-    /// <returns></returns>
-    protected T UpdateGroup(T nextPoint, T previousPoint)
-    {
-      var nextGroup = nextPoint as IPointModel;
-      var previousGroup = previousPoint as IPointModel;
-
-      previousGroup.Ask = nextGroup.Ask ?? nextGroup.Bid;
-      previousGroup.Bid = nextGroup.Bid ?? nextGroup.Ask;
-      previousGroup.Last = previousGroup.Group.Close =
-        nextGroup.Last ??
-        nextGroup.Group.Close ??
-        nextGroup.Bid ?? 
-        nextGroup.Ask;
-
-      previousGroup.AskSize += nextGroup.AskSize ?? 0.0;
-      previousGroup.BidSize += nextGroup.BidSize ?? 0.0;
-
-      if (nextPoint.Ask is null || nextPoint.Bid is null)
-      {
-        return (T)previousGroup;
-      }
-
-      var min = Math.Min(nextGroup.Bid.Value, nextGroup.Ask.Value);
-      var max = Math.Max(nextGroup.Ask.Value, nextGroup.Bid.Value);
-
-      if (min < previousGroup.Group.Low)
-      {
-        previousGroup.Last = previousGroup.Group.Close = min;
-      }
-
-      if (max > previousGroup.Group.High)
-      {
-        previousGroup.Last = previousGroup.Group.Close = max;
-      }
-
-      previousGroup.Group.Low = Math.Min(previousGroup.Group.Low.Value, min);
-      previousGroup.Group.High = Math.Max(previousGroup.Group.High.Value, max);
-
-      return (T)previousGroup;
+      return nextGroup;
     }
   }
 }

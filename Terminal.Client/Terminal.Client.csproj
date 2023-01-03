@@ -13,7 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Connectors\Terminal.Connector.Simulation\Terminal.Connector.Simulation.csproj" />
+    <ProjectReference Include="..\Connectors\Terminal.Connector.Alpaca\Terminal.Alpaca.csproj" />
+    <ProjectReference Include="..\Connectors\Terminal.Connector.Simulation\Terminal.Simulation.csproj" />
   </ItemGroup>
 
 </Project>

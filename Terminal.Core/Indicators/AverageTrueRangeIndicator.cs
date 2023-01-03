@@ -39,8 +39,8 @@ namespace Terminal.Core.IndicatorSpace
       }
 
       var value =
-        Math.Max(currentPoint.Group.High.Value, previousPoint.Group.Close.Value) -
-        Math.Min(currentPoint.Group.Low.Value, previousPoint.Group.Close.Value);
+        Math.Max(currentPoint.Bar.High.Value, previousPoint.Bar.Close.Value) -
+        Math.Min(currentPoint.Bar.Low.Value, previousPoint.Bar.Close.Value);
 
       if (Values.Count > Interval)
       {
@@ -53,9 +53,9 @@ namespace Terminal.Core.IndicatorSpace
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new AverageTrueRangeIndicator();
+      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new AverageTrueRangeIndicator();
 
-      Last = series.Last = series.Group.Close = value;
+      Last = series.Last = series.Bar.Close = value;
 
       return this;
     }

@@ -18,17 +18,17 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Disposable connections
     /// </summary>
-    protected IList<IDisposable> _connections = null;
+    protected IList<IDisposable> _connections;
 
     /// <summary>
     /// Disposable subscriptions
     /// </summary>
-    protected IList<IDisposable> _subscriptions = null;
+    protected IList<IDisposable> _subscriptions;
 
     /// <summary>
     /// Streams
     /// </summary>
-    protected IDictionary<string, StreamReader> _streams = null;
+    protected IDictionary<string, StreamReader> _streams;
 
     /// <summary>
     /// Simulation speed in milliseconds
@@ -71,20 +71,7 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
-    /// Subscribe for incoming data
-    /// </summary>
-    public override Task Disconnect()
-    {
-      Unsubscribe();
-
-      _connections?.ForEach(o => o.Dispose());
-      _connections?.Clear();
-
-      return Task.FromResult(0);
-    }
-
-    /// <summary>
-    /// Subscribe for incoming data
+    /// Subscribe to data streams
     /// </summary>
     public override async Task Subscribe()
     {
@@ -94,7 +81,7 @@ namespace Terminal.Connector.Simulation
         .Instruments
         .Select(o => o.Value.Points.ItemStream)
         .Merge()
-        .Subscribe(message => UpdatePendingOrders());
+        .Subscribe(message => ProcessPendingOrders());
 
       var orderStream = OrderStream.Subscribe(message =>
       {
@@ -133,7 +120,20 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
-    /// Unsubscribe from incoming data
+    /// Save state and dispose
+    /// </summary>
+    public override Task Disconnect()
+    {
+      Unsubscribe();
+
+      _connections?.ForEach(o => o.Dispose());
+      _connections?.Clear();
+
+      return Task.FromResult(0);
+    }
+
+    /// <summary>
+    /// Unsubscribe from data streams
     /// </summary>
     public override Task Unsubscribe()
     {
@@ -156,28 +156,12 @@ namespace Terminal.Connector.Simulation
 
       foreach (var nextOrder in orders)
       {
-        switch (nextOrder.Category)
+        switch (nextOrder.Type)
         {
-          case OrderCategoryEnum.Market:
-
-            CreatePosition(nextOrder);
-            break;
-
-          case OrderCategoryEnum.Stop:
-          case OrderCategoryEnum.Limit:
-          case OrderCategoryEnum.StopLimit:
-
-            // Track only independent orders without parent
-
-            if (nextOrder.Container is null)
-            {
-              nextOrder.Status = OrderStatusEnum.Placed;
-
-              Account.Orders.Add(nextOrder);
-              Account.ActiveOrders.Add(nextOrder.Id, nextOrder);
-            }
-
-            break;
+          case OrderTypeEnum.Stop:
+          case OrderTypeEnum.Limit:
+          case OrderTypeEnum.StopLimit: ProcessPendingOrder(nextOrder); break;
+          case OrderTypeEnum.Market: ProcessOrder(nextOrder); break;
         }
       }
     }
@@ -197,7 +181,7 @@ namespace Terminal.Connector.Simulation
           order.Size = nextOrder.Size;
           order.Price = nextOrder.Price;
           order.Orders = nextOrder.Orders;
-          order.Category = nextOrder.Category;
+          order.Type = nextOrder.Type;
         }
       }
 
@@ -229,65 +213,60 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
+    /// Process pending order
+    /// </summary>
+    /// <param name="nextOrder"></param>
+    /// <returns></returns>
+    protected virtual ITransactionOrderModel ProcessPendingOrder(ITransactionOrderModel nextOrder)
+    {
+      nextOrder.Status = OrderStatusEnum.Placed;
+
+      Account.Orders.Add(nextOrder);
+      Account.ActiveOrders.Add(nextOrder.Id, nextOrder);
+
+      return nextOrder;
+    }
+
+    /// <summary>
     /// Position opening logic 
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel CreatePosition(ITransactionOrderModel nextOrder)
+    protected virtual ITransactionPositionModel ProcessOrder(ITransactionOrderModel nextOrder)
     {
       var previousPosition = Account
         .ActivePositions
         .Values
         .FirstOrDefault(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name));
 
-      ITransactionPositionModel response = null;
-
       if (previousPosition is null)
       {
-        response = OpenPosition(nextOrder, previousPosition);
-      }
-      else
-      {
-        var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
-        var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
-
-        response = isSameBuy || isSameSell ?
-          IncreasePosition(nextOrder, previousPosition) :
-          DecreasePosition(nextOrder, previousPosition);
+        return OpenPosition(nextOrder);
       }
 
-      // Process bracket orders
+      var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
+      var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
 
-      var pointModel = nextOrder
-        .Instrument
-        .PointGroups
-        .LastOrDefault();
-
-      foreach (var order in nextOrder.Orders)
-      {
-        order.Time = pointModel.Time;
-        order.Status = OrderStatusEnum.Placed;
-      }
-
-      return response;
+      return isSameBuy || isSameSell ?
+        IncreasePosition(nextOrder, previousPosition) :
+        DecreasePosition(nextOrder, previousPosition);
     }
 
     /// <summary>
     /// Create position when there are no other positions
     /// </summary>
     /// <param name="nextOrder"></param>
-    /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
+      var pointModel = nextOrder.Instrument.PointGroups.Last();
 
       nextOrder.Time = pointModel.Time;
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.OpenPrices = openPrices;
@@ -296,6 +275,8 @@ namespace Terminal.Connector.Simulation
       Account.Orders.Add(nextOrder);
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
+
+      nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
 
       return nextPosition;
     }
@@ -309,13 +290,13 @@ namespace Terminal.Connector.Simulation
     protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
+      var pointModel = nextOrder.Instrument.PointGroups.Last();
 
       nextOrder.Time = pointModel.Time;
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.Price = nextOrder.Price;
@@ -331,12 +312,13 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
 
-      DeleteOrders(nextOrder.Orders.ToArray());
       DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
+
+      nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
 
       return previousPosition;
     }
@@ -350,13 +332,13 @@ namespace Terminal.Connector.Simulation
     protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.LastOrDefault();
+      var pointModel = nextOrder.Instrument.PointGroups.Last();
 
       nextOrder.Time = pointModel.Time;
       nextOrder.Price = openPrices.Last().Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
-      var nextPosition = GetPosition(new TransactionPositionModel(), nextOrder);
+      var nextPosition = GetPosition(nextOrder);
 
       nextPosition.Time = pointModel.Time;
       nextPosition.OpenPrices = openPrices;
@@ -371,7 +353,6 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
 
-      DeleteOrders(nextOrder.Orders.ToArray());
       DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
@@ -380,6 +361,7 @@ namespace Terminal.Connector.Simulation
       if (nextPosition.Size.Value.IsEqual(0) is false)
       {
         Account.ActivePositions.Add(nextPosition.Id, nextPosition);
+        nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
       }
 
       return nextPosition;
@@ -388,60 +370,143 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Update position properties based on specified order
     /// </summary>
-    /// <param name="nextPosition"></param>
     /// <param name="nextOrder"></param>
-    protected virtual ITransactionPositionModel GetPosition(ITransactionPositionModel nextPosition, ITransactionOrderModel nextOrder)
+    protected virtual ITransactionPositionModel GetPosition(ITransactionOrderModel nextOrder)
     {
-      nextPosition.Id = nextOrder.Id;
-      nextPosition.Name = nextOrder.Name;
-      nextPosition.Description = nextOrder.Description;
-      nextPosition.Category = nextOrder.Category;
-      nextPosition.Size = nextOrder.Size;
-      nextPosition.Side = nextOrder.Side;
-      nextPosition.Group = nextOrder.Group;
-      nextPosition.Price = nextOrder.Price;
-      nextPosition.OpenPrice = nextOrder.Price;
-      nextPosition.Instrument = nextOrder.Instrument;
-      nextPosition.Orders = nextOrder.Orders;
-      nextPosition.Time = nextOrder.Time;
-
-      return nextPosition;
+      return new TransactionPositionModel
+      {
+        Name = nextOrder.Name,
+        Description = nextOrder.Description,
+        Type = nextOrder.Type,
+        Size = nextOrder.Size,
+        Side = nextOrder.Side,
+        Group = nextOrder.Group,
+        Price = nextOrder.Price,
+        OpenPrice = nextOrder.Price,
+        Instrument = nextOrder.Instrument,
+        Orders = nextOrder.Orders,
+        Time = nextOrder.Time
+      };
     }
 
     /// <summary>
     /// Process pending orders
     /// </summary>
-    protected virtual void UpdatePendingOrders()
+    protected virtual void ProcessPendingOrders()
     {
       foreach (var orderItem in Account.ActiveOrders)
       {
         var order = orderItem.Value;
         var pointModel = order.Instrument.PointGroups.LastOrDefault();
 
-        if (pointModel is not null)
+        if (pointModel is null)
         {
-          var isExecutable = false;
-          var isBuyStop = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Category, OrderCategoryEnum.Stop);
-          var isSellStop = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Category, OrderCategoryEnum.Stop);
-          var isBuyLimit = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Category, OrderCategoryEnum.Limit);
-          var isSellLimit = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Category, OrderCategoryEnum.Limit);
+          continue;
+        }
 
-          if (isBuyStop || isSellLimit)
-          {
-            isExecutable = pointModel.Ask >= order.Price;
-          }
+        var isExecutable = false;
+        var isBuyStop = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Type, OrderTypeEnum.Stop);
+        var isSellStop = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Type, OrderTypeEnum.Stop);
+        var isBuyLimit = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Type, OrderTypeEnum.Limit);
+        var isSellLimit = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Type, OrderTypeEnum.Limit);
 
-          if (isSellStop || isBuyLimit)
-          {
-            isExecutable = pointModel.Bid <= order.Price;
-          }
+        if (isBuyStop || isSellLimit)
+        {
+          isExecutable = pointModel.Ask >= order.Price;
+        }
 
-          if (isExecutable)
-          {
-            CreatePosition(order);
-          }
+        if (isSellStop || isBuyLimit)
+        {
+          isExecutable = pointModel.Bid <= order.Price;
+        }
+
+        if (isExecutable)
+        {
+          ProcessOrder(order);
         }
       }
+    }
+
+    /// <summary>
+    /// Get next available point
+    /// </summary>
+    /// <returns></returns>
+    protected virtual IPointModel GetPoint(IDictionary<string, StreamReader> streams, IDictionary<string, IPointModel> points)
+    {
+      var index = string.Empty;
+
+      foreach (var stream in streams)
+      {
+        points.TryGetValue(stream.Key, out IPointModel point);
+
+        if (point is null)
+        {
+          var input = stream.Value.ReadLine();
+
+          if (string.IsNullOrEmpty(input) is false)
+          {
+            points[stream.Key] = Parse(stream.Key, input);
+          }
+        }
+
+        points.TryGetValue(index, out IPointModel min);
+        points.TryGetValue(stream.Key, out IPointModel current);
+
+        var isOne = string.IsNullOrEmpty(index);
+        var isMin = current is not null && min is not null && current.Time <= min.Time;
+
+        if (isOne || isMin)
+        {
+          index = stream.Key;
+        }
+      }
+
+      var response = points[index];
+
+      points[index] = null;
+
+      return response;
+    }
+
+    /// <summary>
+    /// Parse point
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    protected virtual IPointModel Parse(string name, string input)
+    {
+      var props = input.Split(" ");
+
+      long.TryParse(props.ElementAtOrDefault(0), out long date);
+
+      if (date is 0)
+      {
+        return null;
+      }
+
+      double.TryParse(props.ElementAtOrDefault(1), out double bid);
+      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
+      double.TryParse(props.ElementAtOrDefault(3), out double ask);
+      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
+
+      var response = new PointModel
+      {
+        Name = name,
+        Time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(date),
+        Ask = ask,
+        Bid = bid,
+        Last = ask,
+        AskSize = askSize,
+        BidSize = bidSize
+      };
+
+      if (askSize.IsEqual(0))
+      {
+        response.Last = bid;
+      }
+
+      return response;
     }
   }
 }

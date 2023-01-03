@@ -4,6 +4,6 @@ namespace Terminal.Core.EnumSpace
   {
     None = 0,
     Live = 1,
-    Sandbox = 2
+    Paper = 2
   }
 }

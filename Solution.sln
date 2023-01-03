@@ -9,9 +9,11 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terminal.Client", "Terminal
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Connectors", "Connectors", "{72095993-86E4-436B-883D-41677C572028}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terminal.Connector.Simulation", "Connectors\Terminal.Connector.Simulation\Terminal.Connector.Simulation.csproj", "{724A7CA0-6657-4570-A5B2-D1444D280A91}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terminal.Simulation", "Connectors\Terminal.Connector.Simulation\Terminal.Simulation.csproj", "{724A7CA0-6657-4570-A5B2-D1444D280A91}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Gateway.Alpaca", "Connectors\Terminal.Connector.Alpaca\Gateway.Alpaca.csproj", "{D1733BD4-86AE-4585-9326-570955D0DF58}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Terminal.Alpaca", "Connectors\Terminal.Connector.Alpaca\Terminal.Alpaca.csproj", "{D1733BD4-86AE-4585-9326-570955D0DF58}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Terminal.Tests", "Tests\Terminal.Tests.csproj", "{A247DC1D-D30F-4377-8FF2-045B81819DAF}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -53,6 +55,14 @@ Global
 		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|x64.ActiveCfg = Release|x64
 		{D1733BD4-86AE-4585-9326-570955D0DF58}.Release|x64.Build.0 = Release|x64
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Debug|x64.Build.0 = Debug|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Release|x64.ActiveCfg = Release|Any CPU
+		{A247DC1D-D30F-4377-8FF2-045B81819DAF}.Release|x64.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

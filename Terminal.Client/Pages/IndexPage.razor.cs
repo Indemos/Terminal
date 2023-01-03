@@ -76,15 +76,15 @@ namespace Terminal.Client.Pages
             }
           };
 
-          View.Gateway = new Adapter
+          View.Adapter = new Adapter
           {
             Speed = 1,
             Name = _account,
-            Source = Configuration["Inputs:Source"]
+            Account = account,
+            Source = Configuration["Simulation:Source"]
           };
 
           Performer = new PerformanceIndicator { Name = "Balance" };
-          View.Gateway.Account = account;
 
           account
             .Instruments
@@ -153,26 +153,26 @@ namespace Terminal.Client.Pages
 
     private void OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
     {
-      View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
         {
           Size = 1,
           Side = OrderSideEnum.Sell,
-          Category = OrderCategoryEnum.Market,
+          Type = OrderTypeEnum.Market,
           Instrument = assetSell
         }
       });
 
-      View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
         {
           Size = 1,
           Side = OrderSideEnum.Buy,
-          Category = OrderCategoryEnum.Market,
+          Type = OrderTypeEnum.Market,
           Instrument = assetBuy
         }
       });
@@ -180,16 +180,16 @@ namespace Terminal.Client.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in View.Gateway.Account.ActivePositions.Values)
+      foreach (var position in View.Adapter.Account.ActivePositions.Values)
       {
-        View.Gateway.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+        View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
         {
           Action = ActionEnum.Create,
           Next = new TransactionOrderModel
           {
             Size = 1,
             Side = Equals(position.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy,
-            Category = OrderCategoryEnum.Market,
+            Type = OrderTypeEnum.Market,
             Instrument = position.Instrument
           }
         });

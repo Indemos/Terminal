@@ -75,9 +75,9 @@ namespace Terminal.Core.IndicatorSpace
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new ScaleIndicator();
+      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new ScaleIndicator();
 
-      Last = series.Last = series.Group.Close = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
+      Last = series.Last = series.Bar.Close = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
       return this;
     }

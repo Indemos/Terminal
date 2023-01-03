@@ -41,7 +41,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    IPointGroupModel Bar { get; set; }
+    IPointBarModel Bar { get; set; }
   }
 
   /// <summary>
@@ -82,7 +82,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    public virtual IPointGroupModel Bar { get; set; }
+    public virtual IPointBarModel Bar { get; set; }
 
     /// <summary>
     /// Constructor
@@ -90,7 +90,7 @@ namespace Terminal.Core.ModelSpace
     public InstrumentOptionModel()
     {
       Leverage = 100;
-      Bar = new PointGroupModel();
+      Bar = new PointBarModel();
     }
   }
 }

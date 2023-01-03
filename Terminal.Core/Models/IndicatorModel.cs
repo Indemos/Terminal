@@ -26,7 +26,7 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public IndicatorModel()
     {
-      Group = new PointGroupModel();
+      Bar = new PointBarModel();
       Name = Guid.NewGuid().ToString("N");
     }
 
@@ -35,9 +35,6 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public virtual TOutput Calculate(IIndexCollection<TInput> collection)
-    {
-      return default;
-    }
+    public virtual TOutput Calculate(IIndexCollection<TInput> collection) => default;
   }
 }

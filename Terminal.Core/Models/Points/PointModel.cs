@@ -35,7 +35,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    IPointGroupModel Group { get; set; }
+    IPointBarModel Bar { get; set; }
 
     /// <summary>
     /// Reference to the account
@@ -50,7 +50,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Values from related series synced with the current bar, e.g. averaged indicator calculations for the charts
     /// </summary>
-    IDictionary<string, IPointModel> Groups { get; set; }
+    IDictionary<string, IPointModel> Series { get; set; }
   }
 
   /// <summary>
@@ -91,7 +91,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    public virtual IPointGroupModel Group { get; set; }
+    public virtual IPointBarModel Bar { get; set; }
 
     /// <summary>
     /// Reference to the instrument
@@ -101,7 +101,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Values from related series synced with the current data point, e.g. averaged indicator calculations for the charts
     /// </summary>
-    public virtual IDictionary<string, IPointModel> Groups { get; set; }
+    public virtual IDictionary<string, IPointModel> Series { get; set; }
 
     /// <summary>
     /// Constructor
@@ -109,10 +109,10 @@ namespace Terminal.Core.ModelSpace
     public PointModel()
     {
       View = new ViewModel();
-      Group = new PointGroupModel();
+      Bar = new PointBarModel();
       Account = new AccountModel();
       Instrument = new InstrumentModel();
-      Groups = new Dictionary<string, IPointModel>();
+      Series = new Dictionary<string, IPointModel>();
     }
 
     /// <summary>
@@ -123,7 +123,7 @@ namespace Terminal.Core.ModelSpace
     {
       var clone = base.Clone() as IPointModel;
 
-      clone.Group = Group.Clone() as IPointGroupModel;
+      clone.Bar = Bar.Clone() as IPointBarModel;
 
       return clone;
     }

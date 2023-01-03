@@ -1,3 +1,5 @@
+using System;
+
 namespace Terminal.Core.ModelSpace
 {
   public interface IBaseModel : IExpandoModel
@@ -11,6 +13,11 @@ namespace Terminal.Core.ModelSpace
     /// Custom name for UI
     /// </summary>
     string Name { get; set; }
+
+    /// <summary>
+    /// Parameter that can be used to group a set of orders
+    /// </summary>
+    string Group { get; set; }
 
     /// <summary>
     /// Custom description for UI
@@ -34,8 +41,21 @@ namespace Terminal.Core.ModelSpace
     public virtual string Name { get; set; }
 
     /// <summary>
+    /// Parameter that can be used to group a set of orders
+    /// </summary>
+    public virtual string Group { get; set; }
+
+    /// <summary>
     /// Custom description for UI
     /// </summary>
     public virtual string Description { get; set; }
+
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    public BaseModel()
+    {
+      Id = Guid.NewGuid().ToString("N");
+    }
   }
 }

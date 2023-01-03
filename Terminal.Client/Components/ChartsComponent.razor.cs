@@ -80,10 +80,10 @@ namespace Terminal.Client.Components
 
             if (currentBar is not null)
             {
-              currentBar.L = input?.Group?.Low;
-              currentBar.H = input?.Group?.High;
-              currentBar.O = input?.Group?.Open;
-              currentBar.C = input?.Group?.Close;
+              currentBar.L = input?.Bar?.Low;
+              currentBar.H = input?.Bar?.High;
+              currentBar.O = input?.Bar?.Open;
+              currentBar.C = input?.Bar?.Close;
             }
           }
         }

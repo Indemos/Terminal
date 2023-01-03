@@ -67,10 +67,10 @@ namespace Terminal.Core.IndicatorSpace
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Groups[Name] = currentPoint.Groups.Get(Name) ?? new MovingAverageIndicator();
+      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MovingAverageIndicator();
       var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
-      Last = series.Last = series.Group.Close = average.IsEqual(0) ? value : average;
+      Last = series.Last = series.Bar.Close = average.IsEqual(0) ? value : average;
 
       return this;
     }

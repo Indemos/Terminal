@@ -11,20 +11,20 @@ namespace Terminal.Core.ValidatorSpace
   /// </summary>
   public class TransactionOrderPriceValidator : AbstractValidator<ITransactionOrderModel>
   {
-    protected static readonly List<OrderCategoryEnum?> _immediateTypes = new List<OrderCategoryEnum?>
+    protected static readonly List<OrderTypeEnum?> _immediateTypes = new()
     {
-      OrderCategoryEnum.Market
+      OrderTypeEnum.Market
     };
 
     public TransactionOrderPriceValidator()
     {
       Include(new TransactionOrderValidator());
 
-      When(o => _immediateTypes.Contains(o.Category) is false, () => RuleFor(o => o.Price).NotNull().NotEqual(0).WithMessage("No open price"));
-      When(o => Equals(o.Category, OrderSideEnum.Buy) && Equals(o.Category, OrderCategoryEnum.Stop), () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Instrument.PointGroups.Last().Ask).WithMessage("Buy stop is below the offer"));
-      When(o => Equals(o.Category, OrderSideEnum.Sell) && Equals(o.Category, OrderCategoryEnum.Stop), () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Instrument.PointGroups.Last().Bid).WithMessage("Sell stop is above the bid"));
-      When(o => Equals(o.Category, OrderSideEnum.Buy) && Equals(o.Category, OrderCategoryEnum.Limit), () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Instrument.PointGroups.Last().Ask).WithMessage("Buy limit is above the offer"));
-      When(o => Equals(o.Category, OrderSideEnum.Sell) && Equals(o.Category, OrderCategoryEnum.Limit), () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Instrument.PointGroups.Last().Bid).WithMessage("Sell limit is below the bid"));
+      When(o => _immediateTypes.Contains(o.Type) is false, () => RuleFor(o => o.Price).NotNull().NotEqual(0).WithMessage("No open price"));
+      When(o => Equals(o.Type, OrderSideEnum.Buy) && Equals(o.Type, OrderTypeEnum.Stop), () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Instrument.PointGroups.Last().Ask).WithMessage("Buy stop is below the offer"));
+      When(o => Equals(o.Type, OrderSideEnum.Sell) && Equals(o.Type, OrderTypeEnum.Stop), () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Instrument.PointGroups.Last().Bid).WithMessage("Sell stop is above the bid"));
+      When(o => Equals(o.Type, OrderSideEnum.Buy) && Equals(o.Type, OrderTypeEnum.Limit), () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Instrument.PointGroups.Last().Ask).WithMessage("Buy limit is above the offer"));
+      When(o => Equals(o.Type, OrderSideEnum.Sell) && Equals(o.Type, OrderTypeEnum.Limit), () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Instrument.PointGroups.Last().Bid).WithMessage("Sell limit is below the bid"));
     }
   }
 }

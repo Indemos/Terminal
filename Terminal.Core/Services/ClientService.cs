@@ -132,7 +132,7 @@ namespace Terminal.Core.ServiceSpace
       HttpContent content = null,
       CancellationTokenSource cts = null)
     {
-      return await (await Send(HttpMethod.Post, source, query, headers, content, cts).ConfigureAwait(false)).DeserializeAsync<T>(); ;
+      return await (await Send(HttpMethod.Post, source, query, headers, content, cts).ConfigureAwait(false)).DeserializeAsync<T>();
     }
 
     /// <summary>

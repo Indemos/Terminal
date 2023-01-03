@@ -3,7 +3,7 @@ namespace Terminal.Core.ModelSpace
   /// <summary>
   /// Definition
   /// </summary>
-  public interface IPointGroupModel : IBaseModel
+  public interface IPointBarModel : IBaseModel
   {
     /// <summary>
     /// Lowest price of the bar
@@ -29,7 +29,7 @@ namespace Terminal.Core.ModelSpace
   /// <summary>
   /// Implementation
   /// </summary>
-  public class PointGroupModel : BaseModel, IPointGroupModel
+  public class PointBarModel : BaseModel, IPointBarModel
   {
     /// <summary>
     /// Lowest price of the bar

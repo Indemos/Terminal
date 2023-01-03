@@ -1,14 +1,11 @@
-using Distribution.DomainSpace;
 using FluentValidation.Results;
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
-using Terminal.Core.ExtensionSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ServiceSpace;
 using Terminal.Core.ValidatorSpace;
@@ -91,7 +88,7 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public ConnectorModel()
     {
-      Mode = EnvironmentEnum.Sandbox;
+      Mode = EnvironmentEnum.Paper;
       DataStream = new Subject<ITransactionMessage<IPointModel>>();
       OrderStream = new Subject<ITransactionMessage<ITransactionOrderModel>>();
     }
@@ -102,19 +99,19 @@ namespace Terminal.Core.ModelSpace
     public abstract Task Connect();
 
     /// <summary>
+    /// Continue execution
+    /// </summary>
+    public abstract Task Subscribe();
+
+    /// <summary>
     /// Save state and dispose
     /// </summary>
     public abstract Task Disconnect();
 
     /// <summary>
-    /// Suspend execution
+    /// Unsubscribe from data streams
     /// </summary>
     public abstract Task Unsubscribe();
-
-    /// <summary>
-    /// Continue execution
-    /// </summary>
-    public abstract Task Subscribe();
 
     /// <summary>
     /// Dispose
@@ -125,7 +122,7 @@ namespace Terminal.Core.ModelSpace
     /// Ensure that each series has a name and can be attached to specific area on the chart
     /// </summary>
     /// <param name="orders"></param>
-    protected bool ValidateOrders(params ITransactionOrderModel[] orders)
+    protected virtual bool ValidateOrders(params ITransactionOrderModel[] orders)
     {
       var errors = new List<ValidationFailure>();
       var orderRules = InstanceService<TransactionOrderPriceValidator>.Instance;
@@ -145,88 +142,6 @@ namespace Terminal.Core.ModelSpace
       }
 
       return errors.Any() is false;
-    }
-
-    /// <summary>
-    /// Get next available point
-    /// </summary>
-    /// <returns></returns>
-    protected virtual IPointModel GetPoint(IDictionary<string, StreamReader> streams, IDictionary<string, IPointModel> points)
-    {
-      var index = string.Empty;
-
-      foreach (var stream in streams)
-      {
-        points.TryGetValue(stream.Key, out IPointModel point);
-
-        if (point is null)
-        {
-          var input = stream.Value.ReadLine();
-
-          if (string.IsNullOrEmpty(input) is false)
-          {
-            points[stream.Key] = Parse(stream.Key, input);
-          }
-        }
-
-        points.TryGetValue(index, out IPointModel min);
-        points.TryGetValue(stream.Key, out IPointModel current);
-
-        var isOne = string.IsNullOrEmpty(index);
-        var isMin = current is not null && min is not null && current.Time <= min.Time;
-
-        if (isOne || isMin)
-        {
-          index = stream.Key;
-        }
-      }
-
-      var response = points[index];
-
-      points[index] = null;
-
-      return response;
-    }
-
-    /// <summary>
-    /// Parse point
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    protected virtual IPointModel Parse(string name, string input)
-    {
-      var props = input.Split(" ");
-
-      long.TryParse(props.ElementAtOrDefault(0), out long date);
-
-      if (date is 0)
-      {
-        return null;
-      }
-
-      double.TryParse(props.ElementAtOrDefault(1), out double bid);
-      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
-      double.TryParse(props.ElementAtOrDefault(3), out double ask);
-      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
-
-      var response = new PointModel
-      {
-        Name = name,
-        Time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(date),
-        Ask = ask,
-        Bid = bid,
-        Last = ask,
-        AskSize = askSize,
-        BidSize = bidSize
-      };
-
-      if (askSize.IsEqual(0))
-      {
-        response.Last = bid;
-      }
-
-      return response;
     }
 
     /// <summary>

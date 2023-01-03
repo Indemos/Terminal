@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -108,26 +109,15 @@ namespace Terminal.Core.CollectionSpace
     /// Add item using specific index
     /// </summary>
     /// <param name="index"></param>
-    /// <param name="dataItem"></param>
-    public virtual void Add(TKey index, TValue dataItem, ActionEnum action)
+    /// <param name="item"></param>
+    public virtual void Add(TKey index, TValue item, ActionEnum action)
     {
-      var item = dataItem;
-      var itemMessage = new TransactionMessage<TValue>
-      {
-        Next = item,
-        Previous = Items.Any() ? Items.Last().Value : default,
-        Action = action
-      };
-
-      var itemsMessage = new TransactionMessage<IDictionary<TKey, TValue>>
-      {
-        Next = Items,
-        Action = action
-      };
+      var previous = this[index];
 
       Items[index] = item;
-      ItemStream.OnNext(itemMessage);
-      ItemsStream.OnNext(itemsMessage);
+
+      SendItemMessage(item, previous, action);
+      SendItemsMessage(action);
     }
 
     /// <summary>
@@ -135,19 +125,9 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     public virtual void Clear()
     {
-      var itemMessage = new TransactionMessage<TValue>
-      {
-        Action = ActionEnum.Delete
-      };
-
-      var itemsMessage = new TransactionMessage<IDictionary<TKey, TValue>>
-      {
-        Action = ActionEnum.Delete
-      };
-
       Items.Clear();
-      ItemStream.OnNext(itemMessage);
-      ItemsStream.OnNext(itemsMessage);
+      SendItemMessage(default, default, ActionEnum.Delete);
+      SendItemsMessage(ActionEnum.Delete);
     }
 
     /// <summary>
@@ -157,29 +137,16 @@ namespace Terminal.Core.CollectionSpace
     /// <returns></returns>
     public virtual bool Remove(TKey index)
     {
-      var response = false;
-
-      if (Items.TryGetValue(index, out TValue item) is false || item is null)
+      if (Items.ContainsKey(index) is false)
       {
-        return response;
+        return false;
       }
 
-      var itemMessage = new TransactionMessage<TValue>
-      {
-        Previous = Items[index],
-        Action = ActionEnum.Delete
-      };
+      var previous = Items[index];
+      var response = Items.Remove(index);
 
-      var itemsMessage = new TransactionMessage<IDictionary<TKey, TValue>>
-      {
-        Next = Items,
-        Action = ActionEnum.Delete
-      };
-
-      response = Items.Remove(index);
-
-      ItemStream.OnNext(itemMessage);
-      ItemsStream.OnNext(itemsMessage);
+      SendItemMessage(default, previous, ActionEnum.Delete);
+      SendItemsMessage(ActionEnum.Delete);
 
       return response;
     }
@@ -189,9 +156,39 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     /// <param name="item"></param>
     /// <returns></returns>
-    public virtual bool Remove(KeyValuePair<TKey, TValue> item)
+    public virtual bool Remove(KeyValuePair<TKey, TValue> item) => Remove(item.Key);
+
+    /// <summary>
+    /// Send item message
+    /// </summary>
+    /// <param name="next"></param>
+    /// <param name="previous"></param>
+    /// <param name="action"></param>
+    protected virtual void SendItemMessage(TValue next, TValue previous, ActionEnum action)
     {
-      return Remove(item.Key);
+      var itemMessage = new TransactionMessage<TValue>
+      {
+        Next = next,
+        Previous = previous,
+        Action = action
+      };
+
+      ItemStream.OnNext(itemMessage);
+    }
+
+    /// <summary>
+    /// Send collection message
+    /// </summary>
+    /// <param name="action"></param>
+    protected virtual void SendItemsMessage(ActionEnum action)
+    {
+      var collectionMessage = new TransactionMessage<IDictionary<TKey, TValue>>
+      {
+        Next = Items,
+        Action = action
+      };
+
+      ItemsStream.OnNext(collectionMessage);
     }
   }
 }
