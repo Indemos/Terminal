@@ -6,13 +6,13 @@ namespace Terminal.Core.ValidatorSpace
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class PointCollectionsValidator : AbstractValidator<IPointModel>
+  public class PointCollectionValidator : AbstractValidator<IPointModel>
   {
-    public PointCollectionsValidator()
+    public PointCollectionValidator()
     {
       Include(new PointValidator());
 
-      RuleFor(o => o.Series).NotNull().NotEmpty().WithMessage("No series");
+      RuleFor(o => o.Series).NotNull();
     }
   }
 }

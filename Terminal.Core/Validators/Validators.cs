@@ -1,4 +1,3 @@
-using FluentValidation;
 using System.Collections.Generic;
 using Terminal.Core.ServiceSpace;
 
@@ -20,13 +19,13 @@ namespace Terminal.Core.ValidatorSpace
       {
         [nameof(TimeValidator)] = InstanceService<TimeValidator>.Instance,
         [nameof(PointValidator)] = InstanceService<PointValidator>.Instance,
-        [nameof(PointCollectionsValidator)] = InstanceService<PointCollectionsValidator>.Instance,
-        [nameof(PointGroupValidator)] = InstanceService<PointGroupValidator>.Instance,
+        [nameof(PointCollectionValidator)] = InstanceService<PointCollectionValidator>.Instance,
+        [nameof(PointBarValidator)] = InstanceService<PointBarValidator>.Instance,
         [nameof(AccountValidator)] = InstanceService<AccountValidator>.Instance,
-        [nameof(AccountCollectionsValidator)] = InstanceService<AccountCollectionsValidator>.Instance,
+        [nameof(AccountCollectionValidator)] = InstanceService<AccountCollectionValidator>.Instance,
         [nameof(ConnectorValidator)] = InstanceService<ConnectorValidator>.Instance,
         [nameof(InstrumentValidator)] = InstanceService<InstrumentValidator>.Instance,
-        [nameof(InstrumentCollectionsValidator)] = InstanceService<InstrumentCollectionsValidator>.Instance,
+        [nameof(InstrumentCollectionValidator)] = InstanceService<InstrumentCollectionValidator>.Instance,
         [nameof(InstrumentOptionValidator)] = InstanceService<InstrumentOptionValidator>.Instance,
         [nameof(InstrumentFutureValidator)] = InstanceService<InstrumentFutureValidator>.Instance,
         [nameof(TransactionValidator)] = InstanceService<TransactionValidator>.Instance,

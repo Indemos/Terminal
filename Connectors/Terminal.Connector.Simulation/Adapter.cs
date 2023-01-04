@@ -8,6 +8,7 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ExtensionSpace;
+using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
 using Terminal.Core.ServiceSpace;
 
@@ -149,7 +150,7 @@ namespace Terminal.Connector.Simulation
     /// <param name="orders"></param>
     protected virtual void CreateOrders(params ITransactionOrderModel[] orders)
     {
-      if (ValidateOrders(orders) is false)
+      if (ValidateOrders(orders).Any())
       {
         return;
       }
@@ -160,8 +161,8 @@ namespace Terminal.Connector.Simulation
         {
           case OrderTypeEnum.Stop:
           case OrderTypeEnum.Limit:
-          case OrderTypeEnum.StopLimit: ProcessPendingOrder(nextOrder); break;
-          case OrderTypeEnum.Market: ProcessOrder(nextOrder); break;
+          case OrderTypeEnum.StopLimit: SendPendingOrder(nextOrder); break;
+          case OrderTypeEnum.Market: SendOrder(nextOrder); break;
         }
       }
     }
@@ -217,7 +218,7 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual ITransactionOrderModel ProcessPendingOrder(ITransactionOrderModel nextOrder)
+    protected virtual ITransactionOrderModel SendPendingOrder(ITransactionOrderModel nextOrder)
     {
       nextOrder.Status = OrderStatusEnum.Placed;
 
@@ -232,24 +233,16 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel ProcessOrder(ITransactionOrderModel nextOrder)
+    protected virtual ITransactionPositionModel SendOrder(ITransactionOrderModel nextOrder)
     {
       var previousPosition = Account
         .ActivePositions
         .Values
         .FirstOrDefault(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name));
 
-      if (previousPosition is null)
-      {
-        return OpenPosition(nextOrder);
-      }
-
-      var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
-      var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
-
-      return isSameBuy || isSameSell ?
-        IncreasePosition(nextOrder, previousPosition) :
-        DecreasePosition(nextOrder, previousPosition);
+      return previousPosition is null ?
+        CreatePosition(nextOrder) :
+        UpdatePosition(nextOrder, previousPosition);
     }
 
     /// <summary>
@@ -257,18 +250,18 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual ITransactionPositionModel OpenPosition(ITransactionOrderModel nextOrder)
+    protected virtual ITransactionPositionModel CreatePosition(ITransactionOrderModel nextOrder)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.Last();
+      var openPrice = openPrices.Last();
 
-      nextOrder.Time = pointModel.Time;
-      nextOrder.Price = openPrices.Last().Price;
+      nextOrder.Time = openPrice.Time;
+      nextOrder.Price = openPrice.Price;
       nextOrder.Status = OrderStatusEnum.Filled;
 
       var nextPosition = GetPosition(nextOrder);
 
-      nextPosition.Time = pointModel.Time;
+      nextPosition.Time = openPrice.Time;
       nextPosition.OpenPrices = openPrices;
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
 
@@ -276,13 +269,56 @@ namespace Terminal.Connector.Simulation
       Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
-      nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
+      var message = new TransactionMessage<ITransactionOrderModel>
+      {
+        Action = ActionEnum.Create,
+        Next = nextOrder
+      };
+
+      nextOrder.Orders.ForEach(o => SendPendingOrder(o));
+      nextOrder.OrderStream.OnNext(message);
 
       return nextPosition;
     }
 
     /// <summary>
-    /// Create position when there is a position with the same transaction type 
+    /// Update position  
+    /// </summary>
+    /// <param name="nextOrder"></param>
+    /// <param name="previousPosition"></param>
+    /// <returns></returns>
+    protected virtual ITransactionPositionModel UpdatePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
+    {
+      var isSameBuy = Equals(previousPosition.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
+      var isSameSell = Equals(previousPosition.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
+      var openPrice = GetOpenPrices(nextOrder).Last();
+
+      nextOrder.Time = openPrice.Time;
+      nextOrder.Price = openPrice.Price;
+      nextOrder.Status = OrderStatusEnum.Filled;
+
+      var nextPosition = isSameBuy || isSameSell ?
+        IncreasePosition(nextOrder, previousPosition) :
+        DecreasePosition(nextOrder, previousPosition);
+
+      var message = new TransactionMessage<ITransactionOrderModel>
+      {
+        Action = ActionEnum.Update,
+        Next = nextOrder
+      };
+
+      if (nextPosition.Size.Value.IsEqual(0) is false)
+      {
+        nextOrder.Orders.ForEach(o => SendPendingOrder(o));
+      }
+
+      nextOrder.OrderStream.OnNext(message);
+
+      return nextPosition;
+    }
+
+    /// <summary>
+    /// Create position when there is a position 
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <param name="previousPosition"></param>
@@ -290,15 +326,9 @@ namespace Terminal.Connector.Simulation
     protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.Last();
-
-      nextOrder.Time = pointModel.Time;
-      nextOrder.Price = openPrices.Last().Price;
-      nextOrder.Status = OrderStatusEnum.Filled;
-
       var nextPosition = GetPosition(nextOrder);
 
-      nextPosition.Time = pointModel.Time;
+      nextPosition.Time = openPrices.Last().Time;
       nextPosition.Price = nextOrder.Price;
       nextPosition.Size = nextOrder.Size + previousPosition.Size;
       nextPosition.OpenPrices = previousPosition.OpenPrices.Concat(openPrices).ToList();
@@ -318,9 +348,7 @@ namespace Terminal.Connector.Simulation
       Account.Positions.Add(previousPosition);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
-      nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
-
-      return previousPosition;
+      return nextPosition;
     }
 
     /// <summary>
@@ -332,15 +360,9 @@ namespace Terminal.Connector.Simulation
     protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
       var openPrices = GetOpenPrices(nextOrder);
-      var pointModel = nextOrder.Instrument.PointGroups.Last();
-
-      nextOrder.Time = pointModel.Time;
-      nextOrder.Price = openPrices.Last().Price;
-      nextOrder.Status = OrderStatusEnum.Filled;
-
       var nextPosition = GetPosition(nextOrder);
 
-      nextPosition.Time = pointModel.Time;
+      nextPosition.Time = openPrices.Last().Time;
       nextPosition.OpenPrices = openPrices;
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
       nextPosition.Size = Math.Abs(nextPosition.Size.Value - previousPosition.Size.Value);
@@ -361,7 +383,6 @@ namespace Terminal.Connector.Simulation
       if (nextPosition.Size.Value.IsEqual(0) is false)
       {
         Account.ActivePositions.Add(nextPosition.Id, nextPosition);
-        nextPosition.Orders.ForEach(o => ProcessPendingOrder(o));
       }
 
       return nextPosition;
@@ -422,7 +443,7 @@ namespace Terminal.Connector.Simulation
 
         if (isExecutable)
         {
-          ProcessOrder(order);
+          SendOrder(order);
         }
       }
     }

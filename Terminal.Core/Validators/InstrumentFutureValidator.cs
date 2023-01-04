@@ -10,7 +10,7 @@ namespace Terminal.Core.ValidatorSpace
   {
     public InstrumentFutureValidator()
     {
-      RuleFor(o => o.ExpirationDate).NotNull().WithMessage("No expiration date");
+      RuleFor(o => o.ExpirationDate).NotEmpty();
     }
   }
 }

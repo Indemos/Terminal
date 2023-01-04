@@ -220,7 +220,7 @@ namespace Terminal.Core.ModelSpace
     /// <returns></returns>
     protected virtual double? GetGainLossEstimate(double? price = null)
     {
-      var instrumentErrors = InstanceService<InstrumentCollectionsValidator>
+      var instrumentErrors = InstanceService<InstrumentCollectionValidator>
         .Instance
         .Validate(Instrument)
         .Errors;

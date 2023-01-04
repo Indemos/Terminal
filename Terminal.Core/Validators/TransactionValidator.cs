@@ -10,8 +10,8 @@ namespace Terminal.Core.ValidatorSpace
   {
     public TransactionValidator()
     {
-      RuleFor(o => o.Instrument).NotNull().NotEmpty().WithMessage("No instrument");
-      RuleFor(o => o.Size).NotNull().NotEqual(0).WithMessage("No size");
+      RuleFor(o => o.Instrument).NotEmpty();
+      RuleFor(o => o.Size).NotEmpty();
     }
   }
 }

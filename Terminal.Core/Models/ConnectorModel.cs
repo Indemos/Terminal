@@ -119,21 +119,21 @@ namespace Terminal.Core.ModelSpace
     public virtual void Dispose() => Disconnect();
 
     /// <summary>
-    /// Ensure that each series has a name and can be attached to specific area on the chart
+    /// Ensure all properties have correct values
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual bool ValidateOrders(params ITransactionOrderModel[] orders)
+    protected virtual IList<ValidationFailure> ValidateOrders(params ITransactionOrderModel[] orders)
     {
       var errors = new List<ValidationFailure>();
       var orderRules = InstanceService<TransactionOrderPriceValidator>.Instance;
-      var instrumentRules = InstanceService<InstrumentCollectionsValidator>.Instance;
+      var instrumentRules = InstanceService<InstrumentCollectionValidator>.Instance;
 
-      foreach (var model in orders)
+      foreach (var order in orders)
       {
-        errors.AddRange(orderRules.Validate(model).Errors);
-        errors.AddRange(instrumentRules.Validate(model.Instrument).Errors);
-        errors.AddRange(model.Orders.SelectMany(o => orderRules.Validate(o).Errors));
-        errors.AddRange(model.Orders.SelectMany(o => instrumentRules.Validate(o.Instrument).Errors));
+        errors.AddRange(orderRules.Validate(order).Errors);
+        errors.AddRange(instrumentRules.Validate(order.Instrument).Errors);
+        errors.AddRange(order.Orders.SelectMany(o => orderRules.Validate(o).Errors));
+        errors.AddRange(order.Orders.SelectMany(o => instrumentRules.Validate(o.Instrument).Errors));
       }
 
       foreach (var error in errors)
@@ -141,7 +141,7 @@ namespace Terminal.Core.ModelSpace
         InstanceService<LogService>.Instance.Log.Error(error.ErrorMessage);
       }
 
-      return errors.Any() is false;
+      return errors;
     }
 
     /// <summary>

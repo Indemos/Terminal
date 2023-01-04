@@ -12,8 +12,8 @@ namespace Terminal.Core.ValidatorSpace
     {
       Include(new TransactionPositionValidator());
 
-      RuleFor(o => o.GainLoss).NotNull().WithMessage("No PnL");
-      RuleFor(o => o.GainLossPoints).NotNull().WithMessage("No PnL points");
+      RuleFor(o => o.GainLoss).NotEmpty();
+      RuleFor(o => o.GainLossPoints).NotEmpty();
     }
   }
 }

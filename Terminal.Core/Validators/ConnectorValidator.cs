@@ -10,7 +10,7 @@ namespace Terminal.Core.ValidatorSpace
   {
     public ConnectorValidator()
     {
-      RuleFor(o => o.Name).NotNull().NotEmpty().WithMessage("No name");
+      RuleFor(o => o.Name).NotEmpty();
     }
   }
 }

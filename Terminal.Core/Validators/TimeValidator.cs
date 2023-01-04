@@ -10,9 +10,9 @@ namespace Terminal.Core.ValidatorSpace
   {
     public TimeValidator()
     {
-      RuleFor(o => o.Last).NotNull().NotEqual(0).WithMessage("No last price");
-      RuleFor(o => o.Time).NotNull().WithMessage("No time");
-      RuleFor(o => o.TimeFrame).NotNull().WithMessage("No time frame");
+      RuleFor(o => o.Last).NotEmpty();
+      RuleFor(o => o.Time).NotEmpty();
+      RuleFor(o => o.TimeFrame).NotEmpty();
     }
   }
 }

@@ -10,9 +10,9 @@ namespace Terminal.Core.ValidatorSpace
   {
     public InstrumentOptionValidator()
     {
-      RuleFor(o => o.Side).NotNull().WithMessage("No side");
-      RuleFor(o => o.Strike).NotNull().NotEqual(0).WithMessage("No strike");
-      RuleFor(o => o.ExpirationDate).NotNull().WithMessage("No expiration date");
+      RuleFor(o => o.Side).NotEmpty();
+      RuleFor(o => o.Strike).NotEmpty();
+      RuleFor(o => o.ExpirationDate).NotEmpty();
     }
   }
 }

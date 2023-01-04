@@ -1,10 +1,4 @@
-using Terminal.Core.EnumSpace;
-using Terminal.Core.MessageSpace;
 using FluentValidation;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Reactive.Subjects;
 using Terminal.Core.ModelSpace;
 
 namespace Terminal.Core.ValidatorSpace
@@ -16,10 +10,10 @@ namespace Terminal.Core.ValidatorSpace
   {
     public TransactionOrderValidator()
     {
-      RuleFor(o => o.Instrument).NotNull().NotEmpty().WithMessage("No instrument");
-      RuleFor(o => o.Size).NotNull().NotEqual(0).WithMessage("No size");
-      RuleFor(o => o.Type).NotNull().NotEqual(OrderTypeEnum.None).WithMessage("No side");
-      RuleFor(o => o.Orders).NotNull().WithMessage("No orders");
+      RuleFor(o => o.Instrument).NotEmpty();
+      RuleFor(o => o.Side).NotEmpty();
+      RuleFor(o => o.Size).NotEmpty();
+      RuleFor(o => o.Type).NotEmpty();
     }
   }
 }

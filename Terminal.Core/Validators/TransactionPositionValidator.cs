@@ -12,9 +12,9 @@ namespace Terminal.Core.ValidatorSpace
     {
       Include(new TransactionOrderValidator());
 
-      RuleFor(o => o.OpenPrice).NotNull().WithMessage("No open price");
-      RuleFor(o => o.ClosePrice).NotNull().WithMessage("No close price");
-      RuleFor(o => o.OpenPrices).NotNull().WithMessage("No open prices");
+      RuleFor(o => o.OpenPrice).NotEmpty();
+      RuleFor(o => o.ClosePrice).NotEmpty();
+      RuleFor(o => o.OpenPrices).NotEmpty();
     }
   }
 }

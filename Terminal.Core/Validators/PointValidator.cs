@@ -10,13 +10,12 @@ namespace Terminal.Core.ValidatorSpace
   {
     public PointValidator()
     {
-      RuleFor(o => o.Bid).NotNull().NotEqual(0).WithMessage("No bid");
-      RuleFor(o => o.Ask).NotNull().NotEqual(0).WithMessage("No offer");
-      RuleFor(o => o.BidSize).NotNull().WithMessage("No bid size");
-      RuleFor(o => o.AskSize).NotNull().WithMessage("No offer size");
-      RuleFor(o => o.Account).NotNull().WithMessage("No account");
-      RuleFor(o => o.Instrument).NotNull().WithMessage("No instrument");
-      RuleFor(o => o.Series).NotNull().WithMessage("No series");
+      RuleFor(o => o.Bid).NotEmpty();
+      RuleFor(o => o.Ask).NotEmpty();
+      RuleFor(o => o.BidSize).NotEmpty();
+      RuleFor(o => o.AskSize).NotEmpty();
+      RuleFor(o => o.Account).NotEmpty();
+      RuleFor(o => o.Instrument).NotEmpty();
     }
   }
 }
