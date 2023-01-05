@@ -12,7 +12,7 @@ namespace Terminal.Core.ValidatorSpace
     {
       RuleFor(o => o.Instrument).NotEmpty();
       RuleFor(o => o.Side).NotEmpty();
-      RuleFor(o => o.Size).NotEmpty();
+      RuleFor(o => o.Volume).NotEmpty();
       RuleFor(o => o.Type).NotEmpty();
     }
   }

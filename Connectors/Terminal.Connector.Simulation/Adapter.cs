@@ -179,7 +179,7 @@ namespace Terminal.Connector.Simulation
 
         if (order is not null)
         {
-          order.Size = nextOrder.Size;
+          order.Volume = nextOrder.Volume;
           order.Price = nextOrder.Price;
           order.Orders = nextOrder.Orders;
           order.Type = nextOrder.Type;
@@ -307,7 +307,7 @@ namespace Terminal.Connector.Simulation
         Next = nextOrder
       };
 
-      if (nextPosition.Size.Value.IsEqual(0) is false)
+      if (nextPosition.Volume.Value.IsEqual(0) is false)
       {
         nextOrder.Orders.ForEach(o => SendPendingOrder(o));
       }
@@ -330,9 +330,9 @@ namespace Terminal.Connector.Simulation
 
       nextPosition.Time = openPrices.Last().Time;
       nextPosition.Price = nextOrder.Price;
-      nextPosition.Size = nextOrder.Size + previousPosition.Size;
+      nextPosition.Volume = nextOrder.Volume + previousPosition.Volume;
       nextPosition.OpenPrices = previousPosition.OpenPrices.Concat(openPrices).ToList();
-      nextPosition.OpenPrice = nextPosition.OpenPrices.Sum(o => o.Size * o.Price) / nextPosition.OpenPrices.Sum(o => o.Size);
+      nextPosition.OpenPrice = nextPosition.OpenPrices.Sum(o => o.Volume * o.Price) / nextPosition.OpenPrices.Sum(o => o.Volume);
 
       previousPosition.CloseTime = nextPosition.Time;
       previousPosition.ClosePrice = nextPosition.OpenPrice;
@@ -365,7 +365,7 @@ namespace Terminal.Connector.Simulation
       nextPosition.Time = openPrices.Last().Time;
       nextPosition.OpenPrices = openPrices;
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
-      nextPosition.Size = Math.Abs(nextPosition.Size.Value - previousPosition.Size.Value);
+      nextPosition.Volume = Math.Abs(nextPosition.Volume.Value - previousPosition.Volume.Value);
 
       previousPosition.CloseTime = nextPosition.Time;
       previousPosition.ClosePrice = nextPosition.OpenPrice;
@@ -380,7 +380,7 @@ namespace Terminal.Connector.Simulation
       Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
 
-      if (nextPosition.Size.Value.IsEqual(0) is false)
+      if (nextPosition.Volume.Value.IsEqual(0) is false)
       {
         Account.ActivePositions.Add(nextPosition.Id, nextPosition);
       }
@@ -399,7 +399,7 @@ namespace Terminal.Connector.Simulation
         Name = nextOrder.Name,
         Description = nextOrder.Description,
         Type = nextOrder.Type,
-        Size = nextOrder.Size,
+        Volume = nextOrder.Volume,
         Side = nextOrder.Side,
         Group = nextOrder.Group,
         Price = nextOrder.Price,
@@ -418,7 +418,7 @@ namespace Terminal.Connector.Simulation
       foreach (var orderItem in Account.ActiveOrders)
       {
         var order = orderItem.Value;
-        var pointModel = order.Instrument.PointGroups.LastOrDefault();
+        var pointModel = order.Instrument.Points.LastOrDefault();
 
         if (pointModel is null)
         {

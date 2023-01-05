@@ -11,7 +11,7 @@ namespace Terminal.Core.ValidatorSpace
     public TransactionValidator()
     {
       RuleFor(o => o.Instrument).NotEmpty();
-      RuleFor(o => o.Size).NotEmpty();
+      RuleFor(o => o.Volume).NotEmpty();
     }
   }
 }

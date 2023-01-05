@@ -6,12 +6,15 @@ namespace Terminal.Core.ExtensionSpace
   {
     public static DateTime? Round(this DateTime? input, TimeSpan? span)
     {
-      if (input is null || span is null)
+      if (input is null)
       {
         return null;
       }
 
-      return new DateTime(input.Value.Ticks - (input.Value.Ticks % span.Value.Ticks), input.Value.Kind);
+      var date = input.Value.Ticks;
+      var excess = Math.Max(span?.Ticks ?? 1, 1);
+
+      return new DateTime(date - (date % excess), input.Value.Kind);
     }
   }
 }

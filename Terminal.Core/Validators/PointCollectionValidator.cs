@@ -10,7 +10,7 @@ namespace Terminal.Core.ValidatorSpace
   {
     public PointCollectionValidator()
     {
-      Include(new PointValidator());
+      Include(new PointVolumeValidator());
 
       RuleFor(o => o.Series).NotNull();
     }

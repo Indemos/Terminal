@@ -12,8 +12,7 @@ namespace Terminal.Core.ValidatorSpace
     {
       RuleFor(o => o.Bid).NotEmpty();
       RuleFor(o => o.Ask).NotEmpty();
-      RuleFor(o => o.BidSize).NotEmpty();
-      RuleFor(o => o.AskSize).NotEmpty();
+      RuleFor(o => o.Last).NotEmpty();
       RuleFor(o => o.Account).NotEmpty();
       RuleFor(o => o.Instrument).NotEmpty();
     }

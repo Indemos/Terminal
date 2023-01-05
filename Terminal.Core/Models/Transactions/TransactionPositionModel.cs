@@ -150,7 +150,7 @@ namespace Terminal.Core.ModelSpace
     {
       get
       {
-        var point = Instrument.PointGroups.LastOrDefault();
+        var point = Instrument.Points.LastOrDefault();
 
         if (point is not null)
         {
@@ -233,7 +233,7 @@ namespace Terminal.Core.ModelSpace
 
       var step = Instrument.StepValue / Instrument.StepSize;
       var commission = Instrument.Commission * OpenPrices.Count * 2;
-      var estimate = Size * (GetGainLossPointsEstimate(price) * step - commission) ?? 0.0;
+      var estimate = Volume * (GetGainLossPointsEstimate(price) * step - commission) ?? 0.0;
 
       if (price is not null)
       {

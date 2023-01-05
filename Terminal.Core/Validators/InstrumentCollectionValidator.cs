@@ -1,4 +1,5 @@
 using FluentValidation;
+using System.Linq;
 using Terminal.Core.ModelSpace;
 
 namespace Terminal.Core.ValidatorSpace
@@ -14,6 +15,8 @@ namespace Terminal.Core.ValidatorSpace
 
       RuleFor(o => o.Points).NotEmpty();
       RuleFor(o => o.PointGroups).NotEmpty();
+      RuleFor(o => o.Points.LastOrDefault()).SetValidator(new PointValidator());
+      RuleFor(o => o.PointGroups.LastOrDefault()).SetValidator(new PointValidator());
     }
   }
 }

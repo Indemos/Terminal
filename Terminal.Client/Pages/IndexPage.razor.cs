@@ -64,7 +64,7 @@ namespace Terminal.Client.Pages
 
         View.Setup = () =>
         {
-          var span = TimeSpan.FromMinutes(1);
+          var span = TimeSpan.Zero;
           var account = new AccountModel
           {
             Balance = 50000,
@@ -89,7 +89,7 @@ namespace Terminal.Client.Pages
           account
             .Instruments
             .Values
-            .Select(o => o.PointGroups.ItemStream)
+            .Select(o => o.Points.ItemStream)
             .Merge()
             .Subscribe(OnData);
         };
@@ -158,7 +158,7 @@ namespace Terminal.Client.Pages
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
         {
-          Size = 1,
+          Volume = 1,
           Side = OrderSideEnum.Sell,
           Type = OrderTypeEnum.Market,
           Instrument = assetSell
@@ -170,7 +170,7 @@ namespace Terminal.Client.Pages
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
         {
-          Size = 1,
+          Volume = 1,
           Side = OrderSideEnum.Buy,
           Type = OrderTypeEnum.Market,
           Instrument = assetBuy
@@ -187,7 +187,7 @@ namespace Terminal.Client.Pages
           Action = ActionEnum.Create,
           Next = new TransactionOrderModel
           {
-            Size = 1,
+            Volume = 1,
             Side = Equals(position.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy,
             Type = OrderTypeEnum.Market,
             Instrument = position.Instrument

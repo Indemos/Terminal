@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Terminal.Connector.Simulation;
 using Terminal.Core.CollectionSpace;
 using Terminal.Core.EnumSpace;
@@ -12,7 +13,7 @@ namespace Terminal.Tests.Connectors
 
     public SimulationTests()
     {
-      var span = TimeSpan.FromMinutes(1);
+      var span = TimeSpan.FromSeconds(1);
 
       Account = new AccountModel
       {
@@ -26,66 +27,76 @@ namespace Terminal.Tests.Connectors
     }
 
     [Fact]
-    public void ValidateMissingInstrument()
+    public void BreakValidationOnEmptyOrder()
     {
+      var instrument = new InstrumentModel();
       var order = new TransactionOrderModel();
+      var error = "NotEmptyValidator";
+      var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
 
-      Assert.Throws<ArgumentNullException>(() => base.ValidateOrders(order));
+      Assert.Contains($"{nameof(order.Side)} {error}", errors);
+      Assert.Contains($"{nameof(order.Volume)} {error}", errors);
+      Assert.Contains($"{nameof(order.Type)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.Name)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.TimeFrame)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.Points)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.PointGroups)} {error}", errors);
     }
 
     [Fact]
-    public void ValidateIncorrectInstrument()
+    public void BreakValidationOnOrderWithoutQuote()
     {
-      var instrument = new InstrumentModel();
-      var order = new TransactionOrderModel
-      {
-        Size = 1,
-        Side = OrderSideEnum.Buy,
-        Type = OrderTypeEnum.Market,
-        Instrument = instrument
-      };
-
-      var errors = base.ValidateOrders(order);
-
-      Assert.Equal(nameof(instrument.Name), errors[0].PropertyName);
-      Assert.Equal(nameof(instrument.TimeFrame), errors[1].PropertyName);
-      Assert.Equal(nameof(instrument.Points), errors[2].PropertyName);
-      Assert.Equal(nameof(instrument.PointGroups), errors[3].PropertyName);
-
-      var errorCode = "NotEmptyValidator";
-
-      Assert.Equal(errorCode, errors[0].ErrorCode);
-      Assert.Equal(errorCode, errors[1].ErrorCode);
-      Assert.Equal(errorCode, errors[2].ErrorCode);
-      Assert.Equal(errorCode, errors[3].ErrorCode);
-    }
-
-    [Fact]
-    public void ValidateIncorrectOrder()
-    {
+      var point = new PointModel();
       var instrument = new InstrumentModel();
       var order = new TransactionOrderModel
       {
         Instrument = instrument
       };
 
-      var errors = base.ValidateOrders(order);
+      instrument.Points.Add(point);
+      instrument.PointGroups.Add(point);
 
-      Assert.Equal(nameof(order.Side), errors[0].PropertyName);
-      Assert.Equal(nameof(order.Size), errors[1].PropertyName);
-      Assert.Equal(nameof(order.Type), errors[2].PropertyName);
-      Assert.Equal(nameof(order.Price), errors[3].PropertyName);
+      var error = "NotEmptyValidator";
+      var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
 
-      var errorCode = "NotEmptyValidator";
-
-      Assert.Equal(errorCode, errors[0].ErrorCode);
-      Assert.Equal(errorCode, errors[1].ErrorCode);
-      Assert.Equal(errorCode, errors[2].ErrorCode);
-      Assert.Equal(errorCode, errors[3].ErrorCode);
+      Assert.Contains($"{nameof(order.Side)} {error}", errors);
+      Assert.Contains($"{nameof(order.Volume)} {error}", errors);
+      Assert.Contains($"{nameof(order.Type)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.Name)} {error}", errors);
+      Assert.Contains($"{nameof(instrument.TimeFrame)} {error}", errors);
+      Assert.Contains($"{nameof(point.Bid)} {error}", errors);
+      Assert.Contains($"{nameof(point.Ask)} {error}", errors);
+      Assert.Contains($"{nameof(point.Last)} {error}", errors);
     }
 
-    [Fact]
-    public void ValidateIncorrectQuote()
+    [Theory]
+    [InlineData(OrderTypeEnum.Stop)]
+    [InlineData(OrderTypeEnum.Limit)]
+    [InlineData(OrderTypeEnum.StopLimit)]
+    public void BreakValidationOnPendingOrderWithoutPrice(OrderTypeEnum orderType)
+    {
+      var order = new TransactionOrderModel
+      {
+        Type = orderType
+      };
+
+      var error = "NotEmptyValidator";
+      var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
+
+      Assert.Contains($"{nameof(order.Price)} {error}", errors);
+    }
+
+    [Theory]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Stop, 5, 10, "GreaterThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Stop, 10, 5, "LessThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Limit, 10, 5, "LessThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 5, 10, "GreaterThanOrEqualValidator")]
+    public void BreakValidationOnPendingOrderWithIncorrectPrice(
+      OrderSideEnum orderSide,
+      OrderTypeEnum orderType,
+      double orderPrice,
+      double price,
+      string error)
     {
       var instrument = new InstrumentModel
       {
@@ -95,26 +106,78 @@ namespace Terminal.Tests.Connectors
 
       var point = new PointModel
       {
-        //Ask = 200,
-        //Bid = 100,
-        //AskSize = 1000,
-        //BidSize = 500,
-        //Last = 200,
-        //Instrument = instrument
+        Ask = price,
+        Bid = price,
+        Last = price,
+        Instrument = instrument
       };
 
       var order = new TransactionOrderModel
       {
-        Size = 1,
-        Side = OrderSideEnum.Buy,
-        Type = OrderTypeEnum.Market,
-        Instrument = instrument
+        Volume = 1,
+        Side = orderSide,
+        Type = orderType,
+        Instrument = instrument,
+        Price = orderPrice
       };
 
       instrument.Points.Add(point);
       instrument.PointGroups.Add(point);
 
-      var errors = base.ValidateOrders(order);
+      var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
+
+      Assert.Contains($"{nameof(order.Price)} {error}", errors);
+    }
+
+    [Theory]
+    [InlineData(OrderSideEnum.Buy, null, 15, 10, "NotEmptyValidator", "LessThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, null, 15, 5, "NotEmptyValidator", "GreaterThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Buy, 5.0, 15, 10, "GreaterThanOrEqualValidator", "LessThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, 15.0, 10, 5, "LessThanOrEqualValidator", "GreaterThanOrEqualValidator")]
+    public void BreakValidationOnStopLimitOrderWithIncorrectPrice(
+      OrderSideEnum orderSide,
+      double? activationPrice,
+      double orderPrice,
+      double price,
+      string activationError,
+      string orderError)
+    {
+      var instrument = new InstrumentModel
+      {
+        Name = Asset,
+        TimeFrame = TimeSpan.FromSeconds(1)
+      };
+
+      var point = new PointModel
+      {
+        Ask = price,
+        Bid = price,
+        Last = price,
+        Instrument = instrument
+      };
+
+      var order = new TransactionOrderModel
+      {
+        Volume = 1,
+        Side = orderSide,
+        Type = OrderTypeEnum.StopLimit,
+        Instrument = instrument,
+        ActivationPrice = activationPrice,
+        Price = orderPrice
+      };
+
+      instrument.Points.Add(point);
+      instrument.PointGroups.Add(point);
+
+      var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
+
+      Assert.Contains($"{nameof(order.ActivationPrice)} {activationError}", errors);
+      Assert.Contains($"{nameof(order.Price)} {orderError}", errors);
+    }
+
+    [Fact]
+    public void CreateMarketOrder()
+    {
     }
   }
 }

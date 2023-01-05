@@ -11,7 +11,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Contract size
     /// </summary>
-    double? Size { get; set; }
+    double? Volume { get; set; }
 
     /// <summary>
     /// Open price for the order
@@ -52,7 +52,7 @@ namespace Terminal.Core.ModelSpace
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Size { get; set; }
+    public virtual double? Volume { get; set; }
 
     /// <summary>
     /// Open price for the order
@@ -83,5 +83,13 @@ namespace Terminal.Core.ModelSpace
     /// Instrument to buy or sell
     /// </summary>
     public virtual IInstrumentModel Instrument { get; set; }
+
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    public TransactionModel()
+    {
+      Instrument = new InstrumentModel();
+    }
   }
 }

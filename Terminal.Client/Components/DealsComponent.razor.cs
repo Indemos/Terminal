@@ -28,7 +28,7 @@ namespace Terminal.Client.Components
           Time = o.Time,
           Name = o.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Size ?? 0,
+          Size = o.Volume ?? 0,
           OpenPrice = o.OpenPrice ?? 0,
           ClosePrice = o.ClosePrice ?? 0,
           Gain = o.GainLoss ?? 0

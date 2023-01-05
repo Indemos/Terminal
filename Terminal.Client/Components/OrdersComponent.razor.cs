@@ -27,7 +27,7 @@ namespace Terminal.Client.Components
           Time = o.Time,
           Name = o.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Size ?? 0,
+          Size = o.Volume ?? 0,
           Price = o.Price ?? 0,
 
         }).ToList();
