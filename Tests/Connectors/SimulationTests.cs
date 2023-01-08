@@ -130,10 +130,10 @@ namespace Terminal.Tests.Connectors
     }
 
     [Theory]
-    [InlineData(OrderSideEnum.Buy, null, 15, 10, "NotEmptyValidator", "LessThanOrEqualValidator")]
-    [InlineData(OrderSideEnum.Sell, null, 15, 5, "NotEmptyValidator", "GreaterThanOrEqualValidator")]
-    [InlineData(OrderSideEnum.Buy, 5.0, 15, 10, "GreaterThanOrEqualValidator", "LessThanOrEqualValidator")]
-    [InlineData(OrderSideEnum.Sell, 15.0, 10, 5, "LessThanOrEqualValidator", "GreaterThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Buy, null, 15, 10, "NotEmptyValidator", "GreaterThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, null, 15, 5, "NotEmptyValidator", "LessThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Buy, 10.0, 5, 15, "GreaterThanOrEqualValidator", "GreaterThanOrEqualValidator")]
+    [InlineData(OrderSideEnum.Sell, 10.0, 15, 5, "LessThanOrEqualValidator", "LessThanOrEqualValidator")]
     public void BreakValidationOnStopLimitOrderWithIncorrectPrice(
       OrderSideEnum orderSide,
       double? activationPrice,

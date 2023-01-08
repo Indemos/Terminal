@@ -31,14 +31,14 @@ namespace Terminal.Core.ValidatorSpace
       {
         RuleFor(o => o.ActivationPrice).NotEmpty();
         RuleFor(o => o.ActivationPrice).GreaterThanOrEqualTo(o => o.Instrument.Points.Last().Ask);
-        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.ActivationPrice);
+        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.ActivationPrice);
       });
 
       When(o => Equals(o.Side, OrderSideEnum.Sell) && Equals(o.Type, OrderTypeEnum.StopLimit), () =>
       {
         RuleFor(o => o.ActivationPrice).NotEmpty();
         RuleFor(o => o.ActivationPrice).LessThanOrEqualTo(o => o.Instrument.Points.Last().Bid);
-        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.ActivationPrice);
+        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.ActivationPrice);
       });
     }
   }
