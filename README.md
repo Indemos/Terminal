@@ -16,7 +16,7 @@ May contain references to other apps in [this list](https://github.com/Indemos) 
 * **Tests** - unit tests 
 * **Score** - class library measuring performance metrics and related statstics
 * **Data** - catalog with historical data, any format is acceptable as long as you implement your own parser
-* **Connector** - gateway implementations for various brokers and exchanges, including historical and simulated data
+* **Connector** - gateway implementations for brokers and exchanges, including historical and simulated data
 * **Client** - the main application that puts together orders, positions, performance metrics, and charts 
 
 # Gateways 
