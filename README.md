@@ -1,26 +1,27 @@
-# Stock Trading Terminal and Backtester - Web Version
+# Trading Terminal and Backtester - Web Version
 
-All-in-one. Trading terminal with generic gateway implementation, tick backtester, charting, and performance evaluator for trading strategies.
-Currently, supports only stocks with experimental extension for FX, options, and futures. 
+All-in-one. 
+Trading terminal with generic gateway implementation, tick backtester, charting, and performance evaluator for trading strategies.
+Currently, supports stocks with experimental extension for FX, options, and futures. 
 
 # Disclaimer
 
-The app is in active development state and can be updated without any notice. May contain references to other apps in [this list](https://github.com/Indemos) that were NOT included in the current repository.
+The app is in active development state and can be updated without any notice. 
+May contain references to other apps in [this list](https://github.com/Indemos) that were NOT included in the current repository.
 
 # Structure
 
 * **Core** - cross-platform .NET 5 class library that contains main functionality 
-* **Chart** - graphics and [charts](https://github.com/Indemos/Canvas)
-* **Client** - the main application that puts together windows for orders, positions, performance metrics, and charts 
-* **Evaluation** - basic unit tests 
-* **Score** - class library measuring performance and related statstics
+* **Chart** - [canvas](https://github.com/Indemos/Canvas) visualization
+* **Tests** - unit tests 
+* **Score** - class library measuring performance metrics and related statstics
 * **Data** - catalog with historical data, any format is acceptable as long as you implement your own parser
-* **Gateway** - gateway implementations for various brokers and exchanges, including historical and simulated data
+* **Connector** - gateway implementations for various brokers and exchanges, including historical and simulated data
+* **Client** - the main application that puts together orders, positions, performance metrics, and charts 
 
 # Gateways 
 
-Both, trading and data gateways are included in the same interface. 
-In order to create connector for preferable broker, implement interface `IConnectorModel`.
+In order to create connector for preferred broker, implement interface `IConnectorModel`.
 
 # Trading Strategies
 
