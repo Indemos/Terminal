@@ -42,5 +42,13 @@ namespace Terminal.Core.ModelSpace
     /// Aggregation period for the quotes
     /// </summary>
     public virtual TimeSpan? TimeFrame { get; set; }
+
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    public TimeModel()
+    {
+      Time = DateTime.Now;
+    }
   }
 }

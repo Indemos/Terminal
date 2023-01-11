@@ -26,11 +26,6 @@ namespace Terminal.Core.ModelSpace
     OrderTimeSpanEnum? TimeSpan { get; set; }
 
     /// <summary>
-    /// Reference to the main order in the hierarchy
-    /// </summary>
-    ITransactionOrderModel Container { get; set; }
-
-    /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
     IList<ITransactionOrderModel> Orders { get; set; }
@@ -60,11 +55,6 @@ namespace Terminal.Core.ModelSpace
     /// Time in force
     /// </summary>
     public virtual OrderTimeSpanEnum? TimeSpan { get; set; }
-
-    /// <summary>
-    /// Reference to the main order in the hierarchy
-    /// </summary>
-    public virtual ITransactionOrderModel Container { get; set; }
 
     /// <summary>
     /// List of related orders in the hierarchy

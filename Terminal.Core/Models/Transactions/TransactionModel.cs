@@ -89,6 +89,7 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public TransactionModel()
     {
+      Time = DateTime.Now;
       Instrument = new InstrumentModel();
     }
   }

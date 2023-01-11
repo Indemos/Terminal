@@ -168,7 +168,7 @@ namespace Terminal.Connector.Simulation
     }
 
     /// <summary>
-    /// Update order implementation
+    /// Update orders
     /// </summary>
     /// <param name="orders"></param>
     protected virtual ITransactionOrderModel[] UpdateOrders(params ITransactionOrderModel[] orders)
@@ -179,10 +179,12 @@ namespace Terminal.Connector.Simulation
 
         if (order is not null)
         {
-          order.Volume = nextOrder.Volume;
-          order.Price = nextOrder.Price;
-          order.Orders = nextOrder.Orders;
-          order.Type = nextOrder.Type;
+          var update = GetPosition(nextOrder);
+
+          if (ValidateOrders().Any() is false)
+          {
+            Account.ActiveOrders[nextOrder.Id] = update;
+          }
         }
       }
 
@@ -266,7 +268,6 @@ namespace Terminal.Connector.Simulation
       nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
 
       Account.Orders.Add(nextOrder);
-      Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
       var message = new TransactionMessage<ITransactionOrderModel>
@@ -339,13 +340,11 @@ namespace Terminal.Connector.Simulation
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
 
-      Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
 
       DeleteOrders(previousPosition.Orders.ToArray());
 
       Account.Orders.Add(nextOrder);
-      Account.Positions.Add(previousPosition);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
 
       return nextPosition;
@@ -396,6 +395,7 @@ namespace Terminal.Connector.Simulation
     {
       return new TransactionPositionModel
       {
+        Id = nextOrder.Id,
         Name = nextOrder.Name,
         Description = nextOrder.Description,
         Type = nextOrder.Type,
@@ -403,10 +403,9 @@ namespace Terminal.Connector.Simulation
         Side = nextOrder.Side,
         Group = nextOrder.Group,
         Price = nextOrder.Price,
-        OpenPrice = nextOrder.Price,
+        ActivationPrice = nextOrder.ActivationPrice,
         Instrument = nextOrder.Instrument,
-        Orders = nextOrder.Orders,
-        Time = nextOrder.Time
+        Orders = nextOrder.Orders
       };
     }
 
