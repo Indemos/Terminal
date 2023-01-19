@@ -151,7 +151,7 @@ namespace Terminal.Core.ModelSpace
     protected virtual IList<ITransactionOrderModel> GetOpenPrices(ITransactionOrderModel nextOrder)
     {
       var openPrice = nextOrder.Price;
-      var pointModel = nextOrder.Instrument.Points.LastOrDefault();
+      var pointModel = nextOrder.Instrument.Points.Last();
 
       if (openPrice is null)
       {
@@ -168,7 +168,7 @@ namespace Terminal.Core.ModelSpace
         {
           Price = openPrice,
           Volume = nextOrder.Volume,
-          Time = pointModel.Time
+          Time = nextOrder.Time
         }
       };
     }

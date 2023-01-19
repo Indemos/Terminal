@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using Terminal.Connector.Simulation;
 using Terminal.Core.CollectionSpace;
@@ -14,7 +15,20 @@ namespace Terminal.Tests.Connectors
 
     public SimulationTests()
     {
+      var askX = 20;
+      var bidX = 10;
+      var askY = 100;
+      var bidY = 50;
       var span = TimeSpan.FromSeconds(1);
+      var instrumentX = new InstrumentModel { Name = AssetX, TimeFrame = span, Ask = askX, Bid = bidX };
+      var instrumentY = new InstrumentModel { Name = AssetY, TimeFrame = span, Ask = askY, Bid = bidY };
+      var pointX = new PointModel { Ask = askX, Bid = bidX, Last = bidX, Instrument = instrumentX };
+      var pointY = new PointModel { Ask = askY, Bid = bidY, Last = askY, Instrument = instrumentX };
+
+      instrumentX.Points.Add(pointX);
+      instrumentY.Points.Add(pointY);
+      instrumentX.PointGroups.Add(pointX);
+      instrumentY.PointGroups.Add(pointY);
 
       Account = new AccountModel
       {
@@ -22,8 +36,8 @@ namespace Terminal.Tests.Connectors
         Balance = 50000,
         Instruments = new NameCollection<string, IInstrumentModel>
         {
-          [AssetX] = new InstrumentModel { Name = AssetX, TimeFrame = span },
-          [AssetY] = new InstrumentModel { Name = AssetY, TimeFrame = span }
+          [AssetX] = instrumentX,
+          [AssetY] = instrumentY
         }
       };
     }
@@ -33,7 +47,8 @@ namespace Terminal.Tests.Connectors
       OrderSideEnum? orderSide,
       OrderTypeEnum? orderType,
       double? volume,
-      double? price,
+      double? bid,
+      double? ask,
       double? activationPrice,
       double? orderPrice)
     {
@@ -45,9 +60,9 @@ namespace Terminal.Tests.Connectors
 
       var point = new PointModel
       {
-        Ask = price,
-        Bid = price,
-        Last = price,
+        Ask = ask,
+        Bid = bid,
+        Last = bid,
         Instrument = instrument
       };
 
@@ -68,7 +83,7 @@ namespace Terminal.Tests.Connectors
     }
 
     [Fact]
-    public void BreakValidationOnEmptyOrder()
+    public void ValidateOrdersWithoutProps()
     {
       var instrument = new InstrumentModel();
       var order = new TransactionOrderModel();
@@ -85,7 +100,7 @@ namespace Terminal.Tests.Connectors
     }
 
     [Fact]
-    public void BreakValidationOnOrderWithoutQuote()
+    public void ValidateOrdersWithoutQuotes()
     {
       var point = new PointModel();
       var instrument = new InstrumentModel();
@@ -114,7 +129,7 @@ namespace Terminal.Tests.Connectors
     [InlineData(OrderTypeEnum.Stop)]
     [InlineData(OrderTypeEnum.Limit)]
     [InlineData(OrderTypeEnum.StopLimit)]
-    public void BreakValidationOnPendingOrderWithoutPrice(OrderTypeEnum orderType)
+    public void ValidateOrdersWithoutOpenPrice(OrderTypeEnum orderType)
     {
       var order = new TransactionOrderModel
       {
@@ -132,14 +147,14 @@ namespace Terminal.Tests.Connectors
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Stop, 10.0, 5.0, "LessThanOrEqualValidator")]
     [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Limit, 10.0, 5.0, "LessThanOrEqualValidator")]
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 5.0, 10.0, "GreaterThanOrEqualValidator")]
-    public void BreakValidationOnPendingOrderWithIncorrectPrice(
+    public void ValidateOrdersWithIncorrectPrice(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double orderPrice,
       double price,
       string error)
     {
-      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, null, orderPrice);
+      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, price, null, orderPrice);
       var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
 
       Assert.Contains($"{nameof(order.Price)} {error}", errors);
@@ -150,7 +165,7 @@ namespace Terminal.Tests.Connectors
     [InlineData(OrderSideEnum.Sell, 15.0, null, 5.0, "NotEmptyValidator", "LessThanOrEqualValidator")]
     [InlineData(OrderSideEnum.Buy, 5.0, 10.0, 15.0, "GreaterThanOrEqualValidator", "GreaterThanOrEqualValidator")]
     [InlineData(OrderSideEnum.Sell, 15.0, 10.0, 5.0, "LessThanOrEqualValidator", "LessThanOrEqualValidator")]
-    public void BreakValidationOnStopLimitOrderWithIncorrectPrice(
+    public void ValidateOrdersWithIncorrectStopLimitPrice(
       OrderSideEnum orderSide,
       double? orderPrice,
       double? activationPrice,
@@ -158,7 +173,7 @@ namespace Terminal.Tests.Connectors
       string activationError,
       string orderError)
     {
-      var order = GenerateOrder(AssetX, orderSide, OrderTypeEnum.StopLimit, 1.0, price, activationPrice, orderPrice);
+      var order = GenerateOrder(AssetX, orderSide, OrderTypeEnum.StopLimit, 1.0, price, price, activationPrice, orderPrice);
       var errors = base.ValidateOrders(order).Select(o => $"{o.PropertyName} {o.ErrorCode}");
 
       Assert.Contains($"{nameof(order.ActivationPrice)} {activationError}", errors);
@@ -166,7 +181,7 @@ namespace Terminal.Tests.Connectors
     }
 
     [Fact]
-    public void SkipIncorrectMarketOrder()
+    public void CreateOrdersWithEmptyOrder()
     {
       var order = new TransactionOrderModel();
 
@@ -188,7 +203,7 @@ namespace Terminal.Tests.Connectors
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 5.0, null, 15.0, 1, 1, 0, 0)]
     [InlineData(OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 5.0, 10.0, 15.0, 1, 1, 0, 0)]
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 1, 1, 0, 0)]
-    public void RegisterOrderWithoutMatching(
+    public void CreateOrdersWithoutMatching(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double? price,
@@ -199,7 +214,7 @@ namespace Terminal.Tests.Connectors
       int positions,
       int activePositions)
     {
-      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, activationPrice, orderPrice);
+      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, price, activationPrice, orderPrice);
 
       base.CreateOrders(order);
 
@@ -216,14 +231,14 @@ namespace Terminal.Tests.Connectors
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0)]
     [InlineData(OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0)]
     [InlineData(OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0)]
-    public void RegisterPendingOrder(
+    public void SendPendingOrderUpdatingStatements(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double? price,
       double? activationPrice,
       double? orderPrice)
     {
-      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, activationPrice, orderPrice);
+      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, price, activationPrice, orderPrice);
       var orderId = order.Id;
 
       base.SendPendingOrder(order);
@@ -238,14 +253,16 @@ namespace Terminal.Tests.Connectors
     }
 
     [Theory]
-    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0)]
-    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0)]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Market, 10.0, 15.0, 15.0)]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Market, 10.0, 15.0, 10.0)]
     public void CreatePositionWithoutMatching(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
+      double? bid,
+      double? ask,
       double? price)
     {
-      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, price, null, null);
+      var order = GenerateOrder(AssetX, orderSide, orderType, 1.0, bid, ask, null, null);
       var point = order.Instrument.Points.First();
       var orderId = order.Id;
 
@@ -253,11 +270,10 @@ namespace Terminal.Tests.Connectors
 
       var position = Account.ActivePositions[orderId];
 
-      Assert.Equal(order.Time, point.Time);
       Assert.Equal(order.Price, price);
       Assert.Equal(order.Status, OrderStatusEnum.Filled);
 
-      Assert.Equal(position.Time, point.Time);
+      Assert.Equal(position.Time, order.Time);
       Assert.Equal(position.Price, price);
       Assert.Equal(position.OpenPrice, price);
       Assert.Equal(position.OpenPrices.Last().Price, price);
@@ -275,35 +291,30 @@ namespace Terminal.Tests.Connectors
     public void CreatePositionWithPendingOrders()
     {
       var price = 15.0;
-      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 1.0, price, null, null);
-      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 1.0, price, null, 5.0);
-      var TP = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 1.0, price, null, 25.0);
+      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 1.0, price, price, null, null);
+      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 1.0, price, price, null, 5.0);
+      var TP = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 1.0, price, price, null, 25.0);
       var orderId = order.Id;
-      var SLID = SL.Id;
-      var TPID = TP.Id;
 
       order.Orders.Add(SL);
       order.Orders.Add(TP);
 
-      base.CreatePosition(order);
+      var position = base.CreatePosition(order);
 
-      Assert.Equal(order, Account.Orders[0]);
-      Assert.Equal(SL, Account.Orders[1]);
-      Assert.Equal(TP, Account.Orders[2]);
-      Assert.Equal(SL, Account.ActiveOrders[SLID]);
-      Assert.Equal(TP, Account.ActiveOrders[TPID]);
-      Assert.Equal(orderId, Account.ActivePositions[orderId].Id);
-      Assert.Equal(3, Account.Orders.Count);
-      Assert.Equal(2, Account.ActiveOrders.Count);
-      Assert.Single(Account.ActivePositions);
       Assert.Empty(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
+      Assert.Single(Account.Orders);
+      Assert.Single(Account.ActivePositions);
+      Assert.Equal(order, Account.Orders[0]);
+      Assert.Equal(orderId, Account.ActivePositions[orderId].Id);
+      Assert.Equal(position, Account.ActivePositions[orderId]);
     }
 
     [Fact]
-    public void CopyTransaction()
+    public void GetPositionFromOrder()
     {
-      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 2.0, 15.0, 5.0, null);
-      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 1.0, 15.0, null, 25.0);
+      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 2.0, 15.0, 15.0, 5.0, null);
+      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 1.0, 15.0, 15.0, null, 25.0);
       var orderId = order.Id;
 
       order.Orders.Add(SL);
@@ -324,12 +335,12 @@ namespace Terminal.Tests.Connectors
     }
 
     [Fact]
-    public void UpdateOrderProps()
+    public void UpdateOrdersWithMatches()
     {
-      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 2.0, 15.0, 5.0, null);
-      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 2.0, 5.0, 10.0, 15.0);
-      var orderX = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 1.0, 15.0, null, 25.0);
-      var orderY = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 1.0, 15.0, null, 5.0);
+      var SL = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 2.0, 15.0, 15.0, 5.0, null);
+      var order = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 2.0, 5.0, 5.0, 10.0, 15.0);
+      var orderX = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 1.0, 15.0, 15.0, null, 25.0);
+      var orderY = GenerateOrder(AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 1.0, 15.0, 15.0, null, 5.0);
 
       order.Id = orderY.Id;
       order.Orders.Add(SL);
@@ -364,172 +375,121 @@ namespace Terminal.Tests.Connectors
       Assert.Empty(Account.Orders);
     }
 
-    [Theory]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 1)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 1)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0, 2, 2, 0, 0)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0, 2, 2, 0, 0)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0, 2, 2, 0, 0)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0, 2, 2, 0, 0)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0,
-      AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0, 2, 2, 0, 0)]
-    [InlineData(2.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0,
-      AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 2, 2, 0, 0)]
-    public void Increase(
-      double volumeX,
-      string assetX,
-      OrderSideEnum orderSideX,
-      OrderTypeEnum orderTypeX,
-      double? priceX,
-      double? activationPriceX,
-      double? orderPriceX,
-      string assetY,
-      OrderSideEnum orderSideY,
-      OrderTypeEnum orderTypeY,
-      double? priceY,
-      double? activationPriceY,
-      double? orderPriceY,
-      int orders,
-      int activeOrders,
-      int positions,
-      int activePositions)
+    [Fact]
+    public void IncreasePositionWithMatches()
     {
-      var orderX = GenerateOrder(assetX, orderSideX, orderTypeX, volumeX, priceX, activationPriceX, orderPriceX);
-      var orderY = GenerateOrder(assetY, orderSideY, orderTypeY, 2.0, priceY, activationPriceY, orderPriceY);
+      var instrumentX = Account.Instruments[AssetX];
+      var instrumentY = Account.Instruments[AssetY];
+      var pointX = instrumentX.Points.Last();
+      var pointY = instrumentY.Points.Last();
+      var orderX = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 1, pointX.Bid, pointX.Ask, null, null);
+      var orderY = GenerateOrder(AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 2, pointY.Bid, pointY.Ask, null, null);
+      var increase = GenerateOrder(AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 3, pointY.Bid + 5, pointY.Ask + 5, null, null);
+
+      // Open
 
       base.CreateOrders(orderX);
       base.CreateOrders(orderY);
 
-      Assert.Equal(orders, Account.Orders.Count);
-      Assert.Equal(activeOrders, Account.ActiveOrders.Count);
-      Assert.Equal(positions, Account.Positions.Count);
-      Assert.Equal(activePositions, Account.ActivePositions.Count);
+      // Increase
+
+      var previousPosition = Account.ActivePositions[orderY.Id];
+      var nextPosition = base.IncreasePosition(increase, previousPosition);
+      var averageTradePrice = nextPosition.OpenPrices.Sum(o => o.Volume * o.Price) / nextPosition.OpenPrices.Sum(o => o.Volume);
+
+      Assert.Equal(3, Account.Orders.Count);
+      Assert.Equal(0, Account.ActiveOrders.Count);
+      Assert.Equal(0, Account.Positions.Count);
+      Assert.Equal(2, Account.ActivePositions.Count);
+
+      var openA = nextPosition.OpenPrices[0];
+      var openB = nextPosition.OpenPrices[1];
+
+      Assert.Equal(orderY.Volume, openA.Volume);
+      Assert.Equal(increase.Volume, openB.Volume);
+      Assert.Equal(pointY.Ask, openA.Price);
+      Assert.Equal(pointY.Ask + 5, openB.Price);
+      Assert.Equal(orderY.Time, openA.Time);
+      Assert.Equal(increase.Time, openB.Time);
+      Assert.Equal(2, nextPosition.OpenPrices.Count);
+
+      Assert.Equal(increase.Id, nextPosition.Id);
+      Assert.Equal(increase.Time, nextPosition.Time);
+      Assert.Equal(averageTradePrice, nextPosition.OpenPrice);
+      Assert.Equal(increase.Volume + orderY.Volume, nextPosition.Volume);
+
+      Assert.Equal(nextPosition.Time, previousPosition.CloseTime);
+      Assert.Equal(openB.Price, previousPosition.ClosePrice);
+      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
+      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+
+      // Estimate
+
+      var step = instrumentY.StepValue / instrumentY.StepSize;
+      var priceUpdate = new PointModel { Ask = 50, Bid = 40, Last = 40, Instrument = instrumentY };
+
+      instrumentY.Points.Add(priceUpdate);
+      instrumentY.PointGroups.Add(priceUpdate);
+
+      nextPosition.Instrument = instrumentY;
+
+      Assert.Equal(nextPosition.GainLossPointsEstimate * nextPosition.Volume * step - instrumentY.Commission, nextPosition.GainLossEstimate);
+      Assert.Equal(priceUpdate.Bid - nextPosition.OpenPrice, nextPosition.GainLossPointsEstimate);
     }
 
-    //// Same volume - same side - different assets - same type
+    [Fact]
+    public void DecreasePositionWithMatches()
+    {
+      var instrumentX = Account.Instruments[AssetX];
+      var instrumentY = Account.Instruments[AssetY];
+      var pointX = instrumentX.Points.Last();
+      var pointY = instrumentY.Points.Last();
+      var orderX = GenerateOrder(AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 1, pointX.Bid, pointX.Ask, null, null);
+      var orderY = GenerateOrder(AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 1, pointY.Bid, pointY.Ask, null, null);
+      var decreaseA = GenerateOrder(AssetY, OrderSideEnum.Sell, OrderTypeEnum.Market, 2, pointY.Bid + 5, pointY.Ask + 5, null, null);
+      var decreaseB = GenerateOrder(AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 1, pointY.Bid + 15, pointY.Ask + 15, null, null);
 
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 2)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 2)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 2, 2, 0, 0)]
+      // Open
 
-    //// Same volume - different sides - same asset - same type
+      base.CreateOrders(orderX);
+      base.CreateOrders(orderY);
 
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 2, 2, 0, 0)]
+      // Inverse
 
-    //// Same volume - different sides - different assets - same type
+      var previousPosition = Account.ActivePositions[orderY.Id];
+      var nextPosition = base.DecreasePosition(decreaseA, previousPosition);
 
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 2)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Market, 15.0, null, null,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Market, 15.0, null, null, 2, 0, 0, 2)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 25.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Stop, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 5.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.Limit, 15.0, null, 25.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0,
-    //  AssetY, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0, 2, 2, 0, 0)]
-    //[InlineData(2.0,
-    //  AssetX, OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0,
-    //  AssetY, OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 2, 2, 0, 0)]
+      Assert.Equal(3, Account.Orders.Count);
+      Assert.Equal(0, Account.ActiveOrders.Count);
+      Assert.Equal(1, Account.Positions.Count);
+      Assert.Equal(2, Account.ActivePositions.Count);
 
-    //public void RegisterOrderWithMatching(
-    //  double volumeX,
-    //  string assetX,
-    //  OrderSideEnum orderSideX,
-    //  OrderTypeEnum orderTypeX,
-    //  double? priceX,
-    //  double? activationPriceX,
-    //  double? orderPriceX,
-    //  string assetY,
-    //  OrderSideEnum orderSideY,
-    //  OrderTypeEnum orderTypeY,
-    //  double? priceY,
-    //  double? activationPriceY,
-    //  double? orderPriceY,
-    //  int orders,
-    //  int activeOrders,
-    //  int positions,
-    //  int activePositions)
-    //{
-    //  var orderX = GenerateOrder(assetX, orderSideX, orderTypeX, volumeX, priceX, activationPriceX, orderPriceX);
-    //  var orderY = GenerateOrder(assetY, orderSideY, orderTypeY, 2.0, priceY, activationPriceY, orderPriceY);
+      var openA = nextPosition.OpenPrices[0];
 
-    //  base.CreateOrders(orderX);
-    //  base.CreateOrders(orderY);
+      Assert.Equal(decreaseA.Volume, openA.Volume);
+      Assert.Equal(pointY.Bid + 5, openA.Price);
+      Assert.Equal(decreaseA.Time, openA.Time);
+      Assert.Single(nextPosition.OpenPrices);
 
-    //  Assert.Equal(orders, Account.Orders.Count);
-    //  Assert.Equal(activeOrders, Account.ActiveOrders.Count);
-    //  Assert.Equal(positions, Account.Positions.Count);
-    //  Assert.Equal(activePositions, Account.ActivePositions.Count);
-    //}
+      Assert.Equal(decreaseA.Id, nextPosition.Id);
+      Assert.Equal(decreaseA.Time, nextPosition.Time);
+      Assert.Equal(openA.Price, nextPosition.OpenPrice);
+      Assert.Equal(Math.Abs(orderY.Volume.Value - decreaseA.Volume.Value), nextPosition.Volume);
+
+      Assert.Equal(nextPosition.Time, previousPosition.CloseTime);
+      Assert.Equal(openA.Price, previousPosition.ClosePrice);
+      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
+      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+
+      // Close
+
+      previousPosition = Account.ActivePositions[decreaseA.Id];
+      nextPosition = base.DecreasePosition(decreaseB, previousPosition);
+
+      Assert.Equal(4, Account.Orders.Count);
+      Assert.Equal(0, Account.ActiveOrders.Count);
+      Assert.Equal(2, Account.Positions.Count);
+      Assert.Equal(1, Account.ActivePositions.Count);
+    }
   }
 }

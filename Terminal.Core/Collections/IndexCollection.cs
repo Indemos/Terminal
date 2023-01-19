@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -155,8 +156,15 @@ namespace Terminal.Core.CollectionSpace
     /// <param name="index"></param>
     public virtual void CopyTo(T[] items, int index)
     {
-      Items.CopyTo(items, index);
-      SendItemMessage(default, default, ActionEnum.Update);
+      foreach (var item in Items)
+      {
+        var previous = items[index];
+
+        items.SetValue(item, index);
+        SendItemMessage(items[index], previous, ActionEnum.Update);
+        index++;
+      }
+
       SendItemsMessage(ActionEnum.Update);
     }
 

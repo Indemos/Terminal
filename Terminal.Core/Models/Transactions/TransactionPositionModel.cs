@@ -200,7 +200,7 @@ namespace Terminal.Core.ModelSpace
         case OrderSideEnum.Sell: direction = -1; break;
       }
 
-      var estimate = (ClosePriceEstimate - OpenPrice) * direction ?? 0.0;
+      var estimate = ((ClosePriceEstimate - OpenPrice) * direction) ?? 0.0;
 
       if (price is not null)
       {
@@ -220,20 +220,8 @@ namespace Terminal.Core.ModelSpace
     /// <returns></returns>
     protected virtual double? GetGainLossEstimate(double? price = null)
     {
-      var instrumentErrors = InstanceService<InstrumentCollectionValidator>
-        .Instance
-        .Validate(Instrument)
-        .Errors;
-
-      if (instrumentErrors.Any())
-      {
-        InstanceService<LogService>.Instance.Log.Error("Incorrect instrument");
-        return null;
-      }
-
       var step = Instrument.StepValue / Instrument.StepSize;
-      var commission = Instrument.Commission * OpenPrices.Count * 2;
-      var estimate = Volume * (GetGainLossPointsEstimate(price) * step - commission) ?? 0.0;
+      var estimate = Volume * (GetGainLossPointsEstimate(price) * step - Instrument.Commission) ?? 0.0;
 
       if (price is not null)
       {

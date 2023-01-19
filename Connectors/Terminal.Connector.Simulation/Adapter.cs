@@ -96,7 +96,10 @@ namespace Terminal.Connector.Simulation
 
       var balanceStream = Account.Positions.ItemStream.Subscribe(message =>
       {
-        Account.Balance += message.Next.GainLoss;
+        if (Equals(message.Action, ActionEnum.Create))
+        {
+          Account.Balance += message.Next.GainLoss;
+        }
       });
 
       var span = TimeSpan.FromMilliseconds(Speed);
@@ -205,11 +208,6 @@ namespace Terminal.Connector.Simulation
         {
           Account.ActiveOrders.Remove(nextOrder.Id);
         }
-
-        if (nextOrder.Orders.Any())
-        {
-          DeleteOrders(nextOrder.Orders.ToArray());
-        }
       }
 
       return orders;
@@ -265,7 +263,7 @@ namespace Terminal.Connector.Simulation
 
       nextPosition.Time = openPrice.Time;
       nextPosition.OpenPrices = openPrices;
-      nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
+      nextPosition.OpenPrice = nextOrder.Price;
 
       Account.Orders.Add(nextOrder);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
@@ -276,7 +274,6 @@ namespace Terminal.Connector.Simulation
         Next = nextOrder
       };
 
-      nextOrder.Orders.ForEach(o => SendPendingOrder(o));
       nextOrder.OrderStream.OnNext(message);
 
       return nextPosition;
@@ -308,11 +305,6 @@ namespace Terminal.Connector.Simulation
         Next = nextOrder
       };
 
-      if (nextPosition.Volume.Value.IsEqual(0) is false)
-      {
-        nextOrder.Orders.ForEach(o => SendPendingOrder(o));
-      }
-
       nextOrder.OrderStream.OnNext(message);
 
       return nextPosition;
@@ -326,26 +318,23 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual ITransactionPositionModel IncreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      var openPrices = GetOpenPrices(nextOrder);
       var nextPosition = GetPosition(nextOrder);
+      var openPrices = GetOpenPrices(nextOrder);
+      var openPrice = openPrices.Last();
 
-      nextPosition.Time = openPrices.Last().Time;
-      nextPosition.Price = nextOrder.Price;
+      nextPosition.Time = openPrice.Time;
       nextPosition.Volume = nextOrder.Volume + previousPosition.Volume;
       nextPosition.OpenPrices = previousPosition.OpenPrices.Concat(openPrices).ToList();
       nextPosition.OpenPrice = nextPosition.OpenPrices.Sum(o => o.Volume * o.Price) / nextPosition.OpenPrices.Sum(o => o.Volume);
 
       previousPosition.CloseTime = nextPosition.Time;
-      previousPosition.ClosePrice = nextPosition.OpenPrice;
+      previousPosition.ClosePrice = openPrice.Price;
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
 
       Account.ActivePositions.Remove(previousPosition.Id);
-
-      DeleteOrders(previousPosition.Orders.ToArray());
-
-      Account.Orders.Add(nextOrder);
       Account.ActivePositions.Add(nextPosition.Id, nextPosition);
+      Account.Orders.Add(nextOrder);
 
       return nextPosition;
     }
@@ -358,12 +347,13 @@ namespace Terminal.Connector.Simulation
     /// <returns></returns>
     protected virtual ITransactionPositionModel DecreasePosition(ITransactionOrderModel nextOrder, ITransactionPositionModel previousPosition)
     {
-      var openPrices = GetOpenPrices(nextOrder);
       var nextPosition = GetPosition(nextOrder);
+      var openPrices = GetOpenPrices(nextOrder);
+      var openPrice = openPrices.Last();
 
-      nextPosition.Time = openPrices.Last().Time;
+      nextPosition.Time = openPrice.Time;
+      nextPosition.OpenPrice = openPrice.Price;
       nextPosition.OpenPrices = openPrices;
-      nextPosition.Price = nextPosition.OpenPrice = nextOrder.Price;
       nextPosition.Volume = Math.Abs(nextPosition.Volume.Value - previousPosition.Volume.Value);
 
       previousPosition.CloseTime = nextPosition.Time;
@@ -371,13 +361,9 @@ namespace Terminal.Connector.Simulation
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
 
-      Account.ActiveOrders.Remove(nextOrder.Id);
       Account.ActivePositions.Remove(previousPosition.Id);
-
-      DeleteOrders(previousPosition.Orders.ToArray());
-
-      Account.Orders.Add(nextOrder);
       Account.Positions.Add(previousPosition);
+      Account.Orders.Add(nextOrder);
 
       if (nextPosition.Volume.Value.IsEqual(0) is false)
       {
@@ -414,9 +400,11 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     protected virtual void ProcessPendingOrders()
     {
-      foreach (var orderItem in Account.ActiveOrders)
+      var positionOrders = Account.ActivePositions.SelectMany(o => o.Value.Orders);
+      var activeOrders = Account.ActiveOrders.Values.Concat(positionOrders);
+
+      foreach (var order in activeOrders)
       {
-        var order = orderItem.Value;
         var pointModel = order.Instrument.Points.LastOrDefault();
 
         if (pointModel is null)
