@@ -4,6 +4,12 @@ All-in-one.
 Trading terminal with generic gateway implementation, tick backtester, charting, and performance evaluator for trading strategies.
 Currently, supports stocks with experimental extension for FX, options, and futures. 
 
+# Status 
+
+![GitHub Workflow Status (with event)](https://img.shields.io/github/actions/workflow/status/Indemos/Terminal/dotnet.yml?event=push)
+![GitHub](https://img.shields.io/github/license/Indemos/Terminal)
+![GitHub](https://img.shields.io/badge/system-Windows%20%7C%20Linux%20%7C%20Mac-blue)
+
 # Disclaimer
 
 The app is in active development state and can be updated without any notice. 
