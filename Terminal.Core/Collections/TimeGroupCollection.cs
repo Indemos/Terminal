@@ -36,6 +36,12 @@ namespace Terminal.Core.CollectionSpace
     /// </summary>
     public override void Add(T item, TimeSpan? span)
     {
+      if (span is null)
+      {
+        base.Add(item, span);
+        return;
+      }
+
       var currentTime = item.Time.Round(span);
       var previousTime = (item.Time - span.Value).Round(span);
       var currentGroup = Indices.TryGetValue(currentTime.Value.Ticks, out int currentIndex) ? this[currentIndex] : default;

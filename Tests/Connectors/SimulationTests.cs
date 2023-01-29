@@ -94,9 +94,7 @@ namespace Terminal.Tests.Connectors
       Assert.Contains($"{nameof(order.Volume)} {error}", errors);
       Assert.Contains($"{nameof(order.Type)} {error}", errors);
       Assert.Contains($"{nameof(instrument.Name)} {error}", errors);
-      Assert.Contains($"{nameof(instrument.TimeFrame)} {error}", errors);
       Assert.Contains($"{nameof(instrument.Points)} {error}", errors);
-      Assert.Contains($"{nameof(instrument.PointGroups)} {error}", errors);
     }
 
     [Fact]
@@ -119,7 +117,6 @@ namespace Terminal.Tests.Connectors
       Assert.Contains($"{nameof(order.Volume)} {error}", errors);
       Assert.Contains($"{nameof(order.Type)} {error}", errors);
       Assert.Contains($"{nameof(instrument.Name)} {error}", errors);
-      Assert.Contains($"{nameof(instrument.TimeFrame)} {error}", errors);
       Assert.Contains($"{nameof(point.Bid)} {error}", errors);
       Assert.Contains($"{nameof(point.Ask)} {error}", errors);
       Assert.Contains($"{nameof(point.Last)} {error}", errors);

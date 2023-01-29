@@ -12,7 +12,6 @@ namespace Terminal.Core.ValidatorSpace
     {
       RuleFor(o => o.Last).NotEmpty();
       RuleFor(o => o.Time).NotEmpty();
-      RuleFor(o => o.TimeFrame).NotEmpty();
     }
   }
 }

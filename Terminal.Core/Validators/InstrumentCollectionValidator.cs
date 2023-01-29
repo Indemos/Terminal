@@ -14,9 +14,7 @@ namespace Terminal.Core.ValidatorSpace
       Include(new InstrumentValidator());
 
       RuleFor(o => o.Points).NotEmpty();
-      RuleFor(o => o.PointGroups).NotEmpty();
       RuleFor(o => o.Points.LastOrDefault()).SetValidator(new PointValidator());
-      RuleFor(o => o.PointGroups.LastOrDefault()).SetValidator(new PointValidator());
     }
   }
 }

@@ -17,7 +17,6 @@ namespace Terminal.Core.ValidatorSpace
       RuleFor(o => o.ContractSize).NotEmpty();
       RuleFor(o => o.StepSize).NotEmpty();
       RuleFor(o => o.StepValue).NotEmpty();
-      RuleFor(o => o.TimeFrame).NotEmpty();
     }
   }
 }

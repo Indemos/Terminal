@@ -1,6 +1,8 @@
+using Canvas.Core.ModelSpace;
 using Canvas.Core.ShapeSpace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,17 +25,22 @@ namespace Terminal.Client.Pages
     /// <summary>
     /// Strategy
     /// </summary>
+    string _buy = null;
+    string _sell = null;
     const string _assetX = "GOOGL";
     const string _assetY = "GOOG";
     const string _account = "Simulation";
 
     protected virtual PageComponent View { get; set; }
-    protected virtual PerformanceIndicator Performer { get; set; }
+    protected virtual PerformanceIndicator Performance { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
+        var componentX = new ComponentModel { Color = SKColors.OrangeRed };
+        var componentY = new ComponentModel { Color = SKColors.DeepSkyBlue };
+
         await View.ChartsView.Create(new GroupShape
         {
           Groups = new Dictionary<string, IGroupShape>
@@ -42,11 +49,19 @@ namespace Terminal.Client.Pages
             {
               Groups = new Dictionary<string, IGroupShape>
               {
-                ["Delta"] = new BarShape()
+                [nameof(OrderSideEnum.Buy)] = new ArrowShape(),
+                [nameof(OrderSideEnum.Sell)] = new ArrowShape(),
+                [$"{_assetX}:{nameof(PointModel.Ask)}"] = new LineShape { Component = componentX },
+                [$"{_assetX}:{nameof(PointModel.Bid)}"] = new LineShape { Component = componentX },
+                [$"{_assetY}:{nameof(PointModel.Ask)}"] = new LineShape { Component = componentY },
+                [$"{_assetY}:{nameof(PointModel.Bid)}"] = new LineShape { Component = componentY }
               }
             }
           }
         });
+
+        var componentGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
+        var componentBalance = new ComponentModel { Color = SKColors.Black };
 
         await View.ReportsView.Create(new GroupShape
         {
@@ -56,7 +71,8 @@ namespace Terminal.Client.Pages
             {
               Groups = new Dictionary<string, IGroupShape>
               {
-                ["Balance"] = new AreaShape()
+                ["Gain"] = new LineShape { Component = componentGain },
+                ["Balance"] = new AreaShape { Component = componentBalance }
               }
             }
           }
@@ -64,15 +80,14 @@ namespace Terminal.Client.Pages
 
         View.Setup = () =>
         {
-          var span = TimeSpan.Zero;
           var account = new AccountModel
           {
-            Balance = 50000,
+            Balance = 25000,
             Name = _account,
             Instruments = new NameCollection<string, IInstrumentModel>
             {
-              [_assetX] = new InstrumentModel { Name = _assetX, TimeFrame = span },
-              [_assetY] = new InstrumentModel { Name = _assetY, TimeFrame = span }
+              [_assetX] = new InstrumentModel { Name = _assetX },
+              [_assetY] = new InstrumentModel { Name = _assetY }
             }
           };
 
@@ -84,7 +99,7 @@ namespace Terminal.Client.Pages
             Source = Configuration["Simulation:Source"]
           };
 
-          Performer = new PerformanceIndicator { Name = "Balance" };
+          Performance = new PerformanceIndicator { Name = "Balance" };
 
           account
             .Instruments
@@ -104,23 +119,41 @@ namespace Terminal.Client.Pages
       var account = point.Account;
       var instrumentX = point.Account.Instruments[_assetX];
       var instrumentY = point.Account.Instruments[_assetY];
-      var seriesX = instrumentX.PointGroups;
-      var seriesY = instrumentY.PointGroups;
+      var seriesX = instrumentX.Points;
+      var seriesY = instrumentY.Points;
 
       if (seriesX.Any() is false || seriesY.Any() is false)
       {
         return;
       }
 
-      var priceX = seriesX.LastOrDefault().Last;
-      var priceY = seriesY.LastOrDefault().Last;
-      var delta = Math.Abs((priceX - priceY).Value);
-      var performance = Performer.Calculate(new[] { account });
+      var performance = Performance.Calculate(new[] { account });
+      var xPoint = seriesX.Last();
+      var yPoint = seriesY.Last();
+      var xAsk = xPoint.Ask;
+      var xBid = xPoint.Bid;
+      var yAsk = yPoint.Ask;
+      var yBid = yPoint.Bid;
+      var xSpread = xAsk - xBid;
+      var ySpread = yAsk - yBid;
 
-      if (account.ActivePositions.Any())
+      if (account.ActivePositions.Count == 2)
       {
-        if (Math.Abs(delta) <= 0.1)
+        var buy = account.ActivePositions[_buy];
+        var sell = account.ActivePositions[_sell];
+        var buyPoint = buy.Instrument.Points.Last();
+        var sellPoint = sell.Instrument.Points.Last();
+        var buyAsk = buyPoint.Ask;
+        var buyBid = buyPoint.Bid;
+        var sellAsk = sellPoint.Ask;
+        var sellBid = sellPoint.Bid;
+        var buySpread = buyAsk - buyBid;
+        var sellSpread = sellAsk - sellBid;
+
+        if ((buy.GainLossPointsEstimate + sell.GainLossPointsEstimate) > (buySpread + sellSpread))
         {
+          _buy = null;
+          _sell = null;
           ClosePositions();
         }
       }
@@ -129,19 +162,23 @@ namespace Terminal.Client.Pages
       {
         switch (true)
         {
-          case true when priceX - priceY >= 5: OpenPositions(instrumentY, instrumentX); break;
-          case true when priceY - priceX >= 5: OpenPositions(instrumentX, instrumentY); break;
+          case true when (xBid - yAsk) >= (xSpread + ySpread): (_sell, _buy) = OpenPositions(instrumentY, instrumentX); break;
+          case true when (yBid - xAsk) >= (xSpread + ySpread): (_sell, _buy) = OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
-      var chartPoints = new PointModel[]
+      var chartPoints = new[]
       {
-        new PointModel { Time = point.Time, Name = "Delta", Last = delta }
+        new PointModel { Time = point.Time, Name = $"{_assetX}:{nameof(PointModel.Ask)}", Last = xAsk },
+        new PointModel { Time = point.Time, Name = $"{_assetX}:{nameof(PointModel.Bid)}", Last = xBid },
+        new PointModel { Time = point.Time, Name = $"{_assetY}:{nameof(PointModel.Ask)}", Last = yAsk },
+        new PointModel { Time = point.Time, Name = $"{_assetY}:{nameof(PointModel.Bid)}", Last = yBid }
       };
 
       var reportPoints = new[]
       {
-        new PointModel { Time = point.Time, Name = Performer.Name, Last = performance.Last }
+        new PointModel { Time = point.Time, Name = "Balance", Last = account.Balance },
+        new PointModel { Time = point.Time, Name = "Gain", Last = performance.Last }
       };
 
       View.ChartsView.UpdateItems(chartPoints, 100);
@@ -151,9 +188,9 @@ namespace Terminal.Client.Pages
       View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
-    private void OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
+    private (string, string) OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell)
     {
-      View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      var messageSell = new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
@@ -163,9 +200,9 @@ namespace Terminal.Client.Pages
           Type = OrderTypeEnum.Market,
           Instrument = assetSell
         }
-      });
+      };
 
-      View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+      var messageBuy = new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
         Next = new TransactionOrderModel
@@ -175,7 +212,12 @@ namespace Terminal.Client.Pages
           Type = OrderTypeEnum.Market,
           Instrument = assetBuy
         }
-      });
+      };
+
+      View.Adapter.OrderStream.OnNext(messageSell);
+      View.Adapter.OrderStream.OnNext(messageBuy);
+
+      return (messageSell.Next.Id, messageBuy.Next.Id);
     }
 
     private void ClosePositions()
