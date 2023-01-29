@@ -35,4 +35,4 @@ In order to create connector for preferred broker, implement interface `IConnect
 
 # Preview 
 
-![](Screens/Preview.png)
+![](Screens/Preview.gif)
