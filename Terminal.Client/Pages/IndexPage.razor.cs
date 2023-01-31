@@ -71,7 +71,7 @@ namespace Terminal.Client.Pages
             {
               Groups = new Dictionary<string, IGroupShape>
               {
-                ["Gain"] = new LineShape { Component = componentGain },
+                ["PnL"] = new LineShape { Component = componentGain },
                 ["Balance"] = new AreaShape { Component = componentBalance }
               }
             }
@@ -178,7 +178,7 @@ namespace Terminal.Client.Pages
       var reportPoints = new[]
       {
         new PointModel { Time = point.Time, Name = "Balance", Last = account.Balance },
-        new PointModel { Time = point.Time, Name = "Gain", Last = performance.Last }
+        new PointModel { Time = point.Time, Name = "PnL", Last = performance.Last }
       };
 
       View.ChartsView.UpdateItems(chartPoints, 100);
