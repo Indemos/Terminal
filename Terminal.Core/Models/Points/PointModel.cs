@@ -28,11 +28,6 @@ namespace Terminal.Core.ModelSpace
     double? AskSize { get; set; }
 
     /// <summary>
-    /// Style
-    /// </summary>
-    IViewModel View { get; set; }
-
-    /// <summary>
     /// Reference to the complex data point
     /// </summary>
     IPointBarModel Bar { get; set; }
@@ -79,11 +74,6 @@ namespace Terminal.Core.ModelSpace
     public virtual double? AskSize { get; set; }
 
     /// <summary>
-    /// Style
-    /// </summary>
-    public virtual IViewModel View { get; set; }
-
-    /// <summary>
     /// Reference to the account
     /// </summary>
     public virtual IAccountModel Account { get; set; }
@@ -108,7 +98,6 @@ namespace Terminal.Core.ModelSpace
     /// </summary>
     public PointModel()
     {
-      View = new ViewModel();
       Bar = new PointBarModel();
       Account = new AccountModel();
       Instrument = new InstrumentModel();
