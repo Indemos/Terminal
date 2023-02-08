@@ -7,10 +7,7 @@
   <ItemGroup>
     <PackageReference Include="Alpaca.Markets" Version="7.0.0-alpha1" />
     <PackageReference Include="Alpaca.Markets.Extensions" Version="7.0.0-alpha1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\Terminal.Core\Terminal.Core.csproj" />
+    <PackageReference Include="Terminal.Core" Version="1.0.0-prerelease" />
   </ItemGroup>
 
 </Project>

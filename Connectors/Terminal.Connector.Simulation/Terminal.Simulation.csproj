@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Terminal.Core\Terminal.Core.csproj" />
+    <PackageReference Include="Terminal.Core" Version="1.0.0-prerelease" />
   </ItemGroup>
 
 </Project>
