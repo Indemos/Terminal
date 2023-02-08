@@ -2,13 +2,13 @@
 
   <MudPaper Class="w-100 d-flex mb-6 py-4">
 
-    <MudIconButton Style="@(IsConnection ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.PlayCircle" Class="ml-4" @onclick="OnConnect"></MudIconButton>
-    <MudIconButton Style="@(IsConnection ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.Cancel" Class="ml-4" @onclick="OnDisconnect"></MudIconButton>
+    <MudIconButton Style="@(IsConnection ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PlayCircle" Class="ml-4" @onclick="OnConnect"></MudIconButton>
+    <MudIconButton Style="@(IsConnection ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" Class="ml-4" @onclick="OnDisconnect"></MudIconButton>
 
     @if (IsConnection)
     {
-      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.Loop" Class="ml-4" @onclick="OnSubscribe"></MudIconButton>
-      <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Filled.PauseCircle" Class="ml-4" @onclick="OnUnsubscribe"></MudIconButton>
+      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Loop" Class="ml-4" @onclick="OnSubscribe"></MudIconButton>
+      <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PauseCircle" Class="ml-4" @onclick="OnUnsubscribe"></MudIconButton>
     }
 
   </MudPaper>
@@ -18,7 +18,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Charts</MudText>
         </div>
       </TitleContent>
@@ -30,7 +30,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Performance</MudText>
         </div>
       </TitleContent>
@@ -42,7 +42,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Orders</MudText>
         </div>
       </TitleContent>
@@ -54,7 +54,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Positions</MudText>
         </div>
       </TitleContent>
@@ -66,7 +66,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Deals</MudText>
         </div>
       </TitleContent>
@@ -78,7 +78,7 @@
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">
-          <MudIcon Icon="@Icons.Filled.Info" class="mr-3"></MudIcon>
+          <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Statements</MudText>
           <MudText>
             <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OnOpenStatements" class="updater ml-4">Update</a>
