@@ -103,9 +103,7 @@ namespace Terminal.Client.Pages
           account
             .Instruments
             .Values
-            .Select(o => o.Points.ItemStream)
-            .Merge()
-            .Subscribe(OnData);
+            .ForEach(o => o.Points.ItemStream += OnData);
         };
       }
 
@@ -199,8 +197,8 @@ namespace Terminal.Client.Pages
         }
       };
 
-      View.Adapter.OrderStream.OnNext(messageSell);
-      View.Adapter.OrderStream.OnNext(messageBuy);
+      View.Adapter.OrderStream(messageSell);
+      View.Adapter.OrderStream(messageBuy);
 
       var account = View.Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Side == OrderSideEnum.Buy);
@@ -234,7 +232,7 @@ namespace Terminal.Client.Pages
           Instrument = position.Instrument
         };
 
-        View.Adapter.OrderStream.OnNext(new TransactionMessage<ITransactionOrderModel>
+        View.Adapter.OrderStream(new TransactionMessage<ITransactionOrderModel>
         {
           Action = ActionEnum.Create,
           Next = order
