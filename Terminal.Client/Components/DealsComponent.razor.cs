@@ -13,28 +13,27 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected IList<ActiveOrderRecord> Items { get; set; } = new List<ActiveOrderRecord>();
+    protected virtual IList<ActiveOrderRecord> Items { get; set; } = new List<ActiveOrderRecord>();
 
     /// <summary>
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public Task UpdateItems(IIndexCollection<ITransactionPositionModel> items)
+    public virtual Task UpdateItems(IIndexCollection<ITransactionPositionModel> items)
     {
-      return Render(() =>
+      Items = items.Select(o => new ActiveOrderRecord
       {
-        Items = items.Select(o => new ActiveOrderRecord
-        {
-          Time = o.Time,
-          Name = o.Instrument.Name,
-          Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Volume ?? 0,
-          OpenPrice = o.OpenPrice ?? 0,
-          ClosePrice = o.ClosePrice ?? 0,
-          Gain = o.GainLoss ?? 0
+        Time = o.Time,
+        Name = o.Instrument.Name,
+        Side = o.Side ?? OrderSideEnum.None,
+        Size = o.Volume ?? 0,
+        OpenPrice = o.OpenPrice ?? 0,
+        ClosePrice = o.ClosePrice ?? 0,
+        Gain = o.GainLoss ?? 0
 
-        }).ToList();
-      });
+      }).ToList();
+
+      return Render(() => { });
     }
   }
 }

@@ -19,7 +19,7 @@ namespace Terminal.Client.Components
     /// Update UI
     /// </summary>
     /// <param name="accounts"></param>
-    public Task UpdateItems(IList<IAccountModel> accounts)
+    public virtual Task UpdateItems(IList<IAccountModel> accounts)
     {
       var values = new List<InputData>();
       var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Time).ToList();
@@ -62,7 +62,7 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    protected int GetDirection(ITransactionPositionModel position)
+    protected virtual int GetDirection(ITransactionPositionModel position)
     {
       switch (position.Side)
       {
@@ -78,7 +78,7 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    protected string ShowDouble(double? input)
+    protected virtual string ShowDouble(double? input)
     {
       var sign = " ";
 

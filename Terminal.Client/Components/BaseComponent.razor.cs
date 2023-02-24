@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Components;
+using Schedule.RunnerSpace;
 using System;
 using System.Threading.Tasks;
 
@@ -9,21 +10,19 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Updater
     /// </summary>
-    protected Task Updater { get; set; }
+    protected virtual TimeRunner Updater { get; set; } = new() { Count = 1, Span = TimeSpan.FromMilliseconds(100) };
 
     /// <summary>
     /// Render
     /// </summary>
-    protected Task Render(Action action)
+    protected virtual Task Render(Action action)
     {
-      if (Updater?.IsCompleted is false)
+      return Updater.Send(() =>
       {
-        return Updater;
-      }
+        action();
+        InvokeAsync(StateHasChanged);
 
-      action();
-
-      return Updater = InvokeAsync(StateHasChanged);
+      }).Task;
     }
   }
 }

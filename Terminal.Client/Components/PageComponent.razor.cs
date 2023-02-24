@@ -26,7 +26,7 @@ namespace Terminal.Client.Components
     public virtual IConnectorModel Adapter { get; set; }
     public virtual Action Setup { get; set; }
 
-    public async Task OnConnect()
+    public virtual async Task OnConnect()
     {
       OnDisconnect();
       Setup();
@@ -37,7 +37,7 @@ namespace Terminal.Client.Components
       await Adapter.Connect();
     }
 
-    public void OnDisconnect()
+    public virtual void OnDisconnect()
     {
       IsConnection = false;
       IsSubscription = false;
@@ -48,21 +48,21 @@ namespace Terminal.Client.Components
       ReportsView.Clear();
     }
 
-    public async Task OnSubscribe()
+    public virtual async Task OnSubscribe()
     {
       IsSubscription = true;
 
       await Adapter.Subscribe();
     }
 
-    public void OnUnsubscribe()
+    public virtual void OnUnsubscribe()
     {
       IsSubscription = false;
 
       Adapter.Unsubscribe();
     }
 
-    public void OnOpenStatements()
+    public virtual void OnOpenStatements()
     {
       InstanceService<BackgroundRunner>.Instance.Send(() =>
       {

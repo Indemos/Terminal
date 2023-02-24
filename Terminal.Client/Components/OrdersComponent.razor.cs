@@ -12,26 +12,25 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected IList<OrderRecord> Items { get; set; } = new List<OrderRecord>();
+    protected virtual IList<OrderRecord> Items { get; set; } = new List<OrderRecord>();
 
     /// <summary>
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public Task UpdateItems(IDictionary<string, ITransactionOrderModel> items)
+    public virtual Task UpdateItems(IDictionary<string, ITransactionOrderModel> items)
     {
-      return Render(() =>
+      Items = items.Values.Select(o => new OrderRecord
       {
-        Items = items.Values.Select(o => new OrderRecord
-        {
-          Time = o.Time,
-          Name = o.Instrument.Name,
-          Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Volume ?? 0,
-          Price = o.Price ?? 0,
+        Time = o.Time,
+        Name = o.Instrument.Name,
+        Side = o.Side ?? OrderSideEnum.None,
+        Size = o.Volume ?? 0,
+        Price = o.Price ?? 0,
 
-        }).ToList();
-      });
+      }).ToList();
+
+      return Render(() => { });
     }
   }
 }

@@ -2,6 +2,7 @@ using Canvas.Core.ModelSpace;
 using Canvas.Core.ShapeSpace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Schedule.RunnerSpace;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -16,6 +17,7 @@ using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
 using Terminal.Core.ModelSpace;
+using Terminal.Core.ServiceSpace;
 
 namespace Terminal.Client.Pages
 {
@@ -103,14 +105,14 @@ namespace Terminal.Client.Pages
           account
             .Instruments
             .Values
-            .ForEach(o => o.Points.ItemStream += OnData);
+            .ForEach(o => o.Points.ItemStream += v => InstanceService<BackgroundRunner>.Instance.Send(OnData(v)));
         };
       }
 
       await base.OnAfterRenderAsync(setup);
     }
 
-    private void OnData(TransactionMessage<IPointModel> message)
+    private async Task OnData(TransactionMessage<IPointModel> message)
     {
       var point = message.Next;
       var account = point.Account;
@@ -164,11 +166,11 @@ namespace Terminal.Client.Pages
       reportPoints.Add(new PointModel { Time = point.Time, Name = "Balance", Last = account.Balance });
       reportPoints.Add(new PointModel { Time = point.Time, Name = "PnL", Last = performance.Last });
 
-      View.ChartsView.UpdateItems(chartPoints, 100);
-      View.ReportsView.UpdateItems(reportPoints);
-      View.DealsView.UpdateItems(account.Positions);
-      View.OrdersView.UpdateItems(account.ActiveOrders);
-      View.PositionsView.UpdateItems(account.ActivePositions);
+      await View.ChartsView.UpdateItems(chartPoints, 1000);
+      await View.ReportsView.UpdateItems(reportPoints);
+      await View.DealsView.UpdateItems(account.Positions);
+      await View.OrdersView.UpdateItems(account.ActiveOrders);
+      await View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
     private (string, string) OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell, IList<IPointModel> points)
