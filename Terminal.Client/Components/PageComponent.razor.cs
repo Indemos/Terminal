@@ -1,6 +1,6 @@
-using Distribution.DomainSpace;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Schedule.RunnerSpace;
 using System;
 using System.Threading.Tasks;
 using Terminal.Core.ModelSpace;
@@ -64,7 +64,7 @@ namespace Terminal.Client.Components
 
     public void OnOpenStatements()
     {
-      InstanceService<Scene>.Instance.Scheduler.Send(() =>
+      InstanceService<BackgroundRunner>.Instance.Send(() =>
       {
         if (Adapter?.Account is not null)
         {

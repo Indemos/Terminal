@@ -110,7 +110,7 @@ namespace Terminal.Client.Pages
       await base.OnAfterRenderAsync(setup);
     }
 
-    private void OnData(ITransactionMessage<IPointModel> message)
+    private void OnData(TransactionMessage<IPointModel> message)
     {
       var point = message.Next;
       var account = point.Account;
