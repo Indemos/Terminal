@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
@@ -13,6 +14,7 @@ namespace Terminal.Client
       var validators = new Validators();
       var builder = WebApplication.CreateBuilder(args);
 
+      builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
       builder.Services.AddMudServices(o =>
