@@ -1,8 +1,8 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Records;
-using Terminal.Core.CollectionSpace;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.ModelSpace;
 
@@ -19,7 +19,7 @@ namespace Terminal.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(IIndexCollection<ITransactionPositionModel> items)
+    public virtual Task UpdateItems(ObservableCollection<ITransactionPositionModel> items)
     {
       Items = items.Select(o => new ActiveOrderRecord
       {

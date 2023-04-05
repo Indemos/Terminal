@@ -7,10 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Canvas.Views.Web" Version="1.7.7-prerelease" />
+    <PackageReference Include="Canvas.Views.Web" Version="1.7.9-prerelease" />
     <PackageReference Include="ExScore" Version="1.1.5-prerelease" />
-    <PackageReference Include="MudBlazor" Version="6.1.9" />
-    <PackageReference Include="Terminal.Simulation" Version="1.0.8-prerelease" />
+    <PackageReference Include="MudBlazor" Version="6.2.1-dev3" />
+    <PackageReference Include="Terminal.Simulation" Version="1.1.1-prerelease" />
   </ItemGroup>
 
 </Project>

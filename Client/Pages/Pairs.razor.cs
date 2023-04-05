@@ -4,15 +4,12 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schedule.RunnerSpace;
 using SkiaSharp;
-using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Components;
 using Terminal.Connector.Simulation;
-using Terminal.Core.CollectionSpace;
 using Terminal.Core.EnumSpace;
 using Terminal.Core.IndicatorSpace;
 using Terminal.Core.MessageSpace;
@@ -85,7 +82,7 @@ namespace Terminal.Client.Pages
           {
             Balance = 25000,
             Name = _account,
-            Instruments = new NameCollection<string, IInstrumentModel>
+            Instruments = new Dictionary<string, IInstrumentModel>
             {
               [_assetX] = new InstrumentModel { Name = _assetX },
               [_assetY] = new InstrumentModel { Name = _assetY }
@@ -105,16 +102,21 @@ namespace Terminal.Client.Pages
           account
             .Instruments
             .Values
-            .ForEach(o => o.Points.ItemStream += v => InstanceService<BackgroundRunner>.Instance.Send(OnData(v)));
+            .ForEach(o => o.Points.CollectionChanged += (o, e) => 
+            {
+              foreach (IPointModel item in e.NewItems)
+              {
+                InstanceService<BackgroundRunner>.Instance.Send(OnData(item));
+              }
+            });
         };
       }
 
       await base.OnAfterRenderAsync(setup);
     }
 
-    private async Task OnData(TransactionMessage<IPointModel> message)
+    private async Task OnData(IPointModel point)
     {
-      var point = message.Next;
       var account = point.Account;
       var instrumentX = point.Account.Instruments[_assetX];
       var instrumentY = point.Account.Instruments[_assetY];
@@ -178,7 +180,7 @@ namespace Terminal.Client.Pages
       var messageSell = new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
-        Next = new TransactionOrderModel
+        Next = new OrderModel
         {
           Volume = 1,
           Side = OrderSideEnum.Sell,
@@ -190,7 +192,7 @@ namespace Terminal.Client.Pages
       var messageBuy = new TransactionMessage<ITransactionOrderModel>
       {
         Action = ActionEnum.Create,
-        Next = new TransactionOrderModel
+        Next = new OrderModel
         {
           Volume = 1,
           Side = OrderSideEnum.Buy,
@@ -226,7 +228,7 @@ namespace Terminal.Client.Pages
           side = OrderSideEnum.Sell;
         }
 
-        var order = new TransactionOrderModel
+        var order = new OrderModel
         {
           Side = side,
           Volume = position.Volume,

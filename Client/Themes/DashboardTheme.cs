@@ -6,7 +6,7 @@ namespace Terminal.Client.Themes
   {
     public DashboardTheme()
     {
-      Palette = new Palette()
+      Palette = new PaletteDark()
       {
         Primary = Colors.Blue.Darken1,
         Secondary = Colors.DeepPurple.Accent2,
