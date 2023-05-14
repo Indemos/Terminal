@@ -3,12 +3,12 @@ using Microsoft.Extensions.Configuration;
 using Schedule.RunnerSpace;
 using System;
 using System.Threading.Tasks;
-using Terminal.Core.ModelSpace;
-using Terminal.Core.ServiceSpace;
+using Terminal.Core.Domains;
+using Terminal.Core.Services;
 
 namespace Terminal.Client.Components
 {
-  public partial class PageComponent
+    public partial class PageComponent
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -23,7 +23,7 @@ namespace Terminal.Client.Components
     public virtual OrdersComponent OrdersView { get; set; }
     public virtual PositionsComponent PositionsView { get; set; }
     public virtual StatementsComponent StatementsView { get; set; }
-    public virtual IConnectorModel Adapter { get; set; }
+    public virtual IConnector Adapter { get; set; }
     public virtual Action Setup { get; set; }
 
     public virtual async Task OnConnect()

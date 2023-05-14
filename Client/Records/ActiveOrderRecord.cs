@@ -1,5 +1,5 @@
 using System;
-using Terminal.Core.EnumSpace;
+using Terminal.Core.Enums;
 
 namespace Terminal.Client.Records
 {

@@ -3,12 +3,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Terminal.Core.EnumSpace;
-using Terminal.Core.ModelSpace;
+using Terminal.Core.Domains;
+using Terminal.Core.Enums;
+using Terminal.Core.Models;
 
 namespace Terminal.Client.Components
 {
-  public partial class StatementsComponent
+    public partial class StatementsComponent
   {
     /// <summary>
     /// Common performance statistics
@@ -19,17 +20,17 @@ namespace Terminal.Client.Components
     /// Update UI
     /// </summary>
     /// <param name="accounts"></param>
-    public virtual Task UpdateItems(IList<IAccountModel> accounts)
+    public virtual Task UpdateItems(IList<IAccount> accounts)
     {
       var values = new List<InputData>();
-      var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Time).ToList();
+      var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Order.Transaction.Time).ToList();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
 
       if (positions.Any())
       {
         values.Add(new InputData
         {
-          Time = positions.First().Time.Value,
+          Time = positions.First().Order.Transaction.Time.Value,
           Value = balance,
           Min = balance,
           Max = balance
@@ -43,11 +44,11 @@ namespace Terminal.Client.Components
 
         values.Add(new InputData
         {
-          Time = position.Time.Value,
+          Time = position.Order.Transaction.Time.Value,
           Value = previousInput + position.GainLoss.Value,
           Min = previousInput + position.GainLossMin.Value,
           Max = previousInput + position.GainLossMax.Value,
-          Commission = position.Instrument.Commission.Value * 2,
+          Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
           Direction = GetDirection(position)
         });
       }
@@ -62,9 +63,9 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    protected virtual int GetDirection(ITransactionPositionModel position)
+    protected virtual int GetDirection(PositionModel position)
     {
-      switch (position.Side)
+      switch (position.Order.Side)
       {
         case OrderSideEnum.Buy: return 1;
         case OrderSideEnum.Sell: return -1;

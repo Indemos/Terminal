@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
-using Terminal.Core.ValidatorSpace;
+using Terminal.Core.Validators;
 
 namespace Terminal.Client
 {

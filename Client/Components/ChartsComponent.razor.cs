@@ -6,8 +6,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Terminal.Core.ExtensionSpace;
-using Terminal.Core.ModelSpace;
+using Terminal.Core.Extensions;
+using Terminal.Core.Models;
 
 namespace Terminal.Client.Components
 {
@@ -52,11 +52,12 @@ namespace Terminal.Client.Components
     /// </summary>
     /// <param name="inputs"></param>
     /// <param name="count"></param>
-    public virtual Task UpdateItems(IList<IPointModel> inputs, int? count = null)
+    public virtual Task UpdateItems(IList<KeyValuePair<string, PointModel>> inputs, int? count = null)
     {
       foreach (var input in inputs)
       {
-        var index = input.Time.Value.Ticks;
+        var inputValue = input.Value;
+        var index = inputValue.Time.Value.Ticks;
         var previousPoint = (Shapes.ElementAtOrDefault(Shapes.Count - 2) ?? View.Item.Clone()) as IGroupShape;
 
         if (Indices.TryGetValue(index, out IGroupShape currentPoint) is false)
@@ -68,20 +69,20 @@ namespace Terminal.Client.Components
           Indices[index] = currentPoint;
         }
 
-        var series = currentPoint?.Groups?.Get(Maps.Get(input.Name))?.Groups?.Get(input.Name);
+        var series = currentPoint?.Groups?.Get(Maps.Get(input.Key))?.Groups?.Get(input.Key);
 
         if (series is not null)
         {
           var currentBar = series as CandleShape;
 
-          series.Y = input?.Last ?? 0;
+          series.Y = inputValue?.Last ?? 0;
 
           if (currentBar is not null)
           {
-            currentBar.L = input?.Bar?.Low;
-            currentBar.H = input?.Bar?.High;
-            currentBar.O = input?.Bar?.Open;
-            currentBar.C = input?.Bar?.Close;
+            currentBar.L = inputValue?.Bar?.Low;
+            currentBar.H = inputValue?.Bar?.High;
+            currentBar.O = inputValue?.Bar?.Open;
+            currentBar.C = inputValue?.Bar?.Close;
           }
         }
       }
@@ -101,7 +102,7 @@ namespace Terminal.Client.Components
     {
       Shapes.Clear();
       Indices.Clear();
-      UpdateItems(Array.Empty<IPointModel>(), 0);
+      UpdateItems(Array.Empty<KeyValuePair<string, PointModel>>(), 0);
     }
 
     /// <summary>

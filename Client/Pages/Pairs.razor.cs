@@ -10,15 +10,15 @@ using System.Reactive.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Components;
 using Terminal.Connector.Simulation;
-using Terminal.Core.EnumSpace;
-using Terminal.Core.IndicatorSpace;
-using Terminal.Core.MessageSpace;
-using Terminal.Core.ModelSpace;
-using Terminal.Core.ServiceSpace;
+using Terminal.Core.Domains;
+using Terminal.Core.Enums;
+using Terminal.Core.Indicators;
+using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Terminal.Client.Pages
 {
-  public partial class Pairs
+    public partial class Pairs
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -29,6 +29,7 @@ namespace Terminal.Client.Pages
     const string _assetY = "GOOG";
     const string _account = "Simulation";
 
+    protected virtual IAccount Account { get; set; }
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
 
@@ -47,7 +48,7 @@ namespace Terminal.Client.Pages
             {
               Groups = new Dictionary<string, IGroupShape>
               {
-                [nameof(OrderSideEnum.Buy)] = new ArrowShape { Component = comUp},
+                [nameof(OrderSideEnum.Buy)] = new ArrowShape { Component = comUp },
                 [nameof(OrderSideEnum.Sell)] = new ArrowShape { Component = comDown },
                 [$"{_assetX}:{nameof(PointModel.Ask)}"] = new LineShape { Component = comUp },
                 [$"{_assetX}:{nameof(PointModel.Bid)}"] = new LineShape { Component = comUp },
@@ -78,33 +79,32 @@ namespace Terminal.Client.Pages
 
         View.Setup = () =>
         {
-          var account = new AccountModel
+          Account = new Account
           {
             Balance = 25000,
             Name = _account,
-            Instruments = new Dictionary<string, IInstrumentModel>
+            Instruments = new Dictionary<string, Instrument>
             {
-              [_assetX] = new InstrumentModel { Name = _assetX },
-              [_assetY] = new InstrumentModel { Name = _assetY }
+              [_assetX] = new Instrument { Name = _assetX },
+              [_assetY] = new Instrument { Name = _assetY }
             }
           };
 
           View.Adapter = new Adapter
           {
             Speed = 1,
-            Name = _account,
-            Account = account,
+            Account = Account,
             Source = Configuration["Simulation:Source"]
           };
 
           Performance = new PerformanceIndicator { Name = "Balance" };
 
-          account
+          Account
             .Instruments
             .Values
-            .ForEach(o => o.Points.CollectionChanged += (o, e) => 
+            .ForEach(o => o.Points.CollectionChanged += (o, e) =>
             {
-              foreach (IPointModel item in e.NewItems)
+              foreach (PointModel item in e.NewItems)
               {
                 InstanceService<BackgroundRunner>.Instance.Send(OnData(item));
               }
@@ -115,11 +115,10 @@ namespace Terminal.Client.Pages
       await base.OnAfterRenderAsync(setup);
     }
 
-    private async Task OnData(IPointModel point)
+    private async Task OnData(PointModel point)
     {
-      var account = point.Account;
-      var instrumentX = point.Account.Instruments[_assetX];
-      var instrumentY = point.Account.Instruments[_assetY];
+      var instrumentX = Account.Instruments[_assetX];
+      var instrumentY = Account.Instruments[_assetY];
       var seriesX = instrumentX.Points;
       var seriesY = instrumentY.Points;
 
@@ -128,76 +127,82 @@ namespace Terminal.Client.Pages
         return;
       }
 
-      var chartPoints = new List<IPointModel>();
-      var reportPoints = new List<IPointModel>();
-      var performance = Performance.Calculate(new[] { account });
+      var chartPoints = new List<KeyValuePair<string, PointModel>>();
+      var reportPoints = new List<KeyValuePair<string, PointModel>>();
+      var performance = Performance.Calculate(new[] { Account });
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var xAsk = xPoint.Ask;
       var xBid = xPoint.Bid;
       var yAsk = yPoint.Ask;
       var yBid = yPoint.Bid;
-      var expenses = (xAsk - xBid) + (yAsk - yBid);
+      var expenses = ((xAsk - xBid) + (yAsk - yBid)) * 2;
 
-      if (account.ActivePositions.Count == 2)
+      if (Account.ActivePositions.Count == 2)
       {
-        var buy = account.ActivePositions.Values.First(o => o.Side == OrderSideEnum.Buy);
-        var sell = account.ActivePositions.Values.First(o => o.Side == OrderSideEnum.Sell);
+        var buy = Account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
+        var sell = Account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
 
         switch (true)
         {
-          case true when (buy.GainLossPointsEstimate + sell.GainLossPointsEstimate) > expenses: ClosePositions(chartPoints); break;
-          case true when (buy.GainLossPointsEstimate + sell.GainLossPointsEstimate) < -expenses: OpenPositions(buy.Instrument, sell.Instrument, chartPoints); break;
+          case true when (buy.GainLossPointsEstimate + sell.GainLossPointsEstimate) > expenses: ClosePositions(); break;
+          case true when (buy.GainLossPointsEstimate + sell.GainLossPointsEstimate) < -expenses: OpenPositions(buy.Order.Transaction.Instrument, sell.Order.Transaction.Instrument); break;
         }
       }
 
-      if (account.ActiveOrders.Any() is false && account.ActivePositions.Any() is false)
+      if (Account.ActiveOrders.Any() is false && Account.ActivePositions.Any() is false)
       {
         switch (true)
         {
-          case true when (xBid - yAsk) >= expenses: OpenPositions(instrumentY, instrumentX, chartPoints); break;
-          case true when (yBid - xAsk) >= expenses: OpenPositions(instrumentX, instrumentY, chartPoints); break;
+          case true when (xBid - yAsk) >= expenses: OpenPositions(instrumentY, instrumentX); break;
+          case true when (yBid - xAsk) >= expenses: OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
-      chartPoints.Add(new PointModel { Time = point.Time, Name = $"{_assetX}:{nameof(PointModel.Ask)}", Last = xAsk });
-      chartPoints.Add(new PointModel { Time = point.Time, Name = $"{_assetX}:{nameof(PointModel.Bid)}", Last = xBid });
-      chartPoints.Add(new PointModel { Time = point.Time, Name = $"{_assetY}:{nameof(PointModel.Ask)}", Last = yAsk });
-      chartPoints.Add(new PointModel { Time = point.Time, Name = $"{_assetY}:{nameof(PointModel.Bid)}", Last = yBid });
+      chartPoints.Add(KeyValuePair.Create($"{_assetX}:{nameof(PointModel.Ask)}", new PointModel { Time = point.Time, Last = xAsk }));
+      chartPoints.Add(KeyValuePair.Create($"{_assetX}:{nameof(PointModel.Bid)}", new PointModel { Time = point.Time, Last = xBid }));
+      chartPoints.Add(KeyValuePair.Create($"{_assetY}:{nameof(PointModel.Ask)}", new PointModel { Time = point.Time, Last = yAsk }));
+      chartPoints.Add(KeyValuePair.Create($"{_assetY}:{nameof(PointModel.Bid)}", new PointModel { Time = point.Time, Last = yBid }));
 
-      reportPoints.Add(new PointModel { Time = point.Time, Name = "Balance", Last = account.Balance });
-      reportPoints.Add(new PointModel { Time = point.Time, Name = "PnL", Last = performance.Last });
+      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = Account.Balance }));
+      reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
       await View.ChartsView.UpdateItems(chartPoints, 1000);
       await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(account.Positions);
-      await View.OrdersView.UpdateItems(account.ActiveOrders);
-      await View.PositionsView.UpdateItems(account.ActivePositions);
+      await View.DealsView.UpdateItems(Account.Positions);
+      await View.OrdersView.UpdateItems(Account.ActiveOrders);
+      await View.PositionsView.UpdateItems(Account.ActivePositions);
     }
 
-    private (string, string) OpenPositions(IInstrumentModel assetBuy, IInstrumentModel assetSell, IList<IPointModel> points)
+    private (string, string) OpenPositions(IInstrument assetBuy, IInstrument assetSell)
     {
-      var messageSell = new TransactionMessage<ITransactionOrderModel>
+      var messageSell = new StateModel<OrderModel>
       {
         Action = ActionEnum.Create,
         Next = new OrderModel
         {
-          Volume = 1,
           Side = OrderSideEnum.Sell,
           Type = OrderTypeEnum.Market,
-          Instrument = assetSell
+          Transaction = new()
+          {
+            Volume = 1,
+            Instrument = assetSell
+          }
         }
       };
 
-      var messageBuy = new TransactionMessage<ITransactionOrderModel>
+      var messageBuy = new StateModel<OrderModel>
       {
         Action = ActionEnum.Create,
         Next = new OrderModel
         {
-          Volume = 1,
           Side = OrderSideEnum.Buy,
           Type = OrderTypeEnum.Market,
-          Instrument = assetBuy
+          Transaction = new()
+          {
+            Volume = 1,
+            Instrument = assetBuy
+          }
         }
       };
 
@@ -205,24 +210,24 @@ namespace Terminal.Client.Pages
       View.Adapter.OrderStream(messageBuy);
 
       var account = View.Adapter.Account;
-      var buy = account.ActivePositions.Values.First(o => o.Side == OrderSideEnum.Buy);
-      var sell = account.ActivePositions.Values.First(o => o.Side == OrderSideEnum.Sell);
+      var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
+      var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
 
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
 
-      return (messageSell.Next.Id, messageBuy.Next.Id);
+      return (messageSell.Next.Transaction.Id, messageBuy.Next.Transaction.Id);
     }
 
-    private void ClosePositions(IList<IPointModel> points)
+    private void ClosePositions()
     {
       foreach (var position in View.Adapter.Account.ActivePositions.Values)
       {
         var side = OrderSideEnum.Buy;
-        var point = position.Instrument.Points.Last();
+        var point = position.Order.Transaction.Instrument.Points.Last();
         var price = point.Ask;
 
-        if (Equals(position.Side, OrderSideEnum.Buy))
+        if (Equals(position.Order.Side, OrderSideEnum.Buy))
         {
           price = point.Bid;
           side = OrderSideEnum.Sell;
@@ -231,12 +236,15 @@ namespace Terminal.Client.Pages
         var order = new OrderModel
         {
           Side = side,
-          Volume = position.Volume,
           Type = OrderTypeEnum.Market,
-          Instrument = position.Instrument
+          Transaction = new()
+          {
+            Volume = position.Order.Transaction.Volume,
+            Instrument = position.Order.Transaction.Instrument
+          }
         };
 
-        View.Adapter.OrderStream(new TransactionMessage<ITransactionOrderModel>
+        View.Adapter.OrderStream(new StateModel<OrderModel>
         {
           Action = ActionEnum.Create,
           Next = order

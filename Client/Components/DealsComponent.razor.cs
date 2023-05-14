@@ -3,8 +3,8 @@ using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Client.Records;
-using Terminal.Core.EnumSpace;
-using Terminal.Core.ModelSpace;
+using Terminal.Core.Enums;
+using Terminal.Core.Models;
 
 namespace Terminal.Client.Components
 {
@@ -19,16 +19,16 @@ namespace Terminal.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(ObservableCollection<ITransactionPositionModel> items)
+    public virtual Task UpdateItems(ObservableCollection<PositionModel> items)
     {
       Items = items.Select(o => new ActiveOrderRecord
       {
-        Time = o.Time,
-        Name = o.Instrument.Name,
-        Side = o.Side ?? OrderSideEnum.None,
-        Size = o.Volume ?? 0,
-        OpenPrice = o.OpenPrice ?? 0,
-        ClosePrice = o.ClosePrice ?? 0,
+        Time = o.Order.Transaction.Time,
+        Name = o.Order.Transaction.Instrument.Name,
+        Side = o.Order.Side ?? OrderSideEnum.None,
+        Size = o.Order.Transaction.Volume ?? 0,
+        OpenPrice = o.Orders.First().Transaction.Price ?? 0,
+        ClosePrice = o.Orders.Last().Transaction.Price ?? 0,
         Gain = o.GainLoss ?? 0
 
       }).ToList();
