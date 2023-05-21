@@ -1,4 +1,4 @@
-using ExScore.ModelSpace;
+using Estimator.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,7 +9,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Client.Components
 {
-    public partial class StatementsComponent
+  public partial class StatementsComponent
   {
     /// <summary>
     /// Common performance statistics
@@ -31,29 +31,28 @@ namespace Terminal.Client.Components
         values.Add(new InputData
         {
           Time = positions.First().Order.Transaction.Time.Value,
-          Value = balance,
-          Min = balance,
-          Max = balance
+          Value = 0,
+          Min = 0,
+          Max = 0
         });
       }
 
       for (var i = 0; i < positions.Count; i++)
       {
         var position = positions[i];
-        var previousInput = values[i].Value;
 
         values.Add(new InputData
         {
           Time = position.Order.Transaction.Time.Value,
-          Value = previousInput + position.GainLoss.Value,
-          Min = previousInput + position.GainLossMin.Value,
-          Max = previousInput + position.GainLossMax.Value,
+          Value = position.GainLoss.Value,
+          Min = position.GainLossMin.Value,
+          Max = position.GainLossMax.Value,
           Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
           Direction = GetDirection(position)
         });
       }
 
-      Stats = new Score { Values = values }.Calculate();
+      Stats = new Score { Items = values, Balance = balance }.Calculate();
 
       return InvokeAsync(StateHasChanged);
     }
@@ -81,14 +80,7 @@ namespace Terminal.Client.Components
     /// <returns></returns>
     protected virtual string ShowDouble(double? input)
     {
-      var sign = " ";
-
-      if (input < 0)
-      {
-        sign = "-";
-      }
-
-      return sign + string.Format("{0:0.00}", Math.Abs(input.Value));
+      return (input < 0 ? "-" : "") + string.Format("{0:0.00}", Math.Abs(input.Value));
     }
   }
 }

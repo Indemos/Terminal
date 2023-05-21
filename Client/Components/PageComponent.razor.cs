@@ -8,7 +8,7 @@ using Terminal.Core.Services;
 
 namespace Terminal.Client.Components
 {
-    public partial class PageComponent
+  public partial class PageComponent
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -64,13 +64,10 @@ namespace Terminal.Client.Components
 
     public virtual void OnOpenStatements()
     {
-      InstanceService<BackgroundRunner>.Instance.Send(() =>
+      if (Adapter?.Account is not null)
       {
-        if (Adapter?.Account is not null)
-        {
-          StatementsView.UpdateItems(new[] { Adapter.Account });
-        }
-      });
+        StatementsView.UpdateItems(new[] { Adapter.Account });
+      }
     }
   }
 }
