@@ -31,7 +31,7 @@ In order to create connector for preferred broker, implement interface `IConnect
 
 # Trading Strategies
 
-[Examples](https://github.com/Indemos/Terminal/tree/main/Terminal.Client/Pages) of simple trading strategies can be found in `Client` catalog.
+[Examples](https://github.com/Indemos/Terminal/tree/main/Client/Pages) of simple trading strategies can be found in `Client` catalog.
 
 # Preview 
 
