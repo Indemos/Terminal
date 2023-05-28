@@ -10,7 +10,11 @@ namespace Terminal.Client.Components
     /// <summary>
     /// Updater
     /// </summary>
-    protected virtual TimeRunner Updater { get; set; } = new() { Count = 1, Span = TimeSpan.FromMilliseconds(100) };
+    protected virtual TimeRunner Updater { get; set; } = new()
+    {
+      Count = 1,
+      Span = TimeSpan.FromMilliseconds(100)
+    };
 
     /// <summary>
     /// Render
