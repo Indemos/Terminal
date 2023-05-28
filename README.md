@@ -20,9 +20,9 @@ May contain references to other apps in [this list](https://github.com/Indemos) 
 * **Core** - cross-platform .NET 5 class library that contains main functionality 
 * **Chart** - [canvas](https://github.com/Indemos/Canvas) visualization
 * **Tests** - unit tests 
-* **Score** - class library measuring performance metrics and related statstics
+* **Estimator** - class [library](https://github.com/Indemos/Statistics) measuring performance metrics and statistics
 * **Data** - catalog with historical data, any format is acceptable as long as you implement your own parser
-* **Connector** - gateway implementations for brokers and exchanges, including historical and simulated data
+* **Connector** - gateway implementations for brokers and exchanges, including historical and [simulated data](https://github.com/Indemos/Terminal-Connector-Simulation)
 * **Client** - the main application that puts together orders, positions, performance metrics, and charts 
 
 # Gateways 
@@ -31,7 +31,7 @@ In order to create connector for preferred broker, implement interface `IConnect
 
 # Trading Strategies
 
-[Examples](https://github.com/Indemos/Terminal/tree/main/Terminal.Client/Pages) of simple trading strategies can be found in `Client` catalog.
+[Examples](https://github.com/Indemos/Terminal/tree/main/Client/Pages) of simple trading strategies can be found in `Client` catalog.
 
 # Preview 
 
