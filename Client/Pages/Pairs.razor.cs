@@ -1,8 +1,8 @@
-using Canvas.Core.ModelSpace;
-using Canvas.Core.ShapeSpace;
+using Canvas.Core.Models;
+using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using Schedule.RunnerSpace;
+using Schedule.Runners;
 using SkiaSharp;
 using System.Collections.Generic;
 using System.Linq;

@@ -1,6 +1,6 @@
-using Canvas.Core.EngineSpace;
-using Canvas.Core.ModelSpace;
-using Canvas.Core.ShapeSpace;
+using Canvas.Core.Engines;
+using Canvas.Core.Models;
+using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
 using System;
 using System.Collections.Generic;

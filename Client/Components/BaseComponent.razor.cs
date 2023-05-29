@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Components;
-using Schedule.RunnerSpace;
+using Schedule.Runners;
 using System;
 using System.Threading.Tasks;
 
