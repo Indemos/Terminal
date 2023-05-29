@@ -10,7 +10,7 @@
     <PackageReference Include="Canvas.Views.Web" Version="1.7.9-prerelease" />
     <PackageReference Include="Estimator" Version="1.0.1" />
     <PackageReference Include="MudBlazor" Version="6.3.1" />
-    <PackageReference Include="Terminal.Simulation" Version="1.1.6" />
+    <PackageReference Include="Terminal.Simulation" Version="1.1.7" />
   </ItemGroup>
 
 </Project>
