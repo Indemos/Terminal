@@ -7,7 +7,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
-namespace Terminal.Client.Components
+namespace Client.Components
 {
   public partial class StatementsComponent
   {

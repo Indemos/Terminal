@@ -8,17 +8,18 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Terminal.Client.Components;
+using Client.Components;
 using Terminal.Connector.Simulation;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
+using System;
 
-namespace Terminal.Client.Pages
+namespace Client.Pages
 {
-    public partial class Pairs
+  public partial class Pairs
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -50,10 +51,7 @@ namespace Terminal.Client.Pages
               {
                 [nameof(OrderSideEnum.Buy)] = new ArrowShape { Component = comUp },
                 [nameof(OrderSideEnum.Sell)] = new ArrowShape { Component = comDown },
-                [$"{_assetX}:{nameof(PointModel.Ask)}"] = new LineShape { Component = comUp },
-                [$"{_assetX}:{nameof(PointModel.Bid)}"] = new LineShape { Component = comUp },
-                [$"{_assetY}:{nameof(PointModel.Ask)}"] = new LineShape { Component = comDown },
-                [$"{_assetY}:{nameof(PointModel.Bid)}"] = new LineShape { Component = comDown }
+                ["Range"] = new AreaShape { Component = comUp }
               }
             }
           }
@@ -136,7 +134,8 @@ namespace Terminal.Client.Pages
       var xBid = xPoint.Bid;
       var yAsk = yPoint.Ask;
       var yBid = yPoint.Bid;
-      var expenses = ((xAsk - xBid) + (yAsk - yBid)) * 2;
+      var spread = (xAsk - xBid) + (yAsk - yBid);
+      var expenses = spread * 2;
 
       if (Account.ActivePositions.Count == 2)
       {
@@ -154,20 +153,20 @@ namespace Terminal.Client.Pages
       {
         switch (true)
         {
-          case true when (xBid - yAsk) >= expenses: OpenPositions(instrumentY, instrumentX); break;
-          case true when (yBid - xAsk) >= expenses: OpenPositions(instrumentX, instrumentY); break;
+          case true when (xBid - yAsk) > expenses: OpenPositions(instrumentY, instrumentX); break;
+          case true when (yBid - xAsk) > expenses: OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
-      chartPoints.Add(KeyValuePair.Create($"{_assetX}:{nameof(PointModel.Ask)}", new PointModel { Time = point.Time, Last = xAsk }));
-      chartPoints.Add(KeyValuePair.Create($"{_assetX}:{nameof(PointModel.Bid)}", new PointModel { Time = point.Time, Last = xBid }));
-      chartPoints.Add(KeyValuePair.Create($"{_assetY}:{nameof(PointModel.Ask)}", new PointModel { Time = point.Time, Last = yAsk }));
-      chartPoints.Add(KeyValuePair.Create($"{_assetY}:{nameof(PointModel.Bid)}", new PointModel { Time = point.Time, Last = yBid }));
+      var range = Math.Max(
+        ((xBid - yAsk) - expenses).Value,
+        ((yBid - xAsk) - expenses).Value);
 
+      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = Math.Max(0, range) }));
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = Account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
-      await View.ChartsView.UpdateItems(chartPoints, 1000);
+      await View.ChartsView.UpdateItems(chartPoints, 100);
       await View.ReportsView.UpdateItems(reportPoints);
       await View.DealsView.UpdateItems(Account.Positions);
       await View.OrdersView.UpdateItems(Account.ActiveOrders);

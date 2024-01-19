@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Services;
 
-namespace Terminal.Client.Components
+namespace Client.Components
 {
   public partial class PageComponent
   {

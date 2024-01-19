@@ -1,11 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Terminal.Client.Records;
+using Client.Records;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
-namespace Terminal.Client.Components
+namespace Client.Components
 {
   public partial class OrdersComponent
   {

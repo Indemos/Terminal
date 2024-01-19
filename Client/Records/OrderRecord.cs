@@ -1,7 +1,7 @@
 using System;
 using Terminal.Core.Enums;
 
-namespace Terminal.Client.Records
+namespace Client.Records
 {
   /// <summary>
   /// Template record

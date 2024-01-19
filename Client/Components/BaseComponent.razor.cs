@@ -3,7 +3,7 @@ using Schedule.Runners;
 using System;
 using System.Threading.Tasks;
 
-namespace Terminal.Client.Components
+namespace Client.Components
 {
   public class BaseComponent : ComponentBase
   {

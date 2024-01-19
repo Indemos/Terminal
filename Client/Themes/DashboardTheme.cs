@@ -1,6 +1,6 @@
 using MudBlazor;
 
-namespace Terminal.Client.Themes
+namespace Client.Themes
 {
   public class DashboardTheme : MudTheme
   {

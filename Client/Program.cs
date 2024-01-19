@@ -5,7 +5,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using Terminal.Core.Validators;
 
-namespace Terminal.Client
+namespace Client
 {
   public class Program
   {

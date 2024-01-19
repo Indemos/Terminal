@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
-namespace Terminal.Client.Components
+namespace Client.Components
 {
   public partial class ChartsComponent : IDisposable, IAsyncDisposable
   {
