@@ -214,8 +214,8 @@ namespace Alpaca
           {
             case OrderTypeEnum.Stop: await TradeClient.PostOrderAsync(OrderSide.Buy.Stop(name, amount, price)); break;
             case OrderTypeEnum.Limit: await TradeClient.PostOrderAsync(OrderSide.Buy.Limit(name, amount, price)); break;
-            case OrderTypeEnum.StopLimit: await TradeClient.PostOrderAsync(OrderSide.Buy.StopLimit(name, amount, order.ActivationPrice, price); break;
-            case OrderTypeEnum.Market: await TradeClient.PostOrderAsync(OrderSide.Buy.Stop(name, amount, price); break;
+            case OrderTypeEnum.StopLimit: await TradeClient.PostOrderAsync(OrderSide.Buy.StopLimit(name, amount, (decimal)order.ActivationPrice, price)); break;
+            case OrderTypeEnum.Market: await TradeClient.PostOrderAsync(OrderSide.Buy.Market(name, amount)); break;
           }
         }
       }
