@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Terminal.Connector.Simulation;
+using Simulation;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
@@ -35,8 +35,8 @@ namespace Terminal.Tests
       var nextPosition = base.DecreasePosition(order, previousPosition);
 
       Assert.Single(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
       Assert.Equal(3, Account.Orders.Count);
-      Assert.Equal(0, Account.ActiveOrders.Count);
       Assert.Equal(2, Account.ActivePositions.Count);
       Assert.Equal(2, nextPosition.Orders.Count);
 
@@ -87,9 +87,9 @@ namespace Terminal.Tests
       var nextPosition = base.DecreasePosition(order, previousPosition);
 
       Assert.Single(Account.Positions);
+      Assert.Single(Account.ActivePositions);
       Assert.Equal(3, Account.Orders.Count);
-      Assert.Equal(0, Account.ActiveOrders.Count);
-      Assert.Equal(1, Account.ActivePositions.Count);
+      Assert.Empty(Account.ActiveOrders);
       Assert.Equal(2, nextPosition.Orders.Count);
 
       // Order #1
@@ -139,8 +139,8 @@ namespace Terminal.Tests
       var nextPosition = base.DecreasePosition(order, previousPosition);
 
       Assert.Single(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
       Assert.Equal(3, Account.Orders.Count);
-      Assert.Equal(0, Account.ActiveOrders.Count);
       Assert.Equal(2, Account.ActivePositions.Count);
       Assert.Equal(2, nextPosition.Orders.Count);
 

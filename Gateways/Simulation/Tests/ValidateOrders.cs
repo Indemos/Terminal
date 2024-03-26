@@ -1,8 +1,7 @@
-using FluentValidation.Results;
+using Simulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Terminal.Connector.Simulation;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;

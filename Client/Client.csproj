@@ -7,12 +7,13 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Canvas.Views.Web" Version="1.8.1" />
-    <PackageReference Include="Estimator" Version="1.0.1" />
-    <PackageReference Include="MudBlazor" Version="6.12.0" />
+    <PackageReference Include="Canvas.Views.Web" Version="3.0.8" />
+    <PackageReference Include="Estimator" Version="1.0.2" />
+    <PackageReference Include="MudBlazor" Version="6.19.1" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Gateways\Alpaca\Libs\Alpaca.csproj" />
     <ProjectReference Include="..\Gateways\Simulation\Libs\Simulation.csproj" />
   </ItemGroup>
 

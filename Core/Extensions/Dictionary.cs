@@ -7,7 +7,7 @@ namespace Terminal.Core.Extensions
   {
     public static V Get<K, V>(this IDictionary<K, V> input, K index)
     {
-      return input.TryGetValue(index, out var value) ? value : default;
+      return index is not null && input.TryGetValue(index, out var value) ? value : default;
     }
   }
 }

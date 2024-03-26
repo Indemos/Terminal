@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using Schedule.Runners;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
-using Terminal.Core.Services;
 
 namespace Client.Components
 {
@@ -23,43 +22,69 @@ namespace Client.Components
     public virtual OrdersComponent OrdersView { get; set; }
     public virtual PositionsComponent PositionsView { get; set; }
     public virtual StatementsComponent StatementsView { get; set; }
-    public virtual IConnector Adapter { get; set; }
+    public virtual IGateway Adapter { get; set; }
     public virtual Action Setup { get; set; }
 
     public virtual async Task OnConnect()
     {
-      OnDisconnect();
-      Setup();
+      try
+      {
+        OnDisconnect();
+        Setup();
 
-      IsConnection = true;
-      IsSubscription = true;
+        IsConnection = true;
+        IsSubscription = true;
 
-      await Adapter.Connect();
+        await Adapter.Connect();
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e);
+      }
     }
 
     public virtual void OnDisconnect()
     {
-      IsConnection = false;
-      IsSubscription = false;
+      try
+      {
+        Adapter?.Disconnect();
 
-      Adapter?.Disconnect();
+        ChartsView.Clear();
+        ReportsView.Clear();
 
-      ChartsView.Clear();
-      ReportsView.Clear();
+        IsConnection = false;
+        IsSubscription = false;
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e);
+      }
     }
 
-    public virtual async Task OnSubscribe()
+    public virtual void OnSubscribe()
     {
-      IsSubscription = true;
-
-      await Adapter.Subscribe();
+      try
+      {
+        IsSubscription = true;
+        Adapter.Account.Instruments.ForEach(o => Adapter.Subscribe(o.Key));
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e);
+      }
     }
 
     public virtual void OnUnsubscribe()
     {
-      IsSubscription = false;
-
-      Adapter.Unsubscribe();
+      try
+      {
+        IsSubscription = false;
+        Adapter.Account.Instruments.ForEach(o => Adapter.Unsubscribe(o.Key));
+      }
+      catch (Exception e)
+      {
+        Console.WriteLine(e);
+      }
     }
 
     public virtual void OnOpenStatements()

@@ -1,21 +1,20 @@
-using FluentValidation.Results;
+using Distribution.Services;
 using Mapper;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
+using System.Timers;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
-namespace Terminal.Connector.Simulation
+namespace Simulation
 {
-  public class Adapter : Core.Domains.Connector, IDisposable
+  public class Adapter : Gateway, IDisposable
   {
     /// <summary>
     /// Disposable connections
@@ -25,7 +24,7 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Disposable subscriptions
     /// </summary>
-    protected IList<IDisposable> _subscriptions;
+    protected IDictionary<string, IDisposable> _subscriptions;
 
     /// <summary>
     /// Instrument streams
@@ -42,16 +41,18 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     public virtual string Source { get; set; }
 
+    public virtual ScheduleService Scheduler { get; set; } = new();
+
     /// <summary>
     /// Constructor
     /// </summary>
     public Adapter()
     {
-      Speed = 100;
+      Speed = 1000;
 
       _connections = new List<IDisposable>();
-      _subscriptions = new List<IDisposable>();
       _instruments = new Dictionary<string, StreamReader>();
+      _subscriptions = new Dictionary<string, IDisposable>();
     }
 
     /// <summary>
@@ -61,7 +62,7 @@ namespace Terminal.Connector.Simulation
     {
       await Disconnect();
 
-      CorrectAccounts(Account);
+      SetupAccounts(Account);
 
       _instruments = Account
         .Instruments
@@ -69,7 +70,8 @@ namespace Terminal.Connector.Simulation
 
       _instruments.ForEach(o => _connections.Add(o.Value));
 
-      await Subscribe();
+      Account.Positions.CollectionChanged += OnPositionUpdate;
+      Account.Instruments.ForEach(async o => await Subscribe(o.Key));
 
       return null;
     }
@@ -77,30 +79,32 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Subscribe to data streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Subscribe()
+    public override async Task<IList<ErrorModel>> Subscribe(string name)
     {
-      await Unsubscribe();
+      await Unsubscribe(name);
 
-      OrderStream += OnOrderUpdate;
-      Account.Positions.CollectionChanged += OnPositionUpdate;
-      Account.Instruments.ForEach(o => o.Value.Points.CollectionChanged += OnPointUpdate);
+      Account.Instruments[name].Points.CollectionChanged += OnPointUpdate;
 
-      var span = TimeSpan.FromMilliseconds(Speed);
+      var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
-      var scheduler = new EventLoopScheduler();
-      var interval = Observable
-        .Interval(span, scheduler)
-        .Subscribe(o =>
+      var scheduler = InstanceService<ScheduleService>.Instance;
+      var interval = new Timer(span);
+      
+      interval.Enabled = true;
+      interval.AutoReset = true;
+      interval.Elapsed += (sender, e) => scheduler.Send(() =>
+      {
+        var point = GetRecord(_instruments, points);
+
+        if (point is not null)
         {
-          var point = GetRecord(_instruments, points);
+          SetupPoints(point);
+        }
 
-          if (point is not null)
-          {
-            CorrectPoints(point);
-          }
-        });
+        interval.Enabled = true;
+      });
 
-      _subscriptions.Add(interval);
+      _subscriptions[name] = interval;
 
       return null;
     }
@@ -110,7 +114,8 @@ namespace Terminal.Connector.Simulation
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      Unsubscribe();
+      Account.Instruments.ForEach(async o => await Unsubscribe(o.Key));
+      Account.Positions.CollectionChanged -= OnPositionUpdate;
 
       _connections?.ForEach(o => o.Dispose());
       _connections?.Clear();
@@ -121,14 +126,15 @@ namespace Terminal.Connector.Simulation
     /// <summary>
     /// Unsubscribe from data streams
     /// </summary>
-    public override Task<IList<ErrorModel>> Unsubscribe()
+    public override Task<IList<ErrorModel>> Unsubscribe(string name)
     {
-      OrderStream -= OnOrderUpdate;
-      Account.Positions.CollectionChanged -= OnPositionUpdate;
-      Account.Instruments.ForEach(o => o.Value.Points.CollectionChanged -= OnPointUpdate);
+      Account.Instruments[name].Points.CollectionChanged -= OnPointUpdate;
 
-      _subscriptions?.ForEach(o => o.Dispose());
-      _subscriptions?.Clear();
+      if (_subscriptions.ContainsKey(name))
+      {
+        _subscriptions[name].Dispose();
+        _subscriptions.Remove(name);
+      }
 
       return Task.FromResult<IList<ErrorModel>>(null);
     }
@@ -149,7 +155,7 @@ namespace Terminal.Connector.Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
     {
       var response = ValidateOrders(CorrectOrders(orders).ToArray());
 
@@ -176,7 +182,7 @@ namespace Terminal.Connector.Simulation
     /// Update orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<OrderModel>> UpdateOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> UpdateOrders(params OrderModel[] orders)
     {
       var nextOrders = orders.Select(nextOrder =>
       {
@@ -205,9 +211,9 @@ namespace Terminal.Connector.Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<OrderModel>();
+      var response = new ResponseMapModel<OrderModel>();
 
       foreach (var nextOrder in orders)
       {

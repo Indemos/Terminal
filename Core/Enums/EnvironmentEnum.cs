@@ -4,6 +4,6 @@ namespace Terminal.Core.Enums
   {
     None = 0,
     Live = 1,
-    Paper = 2
+    Sandbox = 2
   }
 }

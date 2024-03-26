@@ -1,6 +1,7 @@
+using Distribution.Services;
 using Microsoft.AspNetCore.Components;
-using Schedule.Runners;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Client.Components
@@ -10,23 +11,16 @@ namespace Client.Components
     /// <summary>
     /// Updater
     /// </summary>
-    protected virtual TimeRunner Updater { get; set; } = new()
-    {
-      Count = 1,
-      Span = TimeSpan.FromMilliseconds(100)
-    };
+    protected virtual ScheduleService Updater { get; set; } = new ScheduleService();
 
     /// <summary>
     /// Render
     /// </summary>
-    protected virtual Task Render(Action action)
+    protected virtual Task Render(Action action) => Updater.Send(() =>
     {
-      return Updater.Send(() =>
-      {
-        action();
-        InvokeAsync(StateHasChanged);
-
-      }).Task;
-    }
+      action();
+      InvokeAsync(StateHasChanged);
+      Thread.Sleep(1);
+    }).Task;
   }
 }

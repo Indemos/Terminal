@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Terminal.Connector.Simulation;
+using Simulation;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
@@ -42,8 +42,8 @@ namespace Terminal.Tests
       // State
 
       Assert.Empty(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
       Assert.Equal(3, Account.Orders.Count);
-      Assert.Equal(0, Account.ActiveOrders.Count);
       Assert.Equal(2, Account.ActivePositions.Count);
       Assert.Equal(2, nextPosition.Orders.Count);
 

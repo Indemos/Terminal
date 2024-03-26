@@ -1,6 +1,6 @@
 using System;
 using System.Linq;
-using Terminal.Connector.Simulation;
+using Simulation;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;

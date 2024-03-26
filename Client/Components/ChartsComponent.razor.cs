@@ -11,7 +11,7 @@ using Terminal.Core.Models;
 
 namespace Client.Components
 {
-  public partial class ChartsComponent : IDisposable, IAsyncDisposable
+  public partial class ChartsComponent : IDisposable
   {
     /// <summary>
     /// Reference to view control
@@ -89,7 +89,7 @@ namespace Client.Components
 
       var domain = new DomainModel
       {
-        IndexDomain = new[] { Shapes.Count - (count ?? Shapes.Count), Shapes.Count }
+        IndexDomain = new int[] { Shapes.Count - (count ?? Shapes.Count), Shapes.Count }
       };
 
       return Render(() => View.Update(domain, Shapes));
@@ -108,20 +108,6 @@ namespace Client.Components
     /// <summary>
     /// Dispose
     /// </summary>
-    /// <returns></returns>
-    public virtual ValueTask DisposeAsync()
-    {
-      Dispose();
-
-      return new ValueTask(Task.CompletedTask);
-    }
-
-    /// <summary>
-    /// Dispose
-    /// </summary>
-    public virtual void Dispose()
-    {
-      View?.DisposeAsync();
-    }
+    public virtual void Dispose() => View?.Dispose();
   }
 }

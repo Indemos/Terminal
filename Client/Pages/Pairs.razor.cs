@@ -1,25 +1,22 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
+using Client.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using Schedule.Runners;
+using Simulation;
 using SkiaSharp;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reactive.Linq;
 using System.Threading.Tasks;
-using Client.Components;
-using Terminal.Connector.Simulation;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
-using System;
 
 namespace Client.Pages
 {
-  public partial class Pairs
+  public partial class Pairs : IDisposable
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -28,7 +25,6 @@ namespace Client.Pages
     /// </summary>
     const string _assetX = "GOOGL";
     const string _assetY = "GOOG";
-    const string _account = "Simulation";
 
     protected virtual IAccount Account { get; set; }
     protected virtual PageComponent View { get; set; }
@@ -38,49 +34,35 @@ namespace Client.Pages
     {
       if (setup)
       {
-        var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-        var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+        var indUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+        var indDown = new ComponentModel { Color = SKColors.OrangeRed };
+        var indAreas = new GroupShape();
+        var indCharts = new GroupShape();
 
-        await View.ChartsView.Create(new GroupShape
-        {
-          Groups = new Dictionary<string, IGroupShape>
-          {
-            ["Prices"] = new GroupShape
-            {
-              Groups = new Dictionary<string, IGroupShape>
-              {
-                [nameof(OrderSideEnum.Buy)] = new ArrowShape { Component = comUp },
-                [nameof(OrderSideEnum.Sell)] = new ArrowShape { Component = comDown },
-                ["Range"] = new AreaShape { Component = comUp }
-              }
-            }
-          }
-        });
+        indCharts.Groups["Buy"] = new ArrowShape { Component = indUp };
+        indCharts.Groups["Sell"] = new ArrowShape { Component = indDown };
+        indCharts.Groups["Range"] = new AreaShape { Component = indUp };
+        indAreas.Groups["Prices"] = indCharts;
 
-        var componentGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
-        var componentBalance = new ComponentModel { Color = SKColors.Black };
+        await View.ChartsView.Create(indAreas);
 
-        await View.ReportsView.Create(new GroupShape
-        {
-          Groups = new Dictionary<string, IGroupShape>
-          {
-            ["Performance"] = new GroupShape
-            {
-              Groups = new Dictionary<string, IGroupShape>
-              {
-                ["PnL"] = new LineShape { Component = componentGain },
-                ["Balance"] = new AreaShape { Component = componentBalance }
-              }
-            }
-          }
-        });
+        var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
+        var pnlBalance = new ComponentModel { Color = SKColors.Black };
+        var pnlAreas = new GroupShape();
+        var pnlCharts = new GroupShape();
+
+        pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
+        pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
+        pnlAreas.Groups["Performance"] = pnlCharts;
+
+        await View.ReportsView.Create(pnlAreas);
 
         View.Setup = () =>
         {
           Account = new Account
           {
+            Name = "Demo",
             Balance = 25000,
-            Name = _account,
             Instruments = new Dictionary<string, Instrument>
             {
               [_assetX] = new Instrument { Name = _assetX },
@@ -100,13 +82,10 @@ namespace Client.Pages
           Account
             .Instruments
             .Values
-            .ForEach(o => o.Points.CollectionChanged += (o, e) =>
-            {
-              foreach (PointModel item in e.NewItems)
-              {
-                InstanceService<BackgroundRunner>.Instance.Send(OnData(item));
-              }
-            });
+            .ForEach(o => o.Points.CollectionChanged += (_, e) => e
+              .NewItems
+              .OfType<PointModel>()
+              .ForEach(async o => await OnData(o)));
         };
       }
 
@@ -175,38 +154,30 @@ namespace Client.Pages
 
     private (string, string) OpenPositions(IInstrument assetBuy, IInstrument assetSell)
     {
-      var messageSell = new StateModel<OrderModel>
+      var orderSell = new OrderModel
       {
-        Action = ActionEnum.Create,
-        Next = new OrderModel
+        Side = OrderSideEnum.Sell,
+        Type = OrderTypeEnum.Market,
+        Transaction = new()
         {
-          Side = OrderSideEnum.Sell,
-          Type = OrderTypeEnum.Market,
-          Transaction = new()
-          {
-            Volume = 1,
-            Instrument = assetSell
-          }
+          Volume = 1,
+          Instrument = assetSell
         }
       };
 
-      var messageBuy = new StateModel<OrderModel>
+      var orderBuy = new OrderModel
       {
-        Action = ActionEnum.Create,
-        Next = new OrderModel
+        Side = OrderSideEnum.Buy,
+        Type = OrderTypeEnum.Market,
+        Transaction = new()
         {
-          Side = OrderSideEnum.Buy,
-          Type = OrderTypeEnum.Market,
-          Transaction = new()
-          {
-            Volume = 1,
-            Instrument = assetBuy
-          }
+          Volume = 1,
+          Instrument = assetBuy
         }
       };
 
-      View.Adapter.OrderStream(messageSell);
-      View.Adapter.OrderStream(messageBuy);
+      View.Adapter.CreateOrders(orderBuy);
+      View.Adapter.CreateOrders(orderSell);
 
       var account = View.Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
@@ -215,7 +186,7 @@ namespace Client.Pages
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
 
-      return (messageSell.Next.Transaction.Id, messageBuy.Next.Transaction.Id);
+      return (orderSell.Transaction.Id, orderBuy.Transaction.Id);
     }
 
     private void ClosePositions()
@@ -223,12 +194,9 @@ namespace Client.Pages
       foreach (var position in View.Adapter.Account.ActivePositions.Values)
       {
         var side = OrderSideEnum.Buy;
-        var point = position.Order.Transaction.Instrument.Points.Last();
-        var price = point.Ask;
 
         if (Equals(position.Order.Side, OrderSideEnum.Buy))
         {
-          price = point.Bid;
           side = OrderSideEnum.Sell;
         }
 
@@ -243,14 +211,12 @@ namespace Client.Pages
           }
         };
 
-        View.Adapter.OrderStream(new StateModel<OrderModel>
-        {
-          Action = ActionEnum.Create,
-          Next = order
-        });
+        View.Adapter.CreateOrders(order);
 
         //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
       }
     }
+
+    public void Dispose() => View?.Adapter?.Disconnect();
   }
 }
