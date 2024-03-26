@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <GeneratePackageOnBuild>True</GeneratePackageOnBuild>
+    <Version>1.0.8</Version>
+    <Description>Internal package for trading and analysis</Description>
+    <Authors>artemiusgreat</Authors>
+    <Copyright>indemos.com</Copyright>
+    <PackageProjectUrl>http://indemos.com</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Indemos/Terminal-Connector-Simulation</RepositoryUrl>
+    <PackageTags>finance trading market stock backtester algorithmic-trading</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Distribution.Stream" Version="1.0.6" />
+    <PackageReference Include="PuppeteerSharp" Version="15.1.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Core\Core.csproj" />
+  </ItemGroup>
+  
+</Project>
