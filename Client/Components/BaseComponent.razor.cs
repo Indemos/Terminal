@@ -8,6 +8,8 @@ namespace Client.Components
 {
   public class BaseComponent : ComponentBase
   {
+    private static object protection = new();
+
     /// <summary>
     /// Updater
     /// </summary>
@@ -18,9 +20,12 @@ namespace Client.Components
     /// </summary>
     protected virtual Task Render(Action action) => Updater.Send(() =>
     {
-      action();
-      InvokeAsync(StateHasChanged);
-      Thread.Sleep(1);
+      lock (protection)
+      {
+        action();
+        InvokeAsync(StateHasChanged);
+        Thread.Sleep(1);
+      }
     }).Task;
   }
 }

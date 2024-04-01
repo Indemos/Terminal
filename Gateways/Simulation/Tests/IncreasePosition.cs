@@ -33,8 +33,7 @@ namespace Terminal.Tests
 
       // Increase
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.IncreasePosition(order, previousPosition);
+      var nextPosition = base.IncreasePosition(order, Account.ActivePositions[orderY.Transaction.Id]);
       var averageTradePrice =
         nextPosition.Orders.Sum(o => o.Transaction.Volume * o.Transaction.Price) /
         nextPosition.Orders.Sum(o => o.Transaction.Volume);
@@ -71,11 +70,6 @@ namespace Terminal.Tests
       Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
       Assert.Equal(nextPosition.Order.Transaction.Price, averageTradePrice);
       Assert.Equal(nextPosition.Order.Transaction.Volume, order.Transaction.Volume + orderY.Transaction.Volume);
-
-      // Gain
-
-      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
-      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
 
       // Estimate
 

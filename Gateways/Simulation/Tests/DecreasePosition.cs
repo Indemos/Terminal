@@ -31,8 +31,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction.Id]);
 
       Assert.Single(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
@@ -67,6 +66,8 @@ namespace Terminal.Tests
 
       // Gain
 
+      var previousPosition = Account.Positions.Last();
+
       Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
       Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
     }
@@ -83,8 +84,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction.Id]);
 
       Assert.Single(Account.Positions);
       Assert.Single(Account.ActivePositions);
@@ -119,6 +119,8 @@ namespace Terminal.Tests
 
       // Gain
 
+      var previousPosition = Account.Positions.Last();
+
       Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
       Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
     }
@@ -135,8 +137,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction.Id]);
 
       Assert.Single(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
@@ -170,6 +171,8 @@ namespace Terminal.Tests
       Assert.Equal(nextPosition.Order.Transaction.Volume, Math.Abs(orderY.Transaction.Volume.Value - order.Transaction.Volume.Value));
 
       // Gain
+
+      var previousPosition = Account.Positions.Last();
 
       Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
       Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);

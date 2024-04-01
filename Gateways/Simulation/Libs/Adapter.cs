@@ -327,8 +327,8 @@ namespace Simulation
     /// <returns></returns>
     protected virtual PositionModel UpdatePosition(OrderModel nextOrder, PositionModel previousPosition)
     {
-      var isSameBuy = Equals(previousPosition.Order.Side, OrderSideEnum.Buy) && Equals(nextOrder.Side, OrderSideEnum.Buy);
-      var isSameSell = Equals(previousPosition.Order.Side, OrderSideEnum.Sell) && Equals(nextOrder.Side, OrderSideEnum.Sell);
+      var isSameBuy = previousPosition.Order.Side is OrderSideEnum.Buy && nextOrder.Side is OrderSideEnum.Buy;
+      var isSameSell = previousPosition.Order.Side is OrderSideEnum.Sell && nextOrder.Side is OrderSideEnum.Sell;
 
       nextOrder.Transaction.Status = OrderStatusEnum.Filled;
 
@@ -346,10 +346,11 @@ namespace Simulation
     /// <param name="order"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual PositionModel IncreasePosition(OrderModel order, PositionModel previousPosition)
+    protected virtual PositionModel IncreasePosition(OrderModel order, PositionModel previousPos)
     {
       var nextOrder = order.Clone() as OrderModel;
-      var nextPosition = previousPosition.Clone() as PositionModel;
+      var nextPosition = previousPos.Clone() as PositionModel;
+      var previousPosition = previousPos.Clone() as PositionModel;
 
       nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
       nextPosition.Order.Transaction.Id = nextOrder.Transaction.Id;
@@ -383,10 +384,11 @@ namespace Simulation
     /// <param name="order"></param>
     /// <param name="previousPosition"></param>
     /// <returns></returns>
-    protected virtual PositionModel DecreasePosition(OrderModel order, PositionModel previousPosition)
+    protected virtual PositionModel DecreasePosition(OrderModel order, PositionModel previousPos)
     {
       var nextOrder = order.Clone() as OrderModel;
-      var nextPosition = previousPosition.Clone() as PositionModel;
+      var nextPosition = previousPos.Clone() as PositionModel;
+      var previousPosition = previousPos.Clone() as PositionModel;
 
       nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
       nextPosition.Order.Transaction.Id = nextOrder.Transaction.Id;
@@ -439,12 +441,12 @@ namespace Simulation
         }
 
         var isExecutable = false;
-        var isBuyStop = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Type, OrderTypeEnum.Stop);
-        var isSellStop = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Type, OrderTypeEnum.Stop);
-        var isBuyLimit = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Type, OrderTypeEnum.Limit);
-        var isSellLimit = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Type, OrderTypeEnum.Limit);
-        var isBuyStopLimit = Equals(order.Side, OrderSideEnum.Buy) && Equals(order.Type, OrderTypeEnum.StopLimit) && pointModel.Ask >= order.ActivationPrice;
-        var isSellStopLimit = Equals(order.Side, OrderSideEnum.Sell) && Equals(order.Type, OrderTypeEnum.StopLimit) && pointModel.Bid <= order.ActivationPrice;
+        var isBuyStop = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Stop;
+        var isSellStop = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Stop;
+        var isBuyLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Limit;
+        var isSellLimit =order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Limit;
+        var isBuyStopLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.StopLimit && pointModel.Ask >= order.ActivationPrice;
+        var isSellStopLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.StopLimit && pointModel.Bid <= order.ActivationPrice;
 
         if (isBuyStopLimit || isSellStopLimit)
         {
