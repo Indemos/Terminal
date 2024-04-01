@@ -6,9 +6,20 @@ namespace Terminal.Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class OptionValidator : AbstractValidator<OptionModel>
+  public class OptionValidator : AbstractValidator<OptionModel?>
   {
     public OptionValidator()
+    {
+      RuleFor(o => o.Value).NotEmpty().SetValidator(new OptionValueValidator());
+    }
+  }
+
+  /// <summary>
+  /// Validation rules
+  /// </summary>
+  public class OptionValueValidator : AbstractValidator<OptionModel>
+  {
+    public OptionValueValidator()
     {
       RuleFor(o => o.Name).NotEmpty();
       RuleFor(o => o.BaseName).NotEmpty();

@@ -12,21 +12,21 @@ namespace Client.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected virtual IList<OrderRecord> Items { get; set; } = new List<OrderRecord>();
+    protected IList<OrderRecord> Items { get; set; } = new List<OrderRecord>();
 
     /// <summary>
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(IDictionary<string, OrderModel> items)
+    public Task UpdateItems(IDictionary<string, OrderModel?> items)
     {
       Items = items.Values.Select(o => new OrderRecord
       {
-        Time = o.Transaction.Time,
-        Name = o.Transaction.Instrument.Name,
-        Side = o.Side ?? OrderSideEnum.None,
-        Size = o.Transaction.Volume ?? 0,
-        Price = o.Transaction.Price ?? 0,
+        Time = o?.Transaction?.Time,
+        Name = o?.Transaction?.Instrument.Name,
+        Side = o?.Side ?? OrderSideEnum.None,
+        Size = o?.Transaction?.Volume ?? 0,
+        Price = o?.Transaction?.Price ?? 0,
 
       }).ToList();
 

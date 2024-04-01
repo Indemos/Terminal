@@ -12,7 +12,7 @@ namespace Terminal.Core.Indicators
     /// Implementation
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class AverageTrueRangeIndicator : Indicator<PointModel, AverageTrueRangeIndicator>
+    public class AverageTrueRangeIndicator : Indicator<AverageTrueRangeIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -29,7 +29,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override AverageTrueRangeIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override AverageTrueRangeIndicator Calculate(ObservableCollection<PointModel?> collection)
     {
       var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
       var previousPoint = collection.ElementAtOrDefault(collection.Count - 2);
@@ -39,9 +39,10 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
-      var value =
-        Math.Max(currentPoint.Bar.High.Value, previousPoint.Bar.Close.Value) -
-        Math.Min(currentPoint.Bar.Low.Value, previousPoint.Bar.Close.Value);
+      var pointLow = currentPoint?.Bar?.Low ?? 0;
+      var pointHigh = currentPoint?.Bar?.High ?? 0;
+      var pointClose = currentPoint?.Bar?.Close ?? 0;
+      var value = Math.Max(pointHigh, pointClose) - Math.Min(pointLow, pointClose);
 
       if (Values.Count > Interval)
       {
@@ -54,11 +55,10 @@ namespace Terminal.Core.Indicators
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Series[Name] =
-        currentPoint.Series.Get(Name) ??
-        new AverageTrueRangeIndicator().Point;
+      var point = Point ?? new PointModel();
 
-      Point.Last = series.Last = series.Bar.Close = value;
+      point.Price = value;
+      Point = point;
 
       return this;
     }

@@ -33,11 +33,10 @@ namespace Terminal.Tests
 
       // Increase
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.IncreasePosition(order, previousPosition);
+      var nextPosition = base.IncreasePosition(order, Account.ActivePositions[orderY.Transaction?.Id].Value);
       var averageTradePrice =
-        nextPosition.Orders.Sum(o => o.Transaction.Volume * o.Transaction.Price) /
-        nextPosition.Orders.Sum(o => o.Transaction.Volume);
+        nextPosition.Orders.Sum(o => o?.Transaction?.Volume * o?.Transaction?.Price) /
+        nextPosition.Orders.Sum(o => o?.Transaction?.Volume);
 
       // State
 
@@ -51,44 +50,51 @@ namespace Terminal.Tests
 
       var openA = nextPosition.Orders[0];
 
-      Assert.Equal(openA.Transaction.Id, orderY.Transaction.Id);
-      Assert.Equal(openA.Transaction.Time, orderY.Transaction.Time);
-      Assert.Equal(openA.Transaction.Volume, orderY.Transaction.Volume);
-      Assert.Equal(openA.Transaction.Price, instrumentY.Points[0].Ask);
+      Assert.Equal(openA?.Transaction?.Id, orderY.Transaction?.Id);
+      Assert.Equal(openA?.Transaction?.Time, orderY.Transaction?.Time);
+      Assert.Equal(openA?.Transaction?.Volume, orderY.Transaction?.Volume);
+      Assert.Equal(openA?.Transaction?.Price, instrumentY.Points[0]?.Ask);
 
       // Order #2
 
       var openB = nextPosition.Orders[1];
 
-      Assert.Equal(openB.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(openB.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(openB.Transaction.Volume, order.Transaction.Volume);
-      Assert.Equal(openB.Transaction.Price, instrumentY.Points[1].Ask);
+      Assert.Equal(openB?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(openB?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(openB?.Transaction?.Volume, order.Transaction?.Volume);
+      Assert.Equal(openB?.Transaction?.Price, instrumentY.Points[1]?.Ask);
 
       // Position
 
-      Assert.Equal(nextPosition.Order.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, averageTradePrice);
-      Assert.Equal(nextPosition.Order.Transaction.Volume, order.Transaction.Volume + orderY.Transaction.Volume);
+      Assert.Equal(nextPosition.Order?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(nextPosition.Order?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(nextPosition.Order?.Transaction?.Price, averageTradePrice);
+      Assert.Equal(nextPosition.Order?.Transaction?.Volume, order.Transaction?.Volume + orderY.Transaction?.Volume);
 
       // Gain
 
-      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
-      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+      var previousPosition = Account.Positions.Last();
+
+      Assert.Equal(previousPosition?.GainLossEstimate, previousPosition?.GainLoss);
+      Assert.Equal(previousPosition?.GainLossPointsEstimate, previousPosition?.GainLossPoints);
 
       // Estimate
 
       var step = instrumentY.StepValue / instrumentY.StepSize;
-      var priceUpdate = new PointModel { Ask = 50, Bid = 40, Last = 40, Instrument = instrumentY };
+      var priceUpdate = new PointModel { Ask = 50, Bid = 40, Price = 40, Instrument = instrumentY };
 
       instrumentY.Points.Add(priceUpdate);
       instrumentY.PointGroups.Add(priceUpdate);
 
-      nextPosition.Order.Transaction.Instrument = instrumentY;
+      var nextOrder = nextPosition.Order.Value;
+      var action = nextOrder.Transaction.Value;
 
-      Assert.Equal(nextPosition.GainLossEstimate, nextPosition.GainLossPointsEstimate * nextPosition.Order.Transaction.Volume * step - instrumentY.Commission);
-      Assert.Equal(nextPosition.GainLossPointsEstimate, priceUpdate.Bid - nextPosition.Order.Transaction.Price);
+      action.Instrument = instrumentY;
+      nextOrder.Transaction = action;
+      nextPosition.Order = nextOrder;
+
+      Assert.Equal(nextPosition.GainLossEstimate, nextPosition.GainLossPointsEstimate * nextPosition.Order?.Transaction?.Volume * step - instrumentY.Commission);
+      Assert.Equal(nextPosition.GainLossPointsEstimate, priceUpdate.Bid - nextPosition.Order?.Transaction?.Price);
     }
 
     private (OrderModel, IInstrument) CreatePositions()
@@ -99,13 +105,13 @@ namespace Terminal.Tests
       var instrumentX = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel> { pointX }
+        Points = new ObservableTimeCollection { pointX }
       };
 
       var instrumentY = new Instrument()
       {
         Name = "Y",
-        Points = new ObservableTimeCollection<PointModel> { pointY }
+        Points = new ObservableTimeCollection { pointY }
       };
 
       var orderX = new OrderModel
@@ -135,7 +141,7 @@ namespace Terminal.Tests
 
       instrumentY.Points.Add(newPrice);
 
-      return (orderY.Clone() as OrderModel, instrumentY);
+      return (orderY, instrumentY);
     }
   }
 }

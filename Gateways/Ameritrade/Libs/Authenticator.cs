@@ -18,14 +18,14 @@ namespace Ameritrade
     /// <summary>
     /// Keys
     /// </summary>
-    public virtual string Location { get; set; }
+    public string Location { get; set; }
 
     /// <summary>
     /// Load keys
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    public virtual T GetUser<T>(string name)
+    public T GetUser<T>(string name)
     {
       var location = Path.Combine(Location, name);
 
@@ -42,7 +42,7 @@ namespace Ameritrade
     /// </summary>
     /// <param name="name"></param>
     /// <param name="model"></param>
-    public virtual void SaveUser<T>(string name, T model)
+    public void SaveUser<T>(string name, T model)
     {
       File.WriteAllText(Path.Combine(Location, name), JsonSerializer.Serialize(model));
     }
@@ -52,7 +52,7 @@ namespace Ameritrade
     /// </summary>
     /// <param name="adapter"></param>
     /// <returns></returns>
-    public virtual async Task<UserModel> SignIn(Adapter adapter)
+    public async Task<UserModel> SignIn(Adapter adapter)
     {
       var user = GetUser<UserModel>(nameof(Authenticator));
 

@@ -45,7 +45,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = price, Ask = price }
             }
@@ -53,13 +53,12 @@ namespace Terminal.Tests
         }
       };
 
-      var orderId = order.Transaction.Id;
+      var orderId = order.Transaction?.Id;
 
       base.SendPendingOrder(order);
 
-      Assert.Equal(order.Transaction.Status, OrderStatusEnum.Placed);
-      Assert.Equal(order, Account.Orders[0]);
-      Assert.Equal(order, Account.ActiveOrders[orderId]);
+      Assert.Equal(Account.Orders[0]?.Transaction?.Status, OrderStatusEnum.Placed);
+      Assert.Equal(Account.Orders[0], Account.ActiveOrders[orderId]);
       Assert.Single(Account.Orders);
       Assert.Single(Account.ActiveOrders);
       Assert.Empty(Account.Positions);
@@ -87,7 +86,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = bid, Ask = ask }
             }
@@ -95,24 +94,24 @@ namespace Terminal.Tests
         }
       };
 
-      var orderId = order.Transaction.Id;
+      var orderId = order.Transaction?.Id;
 
       base.CreatePosition(order);
 
       var position = Account.ActivePositions[orderId];
-      var openPrice = position.Orders.First();
-      var closePrice = position.Orders.Last();
+      var openPrice = position?.Orders.First();
+      var closePrice = position?.Orders.Last();
 
-      Assert.Equal(position.Order.Transaction.Price, price);
-      Assert.Equal(position.Order.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(position.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(position.Order.Transaction.Price, price);
-      Assert.Equal(openPrice.Transaction.Price, price);
-      Assert.Equal(closePrice.Transaction.Price, price);
-      Assert.Single(position.Orders);
+      Assert.Equal(position?.Order?.Transaction?.Price, price);
+      Assert.Equal(position?.Order?.Transaction?.Status, OrderStatusEnum.Filled);
+      Assert.Equal(position?.Order?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(position?.Order?.Transaction?.Price, price);
+      Assert.Equal(openPrice?.Transaction?.Price, price);
+      Assert.Equal(closePrice?.Transaction?.Price, price);
+      Assert.Single(position?.Orders);
 
-      Assert.Equal(orderId, Account.Orders[0].Transaction.Id);
-      Assert.Equal(orderId, Account.ActivePositions[orderId].Order.Transaction.Id);
+      Assert.Equal(orderId, Account.Orders[0]?.Transaction?.Id);
+      Assert.Equal(orderId, Account.ActivePositions[orderId]?.Order?.Transaction?.Id);
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
       Assert.Single(Account.Orders);
@@ -126,7 +125,7 @@ namespace Terminal.Tests
       var instrument = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel>
+        Points = new ObservableTimeCollection
         {
           new() { Bid = price, Ask = price }
         }
@@ -168,7 +167,7 @@ namespace Terminal.Tests
         }
       };
 
-      var orderId = order.Transaction.Id;
+      var orderId = order.Transaction?.Id;
 
       order.Orders.Add(SL);
       order.Orders.Add(TP);
@@ -179,8 +178,8 @@ namespace Terminal.Tests
       Assert.Empty(Account.ActiveOrders);
       Assert.Single(Account.Orders);
       Assert.Single(Account.ActivePositions);
-      Assert.Equal(orderId, Account.Orders[0].Transaction.Id);
-      Assert.Equal(orderId, Account.ActivePositions[orderId].Order.Transaction.Id);
+      Assert.Equal(orderId, Account.Orders[0]?.Transaction?.Id);
+      Assert.Equal(orderId, Account.ActivePositions[orderId]?.Order?.Transaction?.Id);
       Assert.Equal(position, Account.ActivePositions[orderId]);
     }
   }

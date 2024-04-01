@@ -3,26 +3,26 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-  public class PointMessageModel
+  public struct PointMessageModel
   {
     /// <summary>
     /// Symbol
     /// </summary>
-    public virtual string Name { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
     /// End date
     /// </summary>
-    public virtual DateTime? MinDate { get; set; }
+    public DateTime? MinDate { get; set; }
 
     /// <summary>
     /// Start date
     /// </summary>
-    public virtual DateTime? MaxDate { get; set; }
+    public DateTime? MaxDate { get; set; }
 
     /// <summary>
     /// Resolution
     /// </summary>
-    public virtual ResolutionEnum? Resolution { get; set; }
+    public ResolutionEnum? Resolution { get; set; }
   }
 }

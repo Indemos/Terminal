@@ -51,12 +51,12 @@ namespace Terminal.Tests
       var response = base.ValidateOrders(order).Items.First();
       var errors = GetErrors(response.Errors);
 
-      Assert.Equal(8, response.Errors.Count);
-      Assert.Contains($"{nameof(order.Transaction.Id)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Time)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Price)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Volume)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Instrument)} {error}", errors);
+      Assert.Equal(9, response.Errors.Count);
+      Assert.Contains($"{nameof(order.Transaction.Value.Id)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Time)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Price)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Volume)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument)} {error}", errors);
     }
 
     [Fact]
@@ -83,11 +83,11 @@ namespace Terminal.Tests
       var errors = GetErrors(response.Errors);
 
       Assert.Equal(10, response.Errors.Count);
-      Assert.Contains($"{nameof(order.Transaction.Instrument.Name)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Instrument.Commission)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Instrument.ContractSize)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Instrument.StepSize)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Instrument.StepValue)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument.Name)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument.Commission)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument.ContractSize)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument.StepSize)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Instrument.StepValue)} {error}", errors);
     }
 
     [Theory]
@@ -113,7 +113,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = price, Ask = price }
             }
@@ -124,7 +124,7 @@ namespace Terminal.Tests
       var response = base.ValidateOrders(order).Items.First();
       var errors = GetErrors(response.Errors);
 
-      Assert.Contains($"{nameof(order.Transaction.Price)} {error}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Price)} {error}", errors);
     }
 
     [Theory]
@@ -152,7 +152,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = price, Ask = price }
             }
@@ -164,7 +164,7 @@ namespace Terminal.Tests
       var errors = GetErrors(response.Errors);
 
       Assert.Contains($"{nameof(order.ActivationPrice)} {activationError}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Price)} {orderError}", errors);
+      Assert.Contains($"{nameof(order.Transaction.Value.Price)} {orderError}", errors);
     }
 
     private IEnumerable<string> GetErrors(IList<ErrorModel> errors)

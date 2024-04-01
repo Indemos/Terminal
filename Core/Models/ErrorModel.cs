@@ -1,8 +1,8 @@
-using FluentValidation.Results;
-
 namespace Terminal.Core.Models
 {
-  public class ErrorModel : ValidationFailure
+  public struct ErrorModel
   {
+    public string ErrorCode { get; set; }
+    public string PropertyName { get; set; }
   }
 }

@@ -20,17 +20,17 @@ namespace Client.Components
     /// Update UI
     /// </summary>
     /// <param name="accounts"></param>
-    public virtual Task UpdateItems(IList<IAccount> accounts)
+    public Task UpdateItems(IList<IAccount> accounts)
     {
       var values = new List<InputData>();
-      var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Order.Transaction.Time).ToList();
+      var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o?.Order?.Transaction?.Time).ToList();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
 
       if (positions.Any())
       {
         values.Add(new InputData
         {
-          Time = positions.First().Order.Transaction.Time.Value,
+          Time = positions.First().Value.Order.Value.Transaction.Value.Time.Value,
           Value = 0,
           Min = 0,
           Max = 0
@@ -43,11 +43,11 @@ namespace Client.Components
 
         values.Add(new InputData
         {
-          Time = position.Order.Transaction.Time.Value,
-          Value = position.GainLoss.Value,
-          Min = position.GainLossMin.Value,
-          Max = position.GainLossMax.Value,
-          Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
+          Time = position.Value.Order.Value.Transaction.Value.Time.Value,
+          Value = position.Value.GainLoss.Value,
+          Min = position.Value.GainLossMin.Value,
+          Max = position.Value.GainLossMax.Value,
+          Commission = position.Value.Order.Value.Transaction.Value.Instrument.Commission.Value * 2,
           Direction = GetDirection(position)
         });
       }
@@ -62,9 +62,9 @@ namespace Client.Components
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    protected virtual int GetDirection(PositionModel position)
+    protected int GetDirection(PositionModel? position)
     {
-      switch (position.Order.Side)
+      switch (position?.Order?.Side)
       {
         case OrderSideEnum.Buy: return 1;
         case OrderSideEnum.Sell: return -1;
@@ -78,7 +78,7 @@ namespace Client.Components
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    protected virtual string ShowDouble(double? input)
+    protected string ShowDouble(double? input)
     {
       return (input < 0 ? "-" : "") + string.Format("{0:0.00}", Math.Abs(input.Value));
     }

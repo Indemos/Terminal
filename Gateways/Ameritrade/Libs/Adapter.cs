@@ -30,42 +30,42 @@ namespace Ameritrade
     /// <summary>
     /// Application ID
     /// </summary>
-    public virtual string ConsumerKey { get; set; }
+    public string ConsumerKey { get; set; }
 
     /// <summary>
     /// Username
     /// </summary>
-    public virtual string Username { get; set; }
+    public string Username { get; set; }
 
     /// <summary>
     /// Password
     /// </summary>
-    public virtual string Password { get; set; }
+    public string Password { get; set; }
 
     /// <summary>
     /// Answer to a secret question
     /// </summary>
-    public virtual string Answer { get; set; }
+    public string Answer { get; set; }
 
     /// <summary>
     /// Query URL
     /// </summary>
-    public virtual string QueryUri { get; set; }
+    public string QueryUri { get; set; }
 
     /// <summary>
     /// Authentication URL
     /// </summary>
-    public virtual string SignInRemoteUri { get; set; }
+    public string SignInRemoteUri { get; set; }
 
     /// <summary>
     /// Authentication URL for API
     /// </summary>
-    public virtual string SignInApiUri { get; set; }
+    public string SignInApiUri { get; set; }
 
     /// <summary>
     /// Local return URL for authentication
     /// </summary>
-    public virtual string SignInLocalUri { get; set; }
+    public string SignInLocalUri { get; set; }
 
     /// <summary>
     /// Constructor
@@ -130,9 +130,9 @@ namespace Ameritrade
     /// Get quote
     /// </summary>
     /// <param name="message"></param>
-    public override Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message)
+    public override Task<ResponseItemModel<PointModel?>> GetPoint(PointMessageModel message)
     {
-      var response = new ResponseItemModel<PointModel>
+      var response = new ResponseItemModel<PointModel?>
       {
         Data = Account.Instruments[message.Name].Points.LastOrDefault()
       };
@@ -225,7 +225,7 @@ namespace Ameritrade
       };
     }
 
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message)
+    public override Task<ResponseItemModel<IList<PointModel?>>> GetPoints(PointMessageModel message)
     {
       throw new NotImplementedException();
     }

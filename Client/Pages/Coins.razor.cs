@@ -24,9 +24,9 @@ namespace Client.Pages
     /// </summary>
     const string _asset = "BTCUSD";
 
-    protected virtual IAccount Account { get; set; }
-    protected virtual PageComponent View { get; set; }
-    protected virtual PerformanceIndicator Performance { get; set; }
+    protected IAccount Account { get; set; }
+    protected PageComponent View { get; set; }
+    protected PerformanceIndicator Performance { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -113,13 +113,13 @@ namespace Client.Pages
       View.Adapter.CreateOrders(orderSell);
 
       var account = View.Adapter.Account;
-      var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
-      var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
+      var buy = account.ActivePositions.Values.First(o => o?.Order?.Side is OrderSideEnum.Buy);
+      var sell = account.ActivePositions.Values.First(o => o?.Order?.Side is OrderSideEnum.Sell);
 
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
 
-      return (orderSell.Transaction.Id, orderBuy.Transaction.Id);
+      return (orderSell.Transaction?.Id, orderBuy.Transaction?.Id);
     }
 
     private void ClosePositions()
@@ -128,7 +128,7 @@ namespace Client.Pages
       {
         var side = OrderSideEnum.Buy;
 
-        if (Equals(position.Order.Side, OrderSideEnum.Buy))
+        if (position?.Order?.Side is OrderSideEnum.Buy)
         {
           side = OrderSideEnum.Sell;
         }
@@ -139,8 +139,8 @@ namespace Client.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Order.Transaction.Volume,
-            Instrument = position.Order.Transaction.Instrument
+            Volume = position?.Order?.Transaction?.Volume,
+            Instrument = position?.Order?.Transaction?.Instrument
           }
         };
 

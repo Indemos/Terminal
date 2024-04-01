@@ -11,12 +11,12 @@ namespace Terminal.Core.Collections
   /// Collection with aggregation by date and time
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public class ObservableTimeCollection<T> : ObservableCollection<T> where T : PointModel
+  public class ObservableTimeCollection : ObservableCollection<PointModel?>
   {
     /// <summary>
     /// Internal tracker to identify new or existing point in time
     /// </summary>
-    protected virtual IDictionary<long, int> Indices { get; set; }
+    protected IDictionary<long, int> Indices { get; set; }
 
     /// <summary>
     /// Constructor
@@ -31,14 +31,14 @@ namespace Terminal.Core.Collections
     /// </summary>
     /// <param name="item"></param>
     /// <param name="span"></param>
-    public virtual void Add(T item, TimeSpan? span)
+    public void Add(PointModel item, TimeSpan? span)
     {
       var previous = this.LastOrDefault();
 
       if (span is not null && previous is not null)
       {
         var nextTime = item.Time.Round(span);
-        var previousTime = previous.Time.Round(span);
+        var previousTime = previous?.Time.Round(span);
 
         if (Equals(previousTime, nextTime))
         {
@@ -56,7 +56,7 @@ namespace Terminal.Core.Collections
     /// <param name="item"></param>
     /// <param name="span"></param>
     /// <param name="combine"></param>
-    public virtual void Add(T item, TimeSpan? span, bool combine)
+    public void Add(PointModel item, TimeSpan? span, bool combine)
     {
       if (span is null)
       {
@@ -66,8 +66,8 @@ namespace Terminal.Core.Collections
 
       var currentTime = item.Time.Round(span);
       var previousTime = (item.Time - span.Value).Round(span);
-      var currentGroup = Indices.TryGetValue(currentTime.Value.Ticks, out int currentIndex) ? this[currentIndex] : default;
-      var previousGroup = Indices.TryGetValue(previousTime.Value.Ticks, out int previousIndex) ? this[previousIndex] : default;
+      var currentGroup = Indices.TryGetValue(currentTime.Value.Ticks, out int currentIndex) ? this[currentIndex] : null;
+      var previousGroup = Indices.TryGetValue(previousTime.Value.Ticks, out int previousIndex) ? this[previousIndex] : null;
       var group = CreateGroup(currentGroup, item, previousGroup, span);
 
       if (group is not null)
@@ -92,33 +92,39 @@ namespace Terminal.Core.Collections
     /// <param name="previousPoint"></param>
     /// <param name="span"></param>
     /// <returns></returns>
-    protected virtual T CreateGroup(T currentPoint, T nextPoint, T previousPoint, TimeSpan? span)
+    protected PointModel? CreateGroup(
+      PointModel? currentPoint,
+      PointModel? nextPoint,
+      PointModel? previousPoint,
+      TimeSpan? span)
     {
-      if (nextPoint.Ask is null && nextPoint.Bid is null)
+      if (nextPoint?.Ask is null && nextPoint?.Bid is null)
       {
-        return default;
+        return null;
       }
 
-      var nextGroup = (T)nextPoint.Clone();
+      var nextGroup = nextPoint ?? new PointModel();
+      var bar = currentPoint?.Bar ?? new BarModel();
 
       if (currentPoint is not null)
       {
-        nextGroup.AskSize += currentPoint.AskSize ?? 0.0;
-        nextGroup.BidSize += currentPoint.BidSize ?? 0.0;
-        nextGroup.Bar.Open = currentPoint.Bar.Open;
+        nextGroup.AskSize += currentPoint?.AskSize;
+        nextGroup.BidSize += currentPoint?.BidSize;
+        bar.Open = currentPoint?.Bar?.Open;
       }
 
-      nextGroup.Ask = nextPoint.Ask ?? nextPoint.Bid;
-      nextGroup.Bid = nextPoint.Bid ?? nextPoint.Ask;
-      nextGroup.Last = nextGroup.Bid ?? nextGroup.Ask;
+      nextGroup.Ask = nextPoint?.Ask ?? nextPoint?.Bid;
+      nextGroup.Bid = nextPoint?.Bid ?? nextPoint?.Ask;
+      nextGroup.Price = nextGroup.Bid ?? nextGroup.Ask;
 
-      nextGroup.Bar.Close = nextGroup.Last;
-      nextGroup.Bar.Open = nextGroup.Bar.Open ?? previousPoint?.Last ?? nextGroup.Last;
-      nextGroup.Bar.Low = Math.Min((nextGroup.Bar.Low ?? nextGroup.Last).Value, nextGroup.Last.Value);
-      nextGroup.Bar.High = Math.Max((nextGroup.Bar.High ?? nextGroup.Last).Value, nextGroup.Last.Value);
+      bar.Close = nextGroup.Price;
+      bar.Open = nextGroup.Bar?.Open ?? previousPoint?.Price ?? nextGroup.Price;
+      bar.Low = Math.Min((nextGroup.Bar?.Low ?? nextGroup.Price).Value, nextGroup.Price.Value);
+      bar.High = Math.Max((nextGroup.Bar?.High ?? nextGroup.Price).Value, nextGroup.Price.Value);
 
+      nextGroup.Bar = bar;
       nextGroup.TimeFrame = span;
-      nextGroup.Time = nextPoint.Time.Round(span);
+      nextGroup.Time = nextPoint?.Time.Round(span);
 
       return nextGroup;
     }

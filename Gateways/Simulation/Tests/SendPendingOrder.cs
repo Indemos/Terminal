@@ -44,7 +44,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = price, Ask = price }
             }
@@ -52,11 +52,11 @@ namespace Terminal.Tests
         }
       };
 
-      var orderId = order.Transaction.Id;
+      var orderId = order.Transaction?.Id;
 
       base.SendPendingOrder(order);
 
-      Assert.Equal(order.Transaction.Status, OrderStatusEnum.Placed);
+      Assert.Equal(order.Transaction?.Status, OrderStatusEnum.Placed);
       Assert.Equal(order, Account.Orders[0]);
       Assert.Equal(order, Account.ActiveOrders[orderId]);
       Assert.Single(Account.Orders);

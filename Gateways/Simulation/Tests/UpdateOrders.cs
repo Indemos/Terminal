@@ -26,7 +26,7 @@ namespace Terminal.Tests
       var instrument = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel>
+        Points = new ObservableTimeCollection
         {
           new() { Bid = price, Ask = price }
         }
@@ -67,12 +67,12 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Stop,
         Orders = new[] { SL, TP },
-        Transaction = new() { Volume = 1, Price = price + 10, Instrument = instrument, Id = orderY.Transaction.Id }
+        Transaction = new() { Volume = 1, Price = price + 10, Instrument = instrument, Id = orderY.Transaction?.Id }
       };
 
-      var xOrderId = orderX.Transaction.Id;
-      var yOrderId = orderY.Transaction.Id;
-      var orderId = order.Transaction.Id;
+      var xOrderId = orderX.Transaction?.Id;
+      var yOrderId = orderY.Transaction?.Id;
+      var orderId = order.Transaction?.Id;
 
       base.CreateOrders(orderX);
       base.CreateOrders(orderY);
@@ -84,16 +84,16 @@ namespace Terminal.Tests
       Assert.Empty(Account.ActivePositions);
       Assert.Equal(2, Account.Orders.Count);
       Assert.Equal(2, Account.ActiveOrders.Count);
-      Assert.Equal(yOrderId, Account.ActiveOrders[yOrderId].Transaction.Id);
-      Assert.Equal(xOrderId, Account.ActiveOrders[xOrderId].Transaction.Id);
-      Assert.Equal(order.Transaction.Instrument.Name, update.Transaction.Instrument.Name);
-      Assert.Equal(order.Type, update.Type);
-      Assert.Equal(order.Side, update.Side);
-      Assert.Equal(order.Transaction.Volume, update.Transaction.Volume);
-      Assert.Equal(order.Transaction.Price, update.Transaction.Price);
-      Assert.Equal(order.Transaction.Instrument, update.Transaction.Instrument);
-      Assert.Equal(order.ActivationPrice, update.ActivationPrice);
-      Assert.Equal(order.Orders, update.Orders);
+      Assert.Equal(yOrderId, Account.ActiveOrders[yOrderId]?.Transaction?.Id);
+      Assert.Equal(xOrderId, Account.ActiveOrders[xOrderId]?.Transaction?.Id);
+      Assert.Equal(order.Transaction?.Instrument.Name, update?.Transaction?.Instrument.Name);
+      Assert.Equal(order.Type, update?.Type);
+      Assert.Equal(order.Side, update?.Side);
+      Assert.Equal(order.Transaction?.Volume, update?.Transaction?.Volume);
+      Assert.Equal(order.Transaction?.Price, update?.Transaction?.Price);
+      Assert.Equal(order.Transaction?.Instrument, update?.Transaction?.Instrument);
+      Assert.Equal(order.ActivationPrice, update?.ActivationPrice);
+      Assert.Equal(order.Orders, update?.Orders);
     }
   }
 }

@@ -23,7 +23,7 @@ namespace Terminal.Core.Indicators
   /// Implementation
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public class MovingAverageIndicator : Indicator<PointModel, MovingAverageIndicator>
+  public class MovingAverageIndicator : Indicator<MovingAverageIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -45,7 +45,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override MovingAverageIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override MovingAverageIndicator Calculate(ObservableCollection<PointModel?> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -54,13 +54,13 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
-      var value = currentPoint.Last.Value;
+      var value = currentPoint?.Price ?? 0;
       var comService = InstanceService<AverageService>.Instance;
 
       switch (Mode)
       {
-        case AveragePriceEnum.Bid: value = currentPoint.Bid.Value; break;
-        case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
+        case AveragePriceEnum.Bid: value = currentPoint?.Bid ?? 0; break;
+        case AveragePriceEnum.Ask: value = currentPoint?.Ask ?? 0; break;
       }
 
       switch (Values.Count < collection.Count)
@@ -69,10 +69,11 @@ namespace Terminal.Core.Indicators
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MovingAverageIndicator().Point;
       var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
+      var point = Point ?? new PointModel();
 
-      Point.Last = series.Last = series.Bar.Close = average.IsEqual(0) ? value : average;
+      point.Price = average.IsEqual(0) ? value : average;
+      Point = point;
 
       return this;
     }

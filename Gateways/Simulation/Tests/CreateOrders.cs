@@ -63,7 +63,7 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
+            Points = new ObservableTimeCollection
             {
               new() { Bid = price, Ask = price }
             }

@@ -42,13 +42,13 @@ namespace Terminal.Core.Domains
     /// Get quote
     /// </summary>
     /// <param name="message"></param>
-    Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message);
+    Task<ResponseItemModel<PointModel?>> GetPoint(PointMessageModel message);
 
     /// <summary>
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
-    Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message);
+    Task<ResponseItemModel<IList<PointModel?>>> GetPoints(PointMessageModel message);
 
     /// <summary>
     /// Get option chains
@@ -83,7 +83,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Account
     /// </summary>
-    public virtual IAccount Account { get; set; }
+    public IAccount Account { get; set; }
 
     /// <summary>
     /// Constructor
@@ -119,13 +119,13 @@ namespace Terminal.Core.Domains
     /// Get quote
     /// </summary>
     /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message);
+    public abstract Task<ResponseItemModel<PointModel?>> GetPoint(PointMessageModel message);
 
     /// <summary>
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message);
+    public abstract Task<ResponseItemModel<IList<PointModel?>>> GetPoints(PointMessageModel message);
 
     /// <summary>
     /// Get option chains
@@ -154,33 +154,38 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Dispose
     /// </summary>
-    public virtual void Dispose() => Disconnect();
+    public void Dispose() => Disconnect();
 
     /// <summary>
     /// Set missing order properties
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual IList<OrderModel> CorrectOrders(params OrderModel[] orders)
+    protected IList<OrderModel> CorrectOrders(params OrderModel[] orders)
     {
-      foreach (var nextOrder in orders)
+      return orders.Select(nextOrder =>
       {
         nextOrder.Type ??= OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= OrderTimeSpanEnum.GTC;
-        nextOrder.Transaction ??= new TransactionModel();
-        nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.Price ??= GetOpenPrice(nextOrder);
-        nextOrder.Transaction.Status ??= OrderStatusEnum.None;
-        nextOrder.Transaction.Operation ??= OperationEnum.In;
-      }
 
-      return orders;
+        var action = nextOrder.Transaction ?? new TransactionModel();
+
+        action.Time ??= DateTime.Now;
+        action.Price ??= GetOpenPrice(nextOrder);
+        action.Status ??= OrderStatusEnum.None;
+        action.Operation ??= OperationEnum.In;
+
+        nextOrder.Transaction = action;
+
+        return nextOrder;
+
+      }).ToList();
     }
 
     /// <summary>
     /// Ensure all properties have correct values
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual ResponseMapModel<OrderModel> ValidateOrders(params OrderModel[] orders)
+    protected ResponseMapModel<OrderModel> ValidateOrders(params OrderModel[] orders)
     {
       var map = Mapper<ValidationFailure, ErrorModel>.Map;
       var orderRules = InstanceService<OrderPriceValidator>.Instance;
@@ -208,16 +213,16 @@ namespace Terminal.Core.Domains
     /// Define open price based on order
     /// </summary>
     /// <param name="nextOrder"></param>
-    protected virtual double? GetOpenPrice(OrderModel nextOrder)
+    protected double? GetOpenPrice(OrderModel nextOrder)
     {
-      var pointModel = nextOrder?.Transaction?.Instrument?.Points?.LastOrDefault();
+      var pointModel = nextOrder.Transaction?.Instrument?.Points?.LastOrDefault();
 
       if (pointModel is not null)
       {
-        switch (nextOrder?.Side)
+        switch (nextOrder.Side)
         {
-          case OrderSideEnum.Buy: return pointModel.Ask;
-          case OrderSideEnum.Sell: return pointModel.Bid;
+          case OrderSideEnum.Buy: return pointModel?.Ask;
+          case OrderSideEnum.Sell: return pointModel?.Bid;
         }
       }
 
@@ -228,7 +233,7 @@ namespace Terminal.Core.Domains
     /// Update points
     /// </summary>
     /// <param name="point"></param>
-    protected virtual IList<IAccount> SetupAccounts(params IAccount[] accounts)
+    protected IList<IAccount> SetupAccounts(params IAccount[] accounts)
     {
       foreach (var account in accounts)
       {
@@ -242,12 +247,13 @@ namespace Terminal.Core.Domains
     /// Update points
     /// </summary>
     /// <param name="point"></param>
-    protected virtual IList<PointModel> SetupPoints(params PointModel[] points)
+    protected IList<PointModel?> SetupPoints(params PointModel?[] points)
     {
-      foreach (var point in points)
+      foreach (var o in points)
       {
+        var point = o ?? new PointModel();
         var instrument = Account.Instruments[point.Instrument.Name];
-        var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
+        var estimates = Account.ActivePositions.Select(o => o.Value?.GainLossEstimate).ToList();
 
         point.Instrument = instrument;
         point.TimeFrame = instrument.TimeFrame;

@@ -14,18 +14,18 @@ namespace Client.Components
     /// <summary>
     /// Controls
     /// </summary>
-    public virtual bool IsConnection { get; set; }
-    public virtual bool IsSubscription { get; set; }
-    public virtual ChartsComponent ChartsView { get; set; }
-    public virtual ChartsComponent ReportsView { get; set; }
-    public virtual DealsComponent DealsView { get; set; }
-    public virtual OrdersComponent OrdersView { get; set; }
-    public virtual PositionsComponent PositionsView { get; set; }
-    public virtual StatementsComponent StatementsView { get; set; }
-    public virtual IGateway Adapter { get; set; }
-    public virtual Action Setup { get; set; }
+    public bool IsConnection { get; set; }
+    public bool IsSubscription { get; set; }
+    public ChartsComponent ChartsView { get; set; }
+    public ChartsComponent ReportsView { get; set; }
+    public DealsComponent DealsView { get; set; }
+    public OrdersComponent OrdersView { get; set; }
+    public PositionsComponent PositionsView { get; set; }
+    public StatementsComponent StatementsView { get; set; }
+    public IGateway Adapter { get; set; }
+    public Action Setup { get; set; }
 
-    public virtual async Task OnConnect()
+    public async Task OnConnect()
     {
       try
       {
@@ -43,7 +43,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnDisconnect()
+    public void OnDisconnect()
     {
       try
       {
@@ -61,7 +61,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnSubscribe()
+    public void OnSubscribe()
     {
       try
       {
@@ -74,7 +74,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnUnsubscribe()
+    public void OnUnsubscribe()
     {
       try
       {
@@ -87,7 +87,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnOpenStatements()
+    public void OnOpenStatements()
     {
       if (Adapter?.Account is not null)
       {

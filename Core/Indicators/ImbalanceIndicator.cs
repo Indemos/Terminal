@@ -6,11 +6,11 @@ using Terminal.Core.Models;
 
 namespace Terminal.Core.Indicators
 {
-    /// <summary>
-    /// Implementation
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class ImbalanceIndicator : Indicator<PointModel, ImbalanceIndicator>
+  /// <summary>
+  /// Implementation
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  public class ImbalanceIndicator : Indicator<ImbalanceIndicator>
   {
     /// <summary>
     /// Calculate indicator value
@@ -18,7 +18,7 @@ namespace Terminal.Core.Indicators
     /// <param name="collection"></param>
     /// <param name="side"></param>
     /// <returns></returns>
-    public ImbalanceIndicator Calculate(ObservableCollection<PointModel> collection, int side = 0)
+    public ImbalanceIndicator Calculate(ObservableCollection<PointModel?> collection, int side = 0)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -28,18 +28,20 @@ namespace Terminal.Core.Indicators
       }
 
       var value = 0.0;
-      var seriesItem = currentPoint.Series[Name] =
-        currentPoint.Series.Get(Name) ??
-        new ImbalanceIndicator().Point;
+      var bid = currentPoint?.BidSize ?? 0;
+      var ask = currentPoint?.AskSize ?? 0;
 
       switch (side)
       {
-        case 0: value = currentPoint.AskSize.Value - currentPoint.BidSize.Value; break;
-        case 1: value = currentPoint.AskSize.Value; break;
-        case -1: value = currentPoint.BidSize.Value; break;
+        case 0: value = ask - bid; break;
+        case 1: value = ask; break;
+        case -1: value = bid; break;
       }
 
-      Point.Last = Point.Bar.Close = seriesItem.Last = seriesItem.Bar.Close = value;
+      var point = Point ?? new PointModel();
+
+      point.Price = value;
+      Point = point;
 
       return this;
     }

@@ -5,11 +5,11 @@ using Terminal.Core.Models;
 
 namespace Terminal.Core.Indicators
 {
-    /// <summary>
-    /// Implementation
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class PerformanceIndicator : Indicator<PointModel, PerformanceIndicator>
+  /// <summary>
+  /// Implementation
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  public class PerformanceIndicator : Indicator<PerformanceIndicator>
   {
     /// <summary>
     /// Calculate indicator value
@@ -18,7 +18,10 @@ namespace Terminal.Core.Indicators
     /// <returns></returns>
     public PerformanceIndicator Calculate(IList<IAccount> accounts)
     {
-      Point.Last = accounts.Sum(o => o.Balance + o.ActivePositions.Sum(v => v.Value.GainLossAverageEstimate));
+      var point = Point ?? new PointModel();
+
+      point.Price = accounts.Sum(o => o.Balance + o.ActivePositions.Sum(v => v.Value?.GainLossAverageEstimate));
+      Point = point;
 
       return this;
     }

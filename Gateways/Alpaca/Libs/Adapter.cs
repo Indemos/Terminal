@@ -27,62 +27,62 @@ namespace Alpaca
     /// <summary>
     /// Key
     /// </summary>
-    public virtual string ConsumerKey { get; set; }
+    public string ConsumerKey { get; set; }
 
     /// <summary>
     /// Secret
     /// </summary>
-    public virtual string ConsumerSecret { get; set; }
+    public string ConsumerSecret { get; set; }
 
     /// <summary>
     /// API source
     /// </summary>
-    public virtual string DataUri { get; set; }
+    public string DataUri { get; set; }
 
     /// <summary>
     /// Streaming 
     /// </summary>
-    public virtual string StreamUri { get; set; }
+    public string StreamUri { get; set; }
 
     /// <summary>
     /// Asset type
     /// </summary>
-    public virtual AssetEnum Asset { get; set; }
+    public AssetEnum Asset { get; set; }
 
     /// <summary>
     /// Environment
     /// </summary>
-    public virtual IEnvironment Environment { get; set; }
+    public IEnvironment Environment { get; set; }
 
     /// <summary>
     /// Data client
     /// </summary>
-    public virtual IAlpacaCryptoDataClient CoinClient { get; protected set; }
+    public IAlpacaCryptoDataClient CoinClient { get; protected set; }
 
     /// <summary>
     /// Data streaming client
     /// </summary>
-    public virtual IAlpacaCryptoStreamingClient CoinStreamClient { get; protected set; }
+    public IAlpacaCryptoStreamingClient CoinStreamClient { get; protected set; }
 
     /// <summary>
     /// Data client
     /// </summary>
-    public virtual IAlpacaDataClient DataClient { get; protected set; }
+    public IAlpacaDataClient DataClient { get; protected set; }
 
     /// <summary>
     /// Data streaming client
     /// </summary>
-    public virtual IAlpacaDataStreamingClient DataStreamClient { get; protected set; }
+    public IAlpacaDataStreamingClient DataStreamClient { get; protected set; }
 
     /// <summary>
     /// Trading client
     /// </summary>
-    public virtual IAlpacaTradingClient TradeClient { get; protected set; }
+    public IAlpacaTradingClient TradeClient { get; protected set; }
 
     /// <summary>
     /// Streaming client
     /// </summary>
-    public virtual IAlpacaStreamingClient TradeStreamClient { get; protected set; }
+    public IAlpacaStreamingClient TradeStreamClient { get; protected set; }
 
     /// <summary>
     /// Constructor
@@ -172,9 +172,9 @@ namespace Alpaca
     /// Get quote
     /// </summary>
     /// <param name="message"></param>
-    public override Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message)
+    public override Task<ResponseItemModel<PointModel?>> GetPoint(PointMessageModel message)
     {
-      var response = new ResponseItemModel<PointModel>
+      var response = new ResponseItemModel<PointModel?>
       {
         Data = Account.Instruments[message.Name].Points.LastOrDefault()
       };
@@ -191,7 +191,7 @@ namespace Alpaca
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message)
+    public override Task<ResponseItemModel<IList<PointModel?>>> GetPoints(PointMessageModel message)
     {
       throw new NotImplementedException();
     }
@@ -202,21 +202,11 @@ namespace Alpaca
 
       foreach (var order in orders)
       {
-        var name = order.Transaction.Instrument.Name;
-        var amount = (int)order.Transaction.Volume;
-        var price = (decimal)order.Transaction.Price;
-        var isBuy = Equals(order.Side, OrderSideEnum.Buy);
-        var isSell = Equals(order.Side, OrderSideEnum.Sell);
+        var remoteOrder = CreateOrder(order);
 
-        if (Equals(order.Side, OrderSideEnum.Buy))
+        if (remoteOrder is not null)
         {
-          switch (order.Type)
-          {
-            case OrderTypeEnum.Stop: await TradeClient.PostOrderAsync(OrderSide.Buy.Stop(name, amount, price)); break;
-            case OrderTypeEnum.Limit: await TradeClient.PostOrderAsync(OrderSide.Buy.Limit(name, amount, price)); break;
-            case OrderTypeEnum.StopLimit: await TradeClient.PostOrderAsync(OrderSide.Buy.StopLimit(name, amount, (decimal)order.ActivationPrice, price)); break;
-            case OrderTypeEnum.Market: await TradeClient.PostOrderAsync(OrderSide.Buy.Market(name, amount)); break;
-          }
+          var orderResponse = await TradeClient.PostOrderAsync(remoteOrder);
         }
       }
 
@@ -231,6 +221,24 @@ namespace Alpaca
     public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
     {
       throw new NotImplementedException();
+    }
+
+    protected OrderBase CreateOrder(OrderModel order)
+    {
+      var action = order.Transaction;
+      var amount = (int)action?.Volume;
+      var name = action?.Instrument.Name;
+      var side = Equals(order.Side, OrderSideEnum.Buy) ? OrderSide.Buy : OrderSide.Sell;
+
+      switch (order.Type)
+      {
+        case OrderTypeEnum.Market: return side.Market(name, amount);
+        case OrderTypeEnum.Stop: return side.Stop(name, amount, (decimal)action?.Price);
+        case OrderTypeEnum.Limit: return side.Limit(name, amount, (decimal)action?.Price);
+        case OrderTypeEnum.StopLimit: return side.StopLimit(name, amount, (decimal)order.ActivationPrice, (decimal)action?.Price);
+      }
+
+      return null;
     }
   }
 }

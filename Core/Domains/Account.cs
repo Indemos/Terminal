@@ -38,22 +38,22 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// History of orders
     /// </summary>
-    ObservableCollection<OrderModel> Orders { get; set; }
+    ObservableCollection<OrderModel?> Orders { get; set; }
 
     /// <summary>
     /// Completed trades
     /// </summary>
-    ObservableCollection<PositionModel> Positions { get; set; }
+    ObservableCollection<PositionModel?> Positions { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    IDictionary<string, OrderModel> ActiveOrders { get; set; }
+    IDictionary<string, OrderModel?> ActiveOrders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    IDictionary<string, PositionModel> ActivePositions { get; set; }
+    IDictionary<string, PositionModel?> ActivePositions { get; set; }
 
     /// <summary>
     /// List of instruments
@@ -69,52 +69,52 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Leverage
     /// </summary>
-    public virtual double? Leverage { get; set; }
+    public double? Leverage { get; set; }
 
     /// <summary>
     /// Balance
     /// </summary>
-    public virtual double? Balance { get; set; }
+    public double? Balance { get; set; }
 
     /// <summary>
     /// State of the account in the beginning
     /// </summary>
-    public virtual double? InitialBalance { get; set; }
+    public double? InitialBalance { get; set; }
 
     /// <summary>
     /// Name
     /// </summary>
-    public virtual string Name { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
     /// Currency
     /// </summary>
-    public virtual string Currency { get; set; }
+    public string Currency { get; set; }
 
     /// <summary>
     /// History of completed orders
     /// </summary>
-    public virtual ObservableCollection<OrderModel> Orders { get; set; }
+    public ObservableCollection<OrderModel?> Orders { get; set; }
 
     /// <summary>
     /// History of completed deals, closed positions
     /// </summary>
-    public virtual ObservableCollection<PositionModel> Positions { get; set; }
+    public ObservableCollection<PositionModel?> Positions { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    public virtual IDictionary<string, OrderModel> ActiveOrders { get; set; }
+    public IDictionary<string, OrderModel?> ActiveOrders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    public virtual IDictionary<string, PositionModel> ActivePositions { get; set; }
+    public IDictionary<string, PositionModel?> ActivePositions { get; set; }
 
     /// <summary>
     /// List of instruments
     /// </summary>
-    public virtual IDictionary<string, Instrument> Instruments { get; set; }
+    public IDictionary<string, Instrument> Instruments { get; set; }
 
     /// <summary>
     /// Constructor
@@ -126,10 +126,10 @@ namespace Terminal.Core.Domains
       InitialBalance = 0.0;
       Currency = nameof(CurrencyEnum.USD);
 
-      Orders = new ObservableCollection<OrderModel>();
-      Positions = new ObservableCollection<PositionModel>();
-      ActiveOrders = new Dictionary<string, OrderModel>();
-      ActivePositions = new Dictionary<string, PositionModel>();
+      Orders = new ObservableCollection<OrderModel?>();
+      Positions = new ObservableCollection<PositionModel?>();
+      ActiveOrders = new Dictionary<string, OrderModel?>();
+      ActivePositions = new Dictionary<string, PositionModel?>();
       Instruments = new Dictionary<string, Instrument>();
     }
   }

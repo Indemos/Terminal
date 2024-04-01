@@ -14,7 +14,7 @@ namespace Terminal.Core.Indicators
     /// Implementation
     /// </summary>
     /// <typeparam name="T"></typeparam>
-    public class RelativeStrengthIndicator : Indicator<PointModel, RelativeStrengthIndicator>
+    public class RelativeStrengthIndicator : Indicator<RelativeStrengthIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -31,7 +31,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override RelativeStrengthIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override RelativeStrengthIndicator Calculate(ObservableCollection<PointModel?> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -51,8 +51,11 @@ namespace Terminal.Core.Indicators
 
         if (nextPrice is not null && previousPrice is not null)
         {
-          ups.Add(Math.Max(nextPrice.Last.Value - previousPrice.Last.Value, 0.0));
-          downs.Add(Math.Max(previousPrice.Last.Value - nextPrice.Last.Value, 0.0));
+          var nextPriceValue = nextPrice?.Price ?? 0;
+          var previousPriceValue = previousPrice?.Price ?? 0;
+
+          ups.Add(Math.Max(nextPriceValue - previousPriceValue, 0.0));
+          downs.Add(Math.Max(previousPriceValue - nextPriceValue, 0.0));
         }
       }
 
@@ -67,11 +70,10 @@ namespace Terminal.Core.Indicators
         case false: Values[collection.Count - 1] = value; break;
       }
 
-      var series = currentPoint.Series[Name] =
-        currentPoint.Series.Get(Name) ??
-        new RelativeStrengthIndicator().Point;
+      var point = Point ?? new PointModel();
 
-      Point.Last = series.Last = series.Bar.Close = value;
+      point.Price = value;
+      Point = point;
 
       return this;
     }

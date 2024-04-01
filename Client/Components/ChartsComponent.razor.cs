@@ -16,28 +16,28 @@ namespace Client.Components
     /// <summary>
     /// Reference to view control
     /// </summary>
-    protected virtual CanvasGroupView View { get; set; }
+    protected CanvasGroupView View { get; set; }
 
     /// <summary>
     /// Points
     /// </summary>
-    protected virtual IList<IShape> Shapes { get; set; } = new List<IShape>();
+    protected IList<IShape> Shapes { get; set; } = new List<IShape>();
 
     /// <summary>
     /// Series
     /// </summary>
-    protected virtual IDictionary<string, string> Maps { get; set; } = new Dictionary<string, string>();
+    protected IDictionary<string, string> Maps { get; set; } = new Dictionary<string, string>();
 
     /// <summary>
     /// Indices
     /// </summary>
-    protected virtual IDictionary<long, IGroupShape> Indices { get; set; } = new Dictionary<long, IGroupShape>();
+    protected IDictionary<long, IGroupShape> Indices { get; set; } = new Dictionary<long, IGroupShape>();
 
     /// <summary>
     /// Define chart model
     /// </summary>
     /// <param name="group"></param>
-    public virtual async Task Create(IGroupShape group)
+    public async Task Create(IGroupShape group)
     {
       (View.Item = group)
         .Groups
@@ -52,7 +52,7 @@ namespace Client.Components
     /// </summary>
     /// <param name="inputs"></param>
     /// <param name="count"></param>
-    public virtual Task UpdateItems(IList<KeyValuePair<string, PointModel>> inputs, int? count = null)
+    public Task UpdateItems(IList<KeyValuePair<string, PointModel>> inputs, int? count = null)
     {
       foreach (var input in inputs)
       {
@@ -75,14 +75,14 @@ namespace Client.Components
         {
           var currentBar = series as CandleShape;
 
-          series.Y = inputValue?.Last ?? 0;
+          series.Y = inputValue.Price ?? 0;
 
           if (currentBar is not null)
           {
-            currentBar.L = inputValue?.Bar?.Low;
-            currentBar.H = inputValue?.Bar?.High;
-            currentBar.O = inputValue?.Bar?.Open;
-            currentBar.C = inputValue?.Bar?.Close;
+            currentBar.L = inputValue.Bar?.Low;
+            currentBar.H = inputValue.Bar?.High;
+            currentBar.O = inputValue.Bar?.Open;
+            currentBar.C = inputValue.Bar?.Close;
           }
         }
       }
@@ -98,7 +98,7 @@ namespace Client.Components
     /// <summary>
     /// Clear points
     /// </summary>
-    public virtual void Clear()
+    public void Clear()
     {
       Shapes.Clear();
       Indices.Clear();
@@ -108,6 +108,6 @@ namespace Client.Components
     /// <summary>
     /// Dispose
     /// </summary>
-    public virtual void Dispose() => View?.Dispose();
+    public void Dispose() => View?.Dispose();
   }
 }

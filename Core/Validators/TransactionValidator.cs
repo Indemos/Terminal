@@ -6,9 +6,20 @@ namespace Terminal.Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class TransactionValidator : AbstractValidator<TransactionModel>
+  public class TransactionValidator : AbstractValidator<TransactionModel?>
   {
     public TransactionValidator()
+    {
+      RuleFor(o => o.Value).NotEmpty().SetValidator(new TransactionValueValidator());
+    }
+  }
+
+  /// <summary>
+  /// Validation rules
+  /// </summary>
+  public class TransactionValueValidator : AbstractValidator<TransactionModel>
+  {
+    public TransactionValueValidator()
     {
       RuleFor(o => o.Id).NotEmpty();
       RuleFor(o => o.Time).NotEmpty();

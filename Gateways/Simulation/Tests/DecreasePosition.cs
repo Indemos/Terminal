@@ -1,6 +1,6 @@
+using Simulation;
 using System;
 using System.Linq;
-using Simulation;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
@@ -31,8 +31,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction?.Id].Value);
 
       Assert.Single(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
@@ -44,31 +43,36 @@ namespace Terminal.Tests
 
       var openA = nextPosition.Orders[0];
 
-      Assert.Equal(openA.Transaction.Id, orderY.Transaction.Id);
-      Assert.Equal(openA.Transaction.Time, orderY.Transaction.Time);
-      Assert.Equal(openA.Transaction.Volume, orderY.Transaction.Volume);
-      Assert.Equal(openA.Transaction.Price, instrumentY.Points[0].Ask);
+      Assert.Equal(openA?.Transaction?.Id, orderY.Transaction?.Id);
+      Assert.Equal(openA?.Transaction?.Time, orderY.Transaction?.Time);
+      Assert.Equal(openA?.Transaction?.Volume, orderY.Transaction?.Volume);
+      Assert.Equal(openA?.Transaction?.Price, instrumentY.Points[0]?.Ask);
 
       // Order #2
 
       var openB = nextPosition.Orders[1];
 
-      Assert.Equal(openB.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(openB.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(openB.Transaction.Volume, order.Transaction.Volume);
-      Assert.Equal(openB.Transaction.Price, instrumentY.Points[1].Ask);
+      Assert.Equal(openB?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(openB?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(openB?.Transaction?.Volume, order.Transaction?.Volume);
+      Assert.Equal(openB?.Transaction?.Price, instrumentY.Points[1]?.Ask);
 
       // Position
 
-      Assert.Equal(nextPosition.Order.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
-      Assert.Equal(nextPosition.Order.Transaction.Volume, Math.Abs(orderY.Transaction.Volume.Value - order.Transaction.Volume.Value));
+      var volumeOrderY = orderY.Transaction?.Volume ?? 0;
+      var volumeOrder = order.Transaction?.Volume ?? 0;
+
+      Assert.Equal(nextPosition.Order?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(nextPosition.Order?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(nextPosition.Order?.Transaction?.Price, order.Transaction?.Price);
+      Assert.Equal(nextPosition.Order?.Transaction?.Volume, Math.Abs(volumeOrderY - volumeOrder));
 
       // Gain
 
-      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
-      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+      var previousPosition = Account.Positions.Last();
+
+      Assert.Equal(previousPosition?.GainLossEstimate, previousPosition?.GainLoss);
+      Assert.Equal(previousPosition?.GainLossPointsEstimate, previousPosition?.GainLossPoints);
     }
 
     [Fact]
@@ -83,8 +87,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction?.Id].Value);
 
       Assert.Single(Account.Positions);
       Assert.Single(Account.ActivePositions);
@@ -96,31 +99,33 @@ namespace Terminal.Tests
 
       var openA = nextPosition.Orders[0];
 
-      Assert.Equal(openA.Transaction.Id, orderY.Transaction.Id);
-      Assert.Equal(openA.Transaction.Time, orderY.Transaction.Time);
-      Assert.Equal(openA.Transaction.Volume, orderY.Transaction.Volume);
-      Assert.Equal(openA.Transaction.Price, instrumentY.Points[0].Ask);
+      Assert.Equal(openA?.Transaction?.Id, orderY.Transaction?.Id);
+      Assert.Equal(openA?.Transaction?.Time, orderY.Transaction?.Time);
+      Assert.Equal(openA?.Transaction?.Volume, orderY.Transaction?.Volume);
+      Assert.Equal(openA?.Transaction?.Price, instrumentY.Points[0]?.Ask);
 
       // Order #2
 
       var openB = nextPosition.Orders[1];
 
-      Assert.Equal(openB.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(openB.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(openB.Transaction.Volume, order.Transaction.Volume);
-      Assert.Equal(openB.Transaction.Price, instrumentY.Points[1].Ask);
+      Assert.Equal(openB?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(openB?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(openB?.Transaction?.Volume, order.Transaction?.Volume);
+      Assert.Equal(openB?.Transaction?.Price, instrumentY.Points[1]?.Ask);
 
       // Position
 
-      Assert.Equal(nextPosition.Order.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
-      Assert.Equal(nextPosition.Order.Transaction.Volume, 0);
+      Assert.Equal(nextPosition.Order?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(nextPosition.Order?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(nextPosition.Order?.Transaction?.Price, order.Transaction?.Price);
+      Assert.Equal(nextPosition.Order?.Transaction?.Volume, 0);
 
       // Gain
 
-      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
-      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+      var previousPosition = Account.Positions.Last();
+
+      Assert.Equal(previousPosition?.GainLossEstimate, previousPosition?.GainLoss);
+      Assert.Equal(previousPosition?.GainLossPointsEstimate, previousPosition?.GainLossPoints);
     }
 
     [Fact]
@@ -135,8 +140,7 @@ namespace Terminal.Tests
 
       }).First();
 
-      var previousPosition = Account.ActivePositions[orderY.Transaction.Id];
-      var nextPosition = base.DecreasePosition(order, previousPosition);
+      var nextPosition = base.DecreasePosition(order, Account.ActivePositions[orderY.Transaction?.Id].Value);
 
       Assert.Single(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
@@ -148,31 +152,36 @@ namespace Terminal.Tests
 
       var openA = nextPosition.Orders[0];
 
-      Assert.Equal(openA.Transaction.Id, orderY.Transaction.Id);
-      Assert.Equal(openA.Transaction.Time, orderY.Transaction.Time);
-      Assert.Equal(openA.Transaction.Volume, orderY.Transaction.Volume);
-      Assert.Equal(openA.Transaction.Price, instrumentY.Points[0].Ask);
+      Assert.Equal(openA?.Transaction?.Id, orderY.Transaction?.Id);
+      Assert.Equal(openA?.Transaction?.Time, orderY.Transaction?.Time);
+      Assert.Equal(openA?.Transaction?.Volume, orderY.Transaction?.Volume);
+      Assert.Equal(openA?.Transaction?.Price, instrumentY.Points[0]?.Ask);
 
       // Order #2
 
       var openB = nextPosition.Orders[1];
 
-      Assert.Equal(openB.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(openB.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(openB.Transaction.Volume, order.Transaction.Volume);
-      Assert.Equal(openB.Transaction.Price, instrumentY.Points[1].Ask);
+      Assert.Equal(openB?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(openB?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(openB?.Transaction?.Volume, order.Transaction?.Volume);
+      Assert.Equal(openB?.Transaction?.Price, instrumentY.Points[1]?.Ask);
 
       // Position
 
-      Assert.Equal(nextPosition.Order.Transaction.Id, order.Transaction.Id);
-      Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
-      Assert.Equal(nextPosition.Order.Transaction.Volume, Math.Abs(orderY.Transaction.Volume.Value - order.Transaction.Volume.Value));
+      var volumeOrderY = orderY.Transaction?.Volume ?? 0;
+      var volumeOrder = order.Transaction?.Volume ?? 0;
+
+      Assert.Equal(nextPosition.Order?.Transaction?.Id, order.Transaction?.Id);
+      Assert.Equal(nextPosition.Order?.Transaction?.Time, order.Transaction?.Time);
+      Assert.Equal(nextPosition.Order?.Transaction?.Price, order.Transaction?.Price);
+      Assert.Equal(nextPosition.Order?.Transaction?.Volume, Math.Abs(volumeOrderY - volumeOrder));
 
       // Gain
 
-      Assert.Equal(previousPosition.GainLossEstimate, previousPosition.GainLoss);
-      Assert.Equal(previousPosition.GainLossPointsEstimate, previousPosition.GainLossPoints);
+      var previousPosition = Account.Positions.Last();
+
+      Assert.Equal(previousPosition?.GainLossEstimate, previousPosition?.GainLoss);
+      Assert.Equal(previousPosition?.GainLossPointsEstimate, previousPosition?.GainLossPoints);
     }
 
     private (OrderModel, IInstrument) CreatePositions()
@@ -183,13 +192,13 @@ namespace Terminal.Tests
       var instrumentX = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel> { pointX }
+        Points = new ObservableTimeCollection { pointX }
       };
 
       var instrumentY = new Instrument()
       {
         Name = "Y",
-        Points = new ObservableTimeCollection<PointModel> { pointY }
+        Points = new ObservableTimeCollection { pointY }
       };
 
       var orderX = new OrderModel
@@ -219,7 +228,7 @@ namespace Terminal.Tests
 
       instrumentY.Points.Add(newPrice);
 
-      return (orderY.Clone() as OrderModel, instrumentY);
+      return (orderY, instrumentY);
     }
   }
 }

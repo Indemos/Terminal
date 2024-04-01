@@ -11,12 +11,12 @@ namespace Client.Components
     /// <summary>
     /// Updater
     /// </summary>
-    protected virtual ScheduleService Updater { get; set; } = new ScheduleService();
+    protected ScheduleService Updater { get; set; } = InstanceService<ScheduleService>.Instance;
 
     /// <summary>
     /// Render
     /// </summary>
-    protected virtual Task Render(Action action) => Updater.Send(() =>
+    protected Task Render(Action action) => Updater.Send(() =>
     {
       action();
       InvokeAsync(StateHasChanged);
