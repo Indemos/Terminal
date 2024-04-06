@@ -13,7 +13,7 @@ using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Gateway.Ameritrade.Models;
 
-namespace Ameritrade
+namespace Schwab
 {
   public class Adapter : Gateway
   {

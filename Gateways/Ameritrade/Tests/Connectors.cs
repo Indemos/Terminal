@@ -1,4 +1,4 @@
-using Ameritrade;
+using Schwab;
 
 namespace Terminal.Tests
 {

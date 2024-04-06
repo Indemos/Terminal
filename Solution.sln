@@ -9,13 +9,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gateways", "Gateways", "{A7
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Core", "Core\Core.csproj", "{97D6A4C0-1682-4C0D-A449-D8BB9C606594}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Ameritrade", "Ameritrade", "{9AF565D1-31F6-416A-9A71-C755E355A741}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Schwab", "Schwab", "{9AF565D1-31F6-416A-9A71-C755E355A741}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simulation", "Simulation", "{CAD78AFC-793C-45A9-B5A5-628011D599E4}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Simulation", "Gateways\Simulation\Libs\Simulation.csproj", "{1F838D97-6CF0-40E4-813F-B4C4707E4DDC}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Ameritrade", "Gateways\Ameritrade\Libs\Ameritrade.csproj", "{697A2F71-6DC7-4AA3-9D5B-61899605BE3F}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Schwab", "Gateways\Ameritrade\Libs\Schwab.csproj", "{697A2F71-6DC7-4AA3-9D5B-61899605BE3F}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Gateways\Ameritrade\Tests\Tests.csproj", "{8DA38824-8E1A-4E42-92AF-D1AA6F4AA730}"
 EndProject

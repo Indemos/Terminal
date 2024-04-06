@@ -22,7 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Libs\Ameritrade.csproj" />
+    <ProjectReference Include="..\Libs\Schwab.csproj" />
   </ItemGroup>
 
 </Project>

@@ -89,7 +89,7 @@ namespace Simulation
       var points = new Dictionary<string, PointModel>();
       var scheduler = InstanceService<ScheduleService>.Instance;
       var interval = new Timer(span);
-      
+
       interval.Enabled = true;
       interval.AutoReset = true;
       interval.Elapsed += (sender, e) => scheduler.Send(() =>
@@ -353,12 +353,16 @@ namespace Simulation
       var previousPosition = previousPos.Clone() as PositionModel;
 
       nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
-      nextPosition.Order.Transaction.Id = nextOrder.Transaction.Id;
       nextPosition.Order.Transaction.Time = nextOrder.Transaction.Time;
       nextPosition.Order.Transaction.Volume += nextOrder.Transaction.Volume;
+
       nextPosition.Order.Transaction.Price =
         nextPosition.Orders.Sum(o => o.Transaction.Volume * o.Transaction.Price) /
         nextPosition.Orders.Sum(o => o.Transaction.Volume);
+
+      nextPosition.Order.Transaction.Descriptor = string.IsNullOrEmpty(nextOrder.Transaction.Descriptor) ?
+        nextPosition.Order.Transaction.Descriptor :
+        nextOrder.Transaction.Descriptor;
 
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
@@ -391,12 +395,16 @@ namespace Simulation
       var previousPosition = previousPos.Clone() as PositionModel;
 
       nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
-      nextPosition.Order.Transaction.Id = nextOrder.Transaction.Id;
       nextPosition.Order.Transaction.Time = nextOrder.Transaction.Time;
       nextPosition.Order.Transaction.Price = nextOrder.Transaction.Price;
+
       nextPosition.Order.Transaction.Volume = Math.Abs(
         previousPosition.Order.Transaction.Volume.Value -
         nextOrder.Transaction.Volume.Value);
+
+      nextPosition.Order.Transaction.Descriptor = string.IsNullOrEmpty(nextOrder.Transaction.Descriptor) ?
+        nextPosition.Order.Transaction.Descriptor :
+        nextOrder.Transaction.Descriptor;
 
       previousPosition.GainLoss = previousPosition.GainLossEstimate;
       previousPosition.GainLossPoints = previousPosition.GainLossPointsEstimate;
@@ -444,7 +452,7 @@ namespace Simulation
         var isBuyStop = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Stop;
         var isSellStop = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Stop;
         var isBuyLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Limit;
-        var isSellLimit =order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Limit;
+        var isSellLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Limit;
         var isBuyStopLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.StopLimit && pointModel.Ask >= order.ActivationPrice;
         var isSellStopLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.StopLimit && pointModel.Bid <= order.ActivationPrice;
 

@@ -84,6 +84,7 @@ namespace Terminal.Tests
         {
           Volume = 1,
           Price = price,
+          Descriptor = "Demo", 
           Instrument = new Instrument()
           {
             Name = "X",
@@ -107,8 +108,11 @@ namespace Terminal.Tests
       Assert.Equal(position.Order.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(position.Order.Transaction.Time, order.Transaction.Time);
       Assert.Equal(position.Order.Transaction.Price, price);
+      Assert.Equal(position.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(openPrice.Transaction.Price, price);
+      Assert.Equal(openPrice.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(closePrice.Transaction.Price, price);
+      Assert.Equal(closePrice.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Single(position.Orders);
 
       Assert.Equal(orderId, Account.Orders[0].Transaction.Id);

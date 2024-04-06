@@ -2,10 +2,8 @@ using Alpaca.Enums;
 using Alpaca.Markets;
 using System;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -202,22 +200,15 @@ namespace Alpaca
 
       foreach (var order in orders)
       {
-        var name = order.Transaction.Instrument.Name;
-        var amount = (int)order.Transaction.Volume;
-        var price = (decimal)order.Transaction.Price;
-        var isBuy = Equals(order.Side, OrderSideEnum.Buy);
-        var isSell = Equals(order.Side, OrderSideEnum.Sell);
+        var exOrder = CreateOrder(order);
 
-        if (Equals(order.Side, OrderSideEnum.Buy))
-        {
-          switch (order.Type)
-          {
-            case OrderTypeEnum.Stop: await TradeClient.PostOrderAsync(OrderSide.Buy.Stop(name, amount, price)); break;
-            case OrderTypeEnum.Limit: await TradeClient.PostOrderAsync(OrderSide.Buy.Limit(name, amount, price)); break;
-            case OrderTypeEnum.StopLimit: await TradeClient.PostOrderAsync(OrderSide.Buy.StopLimit(name, amount, (decimal)order.ActivationPrice, price)); break;
-            case OrderTypeEnum.Market: await TradeClient.PostOrderAsync(OrderSide.Buy.Market(name, amount)); break;
-          }
-        }
+        var inResponse = new ResponseItemModel<OrderModel>();
+        var exResponse = await TradeClient.PostOrderAsync(exOrder);
+
+        inResponse.Data = order;
+        inResponse.Data.Transaction.Id = $"{exResponse.OrderId}";
+
+        response.Items.Add(inResponse);
       }
 
       return response;
@@ -231,6 +222,24 @@ namespace Alpaca
     public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
     {
       throw new NotImplementedException();
+    }
+
+    protected OrderBase CreateOrder(OrderModel order)
+    {
+      var action = order.Transaction;
+      var amount = (int)action?.Volume;
+      var name = action?.Instrument.Name;
+      var side = Equals(order.Side, OrderSideEnum.Buy) ? OrderSide.Buy : OrderSide.Sell;
+
+      switch (order.Type)
+      {
+        case OrderTypeEnum.Market: return side.Market(name, amount);
+        case OrderTypeEnum.Stop: return side.Stop(name, amount, (decimal)action?.Price);
+        case OrderTypeEnum.Limit: return side.Limit(name, amount, (decimal)action?.Price);
+        case OrderTypeEnum.StopLimit: return side.StopLimit(name, amount, (decimal)order.ActivationPrice, (decimal)action?.Price);
+      }
+
+      return null;
     }
   }
 }

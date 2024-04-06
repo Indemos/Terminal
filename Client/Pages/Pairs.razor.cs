@@ -152,7 +152,7 @@ namespace Client.Pages
       await View.PositionsView.UpdateItems(Account.ActivePositions);
     }
 
-    private (string, string) OpenPositions(IInstrument assetBuy, IInstrument assetSell)
+    private void OpenPositions(IInstrument assetBuy, IInstrument assetSell)
     {
       var orderSell = new OrderModel
       {
@@ -185,8 +185,6 @@ namespace Client.Pages
 
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
-
-      return (orderSell.Transaction.Id, orderBuy.Transaction.Id);
     }
 
     private void ClosePositions()

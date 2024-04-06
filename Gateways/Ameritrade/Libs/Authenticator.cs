@@ -11,7 +11,7 @@ using System.Threading.Tasks;
 using Terminal.Core.Extensions;
 using Terminal.Gateway.Ameritrade.Models;
 
-namespace Ameritrade
+namespace Schwab
 {
   public class Authenticator
   {

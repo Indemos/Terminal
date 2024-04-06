@@ -2,7 +2,7 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.Diagnostics;
 
-namespace Ameritrade
+namespace Schwab
 {
   public class ConsoleTraceWriter : ITraceWriter
   {

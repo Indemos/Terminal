@@ -50,7 +50,7 @@ namespace Terminal.Tests
 
       var openA = nextPosition.Orders[0];
 
-      Assert.Equal(openA.Transaction.Id, orderY.Transaction.Id);
+      Assert.Equal(openA.Transaction.Descriptor, orderY.Transaction.Descriptor);
       Assert.Equal(openA.Transaction.Time, orderY.Transaction.Time);
       Assert.Equal(openA.Transaction.Volume, orderY.Transaction.Volume);
       Assert.Equal(openA.Transaction.Price, instrumentY.Points[0].Ask);
@@ -59,14 +59,14 @@ namespace Terminal.Tests
 
       var openB = nextPosition.Orders[1];
 
-      Assert.Equal(openB.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(openB.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(openB.Transaction.Time, order.Transaction.Time);
       Assert.Equal(openB.Transaction.Volume, order.Transaction.Volume);
       Assert.Equal(openB.Transaction.Price, instrumentY.Points[1].Ask);
 
       // Position
 
-      Assert.Equal(nextPosition.Order.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(nextPosition.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
       Assert.Equal(nextPosition.Order.Transaction.Price, averageTradePrice);
       Assert.Equal(nextPosition.Order.Transaction.Volume, order.Transaction.Volume + orderY.Transaction.Volume);

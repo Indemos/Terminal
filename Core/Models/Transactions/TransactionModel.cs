@@ -4,12 +4,17 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-    public class TransactionModel : ICloneable
+  public class TransactionModel : ICloneable
   {
     /// <summary>
     /// Id
     /// </summary>
     public virtual string Id { get; set; }
+
+    /// <summary>
+    /// Group
+    /// </summary>
+    public virtual string Descriptor { get; set; }
 
     /// <summary>
     /// Contract size
