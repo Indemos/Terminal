@@ -441,7 +441,7 @@ namespace Alpaca
 
         if (exResponse.Status < 400)
         {
-          Account.ActiveOrders.Add(order.Transaction.Id, order);
+          Account.ActiveOrders.Remove(order.Transaction.Id);
         }
       }
       catch (Exception e)
