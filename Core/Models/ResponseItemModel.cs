@@ -17,6 +17,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public ResponseItemModel() => Errors = new List<ErrorModel>();
+    public ResponseItemModel() => Errors = [];
   }
 }

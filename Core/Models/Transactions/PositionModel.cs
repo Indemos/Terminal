@@ -142,7 +142,7 @@ namespace Terminal.Core.Models
     /// </summary>
     public PositionModel()
     {
-      Orders = new List<OrderModel>();
+      Orders = [];
     }
 
     /// <summary>

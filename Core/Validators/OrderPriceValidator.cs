@@ -21,24 +21,24 @@ namespace Terminal.Core.Validators
     {
       Include(new OrderValidator());
 
-      When(o => _orderTypes.ContainsKey(o.Type ?? OrderTypeEnum.None) is false, () => RuleFor(o => o.Transaction.Price).NotEmpty());
-      When(o => o.Side is OrderSideEnum.Buy && o.Type is OrderTypeEnum.Stop, () => RuleFor(o => o.Transaction.Price).GreaterThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Ask));
-      When(o => o.Side is OrderSideEnum.Sell && o.Type is OrderTypeEnum.Stop, () => RuleFor(o => o.Transaction.Price).LessThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Bid));
-      When(o => o.Side is OrderSideEnum.Buy && o.Type is OrderTypeEnum.Limit, () => RuleFor(o => o.Transaction.Price).LessThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Ask));
-      When(o => o.Side is OrderSideEnum.Sell && o.Type is OrderTypeEnum.Limit, () => RuleFor(o => o.Transaction.Price).GreaterThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Bid));
+      When(o => _orderTypes.ContainsKey(o.Type ?? OrderTypeEnum.None) is false, () => RuleFor(o => o.Price).NotEmpty());
+      When(o => o.Side is OrderSideEnum.Buy && o.Type is OrderTypeEnum.Stop, () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Ask));
+      When(o => o.Side is OrderSideEnum.Sell && o.Type is OrderTypeEnum.Stop, () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Bid));
+      When(o => o.Side is OrderSideEnum.Buy && o.Type is OrderTypeEnum.Limit, () => RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Ask));
+      When(o => o.Side is OrderSideEnum.Sell && o.Type is OrderTypeEnum.Limit, () => RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Bid));
 
       When(o => Equals(o.Side, OrderSideEnum.Buy) && Equals(o.Type, OrderTypeEnum.StopLimit), () =>
       {
         RuleFor(o => o.ActivationPrice).NotEmpty();
         RuleFor(o => o.ActivationPrice).GreaterThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Ask);
-        RuleFor(o => o.Transaction.Price).GreaterThanOrEqualTo(o => o.ActivationPrice);
+        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.ActivationPrice);
       });
 
       When(o => Equals(o.Side, OrderSideEnum.Sell) && Equals(o.Type, OrderTypeEnum.StopLimit), () =>
       {
         RuleFor(o => o.ActivationPrice).NotEmpty();
         RuleFor(o => o.ActivationPrice).LessThanOrEqualTo(o => o.Transaction.Instrument.Points.Last().Bid);
-        RuleFor(o => o.Transaction.Price).LessThanOrEqualTo(o => o.ActivationPrice);
+        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.ActivationPrice);
       });
     }
   }

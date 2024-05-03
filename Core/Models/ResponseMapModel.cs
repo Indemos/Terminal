@@ -17,6 +17,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public ResponseMapModel() => Items = new List<ResponseItemModel<T>>();
+    public ResponseMapModel() => Items = [];
   }
 }

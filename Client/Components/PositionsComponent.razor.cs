@@ -26,7 +26,7 @@ namespace Client.Components
         Name = o.Order.Transaction.Instrument.Name,
         Side = o.Order.Side ?? OrderSideEnum.None,
         Size = o.Order.Transaction.Volume ?? 0,
-        OpenPrice = o.Orders.First().Transaction.Price ?? 0,
+        OpenPrice = o.Order.Transaction.Price ?? 0,
         ClosePrice = o.ClosePriceEstimate ?? 0,
         Gain = o.GainLossAverageEstimate ?? 0
 

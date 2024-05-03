@@ -10,6 +10,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Terminal.Core.Extensions;
 using Terminal.Gateway.Ameritrade.Models;
+using Distribution.Stream.Extensions;
 
 namespace Schwab
 {
@@ -128,7 +129,9 @@ namespace Schwab
         await page.ClickAsync(".accept.button");
         await nav;
 
+        #pragma warning disable CS0618 // Type or member is obsolete
         var codeSource = page.Target.Url;
+        #pragma warning restore CS0618 // Type or member is obsolete
         var securityCode = codeSource.ToPairs().Get("code");
         var userModel = await Authenticate(adapter, securityCode);
 

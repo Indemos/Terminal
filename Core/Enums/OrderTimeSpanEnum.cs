@@ -3,9 +3,11 @@ namespace Terminal.Core.Enums
   public enum OrderTimeSpanEnum : byte
   {
     None = 0,
-    Date = 1,
-    FOK = 2,
-    GTC = 3,
-    IOC = 4
+    Day = 1,
+    Fok = 2,
+    Gtc = 3,
+    Ioc = 4,
+    Omo = 5,
+    Omc = 6
   }
 }

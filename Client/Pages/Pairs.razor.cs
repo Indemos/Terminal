@@ -39,8 +39,8 @@ namespace Client.Pages
         var indAreas = new GroupShape();
         var indCharts = new GroupShape();
 
-        indCharts.Groups["Buy"] = new ArrowShape { Component = indUp };
-        indCharts.Groups["Sell"] = new ArrowShape { Component = indDown };
+        indCharts.Groups["Ups"] = new ArrowShape { Component = indUp };
+        indCharts.Groups["Downs"] = new ArrowShape { Component = indDown };
         indCharts.Groups["Range"] = new AreaShape { Component = indUp };
         indAreas.Groups["Prices"] = indCharts;
 
@@ -61,7 +61,6 @@ namespace Client.Pages
         {
           Account = new Account
           {
-            Name = "Demo",
             Balance = 25000,
             Instruments = new Dictionary<string, Instrument>
             {
@@ -106,7 +105,7 @@ namespace Client.Pages
 
       var chartPoints = new List<KeyValuePair<string, PointModel>>();
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
-      var performance = Performance.Calculate(new[] { Account });
+      var performance = Performance.Calculate([Account]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var xAsk = xPoint.Ask;
@@ -176,8 +175,8 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter.CreateOrders(orderBuy);
-      View.Adapter.CreateOrders(orderSell);
+      View.Adapter.SendOrders(orderBuy);
+      View.Adapter.SendOrders(orderSell);
 
       var account = View.Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
@@ -209,7 +208,7 @@ namespace Client.Pages
           }
         };
 
-        View.Adapter.CreateOrders(order);
+        View.Adapter.SendOrders(order);
 
         //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
       }

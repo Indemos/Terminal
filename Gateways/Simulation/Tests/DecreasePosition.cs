@@ -14,7 +14,7 @@ namespace Terminal.Tests
     {
       Account = new Account
       {
-        Name = "Demo",
+        Descriptor = "Demo",
         Balance = 50000
       };
     }
@@ -61,7 +61,7 @@ namespace Terminal.Tests
 
       Assert.Equal(nextPosition.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
+      Assert.Equal(nextPosition.Order.Transaction.Price, order.Price);
       Assert.Equal(nextPosition.Order.Transaction.Volume, Math.Abs(orderY.Transaction.Volume.Value - order.Transaction.Volume.Value));
 
       // Gain
@@ -114,7 +114,7 @@ namespace Terminal.Tests
 
       Assert.Equal(nextPosition.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
+      Assert.Equal(nextPosition.Order.Transaction.Price, order.Price);
       Assert.Equal(nextPosition.Order.Transaction.Volume, 0);
 
       // Gain
@@ -167,7 +167,7 @@ namespace Terminal.Tests
 
       Assert.Equal(nextPosition.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(nextPosition.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(nextPosition.Order.Transaction.Price, order.Transaction.Price);
+      Assert.Equal(nextPosition.Order.Transaction.Price, order.Price);
       Assert.Equal(nextPosition.Order.Transaction.Volume, Math.Abs(orderY.Transaction.Volume.Value - order.Transaction.Volume.Value));
 
       // Gain
@@ -186,13 +186,13 @@ namespace Terminal.Tests
       var instrumentX = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel> { pointX }
+        Points = [pointX]
       };
 
       var instrumentY = new Instrument()
       {
         Name = "Y",
-        Points = new ObservableTimeCollection<PointModel> { pointY }
+        Points = [pointY]
       };
 
       var orderX = new OrderModel
@@ -209,8 +209,8 @@ namespace Terminal.Tests
         Transaction = new() { Volume = 2, Instrument = instrumentY }
       };
 
-      base.CreateOrders(orderX);
-      base.CreateOrders(orderY);
+      base.SendOrders(orderX);
+      base.SendOrders(orderY);
 
       // Price
 

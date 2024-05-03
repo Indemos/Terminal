@@ -2,7 +2,6 @@ using Simulation;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -15,7 +14,7 @@ namespace Terminal.Tests
     {
       Account = new Account
       {
-        Name = "Demo",
+        Descriptor = "Demo",
         Balance = 50000
       };
     }
@@ -28,9 +27,10 @@ namespace Terminal.Tests
       var response = base.ValidateOrders(order).Items.First();
       var errors = GetErrors(response.Errors);
 
-      Assert.Equal(4, response.Errors.Count);
+      Assert.Equal(5, response.Errors.Count);
       Assert.Contains($"{nameof(order.Side)} {error}", errors);
       Assert.Contains($"{nameof(order.Type)} {error}", errors);
+      Assert.Contains($"{nameof(order.Price)} {error}", errors);
       Assert.Contains($"{nameof(order.TimeSpan)} {error}", errors);
       Assert.Contains($"{nameof(order.Transaction)} {error}", errors);
     }
@@ -54,7 +54,6 @@ namespace Terminal.Tests
       Assert.Equal(8, response.Errors.Count);
       Assert.Contains($"{nameof(order.Transaction.Id)} {error}", errors);
       Assert.Contains($"{nameof(order.Transaction.Time)} {error}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Price)} {error}", errors);
       Assert.Contains($"{nameof(order.Transaction.Volume)} {error}", errors);
       Assert.Contains($"{nameof(order.Transaction.Instrument)} {error}", errors);
     }
@@ -106,17 +105,17 @@ namespace Terminal.Tests
       {
         Side = orderSide,
         Type = orderType,
+        Price = orderPrice,
         Transaction = new()
         {
           Volume = 1,
-          Price = orderPrice,
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
-            {
+            Points =
+            [
               new() { Bid = price, Ask = price }
-            }
+            ]
           }
         }
       };
@@ -124,7 +123,7 @@ namespace Terminal.Tests
       var response = base.ValidateOrders(order).Items.First();
       var errors = GetErrors(response.Errors);
 
-      Assert.Contains($"{nameof(order.Transaction.Price)} {error}", errors);
+      Assert.Contains($"{nameof(order.Price)} {error}", errors);
     }
 
     [Theory]
@@ -143,19 +142,19 @@ namespace Terminal.Tests
       var order = new OrderModel
       {
         Side = orderSide,
+        Price = orderPrice,
         Type = OrderTypeEnum.StopLimit,
         ActivationPrice = activationPrice,
         Transaction = new()
         {
           Volume = 1,
-          Price = orderPrice,
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
-            {
+            Points =
+            [
               new() { Bid = price, Ask = price }
-            }
+            ]
           }
         }
       };
@@ -164,7 +163,7 @@ namespace Terminal.Tests
       var errors = GetErrors(response.Errors);
 
       Assert.Contains($"{nameof(order.ActivationPrice)} {activationError}", errors);
-      Assert.Contains($"{nameof(order.Transaction.Price)} {orderError}", errors);
+      Assert.Contains($"{nameof(order.Price)} {orderError}", errors);
     }
 
     private IEnumerable<string> GetErrors(IList<ErrorModel> errors)

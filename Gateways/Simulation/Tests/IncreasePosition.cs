@@ -14,7 +14,7 @@ namespace Terminal.Tests
     {
       Account = new Account
       {
-        Name = "Demo",
+        Descriptor = "Demo",
         Balance = 50000
       };
     }
@@ -93,13 +93,13 @@ namespace Terminal.Tests
       var instrumentX = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel> { pointX }
+        Points = [pointX]
       };
 
       var instrumentY = new Instrument()
       {
         Name = "Y",
-        Points = new ObservableTimeCollection<PointModel> { pointY }
+        Points = [pointY]
       };
 
       var orderX = new OrderModel
@@ -116,8 +116,8 @@ namespace Terminal.Tests
         Transaction = new() { Volume = 1, Instrument = instrumentY }
       };
 
-      base.CreateOrders(orderX);
-      base.CreateOrders(orderY);
+      base.SendOrders(orderX);
+      base.SendOrders(orderY);
 
       // Price
 

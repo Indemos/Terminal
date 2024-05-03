@@ -1,7 +1,6 @@
+using Simulation;
 using System;
 using System.Linq;
-using Simulation;
-using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -14,7 +13,7 @@ namespace Terminal.Tests
     {
       Account = new Account
       {
-        Name = "Demo",
+        Descriptor = "Demo",
         Balance = 50000
       };
     }
@@ -45,10 +44,10 @@ namespace Terminal.Tests
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
-            {
+            Points =
+            [
               new() { Bid = price, Ask = price }
-            }
+            ]
           }
         }
       };
@@ -78,20 +77,20 @@ namespace Terminal.Tests
     {
       var order = new OrderModel
       {
+        Price = price,
         Side = orderSide,
         Type = orderType,
         Transaction = new()
         {
           Volume = 1,
-          Price = price,
           Descriptor = "Demo", 
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
-            {
+            Points =
+            [
               new() { Bid = bid, Ask = ask }
-            }
+            ]
           }
         }
       };
@@ -107,7 +106,6 @@ namespace Terminal.Tests
       Assert.Equal(position.Order.Transaction.Price, price);
       Assert.Equal(position.Order.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(position.Order.Transaction.Time, order.Transaction.Time);
-      Assert.Equal(position.Order.Transaction.Price, price);
       Assert.Equal(position.Order.Transaction.Descriptor, order.Transaction.Descriptor);
       Assert.Equal(openPrice.Transaction.Price, price);
       Assert.Equal(openPrice.Transaction.Descriptor, order.Transaction.Descriptor);
@@ -130,10 +128,10 @@ namespace Terminal.Tests
       var instrument = new Instrument()
       {
         Name = "X",
-        Points = new ObservableTimeCollection<PointModel>
-        {
+        Points =
+        [
           new() { Bid = price, Ask = price }
-        }
+        ]
       };
 
       var order = new OrderModel

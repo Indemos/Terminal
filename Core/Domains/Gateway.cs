@@ -60,19 +60,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
-
-    /// <summary>
-    /// Update orders
-    /// </summary>
-    /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> UpdateOrders(params OrderModel[] orders);
+    Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
+    Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders);
   }
 
   /// <summary>
@@ -137,19 +131,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
-
-    /// <summary>
-    /// Update orders
-    /// </summary>
-    /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> UpdateOrders(params OrderModel[] orders);
+    public abstract Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
+    public abstract Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Dispose
@@ -165,10 +153,10 @@ namespace Terminal.Core.Domains
       foreach (var nextOrder in orders)
       {
         nextOrder.Type ??= OrderTypeEnum.Market;
-        nextOrder.TimeSpan ??= OrderTimeSpanEnum.GTC;
+        nextOrder.TimeSpan ??= OrderTimeSpanEnum.Gtc;
+        nextOrder.Price ??= GetOpenPrice(nextOrder);
         nextOrder.Transaction ??= new TransactionModel();
         nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.Price ??= GetOpenPrice(nextOrder);
         nextOrder.Transaction.Status ??= OrderStatusEnum.None;
         nextOrder.Transaction.Operation ??= OperationEnum.In;
       }
@@ -236,27 +224,6 @@ namespace Terminal.Core.Domains
       }
 
       return accounts;
-    }
-
-    /// <summary>
-    /// Update points
-    /// </summary>
-    /// <param name="point"></param>
-    protected virtual IList<PointModel> SetupPoints(params PointModel[] points)
-    {
-      foreach (var point in points)
-      {
-        var instrument = Account.Instruments[point.Instrument.Name];
-        var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
-
-        point.Instrument = instrument;
-        point.TimeFrame = instrument.TimeFrame;
-
-        instrument.Points.Add(point);
-        instrument.PointGroups.Add(point, instrument.TimeFrame, true);
-      }
-
-      return points;
     }
   }
 }

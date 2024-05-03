@@ -6,10 +6,11 @@ namespace Terminal.Core.Enums
     Placed = 1,
     Filled = 2,
     Closed = 3,
-    Expired = 4,
-    Declined = 5,
-    Canceled = 6,
-    Completed = 7,
-    PartiallyFilled = 8
+    Pending = 4,
+    Expired = 5,
+    Declined = 6,
+    Canceled = 7,
+    Completed = 8,
+    Partitioned = 9
   }
 }

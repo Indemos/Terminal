@@ -50,7 +50,7 @@ namespace Simulation
     {
       Speed = 1000;
 
-      _connections = new List<IDisposable>();
+      _connections = [];
       _instruments = new Dictionary<string, StreamReader>();
       _subscriptions = new Dictionary<string, IDisposable>();
     }
@@ -98,7 +98,13 @@ namespace Simulation
 
         if (point is not null)
         {
-          SetupPoints(point);
+          var instrument = Account.Instruments[point.Instrument.Name];
+
+          point.Instrument = instrument;
+          point.TimeFrame = instrument.TimeFrame;
+
+          instrument.Points.Add(point);
+          instrument.PointGroups.Add(point, instrument.TimeFrame, true);
         }
 
         interval.Enabled = true;
@@ -155,9 +161,9 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders)
     {
-      var response = ValidateOrders(CorrectOrders(orders).ToArray());
+      var response = ValidateOrders([.. CorrectOrders(orders)]);
 
       if (response.Count > 0)
       {
@@ -179,39 +185,10 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Update orders
-    /// </summary>
-    /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> UpdateOrders(params OrderModel[] orders)
-    {
-      var nextOrders = orders.Select(nextOrder =>
-      {
-        return Mapper<OrderModel, OrderModel>.Merge(
-          nextOrder,
-          Account.ActiveOrders[nextOrder.Transaction.Id].Clone() as OrderModel);
-
-      }).ToArray();
-
-      var response = ValidateOrders(nextOrders);
-
-      if (response.Count > 0)
-      {
-        return Task.FromResult(response);
-      }
-
-      foreach (var nextOrder in nextOrders)
-      {
-        Account.ActiveOrders[nextOrder.Transaction.Id] = nextOrder;
-      }
-
-      return Task.FromResult(response);
-    }
-
-    /// <summary>
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders)
     {
       var response = new ResponseMapModel<OrderModel>();
 
@@ -232,9 +209,8 @@ namespace Simulation
     {
       switch (message.Action)
       {
-        case ActionEnum.Create: CreateOrders(message.Next); break;
-        case ActionEnum.Update: UpdateOrders(message.Next); break;
-        case ActionEnum.Delete: DeleteOrders(message.Next); break;
+        case ActionEnum.Create: SendOrders(message.Next); break;
+        case ActionEnum.Delete: CancelOrders(message.Next); break;
       }
     }
 
@@ -313,6 +289,7 @@ namespace Simulation
         Next = nextOrder
       };
 
+      nextOrder.Transaction.Price = nextPosition.Order.Transaction.Price = nextOrder.Price;
       nextOrder.Transaction.Status = nextPosition.Order.Transaction.Status = OrderStatusEnum.Filled;
       nextOrder.OrderStream(message);
 
@@ -352,11 +329,12 @@ namespace Simulation
       var nextPosition = previousPos.Clone() as PositionModel;
       var previousPosition = previousPos.Clone() as PositionModel;
 
-      nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
+      nextOrder.Transaction.Price = order.Price;
+      nextPosition.Orders = previousPosition.Orders.Concat([nextOrder]).ToList();
       nextPosition.Order.Transaction.Time = nextOrder.Transaction.Time;
       nextPosition.Order.Transaction.Volume += nextOrder.Transaction.Volume;
 
-      nextPosition.Order.Transaction.Price =
+      nextPosition.Order.Transaction.Price = 
         nextPosition.Orders.Sum(o => o.Transaction.Volume * o.Transaction.Price) /
         nextPosition.Orders.Sum(o => o.Transaction.Volume);
 
@@ -394,9 +372,10 @@ namespace Simulation
       var nextPosition = previousPos.Clone() as PositionModel;
       var previousPosition = previousPos.Clone() as PositionModel;
 
-      nextPosition.Orders = previousPosition.Orders.Concat(new[] { nextOrder }).ToList();
+      nextOrder.Transaction.Price = nextOrder.Price;
+      nextPosition.Orders = previousPosition.Orders.Concat([nextOrder]).ToList();
       nextPosition.Order.Transaction.Time = nextOrder.Transaction.Time;
-      nextPosition.Order.Transaction.Price = nextOrder.Transaction.Price;
+      nextPosition.Order.Transaction.Price = nextOrder.Price;
 
       nextPosition.Order.Transaction.Volume = Math.Abs(
         previousPosition.Order.Transaction.Volume.Value -
@@ -436,6 +415,7 @@ namespace Simulation
     /// <param name="message"></param>
     protected virtual void OnPointUpdate(object sender, NotifyCollectionChangedEventArgs e)
     {
+      var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
       var positionOrders = Account.ActivePositions.SelectMany(o => o.Value.Orders);
       var activeOrders = Account.ActiveOrders.Values.Concat(positionOrders);
 

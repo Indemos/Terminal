@@ -28,7 +28,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Name
     /// </summary>
-    string Name { get; set; }
+    string Descriptor { get; set; }
 
     /// <summary>
     /// Currency
@@ -84,7 +84,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Name
     /// </summary>
-    public virtual string Name { get; set; }
+    public virtual string Descriptor { get; set; }
 
     /// <summary>
     /// Currency
@@ -126,11 +126,11 @@ namespace Terminal.Core.Domains
       InitialBalance = 0.0;
       Currency = nameof(CurrencyEnum.USD);
 
-      Orders = new ObservableCollection<OrderModel>();
-      Positions = new ObservableCollection<PositionModel>();
+      Orders = [];
+      Positions = [];
+      Instruments = new Dictionary<string, Instrument>();
       ActiveOrders = new Dictionary<string, OrderModel>();
       ActivePositions = new Dictionary<string, PositionModel>();
-      Instruments = new Dictionary<string, Instrument>();
     }
   }
 }

@@ -13,7 +13,7 @@ namespace Terminal.Tests
     {
       Account = new Account
       {
-        Name = "Demo",
+        Descriptor = "Demo",
         Balance = 50000
       };
     }
@@ -23,7 +23,7 @@ namespace Terminal.Tests
     {
       var order = new OrderModel();
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       Assert.Empty(Account.Orders);
       Assert.Empty(Account.Positions);
@@ -55,23 +55,23 @@ namespace Terminal.Tests
       {
         Side = orderSide,
         Type = orderType,
+        Price = orderPrice,
         ActivationPrice = activationPrice,
         Transaction = new()
         {
           Volume = 1,
-          Price = orderPrice,
           Instrument = new Instrument()
           {
             Name = "X",
-            Points = new ObservableTimeCollection<PointModel>
-            {
+            Points =
+            [
               new() { Bid = price, Ask = price }
-            }
+            ]
           }
         }
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       Assert.Equal(orders, Account.Orders.Count);
       Assert.Equal(activeOrders, Account.ActiveOrders.Count);

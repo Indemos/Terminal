@@ -121,8 +121,8 @@ namespace Terminal.Core.Domains
       Commission = 0.0;
       ContractSize = 1.0;
 
-      Points = new ObservableTimeCollection<PointModel>();
-      PointGroups = new ObservableTimeCollection<PointModel>();
+      Points = [];
+      PointGroups = [];
     }
   }
 }

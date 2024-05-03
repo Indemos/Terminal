@@ -62,7 +62,6 @@ namespace Terminal.Core.Models
     public PointModel()
     {
       Time = DateTime.Now;
-
       Series = new Dictionary<string, PointModel>();
     }
 

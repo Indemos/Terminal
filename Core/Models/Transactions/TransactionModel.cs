@@ -22,6 +22,11 @@ namespace Terminal.Core.Models
     public virtual double? Volume { get; set; }
 
     /// <summary>
+    /// Size of partially filled contract
+    /// </summary>
+    public virtual double? CurrentVolume { get; set; }
+
+    /// <summary>
     /// Open price for the order
     /// </summary>
     public virtual double? Price { get; set; }

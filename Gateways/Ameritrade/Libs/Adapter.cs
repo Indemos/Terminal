@@ -1,6 +1,8 @@
 using Distribution.Services;
 using Distribution.Stream;
+using Distribution.Stream.Extensions;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -9,7 +11,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Gateway.Ameritrade.Models;
 
@@ -146,7 +147,7 @@ namespace Schwab
     /// <param name="message"></param>
     public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message)
     {
-      var props = new Dictionary<object, object>
+      var props = new Hashtable
       {
         ["symbol"] = message.Name,
         ["fromDate"] = $"{message.MinDate:yyyy-MM-dd}",
@@ -230,17 +231,12 @@ namespace Schwab
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseMapModel<OrderModel>> UpdateOrders(params OrderModel[] orders)
-    {
-      throw new NotImplementedException();
-    }
-
-    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders)
     {
       throw new NotImplementedException();
     }
