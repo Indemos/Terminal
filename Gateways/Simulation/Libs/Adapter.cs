@@ -104,7 +104,7 @@ namespace Simulation
           point.TimeFrame = instrument.TimeFrame;
 
           instrument.Points.Add(point);
-          instrument.PointGroups.Add(point, instrument.TimeFrame, true);
+          instrument.PointGroups.Add(point, instrument.TimeFrame);
         }
 
         interval.Enabled = true;

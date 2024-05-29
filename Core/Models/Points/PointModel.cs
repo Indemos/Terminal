@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
+using Terminal.Core.Extensions;
 
 namespace Terminal.Core.Models
 {
-    public class PointModel : ICloneable
+    public class PointModel : ICloneable, IGroup
   {
     /// <summary>
     /// Bid
@@ -76,6 +78,40 @@ namespace Terminal.Core.Models
       clone.Bar = Bar?.Clone() as BarModel;
 
       return clone;
+    }
+
+    /// <summary>
+    /// Grouping index
+    /// </summary>
+    /// <returns></returns>
+    public virtual long GetIndex() => Time.Value.Ticks;
+
+    /// <summary>
+    /// Grouping implementation
+    /// </summary>
+    /// <param name="previous"></param>
+    /// <returns></returns>
+    public virtual IGroup Update(IGroup previous)
+    {
+      if (previous is not null)
+      {
+        var o = previous as PointModel;
+        var price = (Last ?? Bid ?? Ask ?? o.Last ?? o.Bid ?? o.Ask).Value;
+
+        Ask ??= o.Ask ?? price;
+        Bid ??= o.Bid ?? price;
+        AskSize += o.AskSize ?? 0.0;
+        BidSize += o.BidSize ?? 0.0;
+        Bar ??= new BarModel();
+        Bar.Close = Last = price;
+        Bar.Open = o.Bar?.Open ?? Bar.Open ?? price;
+        Bar.Low = Math.Min(Bar.Low ?? price, o.Bar?.Low ?? price);
+        Bar.High = Math.Max(Bar.High ?? price, o.Bar?.High ?? price);
+        TimeFrame ??= o.TimeFrame;
+        Time = Time.Round(TimeFrame) ?? o.Time;
+      }
+
+      return this;
     }
   }
 }

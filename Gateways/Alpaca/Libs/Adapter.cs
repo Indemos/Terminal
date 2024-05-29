@@ -223,13 +223,16 @@ namespace Alpaca
       var positions = await SendData<JsonPosition[]>("/v2/positions");
       var orders = await SendData<JsonOrder[]>("/v2/orders");
 
-      Account.Balance = account.Data.Equity;
-      Account.Descriptor = account.Data.AccountNumber;
-      Account.ActiveOrders = orders.Data.Select(GetInternalOrder).ToDictionary(o => o.Transaction.Id, o => o);
-      Account.ActivePositions = positions.Data.Select(GetInternalPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
+      if (account.Data is not null)
+      {
+        Account.Balance = account.Data.Equity;
+        Account.Descriptor = account.Data.AccountNumber;
+        Account.ActiveOrders = orders.Data.Select(GetInternalOrder).ToDictionary(o => o.Transaction.Id, o => o);
+        Account.ActivePositions = positions.Data.Select(GetInternalPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
 
-      Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
-      Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
+        Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
+        Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
+      }
     }
 
     /// <summary>

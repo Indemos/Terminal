@@ -49,12 +49,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    ObservableTimeCollection<PointModel> Points { get; set; }
+    ObservableGroupCollection<PointModel> Points { get; set; }
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    ObservableTimeCollection<PointModel> PointGroups { get; set; }
+    ObservableGroupCollection<PointModel> PointGroups { get; set; }
   }
 
   public class Instrument : IInstrument
@@ -102,12 +102,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    public virtual ObservableTimeCollection<PointModel> Points { get; set; }
+    public virtual ObservableGroupCollection<PointModel> Points { get; set; }
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public virtual ObservableTimeCollection<PointModel> PointGroups { get; set; }
+    public virtual ObservableGroupCollection<PointModel> PointGroups { get; set; }
 
     /// <summary>
     /// Constructor
