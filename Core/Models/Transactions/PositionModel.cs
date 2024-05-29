@@ -10,32 +10,32 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Actual PnL measured in account's currency
     /// </summary>
-    public virtual double? GainLoss { get; set; }
+    public virtual decimal? GainLoss { get; set; }
 
     /// <summary>
     /// Min possible PnL in account's currency
     /// </summary>
-    public virtual double? GainLossMin { get; set; }
+    public virtual decimal? GainLossMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in account's currency
     /// </summary>
-    public virtual double? GainLossMax { get; set; }
+    public virtual decimal? GainLossMax { get; set; }
 
     /// <summary>
     /// Actual PnL in points
     /// </summary>
-    public virtual double? GainLossPoints { get; set; }
+    public virtual decimal? GainLossPoints { get; set; }
 
     /// <summary>
     /// Min possible PnL in points
     /// </summary>
-    public virtual double? GainLossPointsMin { get; set; }
+    public virtual decimal? GainLossPointsMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in points
     /// </summary>
-    public virtual double? GainLossPointsMax { get; set; }
+    public virtual decimal? GainLossPointsMax { get; set; }
 
     /// <summary>
     /// Aggregated order
@@ -50,7 +50,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Close price estimate
     /// </summary>
-    public virtual double? ClosePriceEstimate
+    public virtual decimal? ClosePriceEstimate
     {
       get
       {
@@ -72,29 +72,29 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Estimated PnL in account's currency
     /// </summary>
-    public virtual double? GainLossEstimate => GetGainLossEstimate(Order.Transaction.Price);
+    public virtual decimal? GainLossEstimate => GetGainLossEstimate(Order.Transaction.Price);
 
     /// <summary>
     /// Estimated PnL in points
     /// </summary>
-    public virtual double? GainLossPointsEstimate => GetGainLossPointsEstimate(Order.Transaction.Price);
+    public virtual decimal? GainLossPointsEstimate => GetGainLossPointsEstimate(Order.Transaction.Price);
 
     /// <summary>
     /// Cummulative estimated PnL in account's currency for all positions in the same direction
     /// </summary>
-    public virtual double? GainLossAverageEstimate => GetGainLossPointsEstimate();
+    public virtual decimal? GainLossAverageEstimate => GetGainLossPointsEstimate();
 
     /// <summary>
     /// Cummulative estimated PnL in points for all positions in the same direction
     /// </summary>
-    public virtual double? GainLossPointsAverageEstimate => GetGainLossEstimate();
+    public virtual decimal? GainLossPointsAverageEstimate => GetGainLossEstimate();
 
     /// <summary>
     /// Estimated PnL in points
     /// </summary>
     /// <param name="price"></param>
     /// <returns></returns>
-    protected virtual double? GetGainLossPointsEstimate(double? price = null)
+    protected virtual decimal? GetGainLossPointsEstimate(decimal? price = null)
     {
       var direction = 0;
 
@@ -104,11 +104,11 @@ namespace Terminal.Core.Models
         case OrderSideEnum.Sell: direction = -1; break;
       }
 
-      var estimate = ((ClosePriceEstimate - Order.Transaction.Price) * direction) ?? 0.0;
+      var estimate = ((ClosePriceEstimate - Order.Transaction.Price) * direction) ?? 0;
 
       if (price is not null)
       {
-        estimate = ((ClosePriceEstimate - price) * direction) ?? 0.0;
+        estimate = ((ClosePriceEstimate - price) * direction) ?? 0;
 
         GainLossPointsMin = Math.Min(GainLossPointsMin ?? estimate, estimate);
         GainLossPointsMax = Math.Max(GainLossPointsMax ?? estimate, estimate);
@@ -122,11 +122,11 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="price"></param>
     /// <returns></returns>
-    protected virtual double? GetGainLossEstimate(double? price = null)
+    protected virtual decimal? GetGainLossEstimate(decimal? price = null)
     {
       var action = Order.Transaction;
       var step = action.Instrument.StepValue / action.Instrument.StepSize;
-      var estimate = action.Volume * (GetGainLossPointsEstimate(price) * step - action.Instrument.Commission) ?? 0.0;
+      var estimate = action.Volume * (GetGainLossPointsEstimate(price) * step - action.Instrument.Commission) ?? 0;
 
       if (price is not null)
       {

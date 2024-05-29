@@ -38,7 +38,7 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<decimal> Values { get; protected set; } = new List<decimal>();
 
     /// <summary>
     /// Calculate single value
@@ -72,7 +72,7 @@ namespace Terminal.Core.Indicators
       var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MovingAverageIndicator().Point;
       var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
-      Point.Last = series.Last = series.Bar.Close = average.IsEqual(0) ? value : average;
+      Point.Last = series.Last = series.Bar.Close = average is 0 ? value : average;
 
       return this;
     }

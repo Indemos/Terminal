@@ -19,17 +19,17 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public virtual decimal? Volume { get; set; }
 
     /// <summary>
     /// Size of partially filled contract
     /// </summary>
-    public virtual double? CurrentVolume { get; set; }
+    public virtual decimal? CurrentVolume { get; set; }
 
     /// <summary>
     /// Open price for the order
     /// </summary>
-    public virtual double? Price { get; set; }
+    public virtual decimal? Price { get; set; }
 
     /// <summary>
     /// Time stamp

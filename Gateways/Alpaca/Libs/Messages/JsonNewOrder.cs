@@ -8,10 +8,10 @@ public class JsonNewOrder
   public string Symbol { get; set; }
 
   [JsonPropertyName("qty")]
-  public double? Quantity { get; set; }
+  public decimal? Quantity { get; set; }
 
   [JsonPropertyName("notional")]
-  public double? Notional { get; set; }
+  public decimal? Notional { get; set; }
 
   [JsonPropertyName("side")]
   public string OrderSide { get; set; }
@@ -23,16 +23,16 @@ public class JsonNewOrder
   public string TimeInForce { get; set; }
 
   [JsonPropertyName("limit_price")]
-  public double? LimitPrice { get; set; }
+  public decimal? LimitPrice { get; set; }
 
   [JsonPropertyName("stop_price")]
-  public double? StopPrice { get; set; }
+  public decimal? StopPrice { get; set; }
 
   [JsonPropertyName("trail_price")]
-  public double? TrailOffsetInDollars { get; set; }
+  public decimal? TrailOffsetInDollars { get; set; }
 
   [JsonPropertyName("trail_percent")]
-  public double? TrailOffsetInPercent { get; set; }
+  public decimal? TrailOffsetInPercent { get; set; }
 
   [JsonPropertyName("client_order_id")]
   public string ClientOrderId { get; set; }

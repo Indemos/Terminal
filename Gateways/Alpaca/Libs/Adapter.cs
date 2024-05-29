@@ -534,7 +534,7 @@ namespace Alpaca
     /// <param name="order"></param>
     /// <param name="direction"></param>
     /// <returns></returns>
-    protected JsonNewOrderAdvancedAttributes GetExternalBracket(OrderModel order, double direction)
+    protected JsonNewOrderAdvancedAttributes GetExternalBracket(OrderModel order, decimal direction)
     {
       var nextOrder = order
         .Orders

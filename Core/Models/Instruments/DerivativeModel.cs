@@ -7,27 +7,27 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Delta
     /// </summary>
-    public virtual double? Delta { get; set; }
+    public virtual decimal? Delta { get; set; }
 
     /// <summary>
     /// Gamma
     /// </summary>
-    public virtual double? Gamma { get; set; }
+    public virtual decimal? Gamma { get; set; }
 
     /// <summary>
     /// Rho
     /// </summary>
-    public virtual double? Rho { get; set; }
+    public virtual decimal? Rho { get; set; }
 
     /// <summary>
     /// Theta
     /// </summary>
-    public virtual double? Theta { get; set; }
+    public virtual decimal? Theta { get; set; }
 
     /// <summary>
     /// Vega
     /// </summary>
-    public virtual double? Vega { get; set; }
+    public virtual decimal? Vega { get; set; }
 
     /// <summary>
     /// Clone

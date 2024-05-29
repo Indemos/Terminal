@@ -17,41 +17,41 @@ public class JsonPosition
   public string AssetClass { get; set; }
 
   [JsonPropertyName("avg_entry_price")]
-  public double? AverageEntryPrice { get; set; }
+  public decimal? AverageEntryPrice { get; set; }
 
   [JsonPropertyName("qty")]
-  public double? Quantity { get; set; }
+  public decimal? Quantity { get; set; }
 
   [JsonPropertyName("qty_available")]
-  public double? AvailableQuantity { get; set; }
+  public decimal? AvailableQuantity { get; set; }
 
   [JsonPropertyName("side")]
   public string Side { get; set; }
 
   [JsonPropertyName("market_value")]
-  public double? MarketValue { get; set; }
+  public decimal? MarketValue { get; set; }
 
   [JsonPropertyName("cost_basis")]
-  public double? CostBasis { get; set; }
+  public decimal? CostBasis { get; set; }
 
   [JsonPropertyName("unrealized_pl")]
-  public double? UnrealizedProfitLoss { get; set; }
+  public decimal? UnrealizedProfitLoss { get; set; }
 
   [JsonPropertyName("unrealized_plpc")]
-  public double? UnrealizedProfitLossPercent { get; set; }
+  public decimal? UnrealizedProfitLossPercent { get; set; }
 
   [JsonPropertyName("unrealized_intraday_pl")]
-  public double? IntradayUnrealizedProfitLoss { get; set; }
+  public decimal? IntradayUnrealizedProfitLoss { get; set; }
 
   [JsonPropertyName("unrealized_intraday_plpc")]
-  public double? IntradayUnrealizedProfitLossPercent { get; set; }
+  public decimal? IntradayUnrealizedProfitLossPercent { get; set; }
 
   [JsonPropertyName("current_price")]
-  public double? AssetCurrentPrice { get; set; }
+  public decimal? AssetCurrentPrice { get; set; }
 
   [JsonPropertyName("lastday_price")]
-  public double? AssetLastPrice { get; set; }
+  public decimal? AssetLastPrice { get; set; }
 
   [JsonPropertyName("change_today")]
-  public double? AssetChangePercent { get; set; }
+  public decimal? AssetChangePercent { get; set; }
 }

@@ -28,9 +28,9 @@ namespace Terminal.Tests
     public void CreatePendingOrder(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
-      double? price,
-      double? activationPrice,
-      double? orderPrice)
+      decimal? price,
+      decimal? activationPrice,
+      decimal? orderPrice)
     {
       var order = new OrderModel
       {

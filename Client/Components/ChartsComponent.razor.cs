@@ -75,21 +75,21 @@ namespace Client.Components
         {
           var currentBar = series as CandleShape;
 
-          series.Y = inputValue?.Last ?? 0;
+          series.Y = (double)(inputValue?.Last ?? 0);
 
           if (currentBar is not null)
           {
-            currentBar.L = inputValue?.Bar?.Low;
-            currentBar.H = inputValue?.Bar?.High;
-            currentBar.O = inputValue?.Bar?.Open;
-            currentBar.C = inputValue?.Bar?.Close;
+            currentBar.L = (double)inputValue?.Bar?.Low;
+            currentBar.H = (double)inputValue?.Bar?.High;
+            currentBar.O = (double)inputValue?.Bar?.Open;
+            currentBar.C = (double)inputValue?.Bar?.Close;
           }
         }
       }
 
       var domain = new DomainModel
       {
-        IndexDomain = new int[] { Shapes.Count - (count ?? Shapes.Count), Shapes.Count }
+        IndexDomain = [Shapes.Count - (count ?? Shapes.Count), Shapes.Count]
       };
 
       return Render(() => View.Update(domain, Shapes));

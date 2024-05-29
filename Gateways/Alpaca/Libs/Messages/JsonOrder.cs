@@ -54,13 +54,13 @@ public class JsonOrder
   public string AssetClass { get; set; }
 
   [JsonPropertyName("notional")]
-  public double? Notional { get; set; }
+  public decimal? Notional { get; set; }
 
   [JsonPropertyName("qty")]
-  public double? Quantity { get; set; }
+  public decimal? Quantity { get; set; }
 
   [JsonPropertyName("filled_qty")]
-  public double? FilledQuantity { get; set; }
+  public decimal? FilledQuantity { get; set; }
 
   [JsonPropertyName("type")]
   public string OrderType { get; set; }
@@ -75,22 +75,22 @@ public class JsonOrder
   public string TimeInForce { get; set; }
 
   [JsonPropertyName("limit_price")]
-  public double? LimitPrice { get; set; }
+  public decimal? LimitPrice { get; set; }
 
   [JsonPropertyName("stop_price")]
-  public double? StopPrice { get; set; }
+  public decimal? StopPrice { get; set; }
 
   [JsonPropertyName("trail_price")]
-  public double? TrailOffsetInDollars { get; set; }
+  public decimal? TrailOffsetInDollars { get; set; }
 
   [JsonPropertyName("trail_percent")]
-  public double? TrailOffsetInPercent { get; set; }
+  public decimal? TrailOffsetInPercent { get; set; }
 
   [JsonPropertyName("hwm")]
-  public double? HighWaterMark { get; set; }
+  public decimal? HighWaterMark { get; set; }
 
   [JsonPropertyName("filled_avg_price")]
-  public double? AverageFillPrice { get; set; }
+  public decimal? AverageFillPrice { get; set; }
 
   [JsonPropertyName("status")]
   public string OrderStatus { get; set; }

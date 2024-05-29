@@ -13,17 +13,17 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Leverage
     /// </summary>
-    double? Leverage { get; set; }
+    decimal? Leverage { get; set; }
 
     /// <summary>
     /// Balance
     /// </summary>
-    double? Balance { get; set; }
+    decimal? Balance { get; set; }
 
     /// <summary>
     /// State of the account in the beginning
     /// </summary>
-    double? InitialBalance { get; set; }
+    decimal? InitialBalance { get; set; }
 
     /// <summary>
     /// Name
@@ -69,17 +69,17 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Leverage
     /// </summary>
-    public virtual double? Leverage { get; set; }
+    public virtual decimal? Leverage { get; set; }
 
     /// <summary>
     /// Balance
     /// </summary>
-    public virtual double? Balance { get; set; }
+    public virtual decimal? Balance { get; set; }
 
     /// <summary>
     /// State of the account in the beginning
     /// </summary>
-    public virtual double? InitialBalance { get; set; }
+    public virtual decimal? InitialBalance { get; set; }
 
     /// <summary>
     /// Name
@@ -121,9 +121,9 @@ namespace Terminal.Core.Domains
     /// </summary>
     public Account()
     {
-      Balance = 0.0;
-      Leverage = 1.0;
-      InitialBalance = 0.0;
+      Balance = 0;
+      Leverage = 1;
+      InitialBalance = 0;
       Currency = nameof(CurrencyEnum.USD);
 
       Orders = [];

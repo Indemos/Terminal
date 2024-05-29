@@ -22,7 +22,7 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<decimal> Values { get; protected set; } = [];
 
     /// <summary>
     /// Calculate single value

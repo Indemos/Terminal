@@ -97,8 +97,8 @@ namespace Terminal.Tests
     public void ValidateOrdersWithIncorrectExecutionPrice(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
-      double orderPrice,
-      double price,
+      decimal orderPrice,
+      decimal price,
       string error)
     {
       var order = new OrderModel
@@ -133,9 +133,9 @@ namespace Terminal.Tests
     [InlineData(OrderSideEnum.Sell, 15.0, 10.0, 5.0, "LessThanOrEqualValidator", "LessThanOrEqualValidator")]
     public void ValidateOrdersWithIncorrectStopLimitPrice(
       OrderSideEnum orderSide,
-      double? orderPrice,
-      double? activationPrice,
-      double? price,
+      decimal? orderPrice,
+      decimal? activationPrice,
+      decimal? price,
       string activationError,
       string orderError)
     {

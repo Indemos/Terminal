@@ -398,7 +398,7 @@ namespace Simulation
         Next = nextOrder
       };
 
-      if (nextPosition.Order.Transaction.Volume?.IsEqual(0) is false)
+      if (nextPosition.Order.Transaction.Volume is not 0)
       {
         message.Action = ActionEnum.Delete;
         Account.ActivePositions.Add(nextPosition.Order.Transaction.Id, nextPosition);
@@ -516,10 +516,10 @@ namespace Simulation
         return null;
       }
 
-      double.TryParse(props.ElementAtOrDefault(1), out double bid);
-      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
-      double.TryParse(props.ElementAtOrDefault(3), out double ask);
-      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
+      decimal.TryParse(props.ElementAtOrDefault(1), out var bid);
+      decimal.TryParse(props.ElementAtOrDefault(2), out var bidSize);
+      decimal.TryParse(props.ElementAtOrDefault(3), out var ask);
+      decimal.TryParse(props.ElementAtOrDefault(4), out var askSize);
 
       var response = new PointModel
       {
@@ -535,7 +535,7 @@ namespace Simulation
         }
       };
 
-      if (askSize.IsEqual(0))
+      if (askSize is 0)
       {
         response.Last = bid;
       }

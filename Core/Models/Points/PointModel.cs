@@ -11,27 +11,27 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Bid
     /// </summary>
-    public virtual double? Bid { get; set; }
+    public virtual decimal? Bid { get; set; }
 
     /// <summary>
     /// Ask
     /// </summary>
-    public virtual double? Ask { get; set; }
+    public virtual decimal? Ask { get; set; }
 
     /// <summary>
     /// Volume of the bid 
     /// </summary>
-    public virtual double? BidSize { get; set; }
+    public virtual decimal? BidSize { get; set; }
 
     /// <summary>
     /// Volume of the ask
     /// </summary>
-    public virtual double? AskSize { get; set; }
+    public virtual decimal? AskSize { get; set; }
 
     /// <summary>
     /// Last price or value
     /// </summary>
-    public virtual double? Last { get; set; }
+    public virtual decimal? Last { get; set; }
 
     /// <summary>
     /// Time stamp
@@ -100,8 +100,8 @@ namespace Terminal.Core.Models
 
         Ask ??= o.Ask ?? price;
         Bid ??= o.Bid ?? price;
-        AskSize += o.AskSize ?? 0.0;
-        BidSize += o.BidSize ?? 0.0;
+        AskSize += o.AskSize ?? 0;
+        BidSize += o.BidSize ?? 0;
         Bar ??= new BarModel();
         Bar.Close = Last = price;
         Bar.Open = o.Bar?.Open ?? Bar.Open ?? price;

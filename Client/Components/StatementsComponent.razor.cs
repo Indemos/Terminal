@@ -43,16 +43,16 @@ namespace Client.Components
 
         values.Add(new InputData
         {
-          Time = position.Order.Transaction.Time.Value,
-          Value = position.GainLoss.Value,
-          Min = position.GainLossMin.Value,
-          Max = position.GainLossMax.Value,
-          Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
-          Direction = GetDirection(position)
+          //Time = position.Order.Transaction.Time.Value,
+          //Value = position.GainLoss.Value,
+          //Min = position.GainLossMin.Value,
+          //Max = position.GainLossMax.Value,
+          //Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
+          //Direction = GetDirection(position)
         });
       }
 
-      Stats = new Score { Items = values, Balance = balance }.Calculate();
+      //Stats = new Score { Items = values, Balance = balance }.Calculate();
 
       return InvokeAsync(StateHasChanged);
     }

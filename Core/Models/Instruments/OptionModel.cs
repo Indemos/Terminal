@@ -19,32 +19,32 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Strike price
     /// </summary>
-    public virtual double? Strike { get; set; }
+    public virtual decimal? Strike { get; set; }
 
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Leverage { get; set; }
+    public virtual decimal? Leverage { get; set; }
 
     /// <summary>
     /// Open interest
     /// </summary>
-    public virtual double? OpenInterest { get; set; }
+    public virtual decimal? OpenInterest { get; set; }
 
     /// <summary>
     /// Intrinsic value
     /// </summary>
-    public virtual double? IntrinsicValue { get; set; }
+    public virtual decimal? IntrinsicValue { get; set; }
 
     /// <summary>
     /// Volume
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public virtual decimal? Volume { get; set; }
 
     /// <summary>
     /// Volatility
     /// </summary>
-    public virtual double? Volatility { get; set; }
+    public virtual decimal? Volatility { get; set; }
 
     /// <summary>
     /// CALL or PUT

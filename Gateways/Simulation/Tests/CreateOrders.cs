@@ -32,20 +32,20 @@ namespace Terminal.Tests
     }
 
     [Theory]
-    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Market, 5.0, null, null, 1, 0, 0, 1)]
-    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Market, 5.0, null, null, 1, 0, 0, 1)]
-    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Stop, 5.0, null, 15.0, 1, 1, 0, 0)]
-    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Stop, 15.0, null, 5.0, 1, 1, 0, 0)]
-    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Limit, 15.0, null, 5.0, 1, 1, 0, 0)]
-    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 5.0, null, 15.0, 1, 1, 0, 0)]
-    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 5.0, 10.0, 15.0, 1, 1, 0, 0)]
-    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Market, 5, null, null, 1, 0, 0, 1)]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Market, 5, null, null, 1, 0, 0, 1)]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Stop, 5, null, 15, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Stop, 15, null, 5, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.Limit, 15, null, 5, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.Limit, 5, null, 15, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Buy, OrderTypeEnum.StopLimit, 5, 10, 15, 1, 1, 0, 0)]
+    [InlineData(OrderSideEnum.Sell, OrderTypeEnum.StopLimit, 15, 10, 5, 1, 1, 0, 0)]
     public void CreateBasicOrders(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
-      double? price,
-      double? activationPrice,
-      double? orderPrice,
+      decimal? price,
+      decimal? activationPrice,
+      decimal? orderPrice,
       int orders,
       int activeOrders,
       int positions,

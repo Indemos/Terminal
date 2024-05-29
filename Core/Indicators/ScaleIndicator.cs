@@ -24,27 +24,27 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Bottom border of the normalized series
     /// </summary>
-    public double Min { get; set; }
+    public decimal Min { get; set; }
 
     /// <summary>
     /// Top border of the normalized series
     /// </summary>
-    public double Max { get; set; }
+    public decimal Max { get; set; }
 
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<decimal> Values { get; protected set; } = new List<decimal>();
 
     /// <summary>
     /// Preserve last calculated min value
     /// </summary>
-    protected double? _min = null;
+    protected decimal? _min = null;
 
     /// <summary>
     /// Preserve last calculated max value
     /// </summary>
-    protected double? _max = null;
+    protected decimal? _max = null;
 
     /// <summary>
     /// Calculate indicator value
@@ -60,13 +60,13 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
-      var value = currentPoint.Last ?? 0.0;
+      var value = currentPoint.Last ?? 0;
       var comService = InstanceService<AverageService>.Instance;
 
       _min = _min is null ? value : Math.Min(_min.Value, value);
       _max = _max is null ? value : Math.Max(_max.Value, value);
 
-      if (_min.Value.IsEqual(_max.Value) is false)
+      if (Equals(_min, _max) is false)
       {
         value = Min + (value - _min.Value) * (Max - Min) / (_max.Value - _min.Value);
       }

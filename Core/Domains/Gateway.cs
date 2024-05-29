@@ -196,7 +196,7 @@ namespace Terminal.Core.Domains
     /// Define open price based on order
     /// </summary>
     /// <param name="nextOrder"></param>
-    protected virtual double? GetOpenPrice(OrderModel nextOrder)
+    protected virtual decimal? GetOpenPrice(OrderModel nextOrder)
     {
       var pointModel = nextOrder?.Transaction?.Instrument?.Points?.LastOrDefault();
 

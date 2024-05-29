@@ -24,7 +24,7 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<decimal> Values { get; protected set; } = new List<decimal>();
 
     /// <summary>
     /// Calculate single value
@@ -40,8 +40,8 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
-      var ups = new List<double>(Interval);
-      var downs = new List<double>(Interval);
+      var ups = new List<decimal>(Interval);
+      var downs = new List<decimal>(Interval);
       var comService = InstanceService<AverageService>.Instance;
 
       for (var i = 1; i <= Interval; i++)
@@ -51,15 +51,15 @@ namespace Terminal.Core.Indicators
 
         if (nextPrice is not null && previousPrice is not null)
         {
-          ups.Add(Math.Max(nextPrice.Last.Value - previousPrice.Last.Value, 0.0));
-          downs.Add(Math.Max(previousPrice.Last.Value - nextPrice.Last.Value, 0.0));
+          ups.Add(Math.Max(nextPrice.Last.Value - previousPrice.Last.Value, 0));
+          downs.Add(Math.Max(previousPrice.Last.Value - nextPrice.Last.Value, 0));
         }
       }
 
       var averageUp = comService.SimpleAverage(ups, ups.Count - 1, Interval);
       var averageDown = comService.SimpleAverage(downs, downs.Count - 1, Interval);
-      var average = averageDown.IsEqual(0) ? 1.0 : averageUp / averageDown;
-      var value = 100.0 - 100.0 / (1.0 + average);
+      var average = averageDown is 0 ? 1 : averageUp / averageDown;
+      var value = 100 - 100 / (1 + average);
 
       switch (Values.Count < collection.Count)
       {

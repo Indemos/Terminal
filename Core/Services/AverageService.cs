@@ -12,9 +12,9 @@ namespace Terminal.Core.Services
     /// <param name="index"></param>
     /// <param name="interval"></param>
     /// <returns></returns>
-    public virtual double SimpleAverage(IList<double> collection, int index, int interval)
+    public virtual decimal SimpleAverage(IList<decimal> collection, int index, int interval)
     {
-      var v = 0.0;
+      var v = 0m;
 
       if (interval > 0 && index >= interval - 1)
       {
@@ -37,13 +37,13 @@ namespace Terminal.Core.Services
     /// <param name="interval"></param>
     /// <param name="previous"></param>
     /// <returns></returns>
-    public virtual double ExponentialAverage(IList<double> collection, int index, int interval, double previous)
+    public virtual decimal ExponentialAverage(IList<decimal> collection, int index, int interval, decimal previous)
     {
-      var v = 0.0;
+      var v = 0m;
 
       if (interval > 0)
       {
-        var pr = 2.0 / (interval + 1.0);
+        var pr = 2 / (interval + 1);
         v = collection.ElementAt(index) * pr + previous * (1 - pr);
       }
 
@@ -58,9 +58,9 @@ namespace Terminal.Core.Services
     /// <param name="interval"></param>
     /// <param name="previous"></param>
     /// <returns></returns>
-    public virtual double SmoothAverage(IList<double> collection, int index, int interval, double previous)
+    public virtual decimal SmoothAverage(IList<decimal> collection, int index, int interval, decimal previous)
     {
-      var v = 0.0;
+      var v = 0m;
 
       if (interval > 0)
       {
@@ -90,11 +90,11 @@ namespace Terminal.Core.Services
     /// <param name="index"></param>
     /// <param name="interval"></param>
     /// <returns></returns>
-    public virtual double LinearWeightAverage(IList<double> collection, int index, int interval)
+    public virtual decimal LinearWeightAverage(IList<decimal> collection, int index, int interval)
     {
-      var v = 0.0;
-      var sum = 0.0;
-      var wsum = 0.0;
+      var v = 0m;
+      var sum = 0m;
+      var wsum = 0m;
 
       if (interval > 0 && index >= interval - 1)
       {

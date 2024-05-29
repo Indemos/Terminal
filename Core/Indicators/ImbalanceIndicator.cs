@@ -27,7 +27,7 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
-      var value = 0.0;
+      var value = 0m;
       var seriesItem = currentPoint.Series[Name] =
         currentPoint.Series.Get(Name) ??
         new ImbalanceIndicator().Point;

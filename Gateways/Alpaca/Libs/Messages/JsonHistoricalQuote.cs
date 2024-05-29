@@ -13,19 +13,19 @@ public class JsonHistoricalQuote
   public string AskExchange { get; set; }
 
   [JsonPropertyName("ap")]
-  public double? AskPrice { get; set; }
+  public decimal? AskPrice { get; set; }
 
   [JsonPropertyName("as")]
-  public double? AskSize { get; set; }
+  public decimal? AskSize { get; set; }
 
   [JsonPropertyName("bx")]
   public string BidExchange { get; set; }
 
   [JsonPropertyName("bp")]
-  public double? BidPrice { get; set; }
+  public decimal? BidPrice { get; set; }
 
   [JsonPropertyName("bs")]
-  public double? BidSize { get; set; }
+  public decimal? BidSize { get; set; }
 
   [JsonPropertyName("c")]
   public List<string> ConditionsList { get; set; } = [];

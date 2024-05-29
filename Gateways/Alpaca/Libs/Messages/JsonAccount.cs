@@ -21,7 +21,7 @@ public class JsonAccount
   public string Currency { get; set; }
 
   [JsonPropertyName("cash")]
-  public double? TradableCash { get; set; }
+  public decimal? TradableCash { get; set; }
 
   [JsonPropertyName("pattern_day_trader")]
   public bool IsDayPatternTrader { get; set; }
@@ -42,58 +42,58 @@ public class JsonAccount
   public bool ShortingEnabled { get; set; }
 
   [JsonPropertyName("multiplier")]
-  public double? Multiplier { get; set; }
+  public decimal? Multiplier { get; set; }
 
   [JsonPropertyName("buying_power")]
-  public double? BuyingPower { get; set; }
+  public decimal? BuyingPower { get; set; }
 
   [JsonPropertyName("daytrading_buying_power")]
-  public double? DayTradingBuyingPower { get; set; }
+  public decimal? DayTradingBuyingPower { get; set; }
 
   [JsonPropertyName("non_maginable_buying_power")]
-  public double? NonMarginableBuyingPower { get; set; }
+  public decimal? NonMarginableBuyingPower { get; set; }
 
   [JsonPropertyName("regt_buying_power")]
-  public double? RegulationBuyingPower { get; set; }
+  public decimal? RegulationBuyingPower { get; set; }
 
   [JsonPropertyName("long_market_value")]
-  public double? LongMarketValue { get; set; }
+  public decimal? LongMarketValue { get; set; }
 
   [JsonPropertyName("short_market_value")]
-  public double? ShortMarketValue { get; set; }
+  public decimal? ShortMarketValue { get; set; }
 
   [JsonPropertyName("equity")]
-  public double? Equity { get; set; }
+  public decimal? Equity { get; set; }
 
   [JsonPropertyName("last_equity")]
-  public double? LastEquity { get; set; }
+  public decimal? LastEquity { get; set; }
 
   [JsonPropertyName("initial_margin")]
-  public double? InitialMargin { get; set; }
+  public decimal? InitialMargin { get; set; }
 
   [JsonPropertyName("maintenance_margin")]
-  public double? MaintenanceMargin { get; set; }
+  public decimal? MaintenanceMargin { get; set; }
 
   [JsonPropertyName("last_maintenance_margin")]
-  public double? LastMaintenanceMargin { get; set; }
+  public decimal? LastMaintenanceMargin { get; set; }
 
   [JsonPropertyName("daytrade_count")]
-  public double? DayTradeCount { get; set; }
+  public decimal? DayTradeCount { get; set; }
 
   [JsonPropertyName("sma")]
-  public double? Sma { get; set; }
+  public decimal? Sma { get; set; }
 
   [JsonPropertyName("created_at")]
   public DateTime? CreatedAtUtc { get; set; }
 
   [JsonPropertyName("accrued_fees")]
-  public double? AccruedFees { get; set; }
+  public decimal? AccruedFees { get; set; }
 
   [JsonPropertyName("pending_transfer_in")]
-  public double? PendingTransferIn { get; set; }
+  public decimal? PendingTransferIn { get; set; }
 
   [JsonPropertyName("pending_transfer_out")]
-  public double? PendingTransferOut { get; set; }
+  public decimal? PendingTransferOut { get; set; }
 
   [JsonPropertyName("options_trading_level")]
   public string OptionsTradingLevel { get; set; }
@@ -102,5 +102,5 @@ public class JsonAccount
   public string OptionsApprovedLevel { get; set; }
 
   [JsonPropertyName("options_buying_power")]
-  public double? OptionsBuyingPower { get; set; }
+  public decimal? OptionsBuyingPower { get; set; }
 }

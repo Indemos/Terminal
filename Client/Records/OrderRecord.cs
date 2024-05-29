@@ -9,8 +9,8 @@ namespace Client.Records
   public struct OrderRecord
   {
     public string Name { get; set; }
-    public double Size { get; set; }
-    public double Price { get; set; }
+    public decimal Size { get; set; }
+    public decimal Price { get; set; }
     public DateTime? Time { get; set; }
     public OrderSideEnum? Side { get; set; }
   }

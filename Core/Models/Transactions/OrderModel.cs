@@ -9,12 +9,12 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Price the makes order active, e.g. limit price for stop limit order
     /// </summary>
-    public virtual double? ActivationPrice { get; set; }
+    public virtual decimal? ActivationPrice { get; set; }
 
     /// <summary>
     /// Desired price for the order to fill, e.g. stop price for stop order and limit price for limit order
     /// </summary>
-    public virtual double? Price { get; set; }
+    public virtual decimal? Price { get; set; }
 
     /// <summary>
     /// Side
