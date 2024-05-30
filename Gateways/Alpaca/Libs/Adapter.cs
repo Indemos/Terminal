@@ -17,6 +17,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Alpaca
 {
@@ -223,7 +224,7 @@ namespace Alpaca
       var positions = await SendData<JsonPosition[]>("/v2/positions");
       var orders = await SendData<JsonOrder[]>("/v2/orders");
 
-      if (account.Data is not null)
+      try
       {
         Account.Balance = account.Data.Equity;
         Account.Descriptor = account.Data.AccountNumber;
@@ -232,6 +233,10 @@ namespace Alpaca
 
         Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
         Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
+      }
+      catch (Exception e)
+      {
+        InstanceService<MessageService>.Instance.OnMessage($"{e}");
       }
     }
 
@@ -282,8 +287,6 @@ namespace Alpaca
               ?.AsArray()
               ?.FirstOrDefault();
 
-            Console.WriteLine(content);
-
             switch ($"{message?["T"]}".ToUpper())
             {
               case "Q": ProcessPoint(content); break;
@@ -326,7 +329,7 @@ namespace Alpaca
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage(e.Message);
       }
     }
 
@@ -344,7 +347,7 @@ namespace Alpaca
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage(e.Message);
       }
     }
 

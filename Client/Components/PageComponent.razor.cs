@@ -1,9 +1,11 @@
+using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
+using Terminal.Core.Services;
 
 namespace Client.Components
 {
@@ -39,7 +41,7 @@ namespace Client.Components
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage($"{e}");
       }
     }
 
@@ -57,7 +59,7 @@ namespace Client.Components
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage($"{e}");
       }
     }
 
@@ -70,7 +72,7 @@ namespace Client.Components
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage($"{e}");
       }
     }
 
@@ -83,7 +85,7 @@ namespace Client.Components
       }
       catch (Exception e)
       {
-        Console.WriteLine(e);
+        InstanceService<MessageService>.Instance.OnMessage($"{e}");
       }
     }
 
@@ -91,7 +93,7 @@ namespace Client.Components
     {
       if (Adapter?.Account is not null)
       {
-        StatementsView.UpdateItems(new[] { Adapter.Account });
+        StatementsView.UpdateItems([Adapter.Account]);
       }
     }
   }

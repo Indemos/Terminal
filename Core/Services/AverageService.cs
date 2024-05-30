@@ -14,19 +14,19 @@ namespace Terminal.Core.Services
     /// <returns></returns>
     public virtual double SimpleAverage(IList<double> collection, int index, int interval)
     {
-      var v = 0.0;
+      var response = 0.0;
 
       if (interval > 0 && index >= interval - 1)
       {
         for (var i = 0; i < interval; i++)
         {
-          v += collection.ElementAt(index - i);
+          response += collection.ElementAt(index - i);
         }
 
-        v /= interval;
+        response /= interval;
       }
 
-      return v;
+      return response;
     }
 
     /// <summary>
@@ -39,15 +39,15 @@ namespace Terminal.Core.Services
     /// <returns></returns>
     public virtual double ExponentialAverage(IList<double> collection, int index, int interval, double previous)
     {
-      var v = 0.0;
+      var response = 0.0;
 
       if (interval > 0)
       {
         var pr = 2.0 / (interval + 1.0);
-        v = collection.ElementAt(index) * pr + previous * (1 - pr);
+        response = collection.ElementAt(index) * pr + previous * (1 - pr);
       }
 
-      return v;
+      return response;
     }
 
     /// <summary>
@@ -60,7 +60,7 @@ namespace Terminal.Core.Services
     /// <returns></returns>
     public virtual double SmoothAverage(IList<double> collection, int index, int interval, double previous)
     {
-      var v = 0.0;
+      var response = 0.0;
 
       if (interval > 0)
       {
@@ -68,19 +68,19 @@ namespace Terminal.Core.Services
         {
           for (var i = 0; i < interval; i++)
           {
-            v += collection.ElementAt(index - i);
+            response += collection.ElementAt(index - i);
           }
 
-          v /= interval;
+          response /= interval;
         }
 
         if (index >= interval)
         {
-          v = (previous * (interval - 1) + collection.ElementAt(index)) / interval;
+          response = (previous * (interval - 1) + collection.ElementAt(index)) / interval;
         }
       }
 
-      return v;
+      return response;
     }
 
     /// <summary>
@@ -92,9 +92,9 @@ namespace Terminal.Core.Services
     /// <returns></returns>
     public virtual double LinearWeightAverage(IList<double> collection, int index, int interval)
     {
-      var v = 0.0;
       var sum = 0.0;
       var wsum = 0.0;
+      var response = 0.0;
 
       if (interval > 0 && index >= interval - 1)
       {
@@ -104,10 +104,10 @@ namespace Terminal.Core.Services
           sum += collection.ElementAt(index - i + 1) * (interval - i + 1);
         }
 
-        v = sum / wsum;
+        response = sum / wsum;
       }
 
-      return v;
+      return response;
     }
   }
 }

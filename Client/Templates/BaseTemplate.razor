@@ -1,3 +1,6 @@
+@using Distribution.Services
+@using Terminal.Core.Services
+@inject ISnackbar Messenger
 @inherits LayoutComponentBase
 
 <PageTitle>Terminal</PageTitle>
@@ -20,5 +23,7 @@
     {
       StateHasChanged();
     }
+
+    InstanceService<MessageService>.Instance.OnMessage += message => Messenger.Add(message);
   }
 }

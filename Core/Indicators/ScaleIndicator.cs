@@ -66,7 +66,7 @@ namespace Terminal.Core.Indicators
       _min = _min is null ? value : Math.Min(_min.Value, value);
       _max = _max is null ? value : Math.Max(_max.Value, value);
 
-      if (_min.Value.IsEqual(_max.Value) is false)
+      if (_min.Value.Is(_max.Value) is false)
       {
         value = Min + (value - _min.Value) * (Max - Min) / (_max.Value - _min.Value);
       }

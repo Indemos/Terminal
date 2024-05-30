@@ -72,7 +72,7 @@ namespace Terminal.Core.Indicators
       var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MovingAverageIndicator().Point;
       var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
-      Point.Last = series.Last = series.Bar.Close = average.IsEqual(0) ? value : average;
+      Point.Last = series.Last = series.Bar.Close = average.Is(0) ? value : average;
 
       return this;
     }

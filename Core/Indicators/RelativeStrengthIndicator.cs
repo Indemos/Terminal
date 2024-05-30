@@ -58,7 +58,7 @@ namespace Terminal.Core.Indicators
 
       var averageUp = comService.SimpleAverage(ups, ups.Count - 1, Interval);
       var averageDown = comService.SimpleAverage(downs, downs.Count - 1, Interval);
-      var average = averageDown.IsEqual(0) ? 1.0 : averageUp / averageDown;
+      var average = averageDown.Is(0) ? 1.0 : averageUp / averageDown;
       var value = 100.0 - 100.0 / (1.0 + average);
 
       switch (Values.Count < collection.Count)

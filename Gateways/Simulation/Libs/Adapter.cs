@@ -398,7 +398,7 @@ namespace Simulation
         Next = nextOrder
       };
 
-      if (nextPosition.Order.Transaction.Volume?.IsEqual(0) is false)
+      if (nextPosition.Order.Transaction.Volume?.Is(0) is false)
       {
         message.Action = ActionEnum.Delete;
         Account.ActivePositions.Add(nextPosition.Order.Transaction.Id, nextPosition);
@@ -535,7 +535,7 @@ namespace Simulation
         }
       };
 
-      if (askSize.IsEqual(0))
+      if (askSize.Is(0))
       {
         response.Last = bid;
       }
