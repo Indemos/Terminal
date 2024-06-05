@@ -23,7 +23,7 @@ namespace Terminal.Tests
     {
       var order = new OrderModel();
 
-      base.SendOrders(order);
+      base.CreateOrders(order);
 
       Assert.Empty(Account.Orders);
       Assert.Empty(Account.Positions);
@@ -71,7 +71,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.SendOrders(order);
+      base.CreateOrders(order);
 
       Assert.Equal(orders, Account.Orders.Count);
       Assert.Equal(activeOrders, Account.ActiveOrders.Count);

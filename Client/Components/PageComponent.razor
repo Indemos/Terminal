@@ -2,13 +2,13 @@
 
   <MudPaper Class="w-100 d-flex mb-6 py-4">
 
-    <MudIconButton Style="@(IsConnection ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PlayCircle" Class="ml-4" @onclick="OnConnect"></MudIconButton>
-    <MudIconButton Style="@(IsConnection ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" Class="ml-4" @onclick="OnDisconnect"></MudIconButton>
+    <MudIconButton Style="@(IsConnection ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PlayCircle" Class="ml-4" @onclick="Connect"></MudIconButton>
+    <MudIconButton Style="@(IsConnection ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" Class="ml-4" @onclick="Disconnect"></MudIconButton>
 
     @if (IsConnection)
     {
-      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Loop" Class="ml-4" @onclick="OnSubscribe"></MudIconButton>
-      <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PauseCircle" Class="ml-4" @onclick="OnUnsubscribe"></MudIconButton>
+      <MudIconButton Style="@(IsSubscription ? "display: none" : "display: block")" Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Loop" Class="ml-4" @onclick="Subscribe"></MudIconButton>
+      <MudIconButton Style="@(IsSubscription ? "display: block" : "display: none")" Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PauseCircle" Class="ml-4" @onclick="Unsubscribe"></MudIconButton>
     }
 
   </MudPaper>
@@ -81,7 +81,7 @@
           <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
           <MudText>Statements</MudText>
           <MudText>
-            <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OnOpenStatements" class="updater ml-4">Update</a>
+            <a href="#" @onclick:stopPropagation="true" @onclick:preventDefault="true" @onclick="OpenState" class="updater ml-4">Update</a>
           </MudText>
         </div>
       </TitleContent>

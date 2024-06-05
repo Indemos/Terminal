@@ -116,8 +116,8 @@ namespace Terminal.Tests
         Transaction = new() { Volume = 1, Instrument = instrumentY }
       };
 
-      base.SendOrders(orderX);
-      base.SendOrders(orderY);
+      base.CreateOrders(orderX);
+      base.CreateOrders(orderY);
 
       // Price
 

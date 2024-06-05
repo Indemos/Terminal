@@ -33,60 +33,72 @@ namespace Client.Pages
     {
       if (setup)
       {
-        var indUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-        var indDown = new ComponentModel { Color = SKColors.OrangeRed };
-        var indAreas = new GroupShape();
-        var indCharts = new GroupShape();
-
-        indCharts.Groups["Ups"] = new BarShape { Component = indUp };
-        indCharts.Groups["Downs"] = new BarShape { Component = indDown };
-        indAreas.Groups["Prices"] = indCharts;
-
-        await View.ChartsView.Create(indAreas);
-
-        var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
-        var pnlBalance = new ComponentModel { Color = SKColors.Black };
-        var pnlAreas = new GroupShape();
-        var pnlCharts = new GroupShape();
-
-        pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
-        pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
-        pnlAreas.Groups["Performance"] = pnlCharts;
-
-        await View.ReportsView.Create(pnlAreas);
-
-        View.Setup = () =>
+        await CreateViews();
+        View.OnPreConnect = CreateAccounts;
+        View.OnPostConnect = () =>
         {
-          Account = new Account
-          {
-            Descriptor = "Demo",
-            Instruments = new Dictionary<string, Instrument>
-            {
-              [_asset] = new Instrument { Name = _asset }
-            }
-          };
-
-          View.Adapter = new Adapter
-          {
-            Account = Account,
-            ConsumerKey = Configuration["Alpaca:Token"],
-            ConsumerSecret = Configuration["Alpaca:Secret"],
-            StreamUri = "wss://stream.data.alpaca.markets/v2/test"
-          };
-
-          Performance = new PerformanceIndicator { Name = "Balance" };
-
-          Account
-            .Instruments
-            .Values
-            .ForEach(o => o.Points.CollectionChanged += (_, e) => e
-              .NewItems
-              .OfType<PointModel>()
-              .ForEach(async o => await OnData(o)));
+          View.DealsView.UpdateItems(Account.Positions);
+          View.OrdersView.UpdateItems(Account.ActiveOrders);
+          View.PositionsView.UpdateItems(Account.ActivePositions);
         };
       }
 
       await base.OnAfterRenderAsync(setup);
+    }
+
+    protected virtual async Task CreateViews()
+    {
+      var indUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+      var indDown = new ComponentModel { Color = SKColors.OrangeRed };
+      var indAreas = new Shape();
+      var indCharts = new Shape();
+
+      indCharts.Groups["Ups"] = new BarShape { Component = indUp };
+      indCharts.Groups["Downs"] = new BarShape { Component = indDown };
+      indAreas.Groups["Prices"] = indCharts;
+
+      await View.ChartsView.Create(indAreas);
+
+      var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
+      var pnlBalance = new ComponentModel { Color = SKColors.Black };
+      var pnlAreas = new Shape();
+      var pnlCharts = new Shape();
+
+      pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
+      pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
+      pnlAreas.Groups["Performance"] = pnlCharts;
+
+      await View.ReportsView.Create(pnlAreas);
+    }
+
+    protected virtual void CreateAccounts()
+    {
+      Account = new Account
+      {
+        Descriptor = "Demo",
+        Instruments = new Dictionary<string, Instrument>
+        {
+          [_asset] = new Instrument { Name = _asset }
+        }
+      };
+
+      View.Adapter = new Adapter
+      {
+        Account = Account,
+        ConsumerKey = Configuration["Alpaca:Token"],
+        ConsumerSecret = Configuration["Alpaca:Secret"],
+        StreamUri = "wss://stream.data.alpaca.markets/v2/test"
+      };
+
+      Performance = new PerformanceIndicator { Name = "Balance" };
+
+      Account
+        .Instruments
+        .Values
+        .ForEach(o => o.Points.CollectionChanged += (_, e) => e
+          .NewItems
+          .OfType<PointModel>()
+          .ForEach(async o => await OnData(o)));
     }
 
     private async Task OnData(PointModel point)
@@ -138,8 +150,8 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter.SendOrders(orderBuy);
-      View.Adapter.SendOrders(orderSell);
+      View.Adapter.CreateOrders(orderBuy);
+      View.Adapter.CreateOrders(orderSell);
 
       var account = View.Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
@@ -171,7 +183,7 @@ namespace Client.Pages
           }
         };
 
-        View.Adapter.SendOrders(order);
+        View.Adapter.CreateOrders(order);
 
         //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
       }

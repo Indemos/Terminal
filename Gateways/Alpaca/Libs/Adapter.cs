@@ -54,26 +54,20 @@ namespace Alpaca
     public virtual string ConsumerSecret { get; set; }
 
     /// <summary>
-    /// Secret
+    /// Data source
     /// </summary>
     public virtual string DataUri { get; set; }
 
     /// <summary>
-    /// Secret
+    /// Streaming source
     /// </summary>
     public virtual string StreamUri { get; set; }
-
-    /// <summary>
-    /// Environment setter
-    /// </summary>
-    public virtual EnvironmentEnum Environment { get; set; }
 
     /// <summary>
     /// Constructor
     /// </summary>
     public Adapter()
     {
-      Environment = EnvironmentEnum.Live;
       StreamUri = "wss://stream.data.alpaca.markets/v2/iex";
       DataUri = "https://api.alpaca.markets";
 
@@ -94,7 +88,7 @@ namespace Alpaca
       _sender = new Service();
       _streamer = await GetConnection(ws, scheduler);
 
-      await SendStream(_streamer, new JsonAuthentication
+      await SendStream(_streamer, new AuthenticationMessage
       {
         Action = "auth",
         SecretKey = ConsumerSecret,
@@ -118,7 +112,7 @@ namespace Alpaca
     public override async Task<IList<ErrorModel>> Subscribe(string name)
     {
       await Unsubscribe(name);
-      await SendStream(_streamer, new JsonSubscriptionUpdate
+      await SendStream(_streamer, new SubscriptionUpdateMessage
       {
         Action = "subscribe",
         Trades = [name],
@@ -133,10 +127,10 @@ namespace Alpaca
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      _connections?.ForEach(o => o.Dispose());
+      _connections?.ForEach(o => o?.Dispose());
       _connections?.Clear();
 
-      return Task.FromResult(null as IList<ErrorModel>);
+      return Task.FromResult<IList<ErrorModel>>(null);
     }
 
     /// <summary>
@@ -144,7 +138,7 @@ namespace Alpaca
     /// </summary>
     public override async Task<IList<ErrorModel>> Unsubscribe(string name)
     {
-      await SendStream(_streamer, new JsonSubscriptionUpdate
+      await SendStream(_streamer, new SubscriptionUpdateMessage
       {
         Action = "unsubscribe",
         Trades = [name],
@@ -158,20 +152,6 @@ namespace Alpaca
     }
 
     /// <summary>
-    /// Get quote
-    /// </summary>
-    /// <param name="message"></param>
-    public override Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message)
-    {
-      var response = new ResponseItemModel<PointModel>
-      {
-        Data = Account.Instruments[message.Name].Points.LastOrDefault()
-      };
-
-      return Task.FromResult(response);
-    }
-
-    /// <summary>
     /// Get option chains
     /// </summary>
     /// <param name="message"></param>
@@ -180,6 +160,11 @@ namespace Alpaca
       throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Quotes
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
     public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message)
     {
       var response = new ResponseItemModel<IList<PointModel>>
@@ -190,25 +175,35 @@ namespace Alpaca
       return Task.FromResult(response);
     }
 
-    public override async Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders)
+    /// <summary>
+    /// Send orders
+    /// </summary>
+    /// <param name="orders"></param>
+    /// <returns></returns>
+    public override async Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
     {
       var response = new ResponseMapModel<OrderModel>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await SendOrder(order));
+        response.Items.Add(await CreateOrder(order));
       }
 
       return response;
     }
 
-    public override async Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders)
+    /// <summary>
+    /// Cancel orders
+    /// </summary>
+    /// <param name="orders"></param>
+    /// <returns></returns>
+    public override async Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
     {
       var response = new ResponseMapModel<OrderModel>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await CancelOrder(order));
+        response.Items.Add(await DeleteOrder(order));
       }
 
       return response;
@@ -218,11 +213,11 @@ namespace Alpaca
     /// Sync open balance, order, and positions 
     /// </summary>
     /// <returns></returns>
-    public async Task GetAccountData()
+    protected async Task GetAccountData()
     {
-      var account = await SendData<JsonAccount>("/v2/account");
-      var positions = await SendData<JsonPosition[]>("/v2/positions");
-      var orders = await SendData<JsonOrder[]>("/v2/orders");
+      var account = await SendData<AccountMessage>("/v2/account");
+      var positions = await SendData<PositionMessage[]>("/v2/positions");
+      var orders = await SendData<OrderMessage[]>("/v2/orders");
 
       try
       {
@@ -308,7 +303,7 @@ namespace Alpaca
       try
       {
         var streamPoint = JsonSerializer
-          .Deserialize<JsonHistoricalQuote[]>(content, _sender.Options)
+          .Deserialize<HistoricalQuoteMessage[]>(content, _sender.Options)
           .FirstOrDefault();
 
         var instrument = Account.Instruments.Get(streamPoint.Symbol) ?? new Instrument();
@@ -342,7 +337,7 @@ namespace Alpaca
       try
       {
         var order = JsonSerializer
-          .Deserialize<JsonHistoricalTrade[]>(content, _sender.Options)
+          .Deserialize<HistoricalTradeMessage[]>(content, _sender.Options)
           .FirstOrDefault();
       }
       catch (Exception e)
@@ -357,14 +352,15 @@ namespace Alpaca
     /// <typeparam name="T"></typeparam>
     /// <param name="source"></param>
     /// <param name="verb"></param>
-    /// <param name="inputs"></param>
+    /// <param name="query"></param>
     /// <returns></returns>
     protected async Task<Distribution.Stream.Models.ResponseModel<T>> SendData<T>(
       string source,
       HttpMethod verb = null,
-      Hashtable inputs = null)
+      Hashtable query = null,
+      object content = null)
     {
-      inputs ??= [];
+      query ??= [];
       verb ??= HttpMethod.Get;
 
       var uri = new UriBuilder(DataUri)
@@ -379,19 +375,17 @@ namespace Alpaca
 
       switch (true)
       {
-        case true when Equals(verb, HttpMethod.Get): uri.Query = inputs.ToQuery(); break;
+        case true when Equals(verb, HttpMethod.Get): uri.Query = query.ToQuery(); break;
         case true when Equals(verb, HttpMethod.Put):
         case true when Equals(verb, HttpMethod.Post):
-        case true when Equals(verb, HttpMethod.Patch): message.Content = new StringContent(JsonSerializer.Serialize(inputs)); break;
+        case true when Equals(verb, HttpMethod.Patch): message.Content = new StringContent(JsonSerializer.Serialize(content)); break;
       }
 
       message.RequestUri = uri.Uri;
       message.Headers.Add("APCA-API-KEY-ID", ConsumerKey);
       message.Headers.Add("APCA-API-SECRET-KEY", ConsumerSecret);
 
-      var service = InstanceService<Service>.Instance;
-
-      return await service.Send<T>(message, service.Options);
+      return await _sender.Send<T>(message, _sender.Options);
     }
 
     /// <summary>
@@ -399,14 +393,14 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected async Task<ResponseItemModel<OrderModel>> SendOrder(OrderModel order)
+    protected async Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
     {
       var inResponse = new ResponseItemModel<OrderModel>();
 
       try
       {
         var exOrder = GetExternalOrder(order);
-        var exResponse = await SendData<JsonOrder>("/v2/orders", HttpMethod.Post);
+        var exResponse = await SendData<OrderMessage>("/v2/orders", HttpMethod.Post, null, exOrder);
 
         inResponse.Data = order;
         inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
@@ -433,13 +427,13 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected async Task<ResponseItemModel<OrderModel>> CancelOrder(OrderModel order)
+    protected async Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
     {
       var inResponse = new ResponseItemModel<OrderModel>();
 
       try
       {
-        var exResponse = await SendData<JsonOrder>($"/v2/orders/{order.Transaction.Id}", HttpMethod.Delete);
+        var exResponse = await SendData<OrderMessage>($"/v2/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
         inResponse.Data = order;
         inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
@@ -466,10 +460,10 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected JsonNewOrder GetExternalOrder(OrderModel order)
+    protected OrderCreationMessage GetExternalOrder(OrderModel order)
     {
       var action = order.Transaction;
-      var message = new JsonNewOrder
+      var message = new OrderCreationMessage
       {
         Quantity = action.Volume,
         Symbol = action.Instrument.Name,
@@ -524,8 +518,8 @@ namespace Alpaca
         case OrderTimeSpanEnum.Fok: return "fok";
         case OrderTimeSpanEnum.Gtc: return "gtc";
         case OrderTimeSpanEnum.Ioc: return "ioc";
-        case OrderTimeSpanEnum.Omo: return "opg";
-        case OrderTimeSpanEnum.Omc: return "cls";
+        case OrderTimeSpanEnum.Am: return "opg";
+        case OrderTimeSpanEnum.Pm: return "cls";
       }
 
       return null;
@@ -537,7 +531,7 @@ namespace Alpaca
     /// <param name="order"></param>
     /// <param name="direction"></param>
     /// <returns></returns>
-    protected JsonNewOrderAdvancedAttributes GetExternalBracket(OrderModel order, double direction)
+    protected OrderAdvancedAttributesMessage GetExternalBracket(OrderModel order, double direction)
     {
       var nextOrder = order
         .Orders
@@ -545,7 +539,7 @@ namespace Alpaca
 
       if (nextOrder is not null)
       {
-        return new JsonNewOrderAdvancedAttributes { StopPrice = nextOrder.Price };
+        return new OrderAdvancedAttributesMessage { StopPrice = nextOrder.Price };
       }
 
       return null;
@@ -556,7 +550,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected OrderModel GetInternalOrder(JsonOrder order)
+    protected OrderModel GetInternalOrder(OrderMessage order)
     {
       var instrument = new Instrument
       {
@@ -609,7 +603,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    protected PositionModel GetInternalPosition(JsonPosition position)
+    protected PositionModel GetInternalPosition(PositionMessage position)
     {
       var instrument = new Instrument
       {
@@ -724,8 +718,8 @@ namespace Alpaca
         case "fok": return OrderTimeSpanEnum.Fok;
         case "gtc": return OrderTimeSpanEnum.Gtc;
         case "ioc": return OrderTimeSpanEnum.Ioc;
-        case "opg": return OrderTimeSpanEnum.Omo;
-        case "cls": return OrderTimeSpanEnum.Omc;
+        case "opg": return OrderTimeSpanEnum.Am;
+        case "cls": return OrderTimeSpanEnum.Pm;
       }
 
       return OrderTimeSpanEnum.None;

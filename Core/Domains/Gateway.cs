@@ -39,12 +39,6 @@ namespace Terminal.Core.Domains
     Task<IList<ErrorModel>> Unsubscribe(string name);
 
     /// <summary>
-    /// Get quote
-    /// </summary>
-    /// <param name="message"></param>
-    Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message);
-
-    /// <summary>
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
@@ -60,13 +54,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders);
+    Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders);
+    Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
   }
 
   /// <summary>
@@ -110,12 +104,6 @@ namespace Terminal.Core.Domains
     public abstract Task<IList<ErrorModel>> Unsubscribe(string name);
 
     /// <summary>
-    /// Get quote
-    /// </summary>
-    /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message);
-
-    /// <summary>
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
@@ -131,13 +119,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders);
+    public abstract Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders);
+    public abstract Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Dispose

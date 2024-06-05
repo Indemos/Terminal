@@ -21,7 +21,7 @@ namespace Client.Components
     /// <summary>
     /// Points
     /// </summary>
-    protected virtual IList<IShape> Shapes { get; set; } = new List<IShape>();
+    protected virtual IList<IShape> Shapes { get; set; } = [];
 
     /// <summary>
     /// Series
@@ -31,13 +31,13 @@ namespace Client.Components
     /// <summary>
     /// Indices
     /// </summary>
-    protected virtual IDictionary<long, IGroupShape> Indices { get; set; } = new Dictionary<long, IGroupShape>();
+    protected virtual IDictionary<long, IShape> Indices { get; set; } = new Dictionary<long, IShape>();
 
     /// <summary>
     /// Define chart model
     /// </summary>
     /// <param name="group"></param>
-    public virtual async Task Create(IGroupShape group)
+    public virtual async Task Create(IShape group)
     {
       (View.Item = group)
         .Groups
@@ -58,18 +58,23 @@ namespace Client.Components
       {
         var inputValue = input.Value;
         var index = inputValue.Time.Value.Ticks;
-        var previousPoint = (Shapes.ElementAtOrDefault(Shapes.Count - 2) ?? View.Item.Clone()) as IGroupShape;
+        var areaKey = Maps.Get(input.Key);
 
-        if (Indices.TryGetValue(index, out IGroupShape currentPoint) is false)
+        if (areaKey is null)
         {
-          currentPoint = previousPoint.Clone() as IGroupShape;
+          continue;
+        }
+
+        if (Indices.TryGetValue(index, out IShape currentPoint) is false)
+        {
+          currentPoint = (Shapes.LastOrDefault()?.Clone() ?? View.Item.Clone()) as IShape;
           currentPoint.X = index;
 
           Shapes.Add(currentPoint);
           Indices[index] = currentPoint;
         }
 
-        var series = currentPoint?.Groups?.Get(Maps.Get(input.Key))?.Groups?.Get(input.Key);
+        var series = currentPoint?.Groups?.Get(areaKey)?.Groups?.Get(input.Key);
 
         if (series is not null)
         {
@@ -89,7 +94,7 @@ namespace Client.Components
 
       var domain = new DomainModel
       {
-        IndexDomain = new int[] { Shapes.Count - (count ?? Shapes.Count), Shapes.Count }
+        IndexDomain = [Shapes.Count - (count ?? Shapes.Count), Shapes.Count]
       };
 
       return Render(() => View.Update(domain, Shapes));
@@ -102,7 +107,7 @@ namespace Client.Components
     {
       Shapes.Clear();
       Indices.Clear();
-      UpdateItems(Array.Empty<KeyValuePair<string, PointModel>>(), 0);
+      Render(() => View.Update(new DomainModel { IndexDomain = [0, 0] }, Shapes), false);
     }
 
     /// <summary>

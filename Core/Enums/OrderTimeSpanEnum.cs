@@ -7,7 +7,7 @@ namespace Terminal.Core.Enums
     Fok = 2,
     Gtc = 3,
     Ioc = 4,
-    Omo = 5,
-    Omc = 6
+    Am = 5,
+    Pm = 6
   }
 }

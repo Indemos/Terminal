@@ -1,6 +1,4 @@
 using Distribution.Services;
-using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Configuration;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -11,8 +9,6 @@ namespace Client.Components
 {
   public partial class PageComponent
   {
-    [Inject] IConfiguration Configuration { get; set; }
-
     /// <summary>
     /// Controls
     /// </summary>
@@ -25,19 +21,22 @@ namespace Client.Components
     public virtual PositionsComponent PositionsView { get; set; }
     public virtual StatementsComponent StatementsView { get; set; }
     public virtual IGateway Adapter { get; set; }
-    public virtual Action Setup { get; set; }
+    public virtual Action OnPreConnect { get; set; }
+    public virtual Action OnPostConnect { get; set; }
 
-    public virtual async Task OnConnect()
+    public virtual async Task Connect()
     {
       try
       {
-        OnDisconnect();
-        Setup();
+        Disconnect();
+        OnPreConnect();
 
         IsConnection = true;
         IsSubscription = true;
 
         await Adapter.Connect();
+
+        OnPostConnect();
       }
       catch (Exception e)
       {
@@ -45,7 +44,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnDisconnect()
+    public virtual void Disconnect()
     {
       try
       {
@@ -63,7 +62,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnSubscribe()
+    public virtual void Subscribe()
     {
       try
       {
@@ -76,7 +75,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnUnsubscribe()
+    public virtual void Unsubscribe()
     {
       try
       {
@@ -89,7 +88,7 @@ namespace Client.Components
       }
     }
 
-    public virtual void OnOpenStatements()
+    public virtual void OpenState()
     {
       if (Adapter?.Account is not null)
       {

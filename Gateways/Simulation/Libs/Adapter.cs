@@ -1,5 +1,4 @@
 using Distribution.Services;
-using Mapper;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
@@ -40,8 +39,6 @@ namespace Simulation
     /// Location of the files with quotes
     /// </summary>
     public virtual string Source { get; set; }
-
-    public virtual ScheduleService Scheduler { get; set; } = new();
 
     /// <summary>
     /// Constructor
@@ -123,7 +120,7 @@ namespace Simulation
       Account.Instruments.ForEach(async o => await Unsubscribe(o.Key));
       Account.Positions.CollectionChanged -= OnPositionUpdate;
 
-      _connections?.ForEach(o => o.Dispose());
+      _connections?.ForEach(o => o?.Dispose());
       _connections?.Clear();
 
       return Task.FromResult<IList<ErrorModel>>(null);
@@ -146,22 +143,10 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Get quote
-    /// </summary>
-    /// <param name="message"></param>
-    public override Task<ResponseItemModel<PointModel>> GetPoint(PointMessageModel message)
-    {
-      return Task.FromResult(new ResponseItemModel<PointModel>
-      {
-        Data = Account.Instruments[message.Name].Points.LastOrDefault()
-      });
-    }
-
-    /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> SendOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
     {
       var response = ValidateOrders([.. CorrectOrders(orders)]);
 
@@ -188,7 +173,7 @@ namespace Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> CancelOrders(params OrderModel[] orders)
+    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
     {
       var response = new ResponseMapModel<OrderModel>();
 
@@ -209,8 +194,8 @@ namespace Simulation
     {
       switch (message.Action)
       {
-        case ActionEnum.Create: SendOrders(message.Next); break;
-        case ActionEnum.Delete: CancelOrders(message.Next); break;
+        case ActionEnum.Create: CreateOrders(message.Next); break;
+        case ActionEnum.Delete: DeleteOrders(message.Next); break;
       }
     }
 
