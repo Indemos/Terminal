@@ -2,9 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Terminal.Gateway.Ameritrade.Models
+namespace Terminal.Gateway.Schwab.Messages
 {
-  public struct Option
+  public class OptionMessage
   { 
     [JsonPropertyName("putCall")]
     public string PutCall { get; set; }
@@ -109,7 +109,7 @@ namespace Terminal.Gateway.Ameritrade.Models
     public bool? IsNonStandard { get; set; }
 
     [JsonPropertyName("optionDeliverablesList")]
-    public List<OptionDeliverables> OptionDeliverablesList { get; set; }
+    public List<OptionDeliverableMessage> OptionDeliverablesList { get; set; }
 
     [JsonPropertyName("strikePrice")]
     public double? StrikePrice { get; set; }
@@ -149,134 +149,5 @@ namespace Terminal.Gateway.Ameritrade.Models
 
     [JsonPropertyName("markPercentChange")]
     public double? MarkPercentChange { get; set; }
-  }
-
-  public struct OptionDeliverables
-  {    
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; set; }
-    
-    [JsonPropertyName("assetType")]
-    public string AssetType { get; set; }
-    
-    [JsonPropertyName("deliverableUnits")]
-    public string DeliverableUnits { get; set; }
-    
-    [JsonPropertyName("currencyType")]
-    public string CurrencyType { get; set; }
-  }
-
-  public struct OptionChain
-  {    
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; set; }
-    
-    [JsonPropertyName("status")]
-    public string Status { get; set; }
-    
-    [JsonPropertyName("underlying")]
-    public Underlying? Underlying { get; set; }
-    
-    [JsonPropertyName("strategy")]
-    public string Strategy { get; set; }
-    
-    [JsonPropertyName("interval")]
-    public double? Interval { get; set; }
-    
-    [JsonPropertyName("isDelayed")]
-    public bool? IsDelayed { get; set; }
-    
-    [JsonPropertyName("isIndex")]
-    public bool? IsIndex { get; set; }
-    
-    [JsonPropertyName("daysToExpiration")]
-    public double? DaysToExpiration { get; set; }
-
-    [JsonPropertyName("interestRate")]
-    public double? InterestRate { get; set; }
-    
-    [JsonPropertyName("underlyingPrice")]
-    public double? UnderlyingPrice { get; set; }
-    
-    [JsonPropertyName("volatility")]
-    public double? Volatility { get; set; }
-    
-    [JsonPropertyName("callExpDateMap")]
-    public Dictionary<string, Dictionary<string, List<Option>>> CallExpDateMap { get; set; }
-    
-    [JsonPropertyName("putExpDateMap")]
-    public Dictionary<string, Dictionary<string, List<Option>>> PutExpDateMap { get; set; }
-  }
-
-  public struct Underlying
-  {    
-    [JsonPropertyName("ask")]
-    public double? Ask { get; set; }
-    
-    [JsonPropertyName("askSize")]
-    public double? AskSize { get; set; }
-    
-    [JsonPropertyName("bid")]
-    public double? Bid { get; set; }
-    
-    [JsonPropertyName("bidSize")]
-    public double? BidSize { get; set; }
-    
-    [JsonPropertyName("change")]
-    public double? Change { get; set; }
-    
-    [JsonPropertyName("close")]
-    public double? Close { get; set; }
-    
-    [JsonPropertyName("delayed")]
-    public bool? Delayed { get; set; }
-    
-    [JsonPropertyName("description")]
-    public string Description { get; set; }
-    
-    [JsonPropertyName("exchangeName")]
-    public string ExchangeName { get; set; }
-    
-    [JsonPropertyName("fiftyTwoWeekHigh")]
-    public double? FiftyTwoWeekHigh { get; set; }
-    
-    [JsonPropertyName("fiftyTwoWeekLow")]
-    public double? FiftyTwoWeekLow { get; set; }
-    
-    [JsonPropertyName("highPrice")]
-    public double? HighPrice { get; set; }
-    
-    [JsonPropertyName("last")]
-    public double? Last { get; set; }
-    
-    [JsonPropertyName("lowPrice")]
-    public double? LowPrice { get; set; }
-    
-    [JsonPropertyName("mark")]
-    public double? Mark { get; set; }
-    
-    [JsonPropertyName("markChange")]
-    public double? MarkChange { get; set; }
-    
-    [JsonPropertyName("markPercentChange")]
-    public double? MarkPercentChange { get; set; }
-    
-    [JsonPropertyName("openPrice")]
-    public double? OpenPrice { get; set; }
-    
-    [JsonPropertyName("percentChange")]
-    public double? PercentChange { get; set; }
-    
-    [JsonPropertyName("quoteTime")]
-    public double? QuoteTime { get; set; }
-    
-    [JsonPropertyName("symbol")]
-    public string Symbol { get; set; }
-    
-    [JsonPropertyName("totalVolume")]
-    public double? TotalVolume { get; set; }
-    
-    [JsonPropertyName("tradeTime")]
-    public double? TradeTime { get; set; }
   }
 }
