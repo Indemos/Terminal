@@ -17,15 +17,18 @@ May contain references to other apps in [this list](https://github.com/Indemos) 
 
 # Structure
 
-* **Core** - cross-platform .NET 5 class library that contains main functionality 
+* **Core** - cross-platform .NET Core class library with main functionality 
 * **Chart** - [canvas](https://github.com/Indemos/Canvas) visualization
-* **Tests** - unit tests 
 * **Estimator** - class [library](https://github.com/Indemos/Statistics) measuring performance metrics and statistics
 * **Data** - catalog with historical data, any format is acceptable as long as you implement your own parser
 * **Connector** - gateway implementations for brokers and exchanges, including historical and [simulated data](https://github.com/Indemos/Terminal-Connector-Simulation)
-* **Client** - the main application that puts together orders, positions, performance metrics, and charts 
+* **Client** - sample application that puts together orders, positions, performance metrics, and charts 
 
 # Gateways 
+
+* Schwab
+* Alpaca
+* Simulation - virtual orders and market data 
 
 In order to create connector for preferred broker, implement interface `IConnectorModel`.
 
