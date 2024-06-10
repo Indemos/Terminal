@@ -1,9 +1,9 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Alpaca.Markets;
+namespace Alpaca.Messages;
 
-public class RealTimeQuoteMessage
+public class RealTimeQuoteMessage : RealTimeBaseMessage
 {
   [JsonPropertyName("bx")]
   public string BidExchange { get; set; }
@@ -28,7 +28,4 @@ public class RealTimeQuoteMessage
 
   [JsonPropertyName("z")]
   public string Tape { get; set; }
-
-  [JsonPropertyName("S")]
-  public string Symbol { get; set; }
 }

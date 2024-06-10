@@ -1,4 +1,4 @@
-namespace Terminal.Gateway.Schwab.Messages
+namespace Schwab.Messages
 {
   using System;
   using System.Collections.Generic;
@@ -140,11 +140,11 @@ namespace Terminal.Gateway.Schwab.Messages
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("replacingOrderCollection")]
-    public List<string> ReplacingOrderCollection { get; set; }
+    public List<OrderMessage> ReplacingOrderCollection { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("childOrderStrategies")]
-    public List<string> ChildOrderStrategies { get; set; }
+    public List<OrderMessage> ChildOrderStrategies { get; set; }
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("statusDescription")]

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Terminal.Gateway.Schwab.Messages
+namespace Schwab.Messages
 {
   public class OptionDeliverableMessage
   {    

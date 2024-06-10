@@ -1,12 +1,12 @@
 using System.Text.Json.Serialization;
 
-namespace Alpaca.Markets;
+namespace Alpaca.Messages;
 
 public class OptionSnapshotMessage
 {
   [JsonPropertyName("latestQuote")]
-  public OptionQuoteMessage JsonQuote { get; set; }
+  public OptionQuoteMessage Quote { get; set; }
 
   [JsonPropertyName("latestTrade")]
-  public OptionTradeMessage JsonTrade { get; set; }
+  public OptionTradeMessage Trade { get; set; }
 }

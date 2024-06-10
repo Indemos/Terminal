@@ -1,4 +1,5 @@
-using Alpaca.Markets;
+using Alpaca.Mappers;
+using Alpaca.Messages;
 using Distribution.Services;
 using Distribution.Stream;
 using Distribution.Stream.Extensions;
@@ -14,10 +15,9 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
-using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Alpaca
 {
@@ -80,30 +80,39 @@ namespace Alpaca
     /// </summary>
     public override async Task<IList<ErrorModel>> Connect()
     {
-      var ws = new ClientWebSocket();
-      var scheduler = new ScheduleService();
+      var errors = new List<ErrorModel>();
 
-      await Disconnect();
-
-      _sender = new Service();
-      _streamer = await GetConnection(ws, scheduler);
-
-      await SendStream(_streamer, new AuthenticationMessage
+      try
       {
-        Action = "auth",
-        SecretKey = ConsumerSecret,
-        KeyId = ConsumerKey
-      });
+        var ws = new ClientWebSocket();
+        var scheduler = new ScheduleService();
 
-      await GetAccountData();
+        await Disconnect();
 
-      _connections.Add(_sender);
-      _connections.Add(_streamer);
-      _connections.Add(scheduler);
+        _sender = new Service();
+        _streamer = await GetConnection(ws, scheduler);
 
-      Account.Instruments.ForEach(async o => await Subscribe(o.Key));
+        await SendStream(_streamer, new AuthenticationMessage
+        {
+          Action = "auth",
+          SecretKey = ConsumerSecret,
+          KeyId = ConsumerKey
+        });
 
-      return null;
+        await GetAccountData();
+
+        _connections.Add(_sender);
+        _connections.Add(_streamer);
+        _connections.Add(scheduler);
+
+        Account.Instruments.ForEach(async o => await Subscribe(o.Key));
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return errors;
     }
 
     /// <summary>
@@ -111,15 +120,24 @@ namespace Alpaca
     /// </summary>
     public override async Task<IList<ErrorModel>> Subscribe(string name)
     {
-      await Unsubscribe(name);
-      await SendStream(_streamer, new SubscriptionUpdateMessage
-      {
-        Action = "subscribe",
-        Trades = [name],
-        Quotes = [name]
-      });
+      var errors = new List<ErrorModel>();
 
-      return null;
+      try
+      {
+        await Unsubscribe(name);
+        await SendStream(_streamer, new SubscriptionUpdateMessage
+        {
+          Action = "subscribe",
+          Trades = [name],
+          Quotes = [name]
+        });
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return errors;
     }
 
     /// <summary>
@@ -130,7 +148,7 @@ namespace Alpaca
       _connections?.ForEach(o => o?.Dispose());
       _connections?.Clear();
 
-      return Task.FromResult<IList<ErrorModel>>(null);
+      return Task.FromResult<IList<ErrorModel>>([]);
     }
 
     /// <summary>
@@ -138,26 +156,66 @@ namespace Alpaca
     /// </summary>
     public override async Task<IList<ErrorModel>> Unsubscribe(string name)
     {
-      await SendStream(_streamer, new SubscriptionUpdateMessage
+      var errors = new List<ErrorModel>();
+
+      try
       {
-        Action = "unsubscribe",
-        Trades = [name],
-        Quotes = [name]
-      });
+        await SendStream(_streamer, new SubscriptionUpdateMessage
+        {
+          Action = "unsubscribe",
+          Trades = [name],
+          Quotes = [name]
+        });
 
-      _subscriptions?.ForEach(o => o.Dispose());
-      _subscriptions?.Clear();
+        _subscriptions?.ForEach(o => o.Dispose());
+        _subscriptions?.Clear();
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
 
-      return null;
+      return errors;
     }
 
     /// <summary>
     /// Get option chains
     /// </summary>
     /// <param name="message"></param>
-    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message)
+    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message)
     {
-      throw new NotImplementedException();
+      var response = new ResponseItemModel<IList<OptionModel>>();
+
+      try
+      {
+        var props = new Hashtable
+        {
+          ["limit"] = 1000,
+          ["underlying_symbol"] = message.Name,
+          ["expiration_date_gte"] = message.MinDate,
+          ["expiration_date_lte"] = message.MaxDate
+        };
+
+        var optionResponse = await SendData<LatestDataMessage<
+          HistoricalQuoteMessage,
+          HistoricalBarMessage,
+          HistoricalTradeMessage,
+          OptionSnapshotMessage,
+          HistoricalOrderBookMessage>>
+        ($"/v1beta1/options/snapshots/{message.Name}?{props.ToQuery()}");
+
+        response.Data = optionResponse
+          .Data
+          .Snapshots
+          .Select(option => InternalMap.GetOption(option.Value))
+          .ToList();
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -165,14 +223,37 @@ namespace Alpaca
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message)
+    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message)
     {
-      var response = new ResponseItemModel<IList<PointModel>>
-      {
-        Data = Account.Instruments[message.Name].Points
-      };
+      var response = new ResponseItemModel<IDictionary<string, PointModel>>();
 
-      return Task.FromResult(response);
+      try
+      {
+        var props = new Hashtable
+        {
+          ["symbols"] = string.Join(",", message.Names),
+          ["feed"] = "iex"
+        };
+
+        var pointResponse = await SendData<LatestDataMessage<
+          HistoricalQuoteMessage,
+          HistoricalBarMessage,
+          HistoricalTradeMessage,
+          SnapshotMessage,
+          HistoricalOrderBookMessage>
+        >($"/v2/stocks/quotes/latest?{props.ToQuery()}");
+
+        response.Data = message
+          .Names
+          .Select(name => InternalMap.GetPoint(pointResponse.Data.Quotes[name]))
+          .ToDictionary(o => o.Instrument.Name);
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -213,26 +294,19 @@ namespace Alpaca
     /// Sync open balance, order, and positions 
     /// </summary>
     /// <returns></returns>
-    protected async Task GetAccountData()
+    protected virtual async Task GetAccountData()
     {
       var account = await SendData<AccountMessage>("/v2/account");
       var positions = await SendData<PositionMessage[]>("/v2/positions");
       var orders = await SendData<OrderMessage[]>("/v2/orders");
 
-      try
-      {
-        Account.Balance = account.Data.Equity;
-        Account.Descriptor = account.Data.AccountNumber;
-        Account.ActiveOrders = orders.Data.Select(GetInternalOrder).ToDictionary(o => o.Transaction.Id, o => o);
-        Account.ActivePositions = positions.Data.Select(GetInternalPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
+      Account.Balance = account.Data.Equity;
+      Account.Descriptor = account.Data.AccountNumber;
+      Account.ActiveOrders = orders.Data.Select(InternalMap.GetOrder).ToDictionary(o => o.Transaction.Id, o => o);
+      Account.ActivePositions = positions.Data.Select(InternalMap.GetPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
 
-        Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
-        Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
-      }
-      catch (Exception e)
-      {
-        InstanceService<MessageService>.Instance.OnMessage($"{e}");
-      }
+      Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
+      Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
     }
 
     /// <summary>
@@ -242,7 +316,7 @@ namespace Alpaca
     /// <param name="data"></param>
     /// <param name="cancellation"></param>
     /// <returns></returns>
-    protected Task SendStream(ClientWebSocket ws, object data, CancellationTokenSource cancellation = null)
+    protected virtual Task SendStream(ClientWebSocket ws, object data, CancellationTokenSource cancellation = null)
     {
       var content = JsonSerializer.Serialize(data, _sender.Options);
       var message = Encoding.ASCII.GetBytes(content);
@@ -260,7 +334,7 @@ namespace Alpaca
     /// <param name="ws"></param>
     /// <param name="scheduler"></param>
     /// <returns></returns>
-    protected async Task<ClientWebSocket> GetConnection(ClientWebSocket ws, ScheduleService scheduler)
+    protected virtual async Task<ClientWebSocket> GetConnection(ClientWebSocket ws, ScheduleService scheduler)
     {
       var source = new UriBuilder(StreamUri);
       var cancellation = new CancellationTokenSource();
@@ -298,52 +372,60 @@ namespace Alpaca
     /// Process quote from the stream
     /// </summary>
     /// <param name="content"></param>
-    protected void ProcessPoint(string content)
+    protected virtual void ProcessPoint(string content)
     {
-      try
+      var streamPoint = JsonSerializer
+        .Deserialize<HistoricalQuoteMessage[]>(content, _sender.Options)
+        .FirstOrDefault();
+
+      var instrument = Account.Instruments.Get(streamPoint.Symbol) ?? new Instrument();
+      var point = new PointModel
       {
-        var streamPoint = JsonSerializer
-          .Deserialize<HistoricalQuoteMessage[]>(content, _sender.Options)
-          .FirstOrDefault();
+        Ask = streamPoint.AskPrice,
+        Bid = streamPoint.BidPrice,
+        AskSize = streamPoint.AskSize ?? 0,
+        BidSize = streamPoint.BidSize ?? 0,
+        Last = streamPoint.BidPrice ?? streamPoint.AskPrice,
+        Time = streamPoint.TimestampUtc ?? DateTime.Now,
+        TimeFrame = instrument.TimeFrame,
+        Instrument = instrument
+      };
 
-        var instrument = Account.Instruments.Get(streamPoint.Symbol) ?? new Instrument();
-        var point = new PointModel();
-
-        point.Ask = streamPoint.AskPrice;
-        point.Bid = streamPoint.BidPrice;
-        point.AskSize = streamPoint.AskSize ?? 0;
-        point.BidSize = streamPoint.BidSize ?? 0;
-        point.Last = streamPoint.BidPrice ?? streamPoint.AskPrice;
-        point.Time = streamPoint.TimestampUtc ?? DateTime.Now;
-        point.TimeFrame = instrument.TimeFrame;
-        point.Instrument = instrument;
-
-        instrument.Name = streamPoint.Symbol;
-        instrument.Points.Add(point);
-        instrument.PointGroups.Add(point);
-      }
-      catch (Exception e)
-      {
-        InstanceService<MessageService>.Instance.OnMessage(e.Message);
-      }
+      instrument.Name = streamPoint.Symbol;
+      instrument.Points.Add(point);
+      instrument.PointGroups.Add(point);
     }
 
     /// <summary>
     /// Process quote from the stream
     /// </summary>
     /// <param name="content"></param>
-    protected void ProcessTrade(string content)
+    protected virtual void ProcessTrade(string content)
     {
-      try
+      var orderMessage = JsonSerializer
+        .Deserialize<HistoricalTradeMessage[]>(content, _sender.Options)
+        .FirstOrDefault();
+
+      var action = new TransactionModel
       {
-        var order = JsonSerializer
-          .Deserialize<HistoricalTradeMessage[]>(content, _sender.Options)
-          .FirstOrDefault();
-      }
-      catch (Exception e)
+        Id = orderMessage.TradeId,
+        Time = orderMessage.TimestampUtc,
+        Price = orderMessage.Price,
+        Volume = orderMessage.Size,
+        Instrument = new Instrument { Name = orderMessage.Symbol }
+      };
+
+      var order = new OrderModel
       {
-        InstanceService<MessageService>.Instance.OnMessage(e.Message);
-      }
+        Side = InternalMap.GetOrderSide(orderMessage.TakerSide)
+      };
+
+      var message = new StateModel<OrderModel>
+      {
+        Next = order
+      };
+
+      OrderStream(message);
     }
 
     /// <summary>
@@ -354,20 +436,14 @@ namespace Alpaca
     /// <param name="verb"></param>
     /// <param name="query"></param>
     /// <returns></returns>
-    protected async Task<Distribution.Stream.Models.ResponseModel<T>> SendData<T>(
+    protected virtual async Task<Distribution.Stream.Models.ResponseModel<T>> SendData<T>(
       string source,
       HttpMethod verb = null,
-      Hashtable query = null,
       object content = null)
     {
-      query ??= [];
       verb ??= HttpMethod.Get;
 
-      var uri = new UriBuilder(DataUri)
-      {
-        Path = source
-      };
-
+      var uri = new UriBuilder(DataUri + source);
       var message = new HttpRequestMessage
       {
         Method = verb
@@ -375,7 +451,6 @@ namespace Alpaca
 
       switch (true)
       {
-        case true when Equals(verb, HttpMethod.Get): uri.Query = query.ToQuery(); break;
         case true when Equals(verb, HttpMethod.Put):
         case true when Equals(verb, HttpMethod.Post):
         case true when Equals(verb, HttpMethod.Patch): message.Content = new StringContent(JsonSerializer.Serialize(content)); break;
@@ -393,30 +468,27 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected async Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
     {
       var inResponse = new ResponseItemModel<OrderModel>();
 
       try
       {
-        var exOrder = GetExternalOrder(order);
-        var exResponse = await SendData<OrderMessage>("/v2/orders", HttpMethod.Post, null, exOrder);
+        var exOrder = ExternalMap.GetOrder(order);
+        var exResponse = await SendData<OrderMessage>("/v2/orders", HttpMethod.Post, exOrder);
 
         inResponse.Data = order;
         inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
-        inResponse.Data.Transaction.Status = GetInternalStatus(exResponse.Data.OrderStatus);
+        inResponse.Data.Transaction.Status = InternalMap.GetStatus(exResponse.Data.OrderStatus);
 
-        if (exResponse.Status < 400)
+        if ((int)exResponse.Message.StatusCode < 400)
         {
           Account.ActiveOrders.Add(order.Transaction.Id, order);
         }
       }
       catch (Exception e)
       {
-        inResponse.Errors.Add(new ErrorModel
-        {
-          ErrorMessage = e.Message
-        });
+        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
       return inResponse;
@@ -427,7 +499,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected async Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual async Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
     {
       var inResponse = new ResponseItemModel<OrderModel>();
 
@@ -437,292 +509,19 @@ namespace Alpaca
 
         inResponse.Data = order;
         inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
-        inResponse.Data.Transaction.Status = GetInternalStatus(exResponse.Data.OrderStatus);
+        inResponse.Data.Transaction.Status = InternalMap.GetStatus(exResponse.Data.OrderStatus);
 
-        if (exResponse.Status < 400)
+        if ((int)exResponse.Message.StatusCode < 400)
         {
           Account.ActiveOrders.Remove(order.Transaction.Id);
         }
       }
       catch (Exception e)
       {
-        inResponse.Errors.Add(new ErrorModel
-        {
-          ErrorMessage = e.Message
-        });
+        inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
       return inResponse;
-    }
-
-    /// <summary>
-    /// Convert remote order from brokerage to local record
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected OrderCreationMessage GetExternalOrder(OrderModel order)
-    {
-      var action = order.Transaction;
-      var message = new OrderCreationMessage
-      {
-        Quantity = action.Volume,
-        Symbol = action.Instrument.Name,
-        TimeInForce = GetExternalTimeSpan(order.TimeSpan.Value),
-        OrderType = "market"
-      };
-
-      switch (order.Side)
-      {
-        case OrderSideEnum.Buy: message.OrderSide = "buy"; break;
-        case OrderSideEnum.Sell: message.OrderSide = "sell"; break;
-      }
-
-      switch (order.Type)
-      {
-        case OrderTypeEnum.Stop: message.StopPrice = order.Price; break;
-        case OrderTypeEnum.Limit: message.LimitPrice = order.Price; break;
-        case OrderTypeEnum.StopLimit: message.StopPrice = order.ActivationPrice; message.LimitPrice = order.Price; break;
-      }
-
-      if (order.Orders.Any())
-      {
-        message.OrderClass = "bracket";
-
-        switch (order.Side)
-        {
-          case OrderSideEnum.Buy:
-            message.StopLoss = GetExternalBracket(order, 1);
-            message.TakeProfit = GetExternalBracket(order, -1);
-            break;
-
-          case OrderSideEnum.Sell:
-            message.StopLoss = GetExternalBracket(order, -1);
-            message.TakeProfit = GetExternalBracket(order, 1);
-            break;
-        }
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Convert local time in force to remote
-    /// </summary>
-    /// <param name="span"></param>
-    /// <returns></returns>
-    protected string GetExternalTimeSpan(OrderTimeSpanEnum span)
-    {
-      switch (span)
-      {
-        case OrderTimeSpanEnum.Day: return "day";
-        case OrderTimeSpanEnum.Fok: return "fok";
-        case OrderTimeSpanEnum.Gtc: return "gtc";
-        case OrderTimeSpanEnum.Ioc: return "ioc";
-        case OrderTimeSpanEnum.Am: return "opg";
-        case OrderTimeSpanEnum.Pm: return "cls";
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Convert child orders to brackets
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="direction"></param>
-    /// <returns></returns>
-    protected OrderAdvancedAttributesMessage GetExternalBracket(OrderModel order, double direction)
-    {
-      var nextOrder = order
-        .Orders
-        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
-
-      if (nextOrder is not null)
-      {
-        return new OrderAdvancedAttributesMessage { StopPrice = nextOrder.Price };
-      }
-
-      return null;
-    }
-
-    /// <summary>
-    /// Convert remote order to local
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected OrderModel GetInternalOrder(OrderMessage order)
-    {
-      var instrument = new Instrument
-      {
-        Name = order.Symbol
-      };
-
-      var action = new TransactionModel
-      {
-        Id = $"{order.OrderId}",
-        Descriptor = order.ClientOrderId,
-        Instrument = instrument,
-        CurrentVolume = order.FilledQuantity,
-        Volume = order.Quantity,
-        Time = order.CreatedAtUtc,
-        Status = GetInternalStatus(order.OrderStatus)
-      };
-
-      var inOrder = new OrderModel
-      {
-        Transaction = action,
-        Type = OrderTypeEnum.Market,
-        Side = GetInternalOrderSide(order.OrderSide),
-        TimeSpan = GetInternalTimeSpan(order.TimeInForce)
-      };
-
-      switch (order.OrderType)
-      {
-        case "stop":
-          inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = order.StopPrice;
-          break;
-
-        case "limit":
-          inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = order.LimitPrice;
-          break;
-
-        case "stop_limit":
-          inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = order.StopPrice;
-          inOrder.ActivationPrice = order.LimitPrice;
-          break;
-      }
-
-      return inOrder;
-    }
-
-    /// <summary>
-    /// Convert remote position to local
-    /// </summary>
-    /// <param name="position"></param>
-    /// <returns></returns>
-    protected PositionModel GetInternalPosition(PositionMessage position)
-    {
-      var instrument = new Instrument
-      {
-        Name = position.Symbol
-      };
-
-      var action = new TransactionModel
-      {
-        Id = $"{position.AssetId}",
-        Descriptor = position.Symbol,
-        Instrument = instrument,
-        Price = position.AverageEntryPrice,
-        CurrentVolume = position.AvailableQuantity,
-        Volume = position.Quantity
-      };
-
-      var order = new OrderModel
-      {
-        Transaction = action,
-        Type = OrderTypeEnum.Market,
-        Side = GetInternalPositionSide(position.Side)
-      };
-
-      var gainLossPoints = position.AverageEntryPrice - position.AssetCurrentPrice;
-      var gainLoss = position.CostBasis - position.MarketValue;
-
-      return new PositionModel
-      {
-        GainLossPointsMax = gainLossPoints,
-        GainLossPointsMin = gainLossPoints,
-        GainLossPoints = gainLossPoints,
-        GainLossMax = gainLoss,
-        GainLossMin = gainLoss,
-        GainLoss = gainLoss,
-        Order = order,
-        Orders = [order]
-      };
-    }
-
-    /// <summary>
-    /// Convert remote order status to local
-    /// </summary>
-    /// <param name="status"></param>
-    /// <returns></returns>
-    protected OrderStatusEnum GetInternalStatus(string status)
-    {
-      switch (status)
-      {
-        case "fill":
-        case "filled": return OrderStatusEnum.Filled;
-        case "partial_fill":
-        case "partially_filled": return OrderStatusEnum.Partitioned;
-        case "stopped":
-        case "expired":
-        case "rejected":
-        case "canceled":
-        case "done_for_day": return OrderStatusEnum.Canceled;
-        case "new":
-        case "held":
-        case "accepted":
-        case "suspended":
-        case "pending_new":
-        case "pending_cancel":
-        case "pending_replace": return OrderStatusEnum.Pending;
-      }
-
-      return OrderStatusEnum.None;
-    }
-
-    /// <summary>
-    /// Convert remote order side to local
-    /// </summary>
-    /// <param name="side"></param>
-    /// <returns></returns>
-    protected OrderSideEnum GetInternalOrderSide(string side)
-    {
-      switch (side)
-      {
-        case "buy": return OrderSideEnum.Buy;
-        case "sell": return OrderSideEnum.Sell;
-      }
-
-      return OrderSideEnum.None;
-    }
-
-    /// <summary>
-    /// Convert remote position side to local
-    /// </summary>
-    /// <param name="side"></param>
-    /// <returns></returns>
-    protected OrderSideEnum GetInternalPositionSide(string side)
-    {
-      switch (side)
-      {
-        case "long": return OrderSideEnum.Buy;
-        case "short": return OrderSideEnum.Sell;
-      }
-
-      return OrderSideEnum.None;
-    }
-
-    /// <summary>
-    /// Convert remote time in force to local
-    /// </summary>
-    /// <param name="span"></param>
-    /// <returns></returns>
-    protected OrderTimeSpanEnum GetInternalTimeSpan(string span)
-    {
-      switch (span)
-      {
-        case "day": return OrderTimeSpanEnum.Day;
-        case "fok": return OrderTimeSpanEnum.Fok;
-        case "gtc": return OrderTimeSpanEnum.Gtc;
-        case "ioc": return OrderTimeSpanEnum.Ioc;
-        case "opg": return OrderTimeSpanEnum.Am;
-        case "cls": return OrderTimeSpanEnum.Pm;
-      }
-
-      return OrderTimeSpanEnum.None;
     }
   }
 }

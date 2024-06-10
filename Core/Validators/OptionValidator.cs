@@ -11,7 +11,6 @@ namespace Terminal.Core.Validators
     public OptionValidator()
     {
       RuleFor(o => o.Name).NotEmpty();
-      RuleFor(o => o.BaseName).NotEmpty();
       RuleFor(o => o.Side).NotEmpty();
       RuleFor(o => o.Strike).NotEmpty();
       RuleFor(o => o.Leverage).NotEmpty();

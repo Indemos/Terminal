@@ -19,6 +19,11 @@ namespace Terminal.Core.Domains
     IAccount Account { get; set; }
 
     /// <summary>
+    /// Tape
+    /// </summary>
+    Action<StateModel<OrderModel>> OrderStream { get; set; }
+
+    /// <summary>
     /// Connect
     /// </summary>
     Task<IList<ErrorModel>> Connect();
@@ -42,7 +47,7 @@ namespace Terminal.Core.Domains
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
-    Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message);
+    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message);
 
     /// <summary>
     /// Get option chains
@@ -74,10 +79,16 @@ namespace Terminal.Core.Domains
     public virtual IAccount Account { get; set; }
 
     /// <summary>
+    /// Tape
+    /// </summary>
+    public virtual Action<StateModel<OrderModel>> OrderStream { get; set; }
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public Gateway()
     {
+      OrderStream = o => { };
     }
 
     /// <summary>
@@ -107,7 +118,7 @@ namespace Terminal.Core.Domains
     /// Get quotes history
     /// </summary>
     /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message);
+    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message);
 
     /// <summary>
     /// Get option chains

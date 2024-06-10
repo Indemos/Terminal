@@ -259,10 +259,7 @@ namespace Simulation
       var nextPosition = new PositionModel
       {
         Order = order,
-        Orders = new List<OrderModel>
-        {
-          nextOrder
-        }
+        Orders = [nextOrder]
       };
 
       Account.Orders.Add(nextOrder);
@@ -319,7 +316,7 @@ namespace Simulation
       nextPosition.Order.Transaction.Time = nextOrder.Transaction.Time;
       nextPosition.Order.Transaction.Volume += nextOrder.Transaction.Volume;
 
-      nextPosition.Order.Transaction.Price = 
+      nextPosition.Order.Transaction.Price =
         nextPosition.Orders.Sum(o => o.Transaction.Volume * o.Transaction.Price) /
         nextPosition.Orders.Sum(o => o.Transaction.Volume);
 
@@ -528,7 +525,7 @@ namespace Simulation
       return response;
     }
 
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message)
+    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message)
     {
       throw new NotImplementedException();
     }

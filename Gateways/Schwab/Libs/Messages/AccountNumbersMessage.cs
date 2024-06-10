@@ -1,4 +1,4 @@
-namespace Terminal.Gateway.Schwab.Messages
+namespace Schwab.Messages
 {
   using System.Text.Json.Serialization;
 

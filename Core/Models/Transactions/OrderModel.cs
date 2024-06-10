@@ -17,14 +17,24 @@ namespace Terminal.Core.Models
     public virtual double? Price { get; set; }
 
     /// <summary>
-    /// Side
+    /// Asset type
     /// </summary>
-    public virtual OrderSideEnum? Side { get; set; }
+    public virtual string AssetType { get; set; }
+
+    /// <summary>
+    /// Custom order type
+    /// </summary>
+    public virtual string Combination { get; set; }
 
     /// <summary>
     /// Type
     /// </summary>
     public virtual OrderTypeEnum? Type { get; set; }
+
+    /// <summary>
+    /// Side
+    /// </summary>
+    public virtual OrderSideEnum? Side { get; set; }
 
     /// <summary>
     /// Time in force

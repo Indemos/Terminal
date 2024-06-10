@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Canvas.Views.Web" Version="3.1.4" />
     <PackageReference Include="Estimator" Version="1.0.2" />
-    <PackageReference Include="MudBlazor" Version="6.19.1" />
+    <PackageReference Include="MudBlazor" Version="6.20.0" />
   </ItemGroup>
 
   <ItemGroup>

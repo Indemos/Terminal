@@ -1,15 +1,11 @@
 using System;
+using System.Collections.Generic;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
   public class PointMessageModel
   {
-    /// <summary>
-    /// Symbol
-    /// </summary>
-    public virtual string Name { get; set; }
-
     /// <summary>
     /// End date
     /// </summary>
@@ -24,5 +20,10 @@ namespace Terminal.Core.Models
     /// Resolution
     /// </summary>
     public virtual ResolutionEnum? Resolution { get; set; }
+
+    /// <summary>
+    /// Symbol
+    /// </summary>
+    public virtual IList<string> Names { get; set; }
   }
 }

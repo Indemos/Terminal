@@ -1,15 +1,15 @@
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Alpaca.Markets;
+namespace Alpaca.Messages;
 
-public class LatestDataMessage<TQuote, TTrade, TSnapshot>
+public class LatestDataMessage<TQuote, TBar, TTrade, TSnapshot, TOrderBook>
 {
   [JsonPropertyName("quotes")]
   public Dictionary<string, TQuote> Quotes { get; set; } = [];
 
   [JsonPropertyName("bars")]
-  public Dictionary<string, HistoricalBarMessage> Bars { get; set; } = [];
+  public Dictionary<string, TBar> Bars { get; set; } = [];
 
   [JsonPropertyName("trades")]
   public Dictionary<string, TTrade> Trades { get; set; } = [];
@@ -18,5 +18,5 @@ public class LatestDataMessage<TQuote, TTrade, TSnapshot>
   public Dictionary<string, TSnapshot> Snapshots { get; set; } = [];
 
   [JsonPropertyName("orderbooks")]
-  public Dictionary<string, HistoricalOrderBookMessage> OrderBooks { get; set; } = [];
+  public Dictionary<string, TOrderBook> OrderBooks { get; set; } = [];
 }

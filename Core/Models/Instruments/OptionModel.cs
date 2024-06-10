@@ -12,11 +12,6 @@ namespace Terminal.Core.Models
     public virtual string Name { get; set; }
 
     /// <summary>
-    /// The name of the underlying instrument
-    /// </summary>
-    public virtual string BaseName { get; set; }
-
-    /// <summary>
     /// Strike price
     /// </summary>
     public virtual double? Strike { get; set; }

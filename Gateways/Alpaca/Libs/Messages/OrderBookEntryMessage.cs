@@ -1,6 +1,6 @@
 using System.Text.Json.Serialization;
 
-namespace Alpaca.Markets;
+namespace Alpaca.Messages;
 
 public class OrderBookEntryMessage
 {

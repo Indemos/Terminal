@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Text.Json.Serialization;
 
-namespace Alpaca.Markets;
+namespace Alpaca.Messages;
 
 public class HistoricalTradeMessage
 {
@@ -19,7 +19,7 @@ public class HistoricalTradeMessage
   public double? Size { get; set; }
 
   [JsonPropertyName("i")]
-  public double? TradeId { get; set; }
+  public string TradeId { get; set; }
 
   [JsonPropertyName("z")]
   public string Tape { get; set; }

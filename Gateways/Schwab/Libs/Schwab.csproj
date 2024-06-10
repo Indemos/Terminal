@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Distribution.Stream" Version="1.1.6" />
-    <PackageReference Include="PuppeteerSharp" Version="18.0.0" />
+    <PackageReference Include="Distribution.Stream" Version="1.1.8" />
+    <PackageReference Include="PuppeteerSharp" Version="18.0.1" />
   </ItemGroup>
 
   <ItemGroup>
