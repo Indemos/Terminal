@@ -118,7 +118,7 @@ namespace Schwab.Messages
     public double? LastTradingDay { get; set; }
 
     [JsonPropertyName("expirationDate")]
-    public long? ExpirationDate { get; set; }
+    public DateTime? ExpirationDate { get; set; }
 
     [JsonPropertyName("expirationType")]
     public string ExpirationType { get; set; }

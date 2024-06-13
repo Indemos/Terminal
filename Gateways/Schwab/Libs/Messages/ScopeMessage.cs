@@ -21,5 +21,11 @@ namespace Schwab.Messages
 
     [JsonPropertyName("id_token")]
     public string Token { get; set; }
+
+    [JsonIgnore]
+    public string ConsumerKey { get; set; }
+
+    [JsonIgnore]
+    public string ConsumerSecret { get; set; }
   }
 }

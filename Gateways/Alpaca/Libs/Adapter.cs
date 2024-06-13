@@ -17,7 +17,6 @@ using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Alpaca
 {
@@ -434,26 +433,24 @@ namespace Alpaca
     /// <typeparam name="T"></typeparam>
     /// <param name="source"></param>
     /// <param name="verb"></param>
-    /// <param name="query"></param>
+    /// <param name="content"></param>
     /// <returns></returns>
     protected virtual async Task<Distribution.Stream.Models.ResponseModel<T>> SendData<T>(
       string source,
       HttpMethod verb = null,
       object content = null)
     {
-      verb ??= HttpMethod.Get;
-
       var uri = new UriBuilder(DataUri + source);
       var message = new HttpRequestMessage
       {
-        Method = verb
+        Method = verb ?? HttpMethod.Get
       };
 
       switch (true)
       {
-        case true when Equals(verb, HttpMethod.Put):
-        case true when Equals(verb, HttpMethod.Post):
-        case true when Equals(verb, HttpMethod.Patch): message.Content = new StringContent(JsonSerializer.Serialize(content)); break;
+        case true when Equals(message.Method, HttpMethod.Put):
+        case true when Equals(message.Method, HttpMethod.Post):
+        case true when Equals(message.Method, HttpMethod.Patch): message.Content = new StringContent(JsonSerializer.Serialize(content)); break;
       }
 
       message.RequestUri = uri.Uri;

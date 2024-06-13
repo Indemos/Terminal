@@ -6,7 +6,6 @@
 
   <ItemGroup>
     <PackageReference Include="Distribution" Version="2.1.6" />
-    <PackageReference Include="ExpressionMapper" Version="1.0.2" />
     <PackageReference Include="FluentValidation.AspNetCore" Version="11.3.0" />
     <PackageReference Include="SkiaSharp" Version="3.0.0-preview.2.1" />
     <PackageReference Include="System.Interactive" Version="6.0.1" />

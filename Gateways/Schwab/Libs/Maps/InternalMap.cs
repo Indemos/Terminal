@@ -60,7 +60,7 @@ namespace Schwab.Mappers
 
       if (message.ExpirationDate is not null)
       {
-        option.ExpirationDate = DateTimeOffset.FromUnixTimeMilliseconds(message.ExpirationDate.Value).UtcDateTime;
+        option.ExpirationDate = message.ExpirationDate;
       }
 
       return option;
