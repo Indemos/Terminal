@@ -1,9 +1,11 @@
 using Distribution.Services;
+using Simulation.Messages;
 using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 using Terminal.Core.Domains;
@@ -28,7 +30,7 @@ namespace Simulation
     /// <summary>
     /// Instrument streams
     /// </summary>
-    protected IDictionary<string, StreamReader> _instruments;
+    protected IDictionary<string, IEnumerator<string>> _instruments;
 
     /// <summary>
     /// Simulation speed in milliseconds
@@ -48,8 +50,8 @@ namespace Simulation
       Speed = 1000;
 
       _connections = [];
-      _instruments = new Dictionary<string, StreamReader>();
       _subscriptions = new Dictionary<string, IDisposable>();
+      _instruments = new Dictionary<string, IEnumerator<string>>();
     }
 
     /// <summary>
@@ -63,7 +65,11 @@ namespace Simulation
 
       _instruments = Account
         .Instruments
-        .ToDictionary(o => o.Key, o => new StreamReader(Path.Combine(Source, o.Value.Name)));
+        .ToDictionary(
+          o => o.Key,
+          o => Directory
+            .EnumerateFiles(Path.Combine(Source, o.Value.Name), "*", SearchOption.AllDirectories)
+            .GetEnumerator());
 
       _instruments.ForEach(o => _connections.Add(o.Value));
 
@@ -443,8 +449,10 @@ namespace Simulation
     /// <summary>
     /// Get next available point
     /// </summary>
+    /// <param name="streams"></param>
+    /// <param name="points"></param>
     /// <returns></returns>
-    protected virtual PointModel GetRecord(IDictionary<string, StreamReader> streams, IDictionary<string, PointModel> points)
+    protected virtual PointModel GetRecord(IDictionary<string, IEnumerator<string>> streams, IDictionary<string, PointModel> points)
     {
       var index = string.Empty;
 
@@ -454,11 +462,17 @@ namespace Simulation
 
         if (point is null)
         {
-          var input = stream.Value.ReadLine();
+          stream.Value.MoveNext();
+
+          var input = stream.Value.Current;
 
           if (string.IsNullOrEmpty(input) is false)
           {
-            points[stream.Key] = Parse(stream.Key, input);
+            var inputMessage = File.ReadAllText(input);
+            var pointMessage = JsonSerializer.Deserialize<PointMessage>(inputMessage);
+
+            pointMessage.Quote.Instrument = new Instrument { Name = stream.Key };
+            points[stream.Key] = pointMessage.Quote;
           }
         }
 
@@ -477,50 +491,6 @@ namespace Simulation
       var response = points[index];
 
       points[index] = null;
-
-      return response;
-    }
-
-    /// <summary>
-    /// Parse point
-    /// </summary>
-    /// <param name="name"></param>
-    /// <param name="input"></param>
-    /// <returns></returns>
-    protected virtual PointModel Parse(string name, string input)
-    {
-      var props = input.Split(" ");
-
-      long.TryParse(props.ElementAtOrDefault(0), out long date);
-
-      if (date is 0)
-      {
-        return null;
-      }
-
-      double.TryParse(props.ElementAtOrDefault(1), out double bid);
-      double.TryParse(props.ElementAtOrDefault(2), out double bidSize);
-      double.TryParse(props.ElementAtOrDefault(3), out double ask);
-      double.TryParse(props.ElementAtOrDefault(4), out double askSize);
-
-      var response = new PointModel
-      {
-        Time = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddSeconds(date),
-        Ask = ask,
-        Bid = bid,
-        Last = ask,
-        AskSize = askSize,
-        BidSize = bidSize,
-        Instrument = new Instrument()
-        {
-          Name = name
-        }
-      };
-
-      if (askSize.Is(0))
-      {
-        response.Last = bid;
-      }
 
       return response;
     }
