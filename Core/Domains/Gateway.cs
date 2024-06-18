@@ -1,6 +1,6 @@
 using Distribution.Services;
-using FluentValidation.Results;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -43,16 +43,28 @@ namespace Terminal.Core.Domains
     Task<IList<ErrorModel>> Unsubscribe(string name);
 
     /// <summary>
-    /// Get quotes history
+    /// Get latest quote
     /// </summary>
     /// <param name="message"></param>
-    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message);
+    /// <param name="props"></param>
+    /// <returns></returns>
+    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null);
 
     /// <summary>
-    /// Get option chains
+    /// Get historical bars
     /// </summary>
     /// <param name="message"></param>
-    Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message);
+    /// <param name="props"></param>
+    /// <returns></returns>
+    Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null);
+
+    /// <summary>
+    /// Get options
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="props"></param>
+    /// <returns></returns>
+    Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null);
 
     /// <summary>
     /// Send new orders
@@ -114,16 +126,28 @@ namespace Terminal.Core.Domains
     public abstract Task<IList<ErrorModel>> Unsubscribe(string name);
 
     /// <summary>
-    /// Get quotes history
+    /// Get latest quote
     /// </summary>
     /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message);
+    /// <param name="props"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null);
 
     /// <summary>
-    /// Get option chains
+    /// Get historical bars
     /// </summary>
     /// <param name="message"></param>
-    public abstract Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message);
+    /// <param name="props"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null);
+
+    /// <summary>
+    /// Get options
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="props"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null);
 
     /// <summary>
     /// Send new orders

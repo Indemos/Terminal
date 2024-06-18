@@ -1,9 +1,6 @@
 using Schwab.Messages;
 using System;
-using System.Collections.Generic;
-using System.Collections;
 using System.Linq;
-using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -83,6 +80,26 @@ namespace Schwab.Mappers
         Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
         Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
         Instrument = new Instrument { Name = pointMessage.Symbol }
+      };
+
+      return point;
+    }
+
+    /// <summary>
+    /// Get internal point from bar
+    /// </summary>
+    /// <param name="pointMessage"></param>
+    /// <returns></returns>
+    public static PointModel GetBar(BarMessage pointMessage)
+    {
+      var point = new PointModel
+      {
+        Ask = pointMessage.Close,
+        Bid = pointMessage.Close,
+        AskSize = pointMessage.Volume,
+        BidSize = pointMessage.Volume,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(pointMessage.Datetime ?? DateTime.Now.Ticks).UtcDateTime,
+        Last = pointMessage.Close
       };
 
       return point;

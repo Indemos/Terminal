@@ -17,11 +17,6 @@ namespace Terminal.Core.Models
     public virtual DateTime? MaxDate { get; set; }
 
     /// <summary>
-    /// Resolution
-    /// </summary>
-    public virtual ResolutionEnum? Resolution { get; set; }
-
-    /// <summary>
     /// Symbol
     /// </summary>
     public virtual IList<string> Names { get; set; }

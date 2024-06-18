@@ -10,6 +10,11 @@ namespace Terminal.Core.Models
     public virtual string Name { get; set; }
 
     /// <summary>
+    /// Strike count
+    /// </summary>
+    public virtual int? Count { get; set; }
+
+    /// <summary>
     /// Min strike
     /// </summary>
     public virtual double? MinPrice { get; set; }

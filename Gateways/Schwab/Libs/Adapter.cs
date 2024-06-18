@@ -131,12 +131,14 @@ namespace Schwab
     }
 
     /// <summary>
-    /// Get option chains
+    /// Get options
     /// </summary>
     /// <param name="message"></param>
-    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message)
+    /// <param name="props"></param>
+    /// <returns></returns>
+    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null)
     {
-      var props = new Hashtable
+      var criteria = new Hashtable
       {
         ["symbol"] = message.Name,
         ["fromDate"] = $"{message.MinDate:yyyy-MM-dd}",
@@ -144,7 +146,7 @@ namespace Schwab
         ["includeQuotes"] = "TRUE"
       };
 
-      var response = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{props.ToQuery()}");
+      var response = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{criteria.ToQuery()}");
       var options = response
         .Data
         .PutExpDateMap
@@ -159,19 +161,20 @@ namespace Schwab
     }
 
     /// <summary>
-    /// Get points
+    /// Get latest quote
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="props"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message)
+    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null)
     {
-      var props = new Hashtable
+      var criteria = new Hashtable
       {
         ["symbols"] = string.Join(",", message.Names),
         ["fields"] = "quote,fundamental,extended,reference,regular"
       };
 
-      var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{props.ToQuery()}");
+      var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{criteria.ToQuery()}");
       var response = new ResponseItemModel<IDictionary<string, PointModel>>
       {
         Data = message
@@ -181,6 +184,33 @@ namespace Schwab
       };
 
       return response;
+    }
+
+    /// <summary>
+    /// Get historical bars
+    /// </summary>
+    /// <param name="message"></param>
+    /// <param name="props"></param>
+    /// <returns></returns>
+    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null)
+    {
+      var criteria = new Hashtable
+      {
+        ["symbol"] = string.Join(",", message.Names),
+        ["endDate"] = message.MaxDate.Value.Ticks,
+        ["startDate"] = message.MinDate.Value.Ticks,
+      };
+
+      var response = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{criteria.ToQuery()}");
+      var points = response
+        .Data
+        .Bars
+        ?.Select(InternalMap.GetBar)?.ToList() ?? [];
+
+      return new ResponseItemModel<IList<PointModel>>
+      {
+        Data = points
+      };
     }
 
     /// <summary>

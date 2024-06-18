@@ -1,6 +1,7 @@
 using Distribution.Services;
 using Simulation.Messages;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -495,12 +496,17 @@ namespace Simulation
       return response;
     }
 
-    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message)
+    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message)
+    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null)
     {
       throw new NotImplementedException();
     }
