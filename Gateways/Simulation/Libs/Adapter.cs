@@ -496,17 +496,17 @@ namespace Simulation
       return response;
     }
 
-    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null)
+    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null)
+    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null)
+    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
     {
       throw new NotImplementedException();
     }

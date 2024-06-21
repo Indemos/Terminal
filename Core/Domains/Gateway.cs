@@ -45,26 +45,23 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null);
+    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null);
+    Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="message"></param>
     /// <param name="props"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null);
+    Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria);
 
     /// <summary>
     /// Send new orders
@@ -128,26 +125,23 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null);
+    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null);
+    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null);
+    public abstract Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria);
 
     /// <summary>
     /// Send new orders

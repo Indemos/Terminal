@@ -144,10 +144,19 @@ namespace Alpaca
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      _connections?.ForEach(o => o?.Dispose());
-      _connections?.Clear();
+      var errors = new List<ErrorModel>();
 
-      return Task.FromResult<IList<ErrorModel>>([]);
+      try
+      {
+        _connections?.ForEach(o => o?.Dispose());
+        _connections?.Clear();
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return Task.FromResult<IList<ErrorModel>>(errors);
     }
 
     /// <summary>
@@ -180,35 +189,21 @@ namespace Alpaca
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
     {
       var response = new ResponseItemModel<IList<OptionModel>>();
 
       try
       {
-        var criteria = new Hashtable
-        {
-          ["limit"] = 1000,
-          ["underlying_symbol"] = message.Name,
-          ["expiration_date_gte"] = message.MinDate,
-          ["expiration_date_lte"] = message.MaxDate
-        };
-
-        foreach (DictionaryEntry prop in props ?? [])
-        {
-          criteria[prop.Key] = prop.Value;
-        }
-
         var optionResponse = await SendData<LatestDataMessage<
           HistoricalQuoteMessage,
           HistoricalBarMessage,
           HistoricalTradeMessage,
           OptionSnapshotMessage,
           HistoricalOrderBookMessage>>
-        ($"/v1beta1/options/snapshots/{message.Name}?{criteria.ToQuery()}");
+        ($"/v1beta1/options/snapshots/{criteria["underlying_symbol"]}?{criteria.ToQuery()}");
 
         response.Data = optionResponse
           .Data
@@ -227,26 +222,15 @@ namespace Alpaca
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
     {
       var response = new ResponseItemModel<IDictionary<string, PointModel>>();
 
       try
       {
-        var criteria = new Hashtable
-        {
-          ["symbols"] = string.Join(",", message.Names),
-          ["feed"] = "iex"
-        };
-
-        foreach (DictionaryEntry prop in props ?? [])
-        {
-          criteria[prop.Key] = prop.Value;
-        }
-
+        var names = $"{criteria["symbols"]}".Split(",");
         var pointResponse = await SendData<LatestDataMessage<
           HistoricalQuoteMessage,
           HistoricalBarMessage,
@@ -255,8 +239,7 @@ namespace Alpaca
           HistoricalOrderBookMessage>
         >($"/v2/stocks/quotes/latest?{criteria.ToQuery()}");
 
-        response.Data = message
-          .Names
+        response.Data = names
           .Select(name => InternalMap.GetPoint(pointResponse.Data.Quotes[name]))
           .ToDictionary(o => o.Instrument.Name);
       }
@@ -271,37 +254,22 @@ namespace Alpaca
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
     /// <exception cref="NotImplementedException"></exception>
-    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
     {
       var response = new ResponseItemModel<IList<PointModel>>();
 
       try
       {
-        var names = string.Join(",", message.Names);
-        var criteria = new Hashtable
-        {
-          ["limit"] = 1000,
-          ["symbol"] = names,
-          ["start"] = message.MinDate,
-          ["end"] = message.MaxDate
-        };
-
-        foreach (DictionaryEntry prop in props ?? [])
-        {
-          criteria[prop.Key] = prop.Value;
-        }
-
         var pointResponse = await SendData<LatestDataMessage<
           HistoricalQuoteMessage,
           HistoricalBarMessage,
           HistoricalTradeMessage,
           OptionSnapshotMessage,
           HistoricalOrderBookMessage>>
-          ($"/v2/stocks/{names}/bars?{criteria.ToQuery()}");
+          ($"/v2/stocks/{criteria["symbol"]}/bars?{criteria.ToQuery()}");
 
         response.Data = pointResponse
           .Data

@@ -1,27 +1,38 @@
-using System.Text.Json.Serialization;
+﻿/* Copyright (C) 2019 Interactive Brokers LLC. All rights reserved. This code is subject to the terms
+ * and conditions of the IB API Non-Commercial License or the IB API Commercial License, as applicable. */
 
-namespace Alpaca.Messages;
+using IBApi;
 
-public class ErrorMessage
+namespace InteractiveBrokers
 {
-  [JsonPropertyName("code")]
-  public int? Code { get; set; }
+    class ErrorMessage 
+    {
+        public ErrorMessage(int requestId, int errorCode, string message, string advancedOrderRejectJson)
+        {
+            AdvancedOrderRejectJson = advancedOrderRejectJson;
+            Message = message;
+            RequestId = requestId;
+            ErrorCode = errorCode;
+        }
 
-  [JsonPropertyName("message")]
-  public string Message { get; set; }
+        public string AdvancedOrderRejectJson { get; set; }
 
-  [JsonPropertyName("symbol")]
-  public string Symbol { get; set; }
+        public string Message { get; set; }
 
-  [JsonPropertyName("open_orders")]
-  public int? OpenOrdersCount { get; set; }
+        public int ErrorCode { get; set; }
 
-  [JsonPropertyName("day_trading_buying_power")]
-  public double? DayTradingBuyingPower { get; set; }
 
-  [JsonPropertyName("max_dtbp_used")]
-  public double? MaxDayTradingBuyingPowerUsed { get; set; }
+        public int RequestId { get; set; }
 
-  [JsonPropertyName("max_dtbp_used_so_far")]
-  public double? MaxDayTradingBuyingPowerUsedSoFar { get; set; }
+        public override string ToString()
+        {
+            string ret = "Error. Request: " + RequestId + ", Code: " + ErrorCode + " - " + Message;
+            if (!Util.StringIsEmpty(AdvancedOrderRejectJson))
+            {
+                ret += (", AdvancedOrderRejectJson: " + AdvancedOrderRejectJson);
+            }
+            return ret;
+        }
+       
+    }
 }

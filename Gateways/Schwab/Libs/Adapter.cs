@@ -1,7 +1,6 @@
 using Distribution.Services;
 using Distribution.Stream;
 using Distribution.Stream.Extensions;
-using Microsoft.AspNetCore.DataProtection.KeyManagement.Internal;
 using Schwab.Mappers;
 using Schwab.Messages;
 using System;
@@ -17,6 +16,7 @@ using System.Timers;
 using Terminal.Core.Domains;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
+using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Schwab
 {
@@ -78,24 +78,33 @@ namespace Schwab
     /// </summary>
     public override async Task<IList<ErrorModel>> Connect()
     {
-      await Disconnect();
+      var errors = new List<ErrorModel>();
 
-      _sender = new Service();
+      try
+      {
+        await Disconnect();
 
-      await GetAccountData();
+        _sender = new Service();
 
-      var interval = new Timer(TimeSpan.FromMinutes(1));
+        await GetAccountData();
 
-      await UpdateToken("/v1/oauth/token");
+        var interval = new Timer(TimeSpan.FromMinutes(1));
 
-      interval.Enabled = true;
-      interval.Elapsed += async (sender, e) => await UpdateToken("/v1/oauth/token");
+        await UpdateToken("/v1/oauth/token");
 
-      _connections.Add(_sender);
-      _connections.Add(_streamer);
-      _connections.Add(interval);
+        interval.Enabled = true;
+        interval.Elapsed += async (sender, e) => await UpdateToken("/v1/oauth/token");
 
-      return null;
+        _connections.Add(_sender);
+        _connections.Add(_streamer);
+        _connections.Add(interval);
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return errors;
     }
 
     /// <summary>
@@ -103,9 +112,18 @@ namespace Schwab
     /// </summary>
     public override async Task<IList<ErrorModel>> Subscribe(string name)
     {
-      await Unsubscribe(name);
+      var errors = new List<ErrorModel>();
 
-      return null;
+      try
+      {
+        await Unsubscribe(name);
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return errors;
     }
 
     /// <summary>
@@ -113,10 +131,19 @@ namespace Schwab
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      _connections?.ForEach(o => o?.Dispose());
-      _connections?.Clear();
+      var errors = new List<ErrorModel>();
 
-      return Task.FromResult<IList<ErrorModel>>(null);
+      try
+      {
+        _connections?.ForEach(o => o?.Dispose());
+        _connections?.Clear();
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return Task.FromResult<IList<ErrorModel>>(errors);
     }
 
     /// <summary>
@@ -124,64 +151,72 @@ namespace Schwab
     /// </summary>
     public override Task<IList<ErrorModel>> Unsubscribe(string name)
     {
-      _subscriptions?.ForEach(o => o.Dispose());
-      _subscriptions?.Clear();
+      var errors = new List<ErrorModel>();
 
-      return Task.FromResult<IList<ErrorModel>>(null);
+      try
+      {
+        _subscriptions?.ForEach(o => o.Dispose());
+        _subscriptions?.Clear();
+      }
+      catch (Exception e)
+      {
+        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+      }
+
+      return Task.FromResult<IList<ErrorModel>>(errors);
     }
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(OptionMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
     {
-      var criteria = new Hashtable
-      {
-        ["symbol"] = message.Name,
-        ["fromDate"] = $"{message.MinDate:yyyy-MM-dd}",
-        ["toDate"] = $"{message.MaxDate:yyyy-MM-dd}",
-        ["includeQuotes"] = "TRUE"
-      };
+      var response = new ResponseItemModel<IList<OptionModel>>();
 
-      var response = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{criteria.ToQuery()}");
-      var options = response
-        .Data
-        .PutExpDateMap
-        ?.Concat(response.Data.CallExpDateMap)
-        ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
-        ?.Select(InternalMap.GetOption)?.ToList() ?? [];
-
-      return new ResponseItemModel<IList<OptionModel>>
+      try
       {
-        Data = options
-      };
+        var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{criteria.ToQuery()}");
+
+        response.Data = optionResponse
+          .Data
+          .PutExpDateMap
+          ?.Concat(optionResponse.Data.CallExpDateMap)
+          ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
+          ?.Select(InternalMap.GetOption)?.ToList() ?? [];
+
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(PointMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
     {
-      var criteria = new Hashtable
-      {
-        ["symbols"] = string.Join(",", message.Names),
-        ["fields"] = "quote,fundamental,extended,reference,regular"
-      };
+      var response = new ResponseItemModel<IDictionary<string, PointModel>>();
 
-      var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{criteria.ToQuery()}");
-      var response = new ResponseItemModel<IDictionary<string, PointModel>>
+      try
       {
-        Data = message
-          .Names
+        var names = $"{criteria["symbols"]}".Split(",");
+        var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{criteria.ToQuery()}");
+
+        response.Data = names
           .Select(name => InternalMap.GetPoint(pointResponse.Data[name]))
-          .ToDictionary(o => o.Instrument.Name)
-      };
+          .ToDictionary(o => o.Instrument.Name);
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
 
       return response;
     }
@@ -189,28 +224,27 @@ namespace Schwab
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="message"></param>
-    /// <param name="props"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(PointMessageModel message, Hashtable props = null)
+    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
     {
-      var criteria = new Hashtable
-      {
-        ["symbol"] = string.Join(",", message.Names),
-        ["endDate"] = message.MaxDate.Value.Ticks,
-        ["startDate"] = message.MinDate.Value.Ticks,
-      };
+      var response = new ResponseItemModel<IList<PointModel>>();
 
-      var response = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{criteria.ToQuery()}");
-      var points = response
-        .Data
-        .Bars
-        ?.Select(InternalMap.GetBar)?.ToList() ?? [];
-
-      return new ResponseItemModel<IList<PointModel>>
+      try
       {
-        Data = points
-      };
+        var pointResponse = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{criteria.ToQuery()}");
+
+        response.Data = pointResponse
+          .Data
+          .Bars
+          ?.Select(InternalMap.GetBar)?.ToList() ?? [];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -348,8 +382,11 @@ namespace Schwab
 
         var response = await _sender.Send<ScopeMessage>(message, _sender.Options);
 
-        Scope.AccessToken = response.Data.AccessToken;
-        Scope.RefreshToken = response.Data.RefreshToken;
+        if (response.Data is not null)
+        {
+          Scope.AccessToken = response.Data.AccessToken;
+          Scope.RefreshToken = response.Data.RefreshToken;
+        }
       }
       catch (Exception e)
       {
