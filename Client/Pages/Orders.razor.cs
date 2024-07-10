@@ -76,9 +76,9 @@ namespace Client.Pages
       Account = new Account
       {
         Descriptor = "Demo",
-        Instruments = new Dictionary<string, Instrument>
+        Instruments = new Dictionary<string, InstrumentModel>
         {
-          [_asset] = new Instrument { Name = _asset }
+          [_asset] = new InstrumentModel { Name = _asset }
         }
       };
 
@@ -126,7 +126,7 @@ namespace Client.Pages
       await View.PositionsView.UpdateItems(Account.ActivePositions);
     }
 
-    private void OpenPositions(IInstrument assetBuy, IInstrument assetSell)
+    private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
       var orderSell = new OrderModel
       {

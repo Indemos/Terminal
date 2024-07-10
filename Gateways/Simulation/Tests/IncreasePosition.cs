@@ -85,18 +85,18 @@ namespace Terminal.Tests
       Assert.Equal(nextPosition.GainLossPointsEstimate, priceUpdate.Bid - nextPosition.Order.Transaction.Price);
     }
 
-    private (OrderModel, IInstrument) CreatePositions()
+    private (OrderModel, InstrumentModel) CreatePositions()
     {
       var price = 15;
       var pointX = new PointModel { Bid = price, Ask = price };
       var pointY = new PointModel { Bid = price, Ask = price };
-      var instrumentX = new Instrument()
+      var instrumentX = new InstrumentModel()
       {
         Name = "X",
         Points = [pointX]
       };
 
-      var instrumentY = new Instrument()
+      var instrumentY = new InstrumentModel()
       {
         Name = "Y",
         Points = [pointY]

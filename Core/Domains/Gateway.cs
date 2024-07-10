@@ -35,33 +35,63 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Subscribe
     /// </summary>
-    Task<IList<ErrorModel>> Subscribe(string name);
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
-    Task<IList<ErrorModel>> Unsubscribe(string name);
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument);
+
+    /// <summary>
+    /// Get account state
+    /// </summary>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria);
 
     /// <summary>
     /// Get latest quote
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria);
+    Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria);
+    Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="props"></param>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria);
+    Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria);
+
+    /// <summary>
+    /// Get positions
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria);
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria);
 
     /// <summary>
     /// Send new orders
@@ -107,9 +137,9 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Subscribe
     /// </summary>
-    /// <param name="name"></param>
+    /// <param name="instrument"></param>
     /// <returns></returns>
-    public abstract Task<IList<ErrorModel>> Subscribe(string name);
+    public abstract Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Disconnect
@@ -120,28 +150,56 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Unsubscribe
     /// </summary>
-    public abstract Task<IList<ErrorModel>> Unsubscribe(string name);
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public abstract Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument);
+
+    /// <summary>
+    /// Get account state
+    /// </summary>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria);
 
     /// <summary>
     /// Get latest quote
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria);
+    public abstract Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria);
+
+    /// <summary>
+    /// Get positions
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria);
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria);
 
     /// <summary>
     /// Send new orders
@@ -208,7 +266,7 @@ namespace Terminal.Core.Domains
         })));
 
         response.Count += errors.Count;
-        response.Items.Add(new ResponseItemModel<OrderModel>
+        response.Items.Add(new ResponseModel<OrderModel>
         {
           Data = order,
           Errors = errors

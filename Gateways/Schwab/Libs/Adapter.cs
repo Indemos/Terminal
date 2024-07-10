@@ -14,9 +14,9 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 using Terminal.Core.Domains;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Schwab
 {
@@ -43,11 +43,6 @@ namespace Schwab
     protected IList<IDisposable> _connections;
 
     /// <summary>
-    /// Disposable subscriptions
-    /// </summary>
-    protected IList<IDisposable> _subscriptions;
-
-    /// <summary>
     /// Data endpoint
     /// </summary>
     public virtual string DataUri { get; set; }
@@ -69,7 +64,6 @@ namespace Schwab
     {
       DataUri = "https://api.schwabapi.com";
 
-      _subscriptions = [];
       _connections = [];
     }
 
@@ -86,7 +80,7 @@ namespace Schwab
 
         _sender = new Service();
 
-        await GetAccountData();
+        await GetAccount([]);
 
         var interval = new Timer(TimeSpan.FromMinutes(1));
 
@@ -98,6 +92,8 @@ namespace Schwab
         _connections.Add(_sender);
         _connections.Add(_streamer);
         _connections.Add(interval);
+
+        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -110,13 +106,15 @@ namespace Schwab
     /// <summary>
     /// Subscribe to data streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Subscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
 
       try
       {
-        await Unsubscribe(name);
+        await Unsubscribe(instrument);
       }
       catch (Exception e)
       {
@@ -149,19 +147,11 @@ namespace Schwab
     /// <summary>
     /// Unsubscribe from data streams
     /// </summary>
-    public override Task<IList<ErrorModel>> Unsubscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
-
-      try
-      {
-        _subscriptions?.ForEach(o => o.Dispose());
-        _subscriptions?.Clear();
-      }
-      catch (Exception e)
-      {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
 
       return Task.FromResult<IList<ErrorModel>>(errors);
     }
@@ -169,15 +159,24 @@ namespace Schwab
     /// <summary>
     /// Get options
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
+    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<OptionModel>>();
+      var response = new ResponseModel<IList<OptionModel>>();
 
       try
       {
-        var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{criteria.ToQuery()}");
+        var props = new Hashtable
+        {
+          ["symbol"] = args.Name,
+          ["fromDate"] = args.MinDate,
+          ["toDate"] = args.MaxDate
+
+        }.Merge(criteria);
+
+        var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{props}");
 
         response.Data = optionResponse
           .Data
@@ -185,7 +184,6 @@ namespace Schwab
           ?.Concat(optionResponse.Data.CallExpDateMap)
           ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
           ?.Select(InternalMap.GetOption)?.ToList() ?? [];
-
       }
       catch (Exception e)
       {
@@ -198,20 +196,25 @@ namespace Schwab
     /// <summary>
     /// Get latest quote
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IDictionary<string, PointModel>>();
+      var response = new ResponseModel<DomModel>();
 
       try
       {
-        var names = $"{criteria["symbols"]}".Split(",");
-        var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{criteria.ToQuery()}");
+        var props = new Hashtable
+        {
+          ["symbol_id"] = args.Name,
+          ["fields"] = "quote,fundamental,extended,reference,regular"
 
-        response.Data = names
-          .Select(name => InternalMap.GetPoint(pointResponse.Data[name]))
-          .ToDictionary(o => o.Instrument.Name);
+        }.Merge(criteria);
+
+        var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{props}");
+
+        response.Data = InternalMap.GetDom(pointResponse.Data[props["symbol_id"]]);
       }
       catch (Exception e)
       {
@@ -224,15 +227,26 @@ namespace Schwab
     /// <summary>
     /// Get historical bars
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<PointModel>>();
+      var response = new ResponseModel<IList<PointModel>>();
 
       try
       {
-        var pointResponse = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{criteria.ToQuery()}");
+        var props = new Hashtable
+        {
+          ["periodType"] = "day",
+          ["period"] = 1,
+          ["frequencyType"] = "minute",
+          ["frequency"] = 1,
+          ["symbol"] = args.Name
+
+        }.Merge(criteria);
+
+        var pointResponse = await SendData<BarsMessage>($"/marketdata/v1/pricehistory?{props}");
 
         response.Data = pointResponse
           .Data
@@ -284,41 +298,107 @@ namespace Schwab
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    protected virtual async Task GetAccountData()
+    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
     {
-      var dateFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
-      var orderProps = new Hashtable
+      var response = new ResponseModel<IAccount>();
+
+      try
       {
-        ["maxResults"] = 50,
-        ["toEnteredTime"] = DateTime.Now.AddDays(5).ToString(dateFormat),
-        ["fromEnteredTime"] = DateTime.Now.AddDays(-100).ToString(dateFormat)
-      };
+        var accountProps = new Hashtable { ["fields"] = "positions" };
+        var accountNumbers = await SendData<AccountNumberMessage[]>("/trader/v1/accounts/accountNumbers");
 
-      var accountProps = new Hashtable { ["fields"] = "positions" };
-      var accountNumbers = await SendData<AccountNumberMessage[]>("/trader/v1/accounts/accountNumbers");
+        _accountCode = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
 
-      _accountCode = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
+        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.ToQuery()}");
+        var orders = await GetOrders(null, criteria);
 
-      var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.ToQuery()}");
-      var orders = await SendData<OrderMessage[]>($"/trader/v1/accounts/{_accountCode}/orders?{orderProps.ToQuery()}");
+        Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
+        Account.ActivePositions = account
+          .Data
+          .SecuritiesAccount
+          .Positions
+          .Select(InternalMap.GetPosition)
+          .ToDictionary(o => o.Order.Transaction.Id);
 
-      Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
-      Account.ActiveOrders = orders
-        .Data
-        .Where(o => o.CloseTime is null)
-        .Select(InternalMap.GetOrder)
-        .ToDictionary(o => o.Transaction.Id, o => o);
+        Account
+          .ActiveOrders
+          .Select(o => o.Value.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Where(o => Account.Instruments.ContainsKey(o) is false)
+          .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
 
-      Account.ActivePositions = account
-        .Data
-        .SecuritiesAccount
-        .Positions
-        .Select(InternalMap.GetPosition)
-        .ToDictionary(o => o.Order.Transaction.Id, o => o);
+        response.Data = Account;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
 
-      Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
-      Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
+      return response;
+    }
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<OrderModel>>();
+
+      try
+      {
+        var dateFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
+        var props = new Hashtable
+        {
+          ["maxResults"] = 50,
+          ["toEnteredTime"] = DateTime.Now.AddDays(5).ToString(dateFormat),
+          ["fromEnteredTime"] = DateTime.Now.AddDays(-100).ToString(dateFormat)
+
+        }.Merge(criteria);
+
+        var items = await SendData<OrderMessage[]>($"/trader/v1/accounts/{_accountCode}/orders?{props}");
+
+        response.Data = [.. items.Data.Where(o => o.CloseTime is null).Select(InternalMap.GetOrder)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get positions 
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<PositionModel>>();
+
+      try
+      {
+        var props = new Hashtable { ["fields"] = "positions" }.Merge(criteria);
+        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{props}");
+
+        response.Data = [.. account
+          .Data
+          .SecuritiesAccount
+          .Positions
+          .Select(InternalMap.GetPosition)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -399,9 +479,9 @@ namespace Schwab
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {
@@ -439,9 +519,9 @@ namespace Schwab
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {

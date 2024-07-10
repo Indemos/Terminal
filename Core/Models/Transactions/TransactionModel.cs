@@ -49,7 +49,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Instrument to buy or sell
     /// </summary>
-    public virtual IInstrument Instrument { get; set; }
+    public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Constructor

@@ -10,6 +10,30 @@ namespace Schwab.Mappers
   public class InternalMap
   {
     /// <summary>
+    /// Get order book
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    public static DomModel GetDom(AssetMessage message)
+    {
+      var o = message.Quote;
+      var point = new PointModel
+      {
+        Ask = o.AskPrice,
+        Bid = o.BidPrice,
+        AskSize = o.AskSize,
+        BidSize = o.BidSize,
+        Last = o.AskPrice ?? o.BidPrice,
+      };
+
+      return new DomModel
+      {
+        Asks = [point],
+        Bids = [point],
+      };
+    }
+
+    /// <summary>
     /// Get internal option
     /// </summary>
     /// <param name="message"></param>
@@ -66,11 +90,11 @@ namespace Schwab.Mappers
     /// <summary>
     /// Get internal point
     /// </summary>
-    /// <param name="pointMessage"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetPoint(AssetMessage pointMessage)
+    public static PointModel GetPoint(AssetMessage message)
     {
-      var o = pointMessage.Quote;
+      var o = message.Quote;
       var point = new PointModel
       {
         Ask = o.AskPrice,
@@ -79,7 +103,7 @@ namespace Schwab.Mappers
         BidSize = o.BidSize,
         Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime,
         Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
-        Instrument = new Instrument { Name = pointMessage.Symbol }
+        Instrument = new InstrumentModel { Name = message.Symbol }
       };
 
       return point;
@@ -88,18 +112,18 @@ namespace Schwab.Mappers
     /// <summary>
     /// Get internal point from bar
     /// </summary>
-    /// <param name="pointMessage"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetBar(BarMessage pointMessage)
+    public static PointModel GetBar(BarMessage message)
     {
       var point = new PointModel
       {
-        Ask = pointMessage.Close,
-        Bid = pointMessage.Close,
-        AskSize = pointMessage.Volume,
-        BidSize = pointMessage.Volume,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(pointMessage.Datetime ?? DateTime.Now.Ticks).UtcDateTime,
-        Last = pointMessage.Close
+        Ask = message.Close,
+        Bid = message.Close,
+        AskSize = message.Volume,
+        BidSize = message.Volume,
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message.Datetime ?? DateTime.Now.Ticks).UtcDateTime,
+        Last = message.Close
       };
 
       return point;
@@ -108,33 +132,33 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote position to local
     /// </summary>
-    /// <param name="position"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMessage position)
+    public static PositionModel GetPosition(PositionMessage message)
     {
-      var instrument = new Instrument
+      var instrument = new InstrumentModel
       {
-        Name = position.Instrument.Symbol
+        Name = message.Instrument.Symbol
       };
 
       var action = new TransactionModel
       {
         Instrument = instrument,
-        Price = position.AveragePrice,
-        Descriptor = position.Instrument.Symbol,
-        Volume = position.LongQuantity + position.ShortQuantity,
-        CurrentVolume = position.LongQuantity + position.ShortQuantity
+        Price = message.AveragePrice,
+        Descriptor = message.Instrument.Symbol,
+        Volume = message.LongQuantity + message.ShortQuantity,
+        CurrentVolume = message.LongQuantity + message.ShortQuantity
       };
 
       var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetPositionSide(position)
+        Side = GetPositionSide(message)
       };
 
       var gainLossPoints = 0.0;
-      var gainLoss = position.LongOpenProfitLoss;
+      var gainLoss = message.LongOpenProfitLoss;
 
       return new PositionModel
       {
@@ -152,14 +176,14 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote position side to local
     /// </summary>
-    /// <param name="position"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetPositionSide(PositionMessage position)
+    public static OrderSideEnum GetPositionSide(PositionMessage message)
     {
       switch (true)
       {
-        case true when position.LongQuantity > 0: return OrderSideEnum.Buy;
-        case true when position.ShortQuantity > 0: return OrderSideEnum.Sell;
+        case true when message.LongQuantity > 0: return OrderSideEnum.Buy;
+        case true when message.ShortQuantity > 0: return OrderSideEnum.Sell;
       }
 
       return OrderSideEnum.None;
@@ -168,54 +192,54 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote order to local
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderModel GetOrder(OrderMessage order)
+    public static OrderModel GetOrder(OrderMessage message)
     {
-      var assets = order
+      var assets = message
         ?.OrderLegCollection
         ?.Select(o => o?.Instrument?.Symbol);
 
-      var instrument = new Instrument
+      var instrument = new InstrumentModel
       {
         Name = string.Join($" {Environment.NewLine}", assets)
       };
 
       var action = new TransactionModel
       {
-        Id = $"{order.OrderId}",
-        Descriptor = order.OrderId,
+        Id = $"{message.OrderId}",
+        Descriptor = message.OrderId,
         Instrument = instrument,
-        CurrentVolume = order.FilledQuantity,
-        Volume = order.Quantity,
-        Time = order.EnteredTime,
-        Status = GetStatus(order)
+        CurrentVolume = message.FilledQuantity,
+        Volume = message.Quantity,
+        Time = message.EnteredTime,
+        Status = GetStatus(message)
       };
 
       var inOrder = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetOrderSide(order),
-        TimeSpan = GetTimeSpan(order)
+        Side = GetOrderSide(message),
+        TimeSpan = GetTimeSpan(message)
       };
 
-      switch (order.OrderType.ToUpper())
+      switch (message.OrderType.ToUpper())
       {
         case "STOP":
           inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = order.Price;
+          inOrder.Price = message.Price;
           break;
 
         case "LIMIT":
           inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = order.Price;
+          inOrder.Price = message.Price;
           break;
 
         case "STOP_LIMIT":
           inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = order.Price;
-          inOrder.ActivationPrice = order.StopPrice;
+          inOrder.Price = message.Price;
+          inOrder.ActivationPrice = message.StopPrice;
           break;
       }
 
@@ -225,11 +249,11 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote order status to local
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderStatusEnum GetStatus(OrderMessage order)
+    public static OrderStatusEnum GetStatus(OrderMessage message)
     {
-      switch (order.Status.ToUpper())
+      switch (message.Status.ToUpper())
       {
         case "FILLED":
         case "REPLACED": return OrderStatusEnum.Filled;
@@ -256,11 +280,11 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote order side to local
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderSideEnum GetOrderSide(OrderMessage order)
+    public static OrderSideEnum GetOrderSide(OrderMessage message)
     {
-      var position = order
+      var position = message
         ?.OrderLegCollection
         ?.FirstOrDefault();
 
@@ -284,12 +308,12 @@ namespace Schwab.Mappers
     /// <summary>
     /// Convert remote time in force to local
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderTimeSpanEnum GetTimeSpan(OrderMessage order)
+    public static OrderTimeSpanEnum GetTimeSpan(OrderMessage message)
     {
-      var span = order.Duration;
-      var session = order.Session;
+      var span = message.Duration;
+      var session = message.Session;
 
       switch (true)
       {

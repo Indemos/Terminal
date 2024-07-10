@@ -41,7 +41,7 @@ namespace Terminal.Tests
         {
           Volume = 1,
           Price = orderPrice,
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points =
@@ -84,7 +84,7 @@ namespace Terminal.Tests
         {
           Volume = 1,
           Descriptor = "Demo", 
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points =
@@ -125,7 +125,7 @@ namespace Terminal.Tests
     public void CreateMarketOrderWithBrackets()
     {
       var price = 15;
-      var instrument = new Instrument()
+      var instrument = new InstrumentModel()
       {
         Name = "X",
         Points =

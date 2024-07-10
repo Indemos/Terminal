@@ -6,7 +6,7 @@ using Terminal.Core.Extensions;
 
 namespace Terminal.Core.Models
 {
-    public class PointModel : ICloneable, IGroup
+  public class PointModel : ICloneable, IGroup
   {
     /// <summary>
     /// Bid
@@ -51,7 +51,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Reference to the instrument
     /// </summary>
-    public virtual IInstrument Instrument { get; set; }
+    public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Values from related series synced with the current data point, e.g. averaged indicator calculations for the charts

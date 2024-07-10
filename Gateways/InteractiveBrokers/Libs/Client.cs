@@ -1,15 +1,17 @@
+using Distribution.Services;
 using IBApi;
 using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace InteractiveBrokers
 {
   public class IBClient : EWrapper
   {
+    protected ScheduleService sc;
+
     public Task<Contract> ResolveContractAsync(int conId, string refExch)
     {
       var reqId = new Random(DateTime.Now.Millisecond).Next();
@@ -32,23 +34,26 @@ namespace InteractiveBrokers
           resolveResult.SetResult(null);
       });
 
-      var tmpError = Error;
-      var tmpContractDetails = ContractDetails;
-      var tmpContractDetailsEnd = ContractDetailsEnd;
+      var cbError = Error;
+      var cbContractDetails = ContractDetails;
+      var cbContractDetailsEnd = ContractDetailsEnd;
 
       Error = resolveContract_Error;
       ContractDetails = resolveContract;
       ContractDetailsEnd = contractDetailsEnd;
 
-      resolveResult.Task.ContinueWith(t =>
+      resolveResult.Task.ContinueWith(o =>
       {
-        Error = tmpError;
-        ContractDetails = tmpContractDetails;
-        ContractDetailsEnd = tmpContractDetailsEnd;
+        Error = cbError;
+        ContractDetails = cbContractDetails;
+        ContractDetailsEnd = cbContractDetailsEnd;
       });
 
       ClientSocket.reqContractDetails(reqId, new Contract
-      { ConId = conId, Exchange = refExch });
+      {
+        ConId = conId,
+        Exchange = refExch
+      });
 
       return resolveResult.Task;
     }
@@ -63,7 +68,7 @@ namespace InteractiveBrokers
         if (reqId != id)
           return;
 
-        res.SetResult(new Contract[0]);
+        res.SetResult([]);
       });
       var contractDetails = new Action<ContractDetailsMessage>(msg =>
       {
@@ -78,536 +83,539 @@ namespace InteractiveBrokers
           res.SetResult(contractList.ToArray());
       });
 
-      var tmpError = Error;
-      var tmpContractDetails = ContractDetails;
-      var tmpContractDetailsEnd = ContractDetailsEnd;
+      var cbError = Error;
+      var cbContractDetails = ContractDetails;
+      var cbContractDetailsEnd = ContractDetailsEnd;
 
       Error = resolveContract_Error;
       ContractDetails = contractDetails;
       ContractDetailsEnd = contractDetailsEnd;
 
-      res.Task.ContinueWith(t =>
+      res.Task.ContinueWith(o =>
       {
-        Error = tmpError;
-        ContractDetails = tmpContractDetails;
-        ContractDetailsEnd = tmpContractDetailsEnd;
+        Error = cbError;
+        ContractDetails = cbContractDetails;
+        ContractDetailsEnd = cbContractDetailsEnd;
       });
 
       ClientSocket.reqContractDetails(reqId, new Contract
-      { SecType = secType, Symbol = symbol, Currency = currency, Exchange = exchange });
+      {
+        SecType = secType,
+        Symbol = symbol,
+        Currency = currency,
+        Exchange = exchange
+      });
 
       return res.Task;
     }
 
     public int ClientId { get; set; }
 
-    SynchronizationContext sc;
-
     public IBClient(EReaderSignal signal)
     {
       ClientSocket = new EClientSocket(this, signal);
-      sc = SynchronizationContext.Current;
+      sc = new ScheduleService();
     }
 
     public EClientSocket ClientSocket { get; private set; }
 
     public int NextOrderId { get; set; }
 
-    public event Action<int, int, string, string, Exception> Error;
+    public Action<int, int, string, string, Exception> Error;
 
     void EWrapper.error(Exception e)
     {
-      var tmp = Error;
+      var cb = Error;
 
-      if (tmp != null)
-        sc.Post(t => tmp(0, 0, null, null, e), null);
+      if (cb != null)
+        Run(() => cb(0, 0, null, null, e), null);
     }
 
     void EWrapper.error(string str)
     {
-      var tmp = Error;
+      var cb = Error;
 
-      if (tmp != null)
-        sc.Post(t => tmp(0, 0, str, null, null), null);
+      if (cb != null)
+        Run(() => cb(0, 0, str, null, null), null);
     }
 
     void EWrapper.error(int id, int errorCode, string errorMsg, string advancedOrderRejectJson)
     {
-      var tmp = Error;
+      var cb = Error;
 
-      if (tmp != null)
-        sc.Post(t => tmp(id, errorCode, errorMsg, advancedOrderRejectJson, null), null);
+      if (cb != null)
+        Run(() => cb(id, errorCode, errorMsg, advancedOrderRejectJson, null), null);
     }
 
-    public event Action ConnectionClosed;
+    public Action ConnectionClosed;
 
     void EWrapper.connectionClosed()
     {
-      var tmp = ConnectionClosed;
+      var cb = ConnectionClosed;
 
-      if (tmp != null)
-        sc.Post(t => tmp(), null);
+      if (cb != null)
+        Run(() => cb(), null);
     }
 
-    public event Action<long> CurrentTime;
+    public Action<long> CurrentTime;
 
     void EWrapper.currentTime(long time)
     {
-      var tmp = CurrentTime;
+      var cb = CurrentTime;
 
-      if (tmp != null)
-        sc.Post(t => tmp(time), null);
+      if (cb != null)
+        Run(() => cb(time), null);
     }
 
-    public event Action<TickPriceMessage> TickPrice;
+    public Action<TickPriceMessage> TickPrice;
 
     void EWrapper.tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
-      var tmp = TickPrice;
+      var cb = TickPrice;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickPriceMessage(tickerId, field, price, attribs)), null);
+      if (cb != null)
+        Run(() => cb(new TickPriceMessage(tickerId, field, price, attribs)), null);
     }
 
-    public event Action<TickSizeMessage> TickSize;
+    public Action<TickSizeMessage> TickSize;
 
     void EWrapper.tickSize(int tickerId, int field, decimal size)
     {
-      var tmp = TickSize;
+      var cb = TickSize;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickSizeMessage(tickerId, field, size)), null);
+      if (cb != null)
+        Run(() => cb(new TickSizeMessage(tickerId, field, size)), null);
     }
 
-    public event Action<int, int, string> TickString;
+    public Action<int, int, string> TickString;
 
     void EWrapper.tickString(int tickerId, int tickType, string value)
     {
-      var tmp = TickString;
+      var cb = TickString;
 
-      if (tmp != null)
-        sc.Post(t => tmp(tickerId, tickType, value), null);
+      if (cb != null)
+        Run(() => cb(tickerId, tickType, value), null);
     }
 
-    public event Action<TickGenericMessage> TickGeneric;
+    public Action<TickGenericMessage> TickGeneric;
 
     void EWrapper.tickGeneric(int tickerId, int field, double value)
     {
-      var tmp = TickGeneric;
+      var cb = TickGeneric;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickGenericMessage(tickerId, field, value)), null);
+      if (cb != null)
+        Run(() => cb(new TickGenericMessage(tickerId, field, value)), null);
     }
 
-    public event Action<int, int, double, string, double, int, string, double, double> TickEFP;
+    public Action<int, int, double, string, double, int, string, double, double> TickEFP;
 
     void EWrapper.tickEFP(int tickerId, int tickType, double basisPoints, string formattedBasisPoints, double impliedFuture, int holdDays, string futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate)
     {
-      var tmp = TickEFP;
+      var cb = TickEFP;
 
-      if (tmp != null)
-        sc.Post(t => tmp(tickerId, tickType, basisPoints, formattedBasisPoints, impliedFuture, holdDays, futureLastTradeDate, dividendImpact, dividendsToLastTradeDate), null);
+      if (cb != null)
+        Run(() => cb(tickerId, tickType, basisPoints, formattedBasisPoints, impliedFuture, holdDays, futureLastTradeDate, dividendImpact, dividendsToLastTradeDate), null);
     }
 
-    public event Action<int> TickSnapshotEnd;
+    public Action<int> TickSnapshotEnd;
 
     void EWrapper.tickSnapshotEnd(int tickerId)
     {
-      var tmp = TickSnapshotEnd;
+      var cb = TickSnapshotEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(tickerId), null);
+      if (cb != null)
+        Run(() => cb(tickerId), null);
     }
 
-    public event Action<ConnectionStatusMessage> NextValidId;
+    public Action<ConnectionStatusMessage> NextValidId;
 
     void EWrapper.nextValidId(int orderId)
     {
-      var tmp = NextValidId;
+      var cb = NextValidId;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new ConnectionStatusMessage(true)), null);
+      if (cb != null)
+        Run(() => cb(new ConnectionStatusMessage(true)), null);
 
       NextOrderId = orderId;
     }
 
-    public event Action<int, DeltaNeutralContract> DeltaNeutralValidation;
+    public Action<int, DeltaNeutralContract> DeltaNeutralValidation;
 
     void EWrapper.deltaNeutralValidation(int reqId, DeltaNeutralContract deltaNeutralContract)
     {
-      var tmp = DeltaNeutralValidation;
+      var cb = DeltaNeutralValidation;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, deltaNeutralContract), null);
+      if (cb != null)
+        Run(() => cb(reqId, deltaNeutralContract), null);
     }
 
-    public event Action<ManagedAccountsMessage> ManagedAccounts;
+    public Action<ManagedAccountsMessage> ManagedAccounts;
 
     void EWrapper.managedAccounts(string accountsList)
     {
-      var tmp = ManagedAccounts;
+      var cb = ManagedAccounts;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new ManagedAccountsMessage(accountsList)), null);
+      if (cb != null)
+        Run(() => cb(new ManagedAccountsMessage(accountsList)), null);
     }
 
-    public event Action<TickOptionMessage> TickOptionCommunication;
+    public Action<TickOptionMessage> TickOptionCommunication;
 
     void EWrapper.tickOptionComputation(int tickerId, int field, int tickAttrib, double impliedVolatility, double delta, double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice)
     {
-      var tmp = TickOptionCommunication;
+      var cb = TickOptionCommunication;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickOptionMessage(tickerId, field, tickAttrib, impliedVolatility, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)), null);
+      if (cb != null)
+        Run(() => cb(new TickOptionMessage(tickerId, field, tickAttrib, impliedVolatility, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)), null);
     }
 
-    public event Action<AccountSummaryMessage> AccountSummary;
+    public Action<AccountSummaryMessage> AccountSummary;
 
     void EWrapper.accountSummary(int reqId, string account, string tag, string value, string currency)
     {
-      var tmp = AccountSummary;
+      var cb = AccountSummary;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AccountSummaryMessage(reqId, account, tag, value, currency)), null);
+      if (cb != null)
+        Run(() => cb(new AccountSummaryMessage(reqId, account, tag, value, currency)), null);
     }
 
-    public event Action<AccountSummaryEndMessage> AccountSummaryEnd;
+    public Action<AccountSummaryEndMessage> AccountSummaryEnd;
 
     void EWrapper.accountSummaryEnd(int reqId)
     {
-      var tmp = AccountSummaryEnd;
+      var cb = AccountSummaryEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AccountSummaryEndMessage(reqId)), null);
+      if (cb != null)
+        Run(() => cb(new AccountSummaryEndMessage(reqId)), null);
     }
 
-    public event Action<AccountValueMessage> UpdateAccountValue;
+    public Action<AccountValueMessage> UpdateAccountValue;
 
     void EWrapper.updateAccountValue(string key, string value, string currency, string accountName)
     {
-      var tmp = UpdateAccountValue;
+      var cb = UpdateAccountValue;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AccountValueMessage(key, value, currency, accountName)), null);
+      if (cb != null)
+        Run(() => cb(new AccountValueMessage(key, value, currency, accountName)), null);
     }
 
-    public event Action<UpdatePortfolioMessage> UpdatePortfolio;
+    public Action<UpdatePortfolioMessage> UpdatePortfolio;
 
     void EWrapper.updatePortfolio(Contract contract, decimal position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, string accountName)
     {
-      var tmp = UpdatePortfolio;
+      var cb = UpdatePortfolio;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new UpdatePortfolioMessage(contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountName)), null);
+      if (cb != null)
+        Run(() => cb(new UpdatePortfolioMessage(contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountName)), null);
     }
 
-    public event Action<UpdateAccountTimeMessage> UpdateAccountTime;
+    public Action<UpdateAccountTimeMessage> UpdateAccountTime;
 
     void EWrapper.updateAccountTime(string timestamp)
     {
-      var tmp = UpdateAccountTime;
+      var cb = UpdateAccountTime;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new UpdateAccountTimeMessage(timestamp)), null);
+      if (cb != null)
+        Run(() => cb(new UpdateAccountTimeMessage(timestamp)), null);
     }
 
-    public event Action<AccountDownloadEndMessage> AccountDownloadEnd;
+    public Action<AccountDownloadEndMessage> AccountDownloadEnd;
 
     void EWrapper.accountDownloadEnd(string account)
     {
-      var tmp = AccountDownloadEnd;
+      var cb = AccountDownloadEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AccountDownloadEndMessage(account)), null);
+      if (cb != null)
+        Run(() => cb(new AccountDownloadEndMessage(account)), null);
     }
 
-    public event Action<OrderStatusMessage> OrderStatus;
+    public Action<OrderStatusMessage> OrderStatus;
 
     void EWrapper.orderStatus(int orderId, string status, decimal filled, decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, string whyHeld, double mktCapPrice)
     {
-      var tmp = OrderStatus;
+      var cb = OrderStatus;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new OrderStatusMessage(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)), null);
+      if (cb != null)
+        Run(() => cb(new OrderStatusMessage(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)), null);
     }
 
-    public event Action<OpenOrderMessage> OpenOrder;
+    public Action<OpenOrderMessage> OpenOrder;
 
     void EWrapper.openOrder(int orderId, Contract contract, Order order, OrderState orderState)
     {
-      var tmp = OpenOrder;
+      var cb = OpenOrder;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new OpenOrderMessage(orderId, contract, order, orderState)), null);
+      if (cb != null)
+        Run(() => cb(new OpenOrderMessage(orderId, contract, order, orderState)), null);
     }
 
-    public event Action OpenOrderEnd;
+    public Action OpenOrderEnd;
 
     void EWrapper.openOrderEnd()
     {
-      var tmp = OpenOrderEnd;
+      var cb = OpenOrderEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(), null);
+      if (cb != null)
+        Run(() => cb(), null);
     }
 
-    public event Action<ContractDetailsMessage> ContractDetails;
+    public Action<ContractDetailsMessage> ContractDetails;
 
     void EWrapper.contractDetails(int reqId, ContractDetails contractDetails)
     {
-      var tmp = ContractDetails;
+      var cb = ContractDetails;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new ContractDetailsMessage(reqId, contractDetails)), null);
+      if (cb != null)
+        Run(() => cb(new ContractDetailsMessage(reqId, contractDetails)), null);
     }
 
-    public event Action<int> ContractDetailsEnd;
+    public Action<int> ContractDetailsEnd;
 
     void EWrapper.contractDetailsEnd(int reqId)
     {
-      var tmp = ContractDetailsEnd;
+      var cb = ContractDetailsEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<ExecutionMessage> ExecDetails;
+    public Action<ExecutionMessage> ExecDetails;
 
     void EWrapper.execDetails(int reqId, Contract contract, Execution execution)
     {
-      var tmp = ExecDetails;
+      var cb = ExecDetails;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new ExecutionMessage(reqId, contract, execution)), null);
+      if (cb != null)
+        Run(() => cb(new ExecutionMessage(reqId, contract, execution)), null);
     }
 
-    public event Action<int> ExecDetailsEnd;
+    public Action<int> ExecDetailsEnd;
 
     void EWrapper.execDetailsEnd(int reqId)
     {
-      var tmp = ExecDetailsEnd;
+      var cb = ExecDetailsEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<CommissionReport> CommissionReport;
+    public Action<CommissionReport> CommissionReport;
 
     void EWrapper.commissionReport(CommissionReport commissionReport)
     {
-      var tmp = CommissionReport;
+      var cb = CommissionReport;
 
-      if (tmp != null)
-        sc.Post(t => tmp(commissionReport), null);
+      if (cb != null)
+        Run(() => cb(commissionReport), null);
     }
 
-    public event Action<FundamentalsMessage> FundamentalData;
+    public Action<FundamentalsMessage> FundamentalData;
 
     void EWrapper.fundamentalData(int reqId, string data)
     {
-      var tmp = FundamentalData;
+      var cb = FundamentalData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new FundamentalsMessage(data)), null);
+      if (cb != null)
+        Run(() => cb(new FundamentalsMessage(data)), null);
     }
 
-    public event Action<HistoricalDataMessage> HistoricalData;
+    public Action<HistoricalDataMessage> HistoricalData;
 
     void EWrapper.historicalData(int reqId, Bar bar)
     {
-      var tmp = HistoricalData;
+      var cb = HistoricalData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalDataMessage(reqId, bar)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalDataMessage(reqId, bar)), null);
     }
 
-    public event Action<HistoricalDataEndMessage> HistoricalDataEnd;
+    public Action<HistoricalDataEndMessage> HistoricalDataEnd;
 
     void EWrapper.historicalDataEnd(int reqId, string startDate, string endDate)
     {
-      var tmp = HistoricalDataEnd;
+      var cb = HistoricalDataEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalDataEndMessage(reqId, startDate, endDate)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalDataEndMessage(reqId, startDate, endDate)), null);
     }
 
-    public event Action<MarketDataTypeMessage> MarketDataType;
+    public Action<MarketDataTypeMessage> MarketDataType;
 
     void EWrapper.marketDataType(int reqId, int marketDataType)
     {
-      var tmp = MarketDataType;
+      var cb = MarketDataType;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new MarketDataTypeMessage(reqId, marketDataType)), null);
+      if (cb != null)
+        Run(() => cb(new MarketDataTypeMessage(reqId, marketDataType)), null);
     }
 
-    public event Action<DeepBookMessage> UpdateMktDepth;
+    public Action<DeepBookMessage> UpdateMktDepth;
 
     void EWrapper.updateMktDepth(int tickerId, int position, int operation, int side, double price, decimal size)
     {
-      var tmp = UpdateMktDepth;
+      var cb = UpdateMktDepth;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new DeepBookMessage(tickerId, position, operation, side, price, size, "", false)), null);
+      if (cb != null)
+        Run(() => cb(new DeepBookMessage(tickerId, position, operation, side, price, size, "", false)), null);
     }
 
-    public event Action<DeepBookMessage> UpdateMktDepthL2;
+    public Action<DeepBookMessage> UpdateMktDepthL2;
 
     void EWrapper.updateMktDepthL2(int tickerId, int position, string marketMaker, int operation, int side, double price, decimal size, bool isSmartDepth)
     {
-      var tmp = UpdateMktDepthL2;
+      var cb = UpdateMktDepthL2;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new DeepBookMessage(tickerId, position, operation, side, price, size, marketMaker, isSmartDepth)), null);
+      if (cb != null)
+        Run(() => cb(new DeepBookMessage(tickerId, position, operation, side, price, size, marketMaker, isSmartDepth)), null);
     }
 
-    public event Action<int, int, string, string> UpdateNewsBulletin;
+    public Action<int, int, string, string> UpdateNewsBulletin;
 
     void EWrapper.updateNewsBulletin(int msgId, int msgType, string message, string origExchange)
     {
-      var tmp = UpdateNewsBulletin;
+      var cb = UpdateNewsBulletin;
 
-      if (tmp != null)
-        sc.Post(t => tmp(msgId, msgType, message, origExchange), null);
+      if (cb != null)
+        Run(() => cb(msgId, msgType, message, origExchange), null);
     }
 
-    public event Action<PositionMessage> Position;
+    public Action<PositionMessage> Position;
 
     void EWrapper.position(string account, Contract contract, decimal pos, double avgCost)
     {
-      var tmp = Position;
+      var cb = Position;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new PositionMessage(account, contract, pos, avgCost)), null);
+      if (cb != null)
+        Run(() => cb(new PositionMessage(account, contract, pos, avgCost)), null);
     }
 
-    public event Action PositionEnd;
+    public Action PositionEnd;
 
     void EWrapper.positionEnd()
     {
-      var tmp = PositionEnd;
+      var cb = PositionEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(), null);
+      if (cb != null)
+        Run(() => cb(), null);
     }
 
-    public event Action<RealTimeBarMessage> RealtimeBar;
+    public Action<RealTimeBarMessage> RealtimeBar;
 
     void EWrapper.realtimeBar(int reqId, long time, double open, double high, double low, double close, decimal volume, decimal WAP, int count)
     {
-      var tmp = RealtimeBar;
+      var cb = RealtimeBar;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new RealTimeBarMessage(reqId, time, open, high, low, close, volume, WAP, count)), null);
+      if (cb != null)
+        Run(() => cb(new RealTimeBarMessage(reqId, time, open, high, low, close, volume, WAP, count)), null);
     }
 
-    public event Action<string> ScannerParameters;
+    public Action<string> ScannerParameters;
 
     void EWrapper.scannerParameters(string xml)
     {
-      var tmp = ScannerParameters;
+      var cb = ScannerParameters;
 
-      if (tmp != null)
-        sc.Post(t => tmp(xml), null);
+      if (cb != null)
+        Run(() => cb(xml), null);
     }
 
-    public event Action<ScannerMessage> ScannerData;
+    public Action<ScannerMessage> ScannerData;
 
     void EWrapper.scannerData(int reqId, int rank, ContractDetails contractDetails, string distance, string benchmark, string projection, string legsStr)
     {
-      var tmp = ScannerData;
+      var cb = ScannerData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new ScannerMessage(reqId, rank, contractDetails, distance, benchmark, projection, legsStr)), null);
+      if (cb != null)
+        Run(() => cb(new ScannerMessage(reqId, rank, contractDetails, distance, benchmark, projection, legsStr)), null);
     }
 
-    public event Action<int> ScannerDataEnd;
+    public Action<int> ScannerDataEnd;
 
     void EWrapper.scannerDataEnd(int reqId)
     {
-      var tmp = ScannerDataEnd;
+      var cb = ScannerDataEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<AdvisorDataMessage> ReceiveFA;
+    public Action<AdvisorDataMessage> ReceiveFA;
 
     void EWrapper.receiveFA(int faDataType, string faXmlData)
     {
-      var tmp = ReceiveFA;
+      var cb = ReceiveFA;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AdvisorDataMessage(faDataType, faXmlData)), null);
+      if (cb != null)
+        Run(() => cb(new AdvisorDataMessage(faDataType, faXmlData)), null);
     }
 
-    public event Action<BondContractDetailsMessage> BondContractDetails;
+    public Action<BondContractDetailsMessage> BondContractDetails;
 
     void EWrapper.bondContractDetails(int requestId, ContractDetails contractDetails)
     {
-      var tmp = BondContractDetails;
+      var cb = BondContractDetails;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new BondContractDetailsMessage(requestId, contractDetails)), null);
+      if (cb != null)
+        Run(() => cb(new BondContractDetailsMessage(requestId, contractDetails)), null);
     }
 
-    public event Action<string> VerifyMessageAPI;
+    public Action<string> VerifyMessageAPI;
 
     void EWrapper.verifyMessageAPI(string apiData)
     {
-      var tmp = VerifyMessageAPI;
+      var cb = VerifyMessageAPI;
 
-      if (tmp != null)
-        sc.Post(t => tmp(apiData), null);
+      if (cb != null)
+        Run(() => cb(apiData), null);
     }
-    public event Action<bool, string> VerifyCompleted;
+    public Action<bool, string> VerifyCompleted;
 
     void EWrapper.verifyCompleted(bool isSuccessful, string errorText)
     {
-      var tmp = VerifyCompleted;
+      var cb = VerifyCompleted;
 
-      if (tmp != null)
-        sc.Post(t => tmp(isSuccessful, errorText), null);
+      if (cb != null)
+        Run(() => cb(isSuccessful, errorText), null);
     }
 
-    public event Action<string, string> VerifyAndAuthMessageAPI;
+    public Action<string, string> VerifyAndAuthMessageAPI;
 
     void EWrapper.verifyAndAuthMessageAPI(string apiData, string xyzChallenge)
     {
-      var tmp = VerifyAndAuthMessageAPI;
+      var cb = VerifyAndAuthMessageAPI;
 
-      if (tmp != null)
-        sc.Post(t => tmp(apiData, xyzChallenge), null);
+      if (cb != null)
+        Run(() => cb(apiData, xyzChallenge), null);
     }
 
-    public event Action<bool, string> VerifyAndAuthCompleted;
+    public Action<bool, string> VerifyAndAuthCompleted;
 
     void EWrapper.verifyAndAuthCompleted(bool isSuccessful, string errorText)
     {
-      var tmp = VerifyAndAuthCompleted;
+      var cb = VerifyAndAuthCompleted;
 
-      if (tmp != null)
-        sc.Post(t => tmp(isSuccessful, errorText), null);
+      if (cb != null)
+        Run(() => cb(isSuccessful, errorText), null);
     }
 
-    public event Action<int, string> DisplayGroupList;
+    public Action<int, string> DisplayGroupList;
 
     void EWrapper.displayGroupList(int reqId, string groups)
     {
-      var tmp = DisplayGroupList;
+      var cb = DisplayGroupList;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, groups), null);
+      if (cb != null)
+        Run(() => cb(reqId, groups), null);
     }
 
-    public event Action<int, string> DisplayGroupUpdated;
+    public Action<int, string> DisplayGroupUpdated;
 
     void EWrapper.displayGroupUpdated(int reqId, string contractInfo)
     {
-      var tmp = DisplayGroupUpdated;
+      var cb = DisplayGroupUpdated;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, contractInfo), null);
+      if (cb != null)
+        Run(() => cb(reqId, contractInfo), null);
     }
 
 
@@ -617,395 +625,398 @@ namespace InteractiveBrokers
         ClientSocket.startApi();
     }
 
-    public event Action<PositionMultiMessage> PositionMulti;
+    public Action<PositionMultiMessage> PositionMulti;
 
     void EWrapper.positionMulti(int reqId, string account, string modelCode, Contract contract, decimal pos, double avgCost)
     {
-      var tmp = PositionMulti;
+      var cb = PositionMulti;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new PositionMultiMessage(reqId, account, modelCode, contract, pos, avgCost)), null);
+      if (cb != null)
+        Run(() => cb(new PositionMultiMessage(reqId, account, modelCode, contract, pos, avgCost)), null);
     }
 
-    public event Action<int> PositionMultiEnd;
+    public Action<int> PositionMultiEnd;
 
     void EWrapper.positionMultiEnd(int reqId)
     {
-      var tmp = PositionMultiEnd;
+      var cb = PositionMultiEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<AccountUpdateMultiMessage> AccountUpdateMulti;
+    public Action<AccountUpdateMultiMessage> AccountUpdateMulti;
 
     void EWrapper.accountUpdateMulti(int reqId, string account, string modelCode, string key, string value, string currency)
     {
-      var tmp = AccountUpdateMulti;
+      var cb = AccountUpdateMulti;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new AccountUpdateMultiMessage(reqId, account, modelCode, key, value, currency)), null);
+      if (cb != null)
+        Run(() => cb(new AccountUpdateMultiMessage(reqId, account, modelCode, key, value, currency)), null);
     }
 
-    public event Action<int> AccountUpdateMultiEnd;
+    public Action<int> AccountUpdateMultiEnd;
 
     void EWrapper.accountUpdateMultiEnd(int reqId)
     {
-      var tmp = AccountUpdateMultiEnd;
+      var cb = AccountUpdateMultiEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<SecurityDefinitionOptionParameterMessage> SecurityDefinitionOptionParameter;
+    public Action<SecurityDefinitionOptionParameterMessage> SecurityDefinitionOptionParameter;
 
     void EWrapper.securityDefinitionOptionParameter(int reqId, string exchange, int underlyingConId, string tradingClass, string multiplier, HashSet<string> expirations, HashSet<double> strikes)
     {
-      var tmp = SecurityDefinitionOptionParameter;
+      var cb = SecurityDefinitionOptionParameter;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new SecurityDefinitionOptionParameterMessage(reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes)), null);
+      if (cb != null)
+        Run(() => cb(new SecurityDefinitionOptionParameterMessage(reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes)), null);
     }
 
-    public event Action<int> SecurityDefinitionOptionParameterEnd;
+    public Action<int> SecurityDefinitionOptionParameterEnd;
 
     void EWrapper.securityDefinitionOptionParameterEnd(int reqId)
     {
-      var tmp = SecurityDefinitionOptionParameterEnd;
+      var cb = SecurityDefinitionOptionParameterEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId), null);
+      if (cb != null)
+        Run(() => cb(reqId), null);
     }
 
-    public event Action<SoftDollarTiersMessage> SoftDollarTiers;
+    public Action<SoftDollarTiersMessage> SoftDollarTiers;
 
     void EWrapper.softDollarTiers(int reqId, SoftDollarTier[] tiers)
     {
-      var tmp = SoftDollarTiers;
+      var cb = SoftDollarTiers;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new SoftDollarTiersMessage(reqId, tiers)), null);
+      if (cb != null)
+        Run(() => cb(new SoftDollarTiersMessage(reqId, tiers)), null);
     }
 
-    public event Action<FamilyCode[]> FamilyCodes;
+    public Action<FamilyCode[]> FamilyCodes;
 
     void EWrapper.familyCodes(FamilyCode[] familyCodes)
     {
-      var tmp = FamilyCodes;
+      var cb = FamilyCodes;
 
-      if (tmp != null)
-        sc.Post(t => tmp(familyCodes), null);
+      if (cb != null)
+        Run(() => cb(familyCodes), null);
     }
 
-    public event Action<SymbolSamplesMessage> SymbolSamples;
+    public Action<SymbolSamplesMessage> SymbolSamples;
 
     void EWrapper.symbolSamples(int reqId, ContractDescription[] contractDescriptions)
     {
-      var tmp = SymbolSamples;
+      var cb = SymbolSamples;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new SymbolSamplesMessage(reqId, contractDescriptions)), null);
+      if (cb != null)
+        Run(() => cb(new SymbolSamplesMessage(reqId, contractDescriptions)), null);
     }
 
 
-    public event Action<DepthMktDataDescription[]> MktDepthExchanges;
+    public Action<DepthMktDataDescription[]> MktDepthExchanges;
 
     void EWrapper.mktDepthExchanges(DepthMktDataDescription[] depthMktDataDescriptions)
     {
-      var tmp = MktDepthExchanges;
+      var cb = MktDepthExchanges;
 
-      if (tmp != null)
-        sc.Post(t => tmp(depthMktDataDescriptions), null);
+      if (cb != null)
+        Run(() => cb(depthMktDataDescriptions), null);
     }
 
-    public event Action<TickNewsMessage> TickNews;
+    public Action<TickNewsMessage> TickNews;
 
     void EWrapper.tickNews(int tickerId, long timeStamp, string providerCode, string articleId, string headline, string extraData)
     {
-      var tmp = TickNews;
+      var cb = TickNews;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickNewsMessage(tickerId, timeStamp, providerCode, articleId, headline, extraData)), null);
+      if (cb != null)
+        Run(() => cb(new TickNewsMessage(tickerId, timeStamp, providerCode, articleId, headline, extraData)), null);
     }
 
-    public event Action<int, Dictionary<int, KeyValuePair<string, char>>> SmartComponents;
+    public Action<int, Dictionary<int, KeyValuePair<string, char>>> SmartComponents;
 
     void EWrapper.smartComponents(int reqId, Dictionary<int, KeyValuePair<string, char>> theMap)
     {
-      var tmp = SmartComponents;
+      var cb = SmartComponents;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, theMap), null);
+      if (cb != null)
+        Run(() => cb(reqId, theMap), null);
     }
 
-    public event Action<TickReqParamsMessage> TickReqParams;
+    public Action<TickReqParamsMessage> TickReqParams;
 
     void EWrapper.tickReqParams(int tickerId, double minTick, string bboExchange, int snapshotPermissions)
     {
-      var tmp = TickReqParams;
+      var cb = TickReqParams;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickReqParamsMessage(tickerId, minTick, bboExchange, snapshotPermissions)), null);
+      if (cb != null)
+        Run(() => cb(new TickReqParamsMessage(tickerId, minTick, bboExchange, snapshotPermissions)), null);
     }
 
-    public event Action<NewsProvider[]> NewsProviders;
+    public Action<NewsProvider[]> NewsProviders;
 
     void EWrapper.newsProviders(NewsProvider[] newsProviders)
     {
-      var tmp = NewsProviders;
+      var cb = NewsProviders;
 
-      if (tmp != null)
-        sc.Post(t => tmp(newsProviders), null);
+      if (cb != null)
+        Run(() => cb(newsProviders), null);
     }
 
-    public event Action<NewsArticleMessage> NewsArticle;
+    public Action<NewsArticleMessage> NewsArticle;
 
     void EWrapper.newsArticle(int requestId, int articleType, string articleText)
     {
-      var tmp = NewsArticle;
+      var cb = NewsArticle;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new NewsArticleMessage(requestId, articleType, articleText)), null);
+      if (cb != null)
+        Run(() => cb(new NewsArticleMessage(requestId, articleType, articleText)), null);
     }
 
-    public event Action<HistoricalNewsMessage> HistoricalNews;
+    public Action<HistoricalNewsMessage> HistoricalNews;
 
     void EWrapper.historicalNews(int requestId, string time, string providerCode, string articleId, string headline)
     {
-      var tmp = HistoricalNews;
+      var cb = HistoricalNews;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalNewsMessage(requestId, time, providerCode, articleId, headline)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalNewsMessage(requestId, time, providerCode, articleId, headline)), null);
     }
 
-    public event Action<HistoricalNewsEndMessage> HistoricalNewsEnd;
+    public Action<HistoricalNewsEndMessage> HistoricalNewsEnd;
 
     void EWrapper.historicalNewsEnd(int requestId, bool hasMore)
     {
-      var tmp = HistoricalNewsEnd;
+      var cb = HistoricalNewsEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalNewsEndMessage(requestId, hasMore)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalNewsEndMessage(requestId, hasMore)), null);
     }
 
-    public event Action<HeadTimestampMessage> HeadTimestamp;
+    public Action<HeadTimestampMessage> HeadTimestamp;
 
     void EWrapper.headTimestamp(int reqId, string headTimestamp)
     {
-      var tmp = HeadTimestamp;
+      var cb = HeadTimestamp;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HeadTimestampMessage(reqId, headTimestamp)), null);
+      if (cb != null)
+        Run(() => cb(new HeadTimestampMessage(reqId, headTimestamp)), null);
     }
 
-    public event Action<HistogramDataMessage> HistogramData;
+    public Action<HistogramDataMessage> HistogramData;
 
     void EWrapper.histogramData(int reqId, HistogramEntry[] data)
     {
-      var tmp = HistogramData;
+      var cb = HistogramData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistogramDataMessage(reqId, data)), null);
+      if (cb != null)
+        Run(() => cb(new HistogramDataMessage(reqId, data)), null);
     }
 
-    public event Action<HistoricalDataMessage> HistoricalDataUpdate;
+    public Action<HistoricalDataMessage> HistoricalDataUpdate;
 
     void EWrapper.historicalDataUpdate(int reqId, Bar bar)
     {
-      var tmp = HistoricalDataUpdate;
+      var cb = HistoricalDataUpdate;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalDataMessage(reqId, bar)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalDataMessage(reqId, bar)), null);
     }
 
-    public event Action<int, int, string> RerouteMktDataReq;
+    public Action<int, int, string> RerouteMktDataReq;
 
     void EWrapper.rerouteMktDataReq(int reqId, int conId, string exchange)
     {
-      var tmp = RerouteMktDataReq;
+      var cb = RerouteMktDataReq;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, conId, exchange), null);
+      if (cb != null)
+        Run(() => cb(reqId, conId, exchange), null);
     }
 
-    public event Action<int, int, string> RerouteMktDepthReq;
+    public Action<int, int, string> RerouteMktDepthReq;
 
     void EWrapper.rerouteMktDepthReq(int reqId, int conId, string exchange)
     {
-      var tmp = RerouteMktDepthReq;
+      var cb = RerouteMktDepthReq;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, conId, exchange), null);
+      if (cb != null)
+        Run(() => cb(reqId, conId, exchange), null);
     }
 
-    public event Action<MarketRuleMessage> MarketRule;
+    public Action<MarketRuleMessage> MarketRule;
 
     void EWrapper.marketRule(int marketRuleId, PriceIncrement[] priceIncrements)
     {
-      var tmp = MarketRule;
+      var cb = MarketRule;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new MarketRuleMessage(marketRuleId, priceIncrements)), null);
+      if (cb != null)
+        Run(() => cb(new MarketRuleMessage(marketRuleId, priceIncrements)), null);
     }
 
-    public event Action<PnLMessage> pnl;
+    public Action<PnLMessage> Pnl;
 
     void EWrapper.pnl(int reqId, double dailyPnL, double unrealizedPnL, double realizedPnL)
     {
-      var tmp = pnl;
+      var cb = Pnl;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new PnLMessage(reqId, dailyPnL, unrealizedPnL, realizedPnL)), null);
+      if (cb != null)
+        Run(() => cb(new PnLMessage(reqId, dailyPnL, unrealizedPnL, realizedPnL)), null);
     }
 
-    public event Action<PnLSingleMessage> pnlSingle;
+    public Action<PnLSingleMessage> PnlSingle;
 
     void EWrapper.pnlSingle(int reqId, decimal pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value)
     {
-      var tmp = pnlSingle;
+      var cb = PnlSingle;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new PnLSingleMessage(reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value)), null);
+      if (cb != null)
+        Run(() => cb(new PnLSingleMessage(reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value)), null);
     }
 
-    public event Action<HistoricalTickMessage> historicalTick;
+    public Action<HistoricalTickMessage> historicalTick;
 
     void EWrapper.historicalTicks(int reqId, HistoricalTick[] ticks, bool done)
     {
-      var tmp = historicalTick;
+      var cb = historicalTick;
 
-      if (tmp != null)
-        ticks.ToList().ForEach(tick => sc.Post(t => tmp(new HistoricalTickMessage(reqId, tick.Time, tick.Price, tick.Size)), null));
+      if (cb != null)
+        ticks.ToList().ForEach(tick => Run(() => cb(new HistoricalTickMessage(reqId, tick.Time, tick.Price, tick.Size)), null));
     }
 
-    public event Action<HistoricalTickBidAskMessage> historicalTickBidAsk;
+    public Action<HistoricalTickBidAskMessage> historicalTickBidAsk;
 
     void EWrapper.historicalTicksBidAsk(int reqId, HistoricalTickBidAsk[] ticks, bool done)
     {
-      var tmp = historicalTickBidAsk;
+      var cb = historicalTickBidAsk;
 
-      if (tmp != null)
-        ticks.ToList().ForEach(tick => sc.Post(t =>
-            tmp(new HistoricalTickBidAskMessage(reqId, tick.Time, tick.TickAttribBidAsk, tick.PriceBid, tick.PriceAsk, tick.SizeBid, tick.SizeAsk)), null));
+      if (cb != null)
+        ticks.ToList().ForEach(tick => Run(() =>
+            cb(new HistoricalTickBidAskMessage(reqId, tick.Time, tick.TickAttribBidAsk, tick.PriceBid, tick.PriceAsk, tick.SizeBid, tick.SizeAsk)), null));
     }
 
-    public event Action<HistoricalTickLastMessage> historicalTickLast;
+    public Action<HistoricalTickLastMessage> historicalTickLast;
 
     void EWrapper.historicalTicksLast(int reqId, HistoricalTickLast[] ticks, bool done)
     {
-      var tmp = historicalTickLast;
+      var cb = historicalTickLast;
 
-      if (tmp != null)
-        ticks.ToList().ForEach(tick => sc.Post(t =>
-            tmp(new HistoricalTickLastMessage(reqId, tick.Time, tick.TickAttribLast, tick.Price, tick.Size, tick.Exchange, tick.SpecialConditions)), null));
+      if (cb != null)
+        ticks.ToList().ForEach(tick => Run(() =>
+            cb(new HistoricalTickLastMessage(reqId, tick.Time, tick.TickAttribLast, tick.Price, tick.Size, tick.Exchange, tick.SpecialConditions)), null));
     }
 
-    public event Action<TickByTickAllLastMessage> tickByTickAllLast;
+    public Action<TickByTickAllLastMessage> tickByTickAllLast;
 
     void EWrapper.tickByTickAllLast(int reqId, int tickType, long time, double price, decimal size, TickAttribLast tickAttribLast, string exchange, string specialConditions)
     {
-      var tmp = tickByTickAllLast;
+      var cb = tickByTickAllLast;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickByTickAllLastMessage(reqId, tickType, time, price, size, tickAttribLast, exchange, specialConditions)), null);
+      if (cb != null)
+        Run(() => cb(new TickByTickAllLastMessage(reqId, tickType, time, price, size, tickAttribLast, exchange, specialConditions)), null);
     }
 
-    public event Action<TickByTickBidAskMessage> tickByTickBidAsk;
+    public Action<TickByTickBidAskMessage> tickByTickBidAsk;
 
     void EWrapper.tickByTickBidAsk(int reqId, long time, double bidPrice, double askPrice, decimal bidSize, decimal askSize, TickAttribBidAsk tickAttribBidAsk)
     {
-      var tmp = tickByTickBidAsk;
+      var cb = tickByTickBidAsk;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickByTickBidAskMessage(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)), null);
+      if (cb != null)
+        Run(() => cb(new TickByTickBidAskMessage(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)), null);
     }
 
-    public event Action<TickByTickMidPointMessage> tickByTickMidPoint;
+    public Action<TickByTickMidPointMessage> tickByTickMidPoint;
 
     void EWrapper.tickByTickMidPoint(int reqId, long time, double midPoint)
     {
-      var tmp = tickByTickMidPoint;
+      var cb = tickByTickMidPoint;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new TickByTickMidPointMessage(reqId, time, midPoint)), null);
+      if (cb != null)
+        Run(() => cb(new TickByTickMidPointMessage(reqId, time, midPoint)), null);
     }
 
-    public event Action<OrderBoundMessage> OrderBound;
+    public Action<OrderBoundMessage> OrderBound;
 
     void EWrapper.orderBound(long orderId, int apiClientId, int apiOrderId)
     {
-      var tmp = OrderBound;
+      var cb = OrderBound;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new OrderBoundMessage(orderId, apiClientId, apiOrderId)), null);
+      if (cb != null)
+        Run(() => cb(new OrderBoundMessage(orderId, apiClientId, apiOrderId)), null);
     }
 
-    public event Action<CompletedOrderMessage> CompletedOrder;
+    public Action<CompletedOrderMessage> CompletedOrder;
 
     void EWrapper.completedOrder(Contract contract, Order order, OrderState orderState)
     {
-      var tmp = CompletedOrder;
+      var cb = CompletedOrder;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new CompletedOrderMessage(contract, order, orderState)), null);
+      if (cb != null)
+        Run(() => cb(new CompletedOrderMessage(contract, order, orderState)), null);
     }
 
-    public event Action CompletedOrdersEnd;
+    public Action CompletedOrdersEnd;
 
     void EWrapper.completedOrdersEnd()
     {
-      var tmp = CompletedOrdersEnd;
+      var cb = CompletedOrdersEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(), null);
+      if (cb != null)
+        Run(() => cb(), null);
     }
 
-    public event Action<int, string> ReplaceFAEnd;
+    public Action<int, string> ReplaceFAEnd;
 
     void EWrapper.replaceFAEnd(int reqId, string text)
     {
-      var tmp = ReplaceFAEnd;
+      var cb = ReplaceFAEnd;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, text), null);
+      if (cb != null)
+        Run(() => cb(reqId, text), null);
     }
 
-    public event Action<int, string> WshMetaData;
+    public Action<int, string> WshMetaData;
 
     public void wshMetaData(int reqId, string dataJson)
     {
-      var tmp = WshMetaData;
+      var cb = WshMetaData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, dataJson), null);
+      if (cb != null)
+        Run(() => cb(reqId, dataJson), null);
     }
 
-    public event Action<int, string> WshEventData;
+    public Action<int, string> WshEventData;
 
     public void wshEventData(int reqId, string dataJson)
     {
-      var tmp = WshEventData;
+      var cb = WshEventData;
 
-      if (tmp != null)
-        sc.Post(t => tmp(reqId, dataJson), null);
+      if (cb != null)
+        Run(() => cb(reqId, dataJson), null);
     }
 
-    public event Action<HistoricalScheduleMessage> HistoricalSchedule;
+    public Action<HistoricalScheduleMessage> HistoricalSchedule;
 
     public void historicalSchedule(int reqId, string startDateTime, string endDateTime, string timeZone, HistoricalSession[] sessions)
     {
-      var tmp = HistoricalSchedule;
+      var cb = HistoricalSchedule;
 
-      if (tmp != null)
-        sc.Post(t => tmp(new HistoricalScheduleMessage(reqId, startDateTime, endDateTime, timeZone, sessions)), null);
+      if (cb != null)
+        Run(() => cb(new HistoricalScheduleMessage(reqId, startDateTime, endDateTime, timeZone, sessions)), null);
     }
 
-    public event Action<string> UserInfo;
+    public Action<string> UserInfo;
+
     void EWrapper.userInfo(int reqId, string whiteBrandingId)
     {
-      var tmp = UserInfo;
-      if (tmp != null)
-        sc.Post(t => tmp(whiteBrandingId), null);
+      var cb = UserInfo;
+      if (cb != null)
+        Run(() => cb(whiteBrandingId), null);
     }
+
+    protected void Run(Action cb, object state) => sc.Send(cb, false);
   }
 }

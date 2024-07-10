@@ -67,7 +67,7 @@ namespace Client.Components
       try
       {
         IsSubscription = true;
-        Adapter.Account.Instruments.ForEach(o => Adapter.Subscribe(o.Key));
+        Adapter.Account.Instruments.ForEach(o => Adapter.Subscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -80,7 +80,7 @@ namespace Client.Components
       try
       {
         IsSubscription = false;
-        Adapter.Account.Instruments.ForEach(o => Adapter.Unsubscribe(o.Key));
+        Adapter.Account.Instruments.ForEach(o => Adapter.Unsubscribe(o.Value));
       }
       catch (Exception e)
       {

@@ -5,19 +5,19 @@ namespace Alpaca.Messages;
 public class SnapshotMessage
 {
   [JsonPropertyName("latestQuote")]
-  public HistoricalQuoteMessage JsonQuote { get; set; }
+  public QuoteMessage JsonQuote { get; set; }
 
   [JsonPropertyName("latestTrade")]
-  public HistoricalTradeMessage JsonTrade { get; set; }
+  public TradeMessage JsonTrade { get; set; }
 
   [JsonPropertyName("minuteBar")]
-  public HistoricalBarMessage JsonMinuteBar { get; set; }
+  public BarMessage JsonMinuteBar { get; set; }
 
   [JsonPropertyName("dailyBar")]
-  public HistoricalBarMessage JsonCurrentDailyBar { get; set; }
+  public BarMessage JsonCurrentDailyBar { get; set; }
 
   [JsonPropertyName("prevDailyBar")]
-  public HistoricalBarMessage JsonPreviousDailyBar { get; set; }
+  public BarMessage JsonPreviousDailyBar { get; set; }
 
   [JsonPropertyName("symbol")]
   public string Symbol { get; set; }

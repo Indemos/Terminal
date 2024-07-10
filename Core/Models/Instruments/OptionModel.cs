@@ -4,7 +4,7 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-    public class OptionModel : ICloneable
+  public class OptionModel : ICloneable
   {
     /// <summary>
     /// Name
@@ -54,7 +54,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Instrument
     /// </summary>
-    public virtual IInstrument Instrument { get; set; }
+    public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Point

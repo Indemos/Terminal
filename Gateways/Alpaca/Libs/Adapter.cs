@@ -38,11 +38,6 @@ namespace Alpaca
     protected IList<IDisposable> _connections;
 
     /// <summary>
-    /// Disposable subscriptions
-    /// </summary>
-    protected IList<IDisposable> _subscriptions;
-
-    /// <summary>
     /// Key
     /// </summary>
     public virtual string ConsumerKey { get; set; }
@@ -70,7 +65,6 @@ namespace Alpaca
       StreamUri = "wss://stream.data.alpaca.markets/v2/iex";
       DataUri = "https://api.alpaca.markets";
 
-      _subscriptions = [];
       _connections = [];
     }
 
@@ -98,13 +92,13 @@ namespace Alpaca
           KeyId = ConsumerKey
         });
 
-        await GetAccountData();
+        await GetAccount([]);
 
         _connections.Add(_sender);
         _connections.Add(_streamer);
         _connections.Add(scheduler);
 
-        Account.Instruments.ForEach(async o => await Subscribe(o.Key));
+        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -117,18 +111,20 @@ namespace Alpaca
     /// <summary>
     /// Subscribe to data streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Subscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
 
       try
       {
-        await Unsubscribe(name);
+        await Unsubscribe(instrument);
         await SendStream(_streamer, new SubscriptionUpdateMessage
         {
           Action = "subscribe",
-          Trades = [name],
-          Quotes = [name]
+          Trades = [instrument.Name],
+          Quotes = [instrument.Name]
         });
       }
       catch (Exception e)
@@ -162,7 +158,9 @@ namespace Alpaca
     /// <summary>
     /// Unsubscribe from data streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Unsubscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override async Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
 
@@ -171,12 +169,9 @@ namespace Alpaca
         await SendStream(_streamer, new SubscriptionUpdateMessage
         {
           Action = "unsubscribe",
-          Trades = [name],
-          Quotes = [name]
+          Trades = [instrument.Name],
+          Quotes = [instrument.Name]
         });
-
-        _subscriptions?.ForEach(o => o.Dispose());
-        _subscriptions?.Clear();
       }
       catch (Exception e)
       {
@@ -187,23 +182,110 @@ namespace Alpaca
     }
 
     /// <summary>
-    /// Get options
+    /// Sync open balance, order, and positions 
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
+    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<OptionModel>>();
+      var response = new ResponseModel<IAccount>();
 
       try
       {
-        var optionResponse = await SendData<LatestDataMessage<
-          HistoricalQuoteMessage,
-          HistoricalBarMessage,
-          HistoricalTradeMessage,
-          OptionSnapshotMessage,
-          HistoricalOrderBookMessage>>
-        ($"/v1beta1/options/snapshots/{criteria["underlying_symbol"]}?{criteria.ToQuery()}");
+        var account = await SendData<AccountMessage>("/v2/account");
+        var positions = await GetPositions(null, criteria);
+        var orders = await GetOrders(null, criteria);
+
+        Account.Balance = account.Data.Equity;
+        Account.ActiveOrders = orders.Data.ToDictionary(o => o.Transaction.Id);
+        Account.ActivePositions = positions.Data.ToDictionary(o => o.Order.Transaction.Id);
+
+        Account
+          .ActiveOrders
+          .Select(o => o.Value.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Where(o => Account.Instruments.ContainsKey(o) is false)
+          .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
+
+        response.Data = Account;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<OrderModel>>();
+
+      try
+      {
+        var items = await SendData<OrderMessage[]>($"/v2/orders?{criteria.ToQuery()}");
+
+        response.Data = [.. items.Data.Select(InternalMap.GetOrder)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get positions 
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<PositionModel>>();
+
+      try
+      {
+        var items = await SendData<PositionMessage[]>($"/v2/positions?{criteria.ToQuery()}");
+
+        response.Data = [.. items.Data.Select(InternalMap.GetPosition)];
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get options
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<OptionModel>>();
+
+      try
+      {
+        var props = new Hashtable
+        {
+          ["underlying_symbol"] = args.Name,
+          ["expiration_date_gte"] = args.MinDate,
+          ["expiration_date_lte"] = args.MaxDate
+
+        }.Merge(criteria);
+
+        var optionResponse = await SendData<DataMessage<OptionSnapshotMessage>>($"/v1beta1/options/snapshots/{props["underlying_symbol"]}?{props}");
 
         response.Data = optionResponse
           .Data
@@ -222,26 +304,34 @@ namespace Alpaca
     /// <summary>
     /// Get latest quote
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IDictionary<string, PointModel>>();
+      var response = new ResponseModel<DomModel>();
 
       try
       {
-        var names = $"{criteria["symbols"]}".Split(",");
-        var pointResponse = await SendData<LatestDataMessage<
-          HistoricalQuoteMessage,
-          HistoricalBarMessage,
-          HistoricalTradeMessage,
-          SnapshotMessage,
-          HistoricalOrderBookMessage>
-        >($"/v2/stocks/quotes/latest?{criteria.ToQuery()}");
+        var props = new Hashtable
+        {
+          ["loc"] = "us",
+          ["symbols"] = args.Name,
+          ["security"] = args.Security
 
-        response.Data = names
-          .Select(name => InternalMap.GetPoint(pointResponse.Data.Quotes[name]))
-          .ToDictionary(o => o.Instrument.Name);
+        }.Merge(criteria);
+
+        var source = string.Empty;
+
+        switch (props["security"])
+        {
+          case "STK": source = $"/v2/stocks/quotes/latest?{props}"; break;
+          case "CRYPTO": source = $"/v1beta3/crypto/{props["loc"]}/latest/quotes?{props}"; break;
+        }
+
+        var pointResponse = await SendData<DataMessage<SnapshotMessage>>(source);
+
+        response.Data = InternalMap.GetDom(pointResponse.Data.Quotes[props["symbols"]]);
       }
       catch (Exception e)
       {
@@ -254,27 +344,37 @@ namespace Alpaca
     /// <summary>
     /// Get historical bars
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public override async Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<PointModel>>();
+      var response = new ResponseModel<IList<PointModel>>();
 
       try
       {
-        var pointResponse = await SendData<LatestDataMessage<
-          HistoricalQuoteMessage,
-          HistoricalBarMessage,
-          HistoricalTradeMessage,
-          OptionSnapshotMessage,
-          HistoricalOrderBookMessage>>
-          ($"/v2/stocks/{criteria["symbol"]}/bars?{criteria.ToQuery()}");
+        var props = new Hashtable
+        {
+          ["loc"] = "us",
+          ["symbols"] = args.Name,
+          ["security"] = args.Security
+
+        }.Merge(criteria);
+
+        var source = string.Empty;
+
+        switch (props["security"])
+        {
+          case "STK": source = $"/v2/stocks/quotes?{props}"; break;
+          case "CRYPTO": source = $"/v1beta3/crypto/{props["loc"]}/quotes?{props}"; break;
+        }
+
+        var pointResponse = await SendData<DataMessage<SnapshotMessage>>(source);
 
         response.Data = pointResponse
           .Data
-          .Bars
-          .Select(o => InternalMap.GetBar(o.Value))
+          .Quotes
+          .Select(o => InternalMap.GetPoint(o.Value))
           .ToList();
       }
       catch (Exception e)
@@ -317,25 +417,6 @@ namespace Alpaca
       }
 
       return response;
-    }
-
-    /// <summary>
-    /// Sync open balance, order, and positions 
-    /// </summary>
-    /// <returns></returns>
-    protected virtual async Task GetAccountData()
-    {
-      var account = await SendData<AccountMessage>("/v2/account");
-      var positions = await SendData<PositionMessage[]>("/v2/positions");
-      var orders = await SendData<OrderMessage[]>("/v2/orders");
-
-      Account.Balance = account.Data.Equity;
-      Account.Descriptor = account.Data.AccountNumber;
-      Account.ActiveOrders = orders.Data.Select(InternalMap.GetOrder).ToDictionary(o => o.Transaction.Id, o => o);
-      Account.ActivePositions = positions.Data.Select(InternalMap.GetPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
-
-      Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
-      Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
     }
 
     /// <summary>
@@ -404,10 +485,10 @@ namespace Alpaca
     protected virtual void ProcessPoint(string content)
     {
       var streamPoint = JsonSerializer
-        .Deserialize<HistoricalQuoteMessage[]>(content, _sender.Options)
+        .Deserialize<QuoteMessage[]>(content, _sender.Options)
         .FirstOrDefault();
 
-      var instrument = Account.Instruments.Get(streamPoint.Symbol) ?? new Instrument();
+      var instrument = Account.Instruments.Get(streamPoint.Symbol) ?? new InstrumentModel();
       var point = new PointModel
       {
         Ask = streamPoint.AskPrice,
@@ -432,7 +513,7 @@ namespace Alpaca
     protected virtual void ProcessTrade(string content)
     {
       var orderMessage = JsonSerializer
-        .Deserialize<HistoricalTradeMessage[]>(content, _sender.Options)
+        .Deserialize<TradeMessage[]>(content, _sender.Options)
         .FirstOrDefault();
 
       var action = new TransactionModel
@@ -441,7 +522,7 @@ namespace Alpaca
         Time = orderMessage.TimestampUtc,
         Price = orderMessage.Price,
         Volume = orderMessage.Size,
-        Instrument = new Instrument { Name = orderMessage.Symbol }
+        Instrument = new InstrumentModel { Name = orderMessage.Symbol }
       };
 
       var order = new OrderModel
@@ -495,9 +576,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {
@@ -526,9 +607,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {

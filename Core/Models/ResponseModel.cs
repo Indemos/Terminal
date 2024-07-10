@@ -5,18 +5,13 @@ namespace Terminal.Core.Models
   public class ResponseModel<T>
   {
     /// <summary>
-    /// Errors count
+    /// Item
     /// </summary>
-    public virtual int Count { get; set; }
+    public virtual T Data { get; set; }
 
     /// <summary>
     /// Items
     /// </summary>
-    public virtual IList<ResponseItemModel<T>> Items { get; set; }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public ResponseModel() => Items = [];
+    public virtual IList<ErrorModel> Errors { get; set; } = [];
   }
 }

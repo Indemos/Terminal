@@ -75,19 +75,21 @@ namespace Simulation
       _instruments.ForEach(o => _connections.Add(o.Value));
 
       Account.Positions.CollectionChanged += OnPositionUpdate;
-      Account.Instruments.ForEach(async o => await Subscribe(o.Key));
+      Account.Instruments.ForEach(async o => await Subscribe(o.Value));
 
       return null;
     }
 
     /// <summary>
-    /// Subscribe to data streams
+    /// Subscribe to streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Subscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
     {
-      await Unsubscribe(name);
+      await Unsubscribe(instrument);
 
-      Account.Instruments[name].Points.CollectionChanged += OnPointUpdate;
+      Account.Instruments[instrument.Name].Points.CollectionChanged += OnPointUpdate;
 
       var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
@@ -114,7 +116,7 @@ namespace Simulation
         interval.Enabled = true;
       });
 
-      _subscriptions[name] = interval;
+      _subscriptions[instrument.Name] = interval;
 
       return null;
     }
@@ -124,7 +126,7 @@ namespace Simulation
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      Account.Instruments.ForEach(async o => await Unsubscribe(o.Key));
+      Account.Instruments.ForEach(async o => await Unsubscribe(o.Value));
       Account.Positions.CollectionChanged -= OnPositionUpdate;
 
       _connections?.ForEach(o => o?.Dispose());
@@ -134,16 +136,18 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Unsubscribe from data streams
+    /// Unsubscribe from streams
     /// </summary>
-    public override Task<IList<ErrorModel>> Unsubscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
     {
-      Account.Instruments[name].Points.CollectionChanged -= OnPointUpdate;
+      Account.Instruments[instrument.Name].Points.CollectionChanged -= OnPointUpdate;
 
-      if (_subscriptions.ContainsKey(name))
+      if (_subscriptions.ContainsKey(instrument.Name))
       {
-        _subscriptions[name].Dispose();
-        _subscriptions.Remove(name);
+        _subscriptions[instrument.Name].Dispose();
+        _subscriptions.Remove(instrument.Name);
       }
 
       return Task.FromResult<IList<ErrorModel>>(null);
@@ -472,7 +476,7 @@ namespace Simulation
             var inputMessage = File.ReadAllText(input);
             var pointMessage = JsonSerializer.Deserialize<PointMessage>(inputMessage);
 
-            pointMessage.Quote.Instrument = new Instrument { Name = stream.Key };
+            pointMessage.Quote.Instrument = new InstrumentModel { Name = stream.Key };
             points[stream.Key] = pointMessage.Quote;
           }
         }
@@ -496,17 +500,32 @@ namespace Simulation
       return response;
     }
 
-    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
 
-    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
+    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    {
+      throw new NotImplementedException();
+    }
+
+    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
     {
       throw new NotImplementedException();
     }

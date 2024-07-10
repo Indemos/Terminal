@@ -78,10 +78,10 @@ namespace Client.Pages
       Account = new Account
       {
         Balance = 25000,
-        Instruments = new Dictionary<string, Instrument>
+        Instruments = new Dictionary<string, InstrumentModel>
         {
-          [_assetX] = new Instrument { Name = _assetX },
-          [_assetY] = new Instrument { Name = _assetY }
+          [_assetX] = new InstrumentModel { Name = _assetX },
+          [_assetY] = new InstrumentModel { Name = _assetY }
         }
       };
 
@@ -163,7 +163,7 @@ namespace Client.Pages
       await View.PositionsView.UpdateItems(Account.ActivePositions);
     }
 
-    private void OpenPositions(IInstrument assetBuy, IInstrument assetSell)
+    private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
       var orderSell = new OrderModel
       {

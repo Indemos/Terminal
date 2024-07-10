@@ -65,7 +65,7 @@ namespace Terminal.Tests
       {
         Transaction = new()
         {
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             SwapLong = null,
             SwapShort = null,
@@ -109,7 +109,7 @@ namespace Terminal.Tests
         Transaction = new()
         {
           Volume = 1,
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points =
@@ -148,7 +148,7 @@ namespace Terminal.Tests
         Transaction = new()
         {
           Volume = 1,
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points =

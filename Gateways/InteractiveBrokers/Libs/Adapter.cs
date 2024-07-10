@@ -1,16 +1,25 @@
 using IBApi;
+using InteractiveBrokers.Mappers;
+using InteractiveBrokers.Messages;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace InteractiveBrokers
 {
   public class Adapter : Gateway
   {
+    /// <summary>
+    /// Unique request ID
+    /// </summary>
+    protected int _id;
+
     /// <summary>
     /// IB client
     /// </summary>
@@ -19,17 +28,12 @@ namespace InteractiveBrokers
     /// <summary>
     /// Monitoring signal
     /// </summary>
-    private EReaderMonitorSignal _signal;
+    public EReaderMonitorSignal _signal;
 
     /// <summary>
-    /// Disposable connections
+    /// Asset subscriptions
     /// </summary>
-    protected IList<IDisposable> _connections;
-
-    /// <summary>
-    /// Disposable subscriptions
-    /// </summary>
-    protected IList<IDisposable> _subscriptions;
+    protected Dictionary<string, int> _subscriptions;
 
     /// <summary>
     /// Data source
@@ -39,7 +43,12 @@ namespace InteractiveBrokers
     /// <summary>
     /// Streaming source
     /// </summary>
-    public virtual string Port { get; set; }
+    public virtual int Port { get; set; }
+
+    /// <summary>
+    /// Unique ID
+    /// </summary>
+    public virtual int Id => _id++;
 
     /// <summary>
     /// Constructor
@@ -47,11 +56,10 @@ namespace InteractiveBrokers
     public Adapter()
     {
       Host = "127.0.0.1";
-      Port = "7497";
+      Port = 7497;
 
+      _id = 1;
       _subscriptions = [];
-      _connections = [];
-
       _signal = new EReaderMonitorSignal();
       _client = new IBClient(_signal);
     }
@@ -66,9 +74,10 @@ namespace InteractiveBrokers
       try
       {
         await Disconnect();
-        await GetAccountData();
+        await GetReader();
+        await GetAccount([]);
 
-        Account.Instruments.ForEach(async o => await Subscribe(o.Key));
+        Account.Instruments.ForEach(async o => await Subscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -79,15 +88,29 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Subscribe to data streams
+    /// Subscribe to streams
     /// </summary>
-    public override async Task<IList<ErrorModel>> Subscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
 
       try
       {
-        await Unsubscribe(name);
+        await Unsubscribe(instrument);
+
+        var contract = new Contract
+        {
+          Symbol = instrument.Name,
+          SecType = instrument.Security,
+          Currency = "USD",
+          Exchange = "SMART"
+        };
+
+        _subscriptions[instrument.Name] = Id;
+
+        _client.ClientSocket.reqTickByTickData(_subscriptions[instrument.Name], contract, "BidAsk", 0, true);
       }
       catch (Exception e)
       {
@@ -102,8 +125,7 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<IList<ErrorModel>> Disconnect()
     {
-      _connections?.ForEach(o => o?.Dispose());
-      _connections?.Clear();
+      _client?.ClientSocket?.eDisconnect();
 
       return Task.FromResult<IList<ErrorModel>>([]);
     }
@@ -111,14 +133,20 @@ namespace InteractiveBrokers
     /// <summary>
     /// Unsubscribe from data streams
     /// </summary>
-    public override Task<IList<ErrorModel>> Unsubscribe(string name)
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
     {
       var errors = new List<ErrorModel>();
 
       try
       {
-        _subscriptions?.ForEach(o => o.Dispose());
-        _subscriptions?.Clear();
+        if (_subscriptions.TryGetValue(instrument.Name, out var id))
+        {
+          _client?.ClientSocket?.cancelTickByTickData(id);
+
+          _subscriptions.Remove(instrument.Name);
+        }
       }
       catch (Exception e)
       {
@@ -131,11 +159,12 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get options
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseItemModel<IList<OptionModel>>> GetOptions(Hashtable criteria)
+    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<OptionModel>>();
+      var response = new ResponseModel<IList<OptionModel>>();
 
       try
       {
@@ -151,32 +180,52 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get latest quote
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseItemModel<IDictionary<string, PointModel>>> GetPoint(Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IDictionary<string, PointModel>>();
+      var response = new ResponseModel<DomModel>();
 
       try
       {
+        var id = Id;
+        var source = new TaskCompletionSource<TickByTickBidAskMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var contract = new Contract
+        {
+          Symbol = $"{criteria["symbol"]}",
+          SecType = criteria.Get<string>("secType") ?? "STK",
+          Currency = criteria.Get<string>("currency") ?? "USD",
+          Exchange = criteria.Get<string>("exchange") ?? "SMART"
+        };
+
+        _client.tickByTickBidAsk += quote =>
+        {
+          source.TrySetResult(quote);
+          _client.ClientSocket.cancelTickByTickData(id);
+        };
+
+        _client.ClientSocket.reqTickByTickData(id, contract, "BidAsk", 0, true);
+
+        response.Data = InternalMap.GetDom(await source.Task);
       }
       catch (Exception e)
       {
         response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
       }
 
-      return Task.FromResult(response);
+      return response;
     }
 
     /// <summary>
     /// Get historical bars
     /// </summary>
+    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    /// <exception cref="NotImplementedException"></exception>
-    public override Task<ResponseItemModel<IList<PointModel>>> GetPoints(Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
-      var response = new ResponseItemModel<IList<PointModel>>();
+      var response = new ResponseModel<IList<PointModel>>();
 
       try
       {
@@ -224,24 +273,192 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
+    /// Limit actions to current account only
+    /// </summary>
+    /// <param name="descriptor"></param>
+    /// <param name="action"></param>
+    protected void SetAccountData(string descriptor, Action action)
+    {
+      if (string.Equals(descriptor, Account.Descriptor, StringComparison.InvariantCultureIgnoreCase))
+      {
+        action();
+      }
+    }
+
+    /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
+    /// <param name="criteria"></param>
     /// <returns></returns>
-    protected virtual Task GetAccountData()
+    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
     {
-      //var account = await SendData<AccountMessage>("/v2/account");
-      //var positions = await SendData<PositionMessage[]>("/v2/positions");
-      //var orders = await SendData<OrderMessage[]>("/v2/orders");
+      var response = new ResponseModel<IAccount>();
 
-      //Account.Balance = account.Data.Equity;
-      //Account.Descriptor = account.Data.AccountNumber;
-      //Account.ActiveOrders = orders.Data.Select(InternalMap.GetOrder).ToDictionary(o => o.Transaction.Id, o => o);
-      //Account.ActivePositions = positions.Data.Select(InternalMap.GetPosition).ToDictionary(o => o.Order.Transaction.Id, o => o);
+      try
+      {
+        await GetAccountUpdates(criteria);
 
-      //Account.ActiveOrders.ForEach(async o => await Subscribe(o.Value.Transaction.Instrument.Name));
-      //Account.ActivePositions.ForEach(async o => await Subscribe(o.Value.Order.Transaction.Instrument.Name));
+        var orders = await GetOrders(null, criteria);
+        var positions = await GetPositions(null, criteria);
 
-      return Task.CompletedTask;
+        Account.ActiveOrders = orders.Data.ToDictionary(o => o.Transaction.Id);
+        Account.ActivePositions = positions.Data.ToDictionary(o => o.Order.Transaction.Id);
+
+        Account
+          .ActiveOrders
+          .Select(o => o.Value.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Where(o => Account.Instruments.ContainsKey(o) is false)
+          .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
+
+        response.Data = Account;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<OrderModel>>();
+
+      try
+      {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _client.OpenOrder = o => SetAccountData(o.Order.Account, () => Account.ActiveOrders[$"{o.OrderId}"] = InternalMap.GetOrder(o));
+        _client.OpenOrderEnd = () => source.TrySetResult();
+        _client.ClientSocket.reqAutoOpenOrders(true);
+        _client.ClientSocket.reqAllOpenOrders();
+
+        await source.Task;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Get positions 
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    {
+      var response = new ResponseModel<IList<PositionModel>>();
+
+      try
+      {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _client.Position = o => SetAccountData(o.Account, () => Account.ActivePositions[o.Contract.Symbol] = InternalMap.GetPosition(o));
+        _client.PositionEnd = () => source.TrySetResult();
+        _client.ClientSocket.reqPositions();
+
+        await source.Task;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Sync open balance, order, and positions 
+    /// </summary>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
+    protected virtual async Task<ResponseModel<IAccount>> GetAccountUpdates(Hashtable criteria)
+    {
+      var response = new ResponseModel<IAccount>();
+
+      try
+      {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _client.UpdateAccountValue = o => { };
+        _client.AccountSummary = o => SetAccountData(o.Account, () =>
+        {
+          switch (o.Tag)
+          {
+            case AccountSummaryTags.NetLiquidation: Account.Balance = double.Parse(o.Value); break;
+          }
+        });
+
+        _client.AccountSummaryEnd = o => source.TrySetResult();
+        _client.ClientSocket.reqAccountSummary(Id, "All", AccountSummaryTags.GetAllTags());
+        _client.ClientSocket.reqAccountUpdates(true, Account.Descriptor);
+
+        await source.Task;
+
+        response.Data = Account;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Setup socket connection 
+    /// </summary>
+    /// <returns></returns>
+    protected virtual async Task<ResponseModel<EReader>> GetReader()
+    {
+      var response = new ResponseModel<EReader>();
+
+      try
+      {
+        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        _client.ClientSocket.SetConnectOptions("+PACEAPI");
+        _client.ClientSocket.eConnect(Host, Port, 0);
+
+        var reader = new EReader(_client.ClientSocket, _signal);
+        var processor = new Thread(() =>
+        {
+          while (_client.ClientSocket.IsConnected())
+          {
+            _signal.waitForSignal();
+            reader.processMsgs();
+          }
+        })
+        { IsBackground = true };
+
+        reader.Start();
+        processor.Start();
+
+        _client.ConnectionClosed = () => { };
+        _client.Error = (id, errorCode, message, errorMessage, e) => { };
+        _client.NextValidId = o => source.TrySetResult();
+
+        await source.Task;
+
+        response.Data = reader;
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -249,9 +466,9 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual Task<ResponseItemModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {
@@ -280,9 +497,9 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual Task<ResponseItemModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
     {
-      var inResponse = new ResponseItemModel<OrderModel>();
+      var inResponse = new ResponseModel<OrderModel>();
 
       try
       {

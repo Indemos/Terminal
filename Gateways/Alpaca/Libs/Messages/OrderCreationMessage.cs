@@ -44,8 +44,8 @@ public class OrderCreationMessage
   public string OrderClass { get; set; }
 
   [JsonPropertyName("take_profit")]
-  public OrderAdvancedAttributesMessage TakeProfit { get; set; }
+  public OrderBracketMessage TakeProfit { get; set; }
 
   [JsonPropertyName("stop_loss")]
-  public OrderAdvancedAttributesMessage StopLoss { get; set; }
+  public OrderBracketMessage StopLoss { get; set; }
 }

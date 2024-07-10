@@ -9,73 +9,96 @@ namespace Alpaca.Mappers
   public class InternalMap
   {
     /// <summary>
-    /// Get internal option
+    /// Get order book
     /// </summary>
-    /// <param name="optionMessage"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OptionModel GetOption(OptionSnapshotMessage optionMessage)
+    public static DomModel GetDom(QuoteMessage message)
     {
       var point = new PointModel
       {
-        Ask = optionMessage.Quote.AskPrice,
-        Bid = optionMessage.Quote.BidPrice,
-        AskSize = optionMessage.Quote.AskSize,
-        BidSize = optionMessage.Quote.BidSize,
-        Last = optionMessage.Quote.AskPrice ?? optionMessage.Quote.BidPrice
+        Ask = message.AskPrice,
+        Bid = message.BidPrice,
+        AskSize = message.AskSize,
+        BidSize = message.BidSize,
+        Last = message.AskPrice ?? message.BidPrice,
+      };
+
+      return new DomModel
+      {
+        Asks = [point],
+        Bids = [point],
+      };
+    }
+
+    /// <summary>
+    /// Get option contract
+    /// </summary>
+    /// <param name="message"></param>
+    /// <returns></returns>
+    public static OptionModel GetOption(OptionSnapshotMessage message)
+    {
+      var point = new PointModel
+      {
+        Ask = message.Quote.AskPrice,
+        Bid = message.Quote.BidPrice,
+        AskSize = message.Quote.AskSize,
+        BidSize = message.Quote.BidSize,
+        Last = message.Quote.AskPrice ?? message.Quote.BidPrice
       };
 
       var option = new OptionModel
       {
         Point = point,
-        ExpirationDate = optionMessage.Quote.TimestampUtc        
+        ExpirationDate = message.Quote.TimestampUtc
       };
 
       return option;
     }
 
     /// <summary>
-    /// Get internal point
+    /// Get point
     /// </summary>
-    /// <param name="pointMessage"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetPoint(HistoricalQuoteMessage pointMessage)
+    public static PointModel GetPoint(QuoteMessage message)
     {
       var point = new PointModel
       {
-        Ask = pointMessage.AskPrice,
-        Bid = pointMessage.BidPrice,
-        AskSize = pointMessage.AskSize,
-        BidSize = pointMessage.BidSize,
-        Time = pointMessage.TimestampUtc ?? DateTime.UtcNow,
-        Last = pointMessage.BidPrice ?? pointMessage.AskPrice,
-        Instrument = new Instrument { Name = pointMessage.Symbol }
+        Ask = message.AskPrice,
+        Bid = message.BidPrice,
+        AskSize = message.AskSize,
+        BidSize = message.BidSize,
+        Time = message.TimestampUtc ?? DateTime.UtcNow,
+        Last = message.BidPrice ?? message.AskPrice,
+        Instrument = new InstrumentModel { Name = message.Symbol }
       };
 
       return point;
     }
 
     /// <summary>
-    /// Get internal bar
+    /// Get bar
     /// </summary>
-    /// <param name="pointMessage"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PointModel GetBar(HistoricalBarMessage pointMessage)
+    public static PointModel GetBar(BarMessage message)
     {
       var point = new PointModel
       {
-        Ask = pointMessage.Close,
-        Bid = pointMessage.Close,
-        AskSize = pointMessage.Volume,
-        BidSize = pointMessage.Volume,
-        Time = pointMessage.TimeUtc ?? DateTime.UtcNow,
-        Last = pointMessage.Close,
-        Instrument = new Instrument { Name = pointMessage.Symbol },
+        Ask = message.Close,
+        Bid = message.Close,
+        AskSize = message.Volume,
+        BidSize = message.Volume,
+        Time = message.TimeUtc ?? DateTime.UtcNow,
+        Last = message.Close,
+        Instrument = new InstrumentModel { Name = message.Symbol },
         Bar = new BarModel
         {
-          Low = pointMessage.Low,
-          High = pointMessage.High,
-          Open = pointMessage.Open,
-          Close = pointMessage.Close
+          Low = message.Low,
+          High = message.High,
+          Open = message.Open,
+          Close = message.Close
         }
       };
 
@@ -85,50 +108,50 @@ namespace Alpaca.Mappers
     /// <summary>
     /// Convert remote order to local
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static OrderModel GetOrder(OrderMessage order)
+    public static OrderModel GetOrder(OrderMessage message)
     {
-      var instrument = new Instrument
+      var instrument = new InstrumentModel
       {
-        Name = order.Symbol
+        Name = message.Symbol
       };
 
       var action = new TransactionModel
       {
-        Id = $"{order.OrderId}",
-        Descriptor = order.ClientOrderId,
+        Id = $"{message.OrderId}",
+        Descriptor = message.ClientOrderId,
         Instrument = instrument,
-        CurrentVolume = order.FilledQuantity,
-        Volume = order.Quantity,
-        Time = order.CreatedAtUtc,
-        Status = GetStatus(order.OrderStatus)
+        CurrentVolume = message.FilledQuantity,
+        Volume = message.Quantity,
+        Time = message.CreatedAtUtc,
+        Status = GetStatus(message.OrderStatus)
       };
 
       var inOrder = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetOrderSide(order.OrderSide),
-        TimeSpan = GetTimeSpan(order.TimeInForce)
+        Side = GetOrderSide(message.OrderSide),
+        TimeSpan = GetTimeSpan(message.TimeInForce)
       };
 
-      switch (order.OrderType)
+      switch (message.OrderType)
       {
         case "stop":
           inOrder.Type = OrderTypeEnum.Stop;
-          inOrder.Price = order.StopPrice;
+          inOrder.Price = message.StopPrice;
           break;
 
         case "limit":
           inOrder.Type = OrderTypeEnum.Limit;
-          inOrder.Price = order.LimitPrice;
+          inOrder.Price = message.LimitPrice;
           break;
 
         case "stop_limit":
           inOrder.Type = OrderTypeEnum.StopLimit;
-          inOrder.Price = order.StopPrice;
-          inOrder.ActivationPrice = order.LimitPrice;
+          inOrder.Price = message.StopPrice;
+          inOrder.ActivationPrice = message.LimitPrice;
           break;
       }
 
@@ -138,34 +161,34 @@ namespace Alpaca.Mappers
     /// <summary>
     /// Convert remote position to local
     /// </summary>
-    /// <param name="position"></param>
+    /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMessage position)
+    public static PositionModel GetPosition(PositionMessage message)
     {
-      var instrument = new Instrument
+      var instrument = new InstrumentModel
       {
-        Name = position.Symbol
+        Name = message.Symbol
       };
 
       var action = new TransactionModel
       {
-        Id = $"{position.AssetId}",
-        Descriptor = position.Symbol,
+        Id = $"{message.AssetId}",
+        Descriptor = message.Symbol,
         Instrument = instrument,
-        Price = position.AverageEntryPrice,
-        CurrentVolume = position.AvailableQuantity,
-        Volume = position.Quantity
+        Price = message.AverageEntryPrice,
+        CurrentVolume = message.AvailableQuantity,
+        Volume = message.Quantity
       };
 
       var order = new OrderModel
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Side = GetPositionSide(position.Side)
+        Side = GetPositionSide(message.Side)
       };
 
-      var gainLossPoints = position.AverageEntryPrice - position.AssetCurrentPrice;
-      var gainLoss = position.CostBasis - position.MarketValue;
+      var gainLossPoints = message.AverageEntryPrice - message.AssetCurrentPrice;
+      var gainLoss = message.CostBasis - message.MarketValue;
 
       return new PositionModel
       {

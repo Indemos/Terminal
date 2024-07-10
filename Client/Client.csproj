@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Gateways\Alpaca\Libs\Alpaca.csproj" />
+    <ProjectReference Include="..\Gateways\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
     <ProjectReference Include="..\Gateways\Schwab\Libs\Schwab.csproj" />
     <ProjectReference Include="..\Gateways\Simulation\Libs\Simulation.csproj" />
   </ItemGroup>

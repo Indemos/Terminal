@@ -41,7 +41,7 @@ namespace Terminal.Tests
         {
           Volume = 1,
           Price = orderPrice,
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points = new ObservableGroupCollection<PointModel>

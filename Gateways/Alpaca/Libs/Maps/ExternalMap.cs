@@ -83,7 +83,7 @@ namespace Alpaca.Mappers
     /// <param name="order"></param>
     /// <param name="direction"></param>
     /// <returns></returns>
-    public static OrderAdvancedAttributesMessage GetBracket(OrderModel order, double direction)
+    public static OrderBracketMessage GetBracket(OrderModel order, double direction)
     {
       var nextOrder = order
         .Orders
@@ -91,7 +91,7 @@ namespace Alpaca.Mappers
 
       if (nextOrder is not null)
       {
-        return new OrderAdvancedAttributesMessage { StopPrice = nextOrder.Price };
+        return new OrderBracketMessage { StopPrice = nextOrder.Price };
       }
 
       return null;

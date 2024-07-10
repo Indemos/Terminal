@@ -12,11 +12,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Items
     /// </summary>
-    public virtual IList<ResponseItemModel<T>> Items { get; set; }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public ResponseMapModel() => Items = [];
+    public virtual IList<ResponseModel<T>> Items { get; set; } = [];
   }
 }

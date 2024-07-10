@@ -60,7 +60,7 @@ namespace Terminal.Tests
         Transaction = new()
         {
           Volume = 1,
-          Instrument = new Instrument()
+          Instrument = new InstrumentModel()
           {
             Name = "X",
             Points =
