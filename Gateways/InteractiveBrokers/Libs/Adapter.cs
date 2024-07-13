@@ -144,7 +144,6 @@ namespace InteractiveBrokers
         if (_subscriptions.TryGetValue(instrument.Name, out var id))
         {
           _client?.ClientSocket?.cancelTickByTickData(id);
-
           _subscriptions.Remove(instrument.Name);
         }
       }

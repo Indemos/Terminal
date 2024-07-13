@@ -15,6 +15,11 @@ namespace Terminal.Core.Extensions
     {
       var response = HttpUtility.ParseQueryString(string.Empty);
 
+      foreach (DictionaryEntry o in source ?? [])
+      {
+        response[$"{o.Key}"] = $"{o.Value}";
+      }
+
       foreach (Hashtable map in maps ?? [])
       {
         foreach (DictionaryEntry o in map ?? [])

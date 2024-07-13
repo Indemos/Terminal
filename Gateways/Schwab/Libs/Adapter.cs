@@ -171,8 +171,8 @@ namespace Schwab
         var props = new Hashtable
         {
           ["symbol"] = args.Name,
-          ["fromDate"] = args.MinDate,
-          ["toDate"] = args.MaxDate
+          ["fromDate"] = $"{args.MinDate:yyyy-MM-dd}",
+          ["toDate"] = $"{args.MaxDate:yyyy-MM-dd}"
 
         }.Merge(criteria);
 
@@ -493,7 +493,7 @@ namespace Schwab
         if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
         {
           var orderItem = orderData.First();
-          var orderId = $"{orderItem.Substring(orderItem.LastIndexOf('/') + 1)}";
+          var orderId = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
 
           if (string.IsNullOrEmpty(orderId))
           {
