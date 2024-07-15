@@ -5,6 +5,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -476,8 +477,9 @@ namespace Simulation
             var inputMessage = File.ReadAllText(input);
             var pointMessage = JsonSerializer.Deserialize<PointMessage>(inputMessage);
 
-            pointMessage.Quote.Instrument = new InstrumentModel { Name = stream.Key };
-            points[stream.Key] = pointMessage.Quote;
+            pointMessage.Point.Snapshot = input;
+            pointMessage.Point.Instrument = new InstrumentModel { Name = stream.Key };
+            points[stream.Key] = pointMessage.Point;
           }
         }
 
@@ -500,34 +502,78 @@ namespace Simulation
       return response;
     }
 
-    public override Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var point = Account.Instruments[args.Name].Points.LastOrDefault();
+      var response = new ResponseModel<DomModel>
+      {
+        Data = new DomModel
+        {
+          Bids = [point],
+          Asks = [point]
+        }
+      };
+
+      return Task.FromResult(response);
     }
 
     public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<PointModel>>
+      {
+        Data = [.. Account.Instruments[args.Name].Points]
+      };
+
+      return Task.FromResult(response);
     }
 
     public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var source = $"{criteria["source"]}";
+      var document = new FileInfo(source);
+      var response = new ResponseModel<IList<OptionModel>>();
+
+      if (string.Equals(document.Extension, "zip", StringComparison.InvariantCultureIgnoreCase))
+      {
+        using (var stream = File.OpenRead(source))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+        using (var content = archive.Entries.First().Open())
+        {
+          var chain = JsonSerializer.Deserialize<OptionModel>(content);
+        }
+      }
+
+      return Task.FromResult(response);
     }
 
     public override Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IAccount>
+      {
+        Data = Account
+      };
+
+      return Task.FromResult(response);
     }
 
     public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<PositionModel>>
+      {
+        Data = [.. Account.ActivePositions.Values]
+      };
+
+      return Task.FromResult(response);
     }
 
     public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
     {
-      throw new NotImplementedException();
+      var response = new ResponseModel<IList<OrderModel>>
+      {
+        Data = [.. Account.ActiveOrders.Values]
+      };
+
+      return Task.FromResult(response);
     }
   }
 }

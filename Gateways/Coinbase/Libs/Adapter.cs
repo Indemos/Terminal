@@ -222,7 +222,7 @@ namespace Coinbase
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -334,7 +334,7 @@ namespace Coinbase
           orderProps[o.Key] = o.Value;
         }
 
-        var items = await SendData<OrdersMessage>($"/api/v3/brokerage/orders/historical/batch?{orderProps.ToQuery()}");
+        var items = await SendData<OrdersMessage>($"/api/v3/brokerage/orders/historical/batch?{orderProps.Query()}");
 
         response.Data = [.. items.Data.Orders.Select(InternalMap.GetOrder)];
       }
@@ -358,7 +358,7 @@ namespace Coinbase
 
       try
       {
-        var portfolios = await SendData<PortfoliosMessage>($"/api/v3/brokerage/portfolios?{criteria.ToQuery()}");
+        var portfolios = await SendData<PortfoliosMessage>($"/api/v3/brokerage/portfolios?{criteria.Query()}");
 
         foreach (var portfolio in portfolios.Data.Portfolios)
         {

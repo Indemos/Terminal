@@ -1,6 +1,7 @@
 using Schwab.Messages;
 using System;
 using System.Linq;
+using System.Text.Json;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -44,23 +45,28 @@ namespace Schwab.Mappers
       {
         Name = message.Symbol,
         OpenInterest = message.OpenInterest ?? 0,
-        Strike = message.StrikePrice ?? 0,
+        Strike = message.StrikePrice,
         IntrinsicValue = message.IntrinsicValue ?? 0,
         Leverage = message.Multiplier ?? 0,
         Volatility = message.Volatility ?? 0,
         Volume = message.TotalVolume ?? 0,
         Point = new PointModel
         {
-          Ask = message.Ask ?? 0,
+          Ask = message.Ask,
           AskSize = message.AskSize ?? 0,
-          Bid = message.Bid ?? 0,
+          Bid = message.Bid,
           BidSize = message.BidSize ?? 0,
+          Last = message.Last,
           Bar = new BarModel
           {
-            Low = message.LowPrice ?? 0,
-            High = message.LowPrice ?? 0,
-            Open = message.OpenPrice ?? 0,
-            Close = message.ClosePrice ?? 0
+            Low = message.LowPrice,
+            High = message.LowPrice,
+            Open = message.OpenPrice,
+            Close = message.ClosePrice
+          },
+          Instrument = new InstrumentModel
+          {
+            Name = message.Symbol.Split(' ').FirstOrDefault(),
           }
         },
         Derivatives = new DerivativeModel
@@ -196,13 +202,13 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderModel GetOrder(OrderMessage message)
     {
-      var assets = message
+      var subOrders = message
         ?.OrderLegCollection
-        ?.Select(o => o?.Instrument?.Symbol);
+        ?.ToList();
 
       var instrument = new InstrumentModel
       {
-        Name = string.Join($" {Environment.NewLine}", assets)
+        Name = string.Join($" / ", subOrders.Select(o => o?.Instrument?.Symbol))
       };
 
       var action = new TransactionModel
@@ -241,6 +247,38 @@ namespace Schwab.Mappers
           inOrder.Price = message.Price;
           inOrder.ActivationPrice = message.StopPrice;
           break;
+
+        case "NET_DEBIT":
+        case "NET_CREDIT":
+          inOrder.Type = OrderTypeEnum.Limit;
+          inOrder.Price = message.Price;
+          break;
+      }
+
+      if (subOrders.Count > 1)
+      {
+        inOrder.Combination = instrument.Name;
+
+        foreach (var subOrder in subOrders)
+        {
+          var subInstrument = new InstrumentModel
+          {
+            Name = subOrder.Instrument.Symbol
+          };
+
+          var subAction = new TransactionModel
+          {
+            Instrument = subInstrument,
+            CurrentVolume = subOrder.Quantity,
+            Volume = subOrder.Quantity
+          };
+
+          inOrder.Orders.Add(new OrderModel
+          {
+            Transaction = subAction,
+            Side = GetSubOrderSide(subOrder.Instruction)
+          });
+        }
       }
 
       return inOrder;
@@ -284,22 +322,38 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderSideEnum GetOrderSide(OrderMessage message)
     {
+      switch (message.OrderType.ToUpper())
+      {
+        case "NET_DEBIT": return OrderSideEnum.Buy;
+        case "NET_CREDIT": return OrderSideEnum.Sell;
+      }
+
       var position = message
         ?.OrderLegCollection
         ?.FirstOrDefault();
 
-      if (E(position.OrderLegType, "EQUITY"))
-      {
-        switch (position.Instruction.ToUpper())
-        {
-          case "BUY":
-          case "BUY_TO_OPEN":
-          case "BUY_TO_CLOSE": return OrderSideEnum.Buy;
+      return GetSubOrderSide(position.Instruction);
+    }
 
-          case "SELL":
-          case "SELL_TO_OPEN":
-          case "SELL_TO_CLOSE": return OrderSideEnum.Sell;
-        }
+    /// <summary>
+    /// Convert remote order side to local
+    /// </summary>
+    /// <param name="status"></param>
+    /// <returns></returns>
+    public static OrderSideEnum GetSubOrderSide(string status)
+    {
+      switch (status?.ToUpper())
+      {
+        case "BUY":
+        case "BUY_TO_OPEN":
+        case "BUY_TO_CLOSE":
+        case "NET_DEBIT": return OrderSideEnum.Buy;
+
+        case "SELL":
+        case "SELL_SHORT":
+        case "SELL_TO_OPEN":
+        case "SELL_TO_CLOSE":
+        case "NET_CREDIT": return OrderSideEnum.Sell;
       }
 
       return OrderSideEnum.None;

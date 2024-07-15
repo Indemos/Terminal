@@ -34,6 +34,11 @@ namespace Terminal.Core.Models
     public virtual double? Last { get; set; }
 
     /// <summary>
+    /// Reference to market state at the current time
+    /// </summary>
+    public virtual string Snapshot { get; set; }
+
+    /// <summary>
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }
@@ -54,7 +59,7 @@ namespace Terminal.Core.Models
     public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
-    /// Values from related series synced with the current data point, e.g. averaged indicator calculations for the charts
+    /// Values from related series synced with the current data point, e.g. moving average or another indicator
     /// </summary>
     public virtual IDictionary<string, PointModel> Series { get; set; }
 

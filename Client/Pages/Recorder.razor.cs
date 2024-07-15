@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
 using Schwab.Messages;
+using Simulation.Messages;
 using System;
 using System.Collections.Generic;
 using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -58,23 +60,34 @@ namespace Client.Pages
         }
       };
 
-      var aTimer = new Timer();
-      aTimer.Elapsed += async (o, e) => await OnData();
-      aTimer.Interval = 5000;
-      aTimer.Enabled = true;
+      //var aTimer = new Timer();
+      //aTimer.Elapsed += async (o, e) => await OnData();
+      //aTimer.Interval = 5000;
+      //aTimer.Enabled = true;
     }
 
     private async Task OnData()
     {
-      var args = new OptionsArgs
+      var optionArgs = new OptionsArgs
       {
         Name = "SPY",
         MinDate = DateTime.Now,
         MaxDate = DateTime.Now.AddYears(1)
       };
 
-      var options = await View.Adapter.GetOptions(args, []);
-      var content = JsonSerializer.Serialize(options);
+      var domArgs = new DomArgs
+      {
+        Name = "SPY"
+      };
+
+      var dom = await View.Adapter.GetDom(domArgs, []);
+      var options = await View.Adapter.GetOptions(optionArgs, []);
+      var message = new PointMessage
+      {
+        Point = dom.Data.Bids.First(),
+        Options = options.Data
+      };
+      var content = JsonSerializer.Serialize(message);
       var source = $"D:/Code/NET/Terminal/Data/SPY/{DateTime.UtcNow.Ticks}.zip";
 
       using var archive = ZipFile.Open(source, ZipArchiveMode.Create);

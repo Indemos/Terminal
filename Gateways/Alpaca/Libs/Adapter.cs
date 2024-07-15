@@ -229,7 +229,7 @@ namespace Alpaca
 
       try
       {
-        var items = await SendData<OrderMessage[]>($"/v2/orders?{criteria.ToQuery()}");
+        var items = await SendData<OrderMessage[]>($"/v2/orders?{criteria.Query()}");
 
         response.Data = [.. items.Data.Select(InternalMap.GetOrder)];
       }
@@ -253,7 +253,7 @@ namespace Alpaca
 
       try
       {
-        var items = await SendData<PositionMessage[]>($"/v2/positions?{criteria.ToQuery()}");
+        var items = await SendData<PositionMessage[]>($"/v2/positions?{criteria.Query()}");
 
         response.Data = [.. items.Data.Select(InternalMap.GetPosition)];
       }
@@ -307,7 +307,7 @@ namespace Alpaca
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
       var response = new ResponseModel<DomModel>();
 

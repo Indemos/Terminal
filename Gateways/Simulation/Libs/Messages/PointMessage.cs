@@ -5,7 +5,7 @@ namespace Simulation.Messages
 
   public partial class PointMessage
   {
-    public PointModel Quote { get; set; }
+    public PointModel Point { get; set; }
 
     public IList<OptionModel> Options { get; set; }
   }

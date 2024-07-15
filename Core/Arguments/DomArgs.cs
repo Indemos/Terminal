@@ -1,6 +1,6 @@
 namespace Terminal.Core.Models
 {
-  public class InstrumentArgs
+  public class DomArgs
   {
     /// <summary>
     /// Symbol name

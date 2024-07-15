@@ -199,7 +199,7 @@ namespace Schwab
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
       var response = new ResponseModel<DomModel>();
 
@@ -207,14 +207,15 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["symbol_id"] = args.Name,
+          ["symbols"] = args.Name,
+          ["indicative"] = false,
           ["fields"] = "quote,fundamental,extended,reference,regular"
 
         }.Merge(criteria);
 
         var pointResponse = await SendData<Dictionary<string, AssetMessage>>($"/marketdata/v1/quotes?{props}");
 
-        response.Data = InternalMap.GetDom(pointResponse.Data[props["symbol_id"]]);
+        response.Data = InternalMap.GetDom(pointResponse.Data[props["symbols"]]);
       }
       catch (Exception e)
       {
@@ -311,7 +312,7 @@ namespace Schwab
 
         _accountCode = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
 
-        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.ToQuery()}");
+        var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.Query()}");
         var orders = await GetOrders(null, criteria);
 
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;

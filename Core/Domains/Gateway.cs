@@ -59,7 +59,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria);
+    Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
@@ -167,7 +167,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<DomModel>> GetDom(InstrumentArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
