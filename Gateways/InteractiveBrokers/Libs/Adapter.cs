@@ -77,6 +77,9 @@ namespace InteractiveBrokers
         await GetReader();
         await GetAccount([]);
 
+        _client.ConnectionClosed = () => { };
+        _client.Error = (id, errorCode, message, errorMessage, e) => { };
+
         Account.Instruments.ForEach(async o => await Subscribe(o.Value));
       }
       catch (Exception e)
@@ -184,26 +187,30 @@ namespace InteractiveBrokers
     /// <returns></returns>
     public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
+      var id = Id;
       var response = new ResponseModel<DomModel>();
+      var source = new TaskCompletionSource<TickByTickBidAskMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+      void getDom(TickByTickBidAskMessage o)
+      {
+        if (Equals(id, o.ReqId))
+        {
+          source.TrySetResult(o);
+          _client.tickByTickBidAsk -= getDom;
+        }
+      }
 
       try
       {
-        var id = Id;
-        var source = new TaskCompletionSource<TickByTickBidAskMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
         var contract = new Contract
         {
-          Symbol = $"{criteria["symbol"]}",
-          SecType = criteria.Get<string>("secType") ?? "STK",
-          Currency = criteria.Get<string>("currency") ?? "USD",
-          Exchange = criteria.Get<string>("exchange") ?? "SMART"
+          Symbol = args.Name ?? $"{criteria["symbol"]}",
+          SecType = args.Security ?? criteria.Get<string>("secType") ?? "STK",
+          Currency = args.Currency ?? criteria.Get<string>("currency") ?? "USD",
+          Exchange = args.Exchange ?? criteria.Get<string>("exchange") ?? "SMART"
         };
 
-        _client.tickByTickBidAsk += quote =>
-        {
-          source.TrySetResult(quote);
-          _client.ClientSocket.cancelTickByTickData(id);
-        };
-
+        _client.tickByTickBidAsk += getDom;
         _client.ClientSocket.reqTickByTickData(id, contract, "BidAsk", 0, true);
 
         response.Data = InternalMap.GetDom(await source.Task);
@@ -416,17 +423,32 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
+    /// Generate next available order ID
+    /// </summary>
+    /// <returns></returns>
+    protected virtual async Task<ResponseModel<int>> GetOrderId()
+    {
+      var source = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+      var response = new ResponseModel<int>();
+
+      _client.NextValidId = o => source.TrySetResult(o);
+      _client.ClientSocket.reqIds(-1);
+
+      response.Data = await source.Task;
+
+      return response;
+    }
+
+    /// <summary>
     /// Setup socket connection 
     /// </summary>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<EReader>> GetReader()
+    protected virtual Task<ResponseModel<EReader>> GetReader()
     {
       var response = new ResponseModel<EReader>();
 
       try
       {
-        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
         _client.ClientSocket.SetConnectOptions("+PACEAPI");
         _client.ClientSocket.eConnect(Host, Port, 0);
 
@@ -444,12 +466,6 @@ namespace InteractiveBrokers
         reader.Start();
         processor.Start();
 
-        _client.ConnectionClosed = () => { };
-        _client.Error = (id, errorCode, message, errorMessage, e) => { };
-        _client.NextValidId = o => source.TrySetResult();
-
-        await source.Task;
-
         response.Data = reader;
       }
       catch (Exception e)
@@ -457,7 +473,7 @@ namespace InteractiveBrokers
         response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
       }
 
-      return response;
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -465,30 +481,45 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
     {
       var inResponse = new ResponseModel<OrderModel>();
 
       try
       {
-        //var exOrder = ExternalMap.GetOrder(order);
-        //var exResponse = await SendData<OrderMessage>("/v2/orders", HttpMethod.Post, exOrder);
+        var source = new TaskCompletionSource<OpenOrderMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var exOrder = ExternalMap.GetOrder(order);
+        var orderId = _client.NextOrderId++;
 
-        //inResponse.Data = order;
-        //inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
-        //inResponse.Data.Transaction.Status = InternalMap.GetStatus(exResponse.Data.OrderStatus);
+        void createOrder(OpenOrderMessage o)
+        {
+          if (Equals(orderId, o.OrderId))
+          {
+            source.TrySetResult(o);
+            _client.OpenOrder -= createOrder;
+          }
+        }
 
-        //if ((int)exResponse.Message.StatusCode < 400)
-        //{
-        //  Account.ActiveOrders.Add(order.Transaction.Id, order);
-        //}
+        _client.OpenOrder += createOrder;
+        _client.ClientSocket.placeOrder(orderId, exOrder.Contract, exOrder.Order);
+
+        var exResponse = await source.Task;
+
+        inResponse.Data = order;
+        inResponse.Data.Transaction.Id = $"{orderId}";
+        inResponse.Data.Transaction.Status = InternalMap.GetStatus(exResponse.OrderState.Status);
+
+        if (string.Equals(exResponse.OrderState.Status, "Submitted", StringComparison.InvariantCultureIgnoreCase))
+        {
+          Account.ActiveOrders.Add(order.Transaction.Id, order);
+        }
       }
       catch (Exception e)
       {
         inResponse.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult(inResponse);
+      return inResponse;
     }
 
     /// <summary>

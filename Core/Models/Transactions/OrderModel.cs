@@ -17,14 +17,19 @@ namespace Terminal.Core.Models
     public virtual double? Price { get; set; }
 
     /// <summary>
-    /// Asset type
-    /// </summary>
-    public virtual string AssetType { get; set; }
-
-    /// <summary>
     /// Custom order type
     /// </summary>
-    public virtual string Combination { get; set; }
+    public virtual string Instruction { get; set; }
+
+    /// <summary>
+    /// Exchange
+    /// </summary>
+    public virtual string Exchange { get; set; }
+
+    /// <summary>
+    /// Currency
+    /// </summary>
+    public virtual string Currency { get; set; }
 
     /// <summary>
     /// Type
@@ -63,6 +68,7 @@ namespace Terminal.Core.Models
     {
       Orders = [];
       OrderStream = o => { };
+      Currency = nameof(CurrencyEnum.USD);
     }
 
     /// <summary>

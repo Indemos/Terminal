@@ -60,10 +60,10 @@ namespace Client.Pages
         }
       };
 
-      //var aTimer = new Timer();
-      //aTimer.Elapsed += async (o, e) => await OnData();
-      //aTimer.Interval = 5000;
-      //aTimer.Enabled = true;
+      var aTimer = new Timer();
+      aTimer.Elapsed += async (o, e) => await OnData();
+      aTimer.Interval = 5000;
+      aTimer.Enabled = true;
     }
 
     private async Task OnData()

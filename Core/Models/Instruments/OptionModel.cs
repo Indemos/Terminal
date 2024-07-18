@@ -7,19 +7,9 @@ namespace Terminal.Core.Models
   public class OptionModel : ICloneable
   {
     /// <summary>
-    /// Name
-    /// </summary>
-    public virtual string Name { get; set; }
-
-    /// <summary>
     /// Strike price
     /// </summary>
     public virtual double? Strike { get; set; }
-
-    /// <summary>
-    /// Contract size
-    /// </summary>
-    public virtual double? Leverage { get; set; }
 
     /// <summary>
     /// Open interest
@@ -64,15 +54,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Risk and derivatives
     /// </summary>
-    public virtual DerivativeModel Derivatives { get; set; }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public OptionModel()
-    {
-      Leverage = 100;
-    }
+    public virtual GreekModel Greeks { get; set; }
 
     /// <summary>
     /// Clone

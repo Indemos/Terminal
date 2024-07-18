@@ -7,6 +7,9 @@ namespace InteractiveBrokers.Messages
 {
   public class OpenOrderMessage : OrderMessage
   {
+    public OpenOrderMessage()
+    { }
+
     public OpenOrderMessage(int orderId, Contract contract, Order order, OrderState orderState)
     {
       OrderId = orderId;

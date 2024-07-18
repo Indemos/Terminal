@@ -52,6 +52,11 @@ namespace Terminal.Core.Models
     public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
+    /// Option
+    /// </summary>
+    public virtual OptionModel Option { get; set; }
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public TransactionModel()

@@ -37,6 +37,11 @@ namespace Terminal.Core.Domains
     public virtual double? ContractSize { get; set; }
 
     /// <summary>
+    /// Contract size
+    /// </summary>
+    public virtual double? Leverage { get; set; }
+
+    /// <summary>
     /// Tick size, i.e. minimum price change 
     /// </summary>
     public virtual double? StepSize { get; set; }
@@ -66,12 +71,13 @@ namespace Terminal.Core.Domains
     /// </summary>
     public InstrumentModel()
     {
-      SwapLong = 0.0;
-      SwapShort = 0.0;
+      SwapLong = 0;
+      SwapShort = 0;
       StepSize = 0.01;
       StepValue = 0.01;
-      Commission = 0.0;
-      ContractSize = 1.0;
+      Commission = 0;
+      ContractSize = 1;
+      Leverage = 1;
 
       Points = [];
       PointGroups = [];

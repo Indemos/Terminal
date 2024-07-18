@@ -171,8 +171,8 @@ namespace Schwab
         var props = new Hashtable
         {
           ["symbol"] = args.Name,
-          ["fromDate"] = $"{args.MinDate:yyyy-MM-dd}",
-          ["toDate"] = $"{args.MaxDate:yyyy-MM-dd}"
+          ["toDate"] = $"{args.MaxDate:yyyy-MM-dd}",
+          ["fromDate"] = $"{args.MinDate:yyyy-MM-dd}"
 
         }.Merge(criteria);
 

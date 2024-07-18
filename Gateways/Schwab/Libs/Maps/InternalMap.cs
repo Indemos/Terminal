@@ -1,7 +1,6 @@
 using Schwab.Messages;
 using System;
 using System.Linq;
-using System.Text.Json;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -41,42 +40,56 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OptionModel GetOption(OptionMessage message)
     {
+      var optionInstrument = new InstrumentModel
+      {
+        Leverage = message.Multiplier ?? 100,
+        Name = message.Symbol,
+      };
+
+      var instrument = new InstrumentModel
+      {
+        Leverage = message.Multiplier ?? 1,
+        Name = message.Symbol.Split(' ').FirstOrDefault(),
+      };
+
+      var bar = new BarModel
+      {
+        Low = message.LowPrice,
+        High = message.LowPrice,
+        Open = message.OpenPrice,
+        Close = message.ClosePrice
+      };
+
+      var point = new PointModel
+      {
+        Ask = message.Ask,
+        AskSize = message.AskSize ?? 0,
+        Bid = message.Bid,
+        BidSize = message.BidSize ?? 0,
+        Last = message.Last,
+        Bar = bar,
+        Instrument = instrument
+      };
+
+      var greeks = new GreekModel
+      {
+        Rho = message.Rho ?? 0,
+        Vega = message.Vega ?? 0,
+        Delta = message.Delta ?? 0,
+        Gamma = message.Gamma ?? 0,
+        Theta = message.Theta ?? 0
+      };
+
       var option = new OptionModel
       {
-        Name = message.Symbol,
         OpenInterest = message.OpenInterest ?? 0,
         Strike = message.StrikePrice,
         IntrinsicValue = message.IntrinsicValue ?? 0,
-        Leverage = message.Multiplier ?? 0,
         Volatility = message.Volatility ?? 0,
         Volume = message.TotalVolume ?? 0,
-        Point = new PointModel
-        {
-          Ask = message.Ask,
-          AskSize = message.AskSize ?? 0,
-          Bid = message.Bid,
-          BidSize = message.BidSize ?? 0,
-          Last = message.Last,
-          Bar = new BarModel
-          {
-            Low = message.LowPrice,
-            High = message.LowPrice,
-            Open = message.OpenPrice,
-            Close = message.ClosePrice
-          },
-          Instrument = new InstrumentModel
-          {
-            Name = message.Symbol.Split(' ').FirstOrDefault(),
-          }
-        },
-        Derivatives = new DerivativeModel
-        {
-          Rho = message.Rho ?? 0,
-          Vega = message.Vega ?? 0,
-          Delta = message.Delta ?? 0,
-          Gamma = message.Gamma ?? 0,
-          Theta = message.Theta ?? 0
-        }
+        Point = point,
+        Instrument = optionInstrument,
+        Greeks = greeks
       };
 
       switch (message.PutCall.ToUpper())
@@ -257,7 +270,7 @@ namespace Schwab.Mappers
 
       if (subOrders.Count > 1)
       {
-        inOrder.Combination = instrument.Name;
+        inOrder.Instruction = instrument.Name;
 
         foreach (var subOrder in subOrders)
         {

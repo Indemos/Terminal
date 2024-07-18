@@ -15,6 +15,7 @@ namespace Terminal.Core.Validators
       RuleFor(o => o.ContractSize).NotEmpty();
       RuleFor(o => o.StepSize).NotEmpty();
       RuleFor(o => o.StepValue).NotEmpty();
+      RuleFor(o => o.Leverage).NotEmpty();
     }
   }
 }

@@ -21,7 +21,7 @@ namespace Schwab.Mappers
         Duration = "DAY",
         Session = "NORMAL",
         OrderType = "MARKET",
-        OrderStrategyType = order.Combination
+        OrderStrategyType = order.Instruction
       };
 
       switch (order.Type)
@@ -44,7 +44,7 @@ namespace Schwab.Mappers
           break;
       }
 
-      if (E(order.Combination, "TRIGGER"))
+      if (string.Equals(order.Instruction, "TRIGGER", StringComparison.OrdinalIgnoreCase))
       {
         message.OrderLegCollection = [GetOrderItem(order)];
         message.ChildOrderStrategies = order
@@ -74,7 +74,7 @@ namespace Schwab.Mappers
     {
       var instrument = new InstrumentMessage
       {
-        AssetType = order.AssetType,
+        AssetType = order.Transaction.Instrument.Security,
         Symbol = order.Transaction.Instrument.Name
       };
 
@@ -90,7 +90,7 @@ namespace Schwab.Mappers
         case OrderSideEnum.Sell: response.Instruction = "SELL"; break;
       }
 
-      if (E(order.AssetType, "OPTION"))
+      if (string.Equals(order.Transaction.Instrument.Security, "OPTION", StringComparison.OrdinalIgnoreCase))
       {
         switch (order.Side)
         {
@@ -101,13 +101,5 @@ namespace Schwab.Mappers
 
       return response;
     }
-
-    /// <summary>
-    /// Case insensitive comparison
-    /// </summary>
-    /// <param name="x"></param>
-    /// <param name="o"></param>
-    /// <returns></returns>
-    public static bool E(string x, string o) => string.Equals(x, o, StringComparison.OrdinalIgnoreCase);
   }
 }

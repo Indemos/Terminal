@@ -227,14 +227,14 @@ namespace InteractiveBrokers
         Run(() => cb(tickerId), null);
     }
 
-    public Action<ConnectionStatusMessage> NextValidId;
+    public Action<int> NextValidId;
 
     void EWrapper.nextValidId(int orderId)
     {
       var cb = NextValidId;
 
       if (cb != null)
-        Run(() => cb(new ConnectionStatusMessage(true)), null);
+        Run(() => cb(orderId), null);
 
       NextOrderId = orderId;
     }

@@ -1,1 +1,1 @@
-{"Quote":{"Bid":1365.27,"Ask":1365.43,"BidSize":112,"AskSize":0,"Last":1365.27,"Time":"2020-01-02T20:37:03Z","TimeFrame":null,"Bar":null,"Instrument":null,"Series":null}}
+{"Point":{"Bid":1365.27,"Ask":1365.43,"BidSize":112,"AskSize":0,"Last":1365.27,"Snapshot":null,"Time":"2020-01-02T20:37:03Z","TimeFrame":null,"Bar":null,"Instrument":null,"Series":null},"Options":[]}

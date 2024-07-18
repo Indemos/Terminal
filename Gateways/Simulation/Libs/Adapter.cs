@@ -409,8 +409,14 @@ namespace Simulation
     /// <param name="message"></param>
     protected virtual void OnPointUpdate(object sender, NotifyCollectionChangedEventArgs e)
     {
+      var positionOrders = Account
+        .ActivePositions
+        .SelectMany(position => position
+          .Value
+          .Orders
+          .Where(order => string.Equals(order.Instruction, nameof(InstructionEnum.Brace))));
+
       var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
-      var positionOrders = Account.ActivePositions.SelectMany(o => o.Value.Orders);
       var activeOrders = Account.ActiveOrders.Values.Concat(positionOrders);
 
       foreach (var order in activeOrders)
@@ -502,6 +508,12 @@ namespace Simulation
       return response;
     }
 
+    /// <summary>
+    /// Get depth of market when available or just a top of the book
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
     {
       var point = Account.Instruments[args.Name].Points.LastOrDefault();
@@ -517,6 +529,12 @@ namespace Simulation
       return Task.FromResult(response);
     }
 
+    /// <summary>
+    /// List of points by criteria, e.g. for specified instrument
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>
@@ -527,6 +545,12 @@ namespace Simulation
       return Task.FromResult(response);
     }
 
+    /// <summary>
+    /// Option chain
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
     {
       var source = $"{criteria["source"]}";
@@ -546,6 +570,11 @@ namespace Simulation
       return Task.FromResult(response);
     }
 
+    /// <summary>
+    /// Load account data
+    /// </summary>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
     {
       var response = new ResponseModel<IAccount>
@@ -556,6 +585,12 @@ namespace Simulation
       return Task.FromResult(response);
     }
 
+    /// <summary>
+    /// Get all account positions
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>
@@ -566,6 +601,12 @@ namespace Simulation
       return Task.FromResult(response);
     }
 
+    /// <summary>
+    /// Get all account orders
+    /// </summary>
+    /// <param name="args"></param>
+    /// <param name="criteria"></param>
+    /// <returns></returns>
     public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>
