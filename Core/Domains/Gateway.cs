@@ -56,42 +56,42 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria);
+    Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria);
+    Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria);
+    Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria);
+    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria);
+    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria);
 
     /// <summary>
     /// Send new orders
@@ -167,7 +167,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<DomModel>> GetDom(DomScreenModel args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
@@ -175,7 +175,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel args, Hashtable criteria);
 
     /// <summary>
     /// Get options
@@ -183,7 +183,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel args, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -191,7 +191,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel args, Hashtable criteria);
 
     /// <summary>
     /// Get orders
@@ -199,7 +199,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel args, Hashtable criteria);
 
     /// <summary>
     /// Send new orders

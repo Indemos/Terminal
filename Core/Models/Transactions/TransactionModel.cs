@@ -9,52 +9,52 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Id
     /// </summary>
-    public virtual string Id { get; set; }
+    public string Id { get; set; }
 
     /// <summary>
     /// Group
     /// </summary>
-    public virtual string Descriptor { get; set; }
+    public string Descriptor { get; set; }
 
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public double? Volume { get; set; }
 
     /// <summary>
     /// Size of partially filled contract
     /// </summary>
-    public virtual double? CurrentVolume { get; set; }
+    public double? CurrentVolume { get; set; }
 
     /// <summary>
     /// Open price for the order
     /// </summary>
-    public virtual double? Price { get; set; }
+    public double? Price { get; set; }
 
     /// <summary>
     /// Time stamp
     /// </summary>
-    public virtual DateTime? Time { get; set; }
+    public DateTime? Time { get; set; }
 
     /// <summary>
     /// Transaction type, e.g. withdrawal or order placement
     /// </summary>
-    public virtual OperationEnum? Operation { get; set; }
+    public OperationEnum? Operation { get; set; }
 
     /// <summary>
     /// Status of the order, e.g. Pending
     /// </summary>
-    public virtual OrderStatusEnum? Status { get; set; }
+    public OrderStatusEnum? Status { get; set; }
 
     /// <summary>
     /// Instrument to buy or sell
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Option
     /// </summary>
-    public virtual OptionModel Option { get; set; }
+    public OptionModel Option { get; set; }
 
     /// <summary>
     /// Constructor
@@ -68,6 +68,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone() => MemberwiseClone() as TransactionModel;
+    public object Clone() => MemberwiseClone() as TransactionModel;
   }
 }

@@ -159,10 +159,10 @@ namespace Schwab
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OptionModel>>();
 
@@ -170,9 +170,9 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["symbol"] = args.Name,
-          ["toDate"] = $"{args.MaxDate:yyyy-MM-dd}",
-          ["fromDate"] = $"{args.MinDate:yyyy-MM-dd}"
+          ["symbol"] = screener.Name,
+          ["toDate"] = $"{screener.MaxDate:yyyy-MM-dd}",
+          ["fromDate"] = $"{screener.MinDate:yyyy-MM-dd}"
 
         }.Merge(criteria);
 
@@ -196,10 +196,10 @@ namespace Schwab
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<DomModel>();
 
@@ -207,7 +207,7 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["symbols"] = args.Name,
+          ["symbols"] = screener.Name,
           ["indicative"] = false,
           ["fields"] = "quote,fundamental,extended,reference,regular"
 
@@ -228,10 +228,10 @@ namespace Schwab
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
@@ -243,7 +243,7 @@ namespace Schwab
           ["period"] = 1,
           ["frequencyType"] = "minute",
           ["frequency"] = 1,
-          ["symbol"] = args.Name
+          ["symbol"] = screener.Name
 
         }.Merge(criteria);
 
@@ -343,10 +343,10 @@ namespace Schwab
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -376,10 +376,10 @@ namespace Schwab
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 

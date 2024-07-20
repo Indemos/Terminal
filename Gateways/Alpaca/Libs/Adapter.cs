@@ -220,10 +220,10 @@ namespace Alpaca
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -244,10 +244,10 @@ namespace Alpaca
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 
@@ -268,10 +268,10 @@ namespace Alpaca
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OptionModel>>();
 
@@ -279,9 +279,9 @@ namespace Alpaca
       {
         var props = new Hashtable
         {
-          ["underlying_symbol"] = args.Name,
-          ["expiration_date_gte"] = args.MinDate,
-          ["expiration_date_lte"] = args.MaxDate
+          ["underlying_symbol"] = screener.Name,
+          ["expiration_date_gte"] = screener.MinDate,
+          ["expiration_date_lte"] = screener.MaxDate
 
         }.Merge(criteria);
 
@@ -304,10 +304,10 @@ namespace Alpaca
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<DomModel>();
 
@@ -316,8 +316,8 @@ namespace Alpaca
         var props = new Hashtable
         {
           ["loc"] = "us",
-          ["symbols"] = args.Name,
-          ["security"] = args.Security
+          ["symbols"] = screener.Name,
+          ["security"] = screener.Security
 
         }.Merge(criteria);
 
@@ -344,10 +344,10 @@ namespace Alpaca
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
@@ -356,8 +356,8 @@ namespace Alpaca
         var props = new Hashtable
         {
           ["loc"] = "us",
-          ["symbols"] = args.Name,
-          ["security"] = args.Security
+          ["symbols"] = screener.Name,
+          ["security"] = screener.Security
 
         }.Merge(criteria);
 

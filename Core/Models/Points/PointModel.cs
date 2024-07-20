@@ -11,57 +11,57 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Bid
     /// </summary>
-    public virtual double? Bid { get; set; }
+    public double? Bid { get; set; }
 
     /// <summary>
     /// Ask
     /// </summary>
-    public virtual double? Ask { get; set; }
+    public double? Ask { get; set; }
 
     /// <summary>
     /// Volume of the bid 
     /// </summary>
-    public virtual double? BidSize { get; set; }
+    public double? BidSize { get; set; }
 
     /// <summary>
     /// Volume of the ask
     /// </summary>
-    public virtual double? AskSize { get; set; }
+    public double? AskSize { get; set; }
 
     /// <summary>
     /// Last price or value
     /// </summary>
-    public virtual double? Last { get; set; }
+    public double? Last { get; set; }
 
     /// <summary>
     /// Reference to market state at the current time
     /// </summary>
-    public virtual string Snapshot { get; set; }
+    public string Snapshot { get; set; }
 
     /// <summary>
     /// Time stamp
     /// </summary>
-    public virtual DateTime? Time { get; set; }
+    public DateTime? Time { get; set; }
 
     /// <summary>
     /// Aggregation period for the quotes
     /// </summary>
-    public virtual TimeSpan? TimeFrame { get; set; }
+    public TimeSpan? TimeFrame { get; set; }
 
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    public virtual BarModel Bar { get; set; }
+    public BarModel Bar { get; set; }
 
     /// <summary>
     /// Reference to the instrument
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Values from related series synced with the current data point, e.g. moving average or another indicator
     /// </summary>
-    public virtual IDictionary<string, PointModel> Series { get; set; }
+    public IDictionary<string, PointModel> Series { get; set; }
 
     /// <summary>
     /// Constructor
@@ -76,7 +76,7 @@ namespace Terminal.Core.Models
     /// Clone
     /// </summary>
     /// <returns></returns>
-    public virtual object Clone()
+    public object Clone()
     {
       var clone = MemberwiseClone() as PointModel;
 
@@ -89,14 +89,14 @@ namespace Terminal.Core.Models
     /// Grouping index
     /// </summary>
     /// <returns></returns>
-    public virtual long GetIndex() => Time.Value.Ticks;
+    public long GetIndex() => Time.Value.Ticks;
 
     /// <summary>
     /// Grouping implementation
     /// </summary>
     /// <param name="previous"></param>
     /// <returns></returns>
-    public virtual IGroup Update(IGroup previous)
+    public IGroup Update(IGroup previous)
     {
       if (previous is not null)
       {

@@ -20,16 +20,16 @@ namespace InteractiveBrokers.Mappers
       var contract = new Contract();
 
       contract.Symbol = action.Instrument.Name;
-      contract.SecType = action.Instrument.Security ?? "STK";
       contract.Exchange = orderModel.Exchange ?? "SMART";
+      contract.SecType = action.Instrument.Security ?? "STK";
       contract.Currency = orderModel.Currency ?? nameof(CurrencyEnum.USD);
 
       if (string.Equals(action.Instrument.Security, "OPT"))
       {
         var option = action.Option;
 
-        contract.LocalSymbol = option.Instrument.Name;
-        contract.Multiplier = $"{option.Instrument.Leverage}";
+        contract.LocalSymbol = option.Option.Instrument.Name;
+        contract.Multiplier = $"{option.Option.Instrument.Leverage}";
         contract.Strike = option.Strike.Value;
         contract.LastTradeDateOrContractMonth = $"{option.ExpirationDate:yyyyMMdd}";
 

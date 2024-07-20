@@ -161,10 +161,10 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OptionModel>>();
 
@@ -182,10 +182,10 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
     {
       var id = Id;
       var response = new ResponseModel<DomModel>();
@@ -204,10 +204,10 @@ namespace InteractiveBrokers
       {
         var contract = new Contract
         {
-          Symbol = args.Name ?? $"{criteria["symbol"]}",
-          SecType = args.Security ?? criteria.Get<string>("secType") ?? "STK",
-          Currency = args.Currency ?? criteria.Get<string>("currency") ?? "USD",
-          Exchange = args.Exchange ?? criteria.Get<string>("exchange") ?? "SMART"
+          Symbol = screener.Name ?? $"{criteria["symbol"]}",
+          SecType = screener.Security ?? criteria.Get<string>("secType") ?? "STK",
+          Currency = screener.Currency ?? criteria.Get<string>("currency") ?? "USD",
+          Exchange = screener.Exchange ?? criteria.Get<string>("exchange") ?? "SMART"
         };
 
         _client.tickByTickBidAsk += getDom;
@@ -226,10 +226,10 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
@@ -330,10 +330,10 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -359,10 +359,10 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 

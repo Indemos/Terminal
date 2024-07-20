@@ -1,5 +1,5 @@
 using Distribution.Services;
-using Simulation.Messages;
+using SkiaSharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -101,7 +101,7 @@ namespace Simulation
       interval.AutoReset = true;
       interval.Elapsed += (sender, e) => scheduler.Send(() =>
       {
-        var point = GetRecord(_instruments, points);
+        var point = GetSnapshot(_instruments, points);
 
         if (point is not null)
         {
@@ -464,7 +464,9 @@ namespace Simulation
     /// <param name="streams"></param>
     /// <param name="points"></param>
     /// <returns></returns>
-    protected virtual PointModel GetRecord(IDictionary<string, IEnumerator<string>> streams, IDictionary<string, PointModel> points)
+    protected virtual PointModel GetSnapshot(
+      IDictionary<string, IEnumerator<string>> streams,
+      IDictionary<string, PointModel> points)
     {
       var index = string.Empty;
 
@@ -476,16 +478,9 @@ namespace Simulation
         {
           stream.Value.MoveNext();
 
-          var input = stream.Value.Current;
-
-          if (string.IsNullOrEmpty(input) is false)
+          if (string.IsNullOrEmpty(stream.Value.Current) is false)
           {
-            var inputMessage = File.ReadAllText(input);
-            var pointMessage = JsonSerializer.Deserialize<PointMessage>(inputMessage);
-
-            pointMessage.Point.Snapshot = input;
-            pointMessage.Point.Instrument = new InstrumentModel { Name = stream.Key };
-            points[stream.Key] = pointMessage.Point;
+            points[stream.Key] = GetSnapshotContent(stream.Key, stream.Value.Current).Point;
           }
         }
 
@@ -509,14 +504,48 @@ namespace Simulation
     }
 
     /// <summary>
+    /// Parse snapshot document to get current symbol and options state
+    /// </summary>
+    /// <param name="name"></param>
+    /// <param name="source"></param>
+    /// <returns></returns>
+    protected virtual SnapshotModel GetSnapshotContent(string name, string source)
+    {
+      var document = new FileInfo(source);
+
+      if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
+      {
+        using (var stream = File.OpenRead(source))
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
+        using (var content = archive.Entries.First().Open())
+        {
+          var optionMessage = JsonSerializer.Deserialize<SnapshotModel>(content);
+
+          optionMessage.Point.Snapshot = source;
+          optionMessage.Point.Instrument = new InstrumentModel { Name = name };
+
+          return optionMessage;
+        }
+      }
+
+      var inputMessage = File.ReadAllText(source);
+      var pointMessage = JsonSerializer.Deserialize<SnapshotModel>(inputMessage);
+
+      pointMessage.Point.Snapshot = source;
+      pointMessage.Point.Instrument = new InstrumentModel { Name = name };
+
+      return pointMessage;
+    }
+
+    /// <summary>
     /// Get depth of market when available or just a top of the book
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
     {
-      var point = Account.Instruments[args.Name].Points.LastOrDefault();
+      var point = Account.Instruments[screener.Name].Points.LastOrDefault();
       var response = new ResponseModel<DomModel>
       {
         Data = new DomModel
@@ -532,14 +561,14 @@ namespace Simulation
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>
       {
-        Data = [.. Account.Instruments[args.Name].Points]
+        Data = [.. Account.Instruments[screener.Name].Points]
       };
 
       return Task.FromResult(response);
@@ -548,22 +577,22 @@ namespace Simulation
     /// <summary>
     /// Option chain
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
     {
-      var source = $"{criteria["source"]}";
+      var source = $"{criteria["snapshot"]}";
       var document = new FileInfo(source);
       var response = new ResponseModel<IList<OptionModel>>();
 
-      if (string.Equals(document.Extension, "zip", StringComparison.InvariantCultureIgnoreCase))
+      if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
       {
         using (var stream = File.OpenRead(source))
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          var chain = JsonSerializer.Deserialize<OptionModel>(content);
+          response.Data = JsonSerializer.Deserialize<SnapshotModel>(content).Options;
         }
       }
 
@@ -588,10 +617,10 @@ namespace Simulation
     /// <summary>
     /// Get all account positions
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>
       {
@@ -604,10 +633,10 @@ namespace Simulation
     /// <summary>
     /// Get all account orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>
       {

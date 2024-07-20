@@ -87,8 +87,7 @@ namespace Schwab.Mappers
         IntrinsicValue = message.IntrinsicValue ?? 0,
         Volatility = message.Volatility ?? 0,
         Volume = message.TotalVolume ?? 0,
-        Point = point,
-        Instrument = optionInstrument,
+        Option = point,
         Greeks = greeks
       };
 

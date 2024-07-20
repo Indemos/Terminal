@@ -208,10 +208,10 @@ namespace Coinbase
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -219,10 +219,10 @@ namespace Coinbase
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(DomArgs args, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -230,10 +230,10 @@ namespace Coinbase
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointsArgs args, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -315,10 +315,10 @@ namespace Coinbase
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrdersArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -349,10 +349,10 @@ namespace Coinbase
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="args"></param>
+    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionsArgs args, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 
@@ -422,7 +422,7 @@ namespace Coinbase
           await ws.ReceiveAsync(data, cancellation.Token).ContinueWith(async o =>
           {
             var response = await o;
-            var content = $"[{Encoding.ASCII.GetString(data).Trim('\0', '[', ']')}]";
+            var content = ""; // $"[{Encoding.ASCII.GetString(data).Trim('\0', '[', ']')}]";
             var message = JsonNode
               .Parse(content)
               ?.AsArray()

@@ -9,57 +9,57 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Price the makes order active, e.g. limit price for stop limit order
     /// </summary>
-    public virtual double? ActivationPrice { get; set; }
+    public double? ActivationPrice { get; set; }
 
     /// <summary>
     /// Desired price for the order to fill, e.g. stop price for stop order and limit price for limit order
     /// </summary>
-    public virtual double? Price { get; set; }
+    public double? Price { get; set; }
 
     /// <summary>
     /// Custom order type
     /// </summary>
-    public virtual string Instruction { get; set; }
+    public string Instruction { get; set; }
 
     /// <summary>
     /// Exchange
     /// </summary>
-    public virtual string Exchange { get; set; }
+    public string Exchange { get; set; }
 
     /// <summary>
     /// Currency
     /// </summary>
-    public virtual string Currency { get; set; }
+    public string Currency { get; set; }
 
     /// <summary>
     /// Type
     /// </summary>
-    public virtual OrderTypeEnum? Type { get; set; }
+    public OrderTypeEnum? Type { get; set; }
 
     /// <summary>
     /// Side
     /// </summary>
-    public virtual OrderSideEnum? Side { get; set; }
+    public OrderSideEnum? Side { get; set; }
 
     /// <summary>
     /// Time in force
     /// </summary>
-    public virtual OrderTimeSpanEnum? TimeSpan { get; set; }
+    public OrderTimeSpanEnum? TimeSpan { get; set; }
 
     /// <summary>
     /// Transaction
     /// </summary>
-    public virtual TransactionModel Transaction { get; set; }
+    public TransactionModel Transaction { get; set; }
 
     /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
-    public virtual IList<OrderModel> Orders { get; set; }
+    public IList<OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Order events
     /// </summary>
-    public virtual Action<StateModel<OrderModel>> OrderStream { get; set; }
+    public Action<StateModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Constructor
@@ -74,7 +74,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone()
+    public object Clone()
     {
       var clone = MemberwiseClone() as OrderModel;
 

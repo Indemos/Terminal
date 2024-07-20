@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Terminal.Core.Models
 {
-  public class PositionsArgs
+  public class PositionScreenModel
   {
     /// <summary>
     /// Symbols

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Terminal.Core.Models
 {
-  public class PointOptionsModel : ICloneable
+  public class SnapshotModel : ICloneable
   {
     /// <summary>
     /// Point
@@ -18,7 +18,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public PointOptionsModel()
+    public SnapshotModel()
     {
       Options = [];
     }

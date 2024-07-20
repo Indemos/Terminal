@@ -10,47 +10,47 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Actual PnL measured in account's currency
     /// </summary>
-    public virtual double? GainLoss { get; set; }
+    public double? GainLoss { get; set; }
 
     /// <summary>
     /// Min possible PnL in account's currency
     /// </summary>
-    public virtual double? GainLossMin { get; set; }
+    public double? GainLossMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in account's currency
     /// </summary>
-    public virtual double? GainLossMax { get; set; }
+    public double? GainLossMax { get; set; }
 
     /// <summary>
     /// Actual PnL in points
     /// </summary>
-    public virtual double? GainLossPoints { get; set; }
+    public double? GainLossPoints { get; set; }
 
     /// <summary>
     /// Min possible PnL in points
     /// </summary>
-    public virtual double? GainLossPointsMin { get; set; }
+    public double? GainLossPointsMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in points
     /// </summary>
-    public virtual double? GainLossPointsMax { get; set; }
+    public double? GainLossPointsMax { get; set; }
 
     /// <summary>
     /// Aggregated order
     /// </summary>
-    public virtual OrderModel Order { get; set; }
+    public OrderModel Order { get; set; }
 
     /// <summary>
     /// Related orders
     /// </summary>
-    public virtual IList<OrderModel> Orders { get; set; }
+    public IList<OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Close price estimate
     /// </summary>
-    public virtual double? ClosePriceEstimate
+    public double? ClosePriceEstimate
     {
       get
       {
@@ -72,22 +72,22 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Estimated PnL in account's currency
     /// </summary>
-    public virtual double? GainLossEstimate => GetGainLossEstimate(Order.Transaction.Price);
+    public double? GainLossEstimate => GetGainLossEstimate(Order.Transaction.Price);
 
     /// <summary>
     /// Estimated PnL in points
     /// </summary>
-    public virtual double? GainLossPointsEstimate => GetGainLossPointsEstimate(Order.Transaction.Price);
+    public double? GainLossPointsEstimate => GetGainLossPointsEstimate(Order.Transaction.Price);
 
     /// <summary>
     /// Cummulative estimated PnL in account's currency for all positions in the same direction
     /// </summary>
-    public virtual double? GainLossAverageEstimate => GetGainLossPointsEstimate();
+    public double? GainLossAverageEstimate => GetGainLossPointsEstimate();
 
     /// <summary>
     /// Cummulative estimated PnL in points for all positions in the same direction
     /// </summary>
-    public virtual double? GainLossPointsAverageEstimate => GetGainLossEstimate();
+    public double? GainLossPointsAverageEstimate => GetGainLossEstimate();
 
     /// <summary>
     /// Estimated PnL in points
@@ -148,7 +148,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone()
+    public object Clone()
     {
       var clone = MemberwiseClone() as PositionModel;
 

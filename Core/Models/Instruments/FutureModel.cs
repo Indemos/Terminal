@@ -8,21 +8,21 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Name
     /// </summary>
-    public virtual string Name { get; set; }
+    public string Name { get; set; }
 
     /// <summary>
     /// Expiration date
     /// </summary>
-    public virtual DateTime? ExpirationDate { get; set; }
+    public DateTime? ExpirationDate { get; set; }
 
     /// <summary>
     /// Instrument
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone() => MemberwiseClone() as FutureModel;
+    public object Clone() => MemberwiseClone() as FutureModel;
   }
 }

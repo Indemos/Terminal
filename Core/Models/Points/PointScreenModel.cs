@@ -2,7 +2,7 @@ using System;
 
 namespace Terminal.Core.Models
 {
-  public class OptionsArgs
+  public class PointScreenModel
   {
     /// <summary>
     /// Symbol name
@@ -10,14 +10,9 @@ namespace Terminal.Core.Models
     public string Name { get; set; }
 
     /// <summary>
-    /// Min strike
+    /// Security type
     /// </summary>
-    public double? MinPrice { get; set; }
-
-    /// <summary>
-    /// Max strike
-    /// </summary>
-    public double? MaxPrice { get; set; }
+    public string Security { get; set; }
 
     /// <summary>
     /// Start date

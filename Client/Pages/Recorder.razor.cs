@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
 using Schwab.Messages;
-using Simulation.Messages;
 using System;
 using System.Collections.Generic;
 using System.IO.Compression;
@@ -68,21 +67,21 @@ namespace Client.Pages
 
     private async Task OnData()
     {
-      var optionArgs = new OptionsArgs
+      var optionArgs = new OptionScreenModel
       {
         Name = "SPY",
         MinDate = DateTime.Now,
         MaxDate = DateTime.Now.AddYears(1)
       };
 
-      var domArgs = new DomArgs
+      var domArgs = new DomScreenModel
       {
         Name = "SPY"
       };
 
       var dom = await View.Adapter.GetDom(domArgs, []);
       var options = await View.Adapter.GetOptions(optionArgs, []);
-      var message = new PointMessage
+      var message = new SnapshotModel
       {
         Point = dom.Data.Bids.First(),
         Options = options.Data

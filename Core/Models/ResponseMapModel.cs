@@ -7,11 +7,11 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Errors count
     /// </summary>
-    public virtual int Count { get; set; }
+    public int Count { get; set; }
 
     /// <summary>
     /// Items
     /// </summary>
-    public virtual IList<ResponseModel<T>> Items { get; set; } = [];
+    public IList<ResponseModel<T>> Items { get; set; } = [];
   }
 }

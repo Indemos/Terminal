@@ -1,6 +1,6 @@
 namespace Terminal.Core.Models
 {
-  public class DomArgs
+  public class DomScreenModel
   {
     /// <summary>
     /// Symbol name

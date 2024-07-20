@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Terminal.Core.Models
 {
-  public class OrdersArgs
+  public class OrderScreenModel
   {
     /// <summary>
     /// Order status
