@@ -5,6 +5,7 @@ using Schwab;
 using Schwab.Messages;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
@@ -12,6 +13,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
 using Terminal.Core.Domains;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 
@@ -21,9 +23,13 @@ namespace Client.Pages
   {
     [Inject] IConfiguration Configuration { get; set; }
 
-    protected virtual IAccount Account { get; set; }
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual IGateway Adapter
+    {
+      get => View.Adapters.Get("Demo");
+      set => View.Adapters["Demo"] = value;
+    }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -38,7 +44,7 @@ namespace Client.Pages
 
     protected virtual void CreateAccounts()
     {
-      Account = new Account
+      var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
         Instruments = new Dictionary<string, InstrumentModel>
@@ -47,9 +53,9 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter = new Adapter
+      Adapter = new Adapter
       {
-        Account = Account,
+        Account = account,
         Scope = new ScopeMessage
         {
           AccessToken = Configuration["Schwab:AccessToken"],
@@ -59,35 +65,41 @@ namespace Client.Pages
         }
       };
 
-      var aTimer = new Timer();
-      aTimer.Elapsed += async (o, e) => await OnData();
-      aTimer.Interval = 5000;
-      aTimer.Enabled = true;
+      //var interval = new Timer();
+
+      //interval.Elapsed += async (o, e) => await OnData();
+      //interval.Interval = 5000;
+      //interval.Enabled = true;
     }
 
     private async Task OnData()
     {
-      var optionArgs = new OptionScreenModel
+      var optionArgs = new OptionScreenerModel
       {
         Name = "SPY",
         MinDate = DateTime.Now,
         MaxDate = DateTime.Now.AddYears(1)
       };
 
-      var domArgs = new DomScreenModel
+      var domArgs = new DomScreenerModel
       {
         Name = "SPY"
       };
 
-      var dom = await View.Adapter.GetDom(domArgs, []);
-      var options = await View.Adapter.GetOptions(optionArgs, []);
-      var message = new SnapshotModel
+      var dom = await Adapter.GetDom(domArgs, []);
+      var options = await Adapter.GetOptions(optionArgs, []);
+      var message = dom.Data.Bids.First();
+      var location = $"D:/Code/NET/Terminal/Data/SPY/{DateTime.Now:yyyy-MM-dd}";
+
+      message.Derivatives = new Dictionary<string, IList<DerivativeModel>>
       {
-        Point = dom.Data.Bids.First(),
-        Options = options.Data
+        ["Options"] = options.Data
       };
+
+      Directory.CreateDirectory(location);
+
       var content = JsonSerializer.Serialize(message);
-      var source = $"D:/Code/NET/Terminal/Data/SPY/{DateTime.UtcNow.Ticks}.zip";
+      var source = $"{location}/{DateTime.UtcNow.Ticks}.zip";
 
       using var archive = ZipFile.Open(source, ZipArchiveMode.Create);
       using (var entry = archive.CreateEntry($"{DateTime.UtcNow.Ticks}").Open())

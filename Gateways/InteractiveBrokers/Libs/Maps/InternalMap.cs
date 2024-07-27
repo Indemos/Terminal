@@ -43,17 +43,18 @@ namespace InteractiveBrokers.Mappers
     {
       var instrument = new InstrumentModel
       {
-        Name = message.Contract.Symbol
+        Name = message.Contract.Symbol,
+        Security = message.Contract.SecType
       };
 
       var action = new TransactionModel
       {
-        Id = $"{message.OrderId}",
-        Descriptor = $"{message.Order.ClientId}",
         Instrument = instrument,
-        CurrentVolume = (double)message.Order.FilledQuantity,
+        Id = $"{message.Order.PermId}",
+        Descriptor = $"{message.Order.OrderRef}",
+        CurrentVolume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
         Volume = (double)message.Order.TotalQuantity,
-        Time = DateTime.Parse(message.Order.ActiveStartTime),
+        Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
         Status = GetStatus(message.OrderState.Status)
       };
 
@@ -67,17 +68,17 @@ namespace InteractiveBrokers.Mappers
 
       switch (message.Order.OrderType)
       {
-        case "stop":
+        case "STP":
           inOrder.Type = OrderTypeEnum.Stop;
           inOrder.Price = message.Order.AdjustedStopPrice;
           break;
 
-        case "limit":
+        case "LMT":
           inOrder.Type = OrderTypeEnum.Limit;
           inOrder.Price = message.Order.LmtPrice;
           break;
 
-        case "stop_limit":
+        case "STP LMT":
           inOrder.Type = OrderTypeEnum.StopLimit;
           inOrder.Price = message.Order.AdjustedStopPrice;
           inOrder.ActivationPrice = message.Order.LmtPrice;
@@ -92,7 +93,7 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMessage message)
+    public static PositionModel GetPosition(PositionMultiMessage message)
     {
       var instrument = new InstrumentModel
       {
@@ -105,8 +106,8 @@ namespace InteractiveBrokers.Mappers
         Id = $"{instrument.Name}",
         Descriptor = instrument.Name,
         Price = message.AverageCost,
-        CurrentVolume = message.Position,
-        Volume = message.Position
+        CurrentVolume = (double)message.Position,
+        Volume = (double)message.Position
       };
 
       var order = new OrderModel

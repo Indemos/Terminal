@@ -67,8 +67,6 @@ namespace Terminal.Tests
         {
           Instrument = new InstrumentModel()
           {
-            SwapLong = null,
-            SwapShort = null,
             StepSize = null,
             StepValue = null,
             Commission = null,

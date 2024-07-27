@@ -1,5 +1,7 @@
 using Distribution.Services;
+using Microsoft.AspNetCore.Builder;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
@@ -9,9 +11,6 @@ namespace Client.Components
 {
   public partial class PageComponent
   {
-    /// <summary>
-    /// Controls
-    /// </summary>
     public virtual bool IsConnection { get; set; }
     public virtual bool IsSubscription { get; set; }
     public virtual ChartsComponent ChartsView { get; set; }
@@ -20,21 +19,22 @@ namespace Client.Components
     public virtual OrdersComponent OrdersView { get; set; }
     public virtual PositionsComponent PositionsView { get; set; }
     public virtual StatementsComponent StatementsView { get; set; }
-    public virtual IGateway Adapter { get; set; }
     public virtual Action OnPreConnect { get; set; }
     public virtual Action OnPostConnect { get; set; }
+    public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
 
     public virtual async Task Connect()
     {
       try
       {
-        Disconnect();
+        await Disconnect();
+
         OnPreConnect();
+
+        await Task.WhenAll(Adapters.Values.Select(o => o.Connect()));
 
         IsConnection = true;
         IsSubscription = true;
-
-        await Adapter.Connect();
 
         OnPostConnect();
       }
@@ -44,11 +44,11 @@ namespace Client.Components
       }
     }
 
-    public virtual void Disconnect()
+    public virtual async Task Disconnect()
     {
       try
       {
-        Adapter?.Disconnect();
+        await Task.WhenAll(Adapters.Values.Select(o => o.Disconnect()));
 
         ChartsView.Clear();
         ReportsView.Clear();
@@ -62,12 +62,19 @@ namespace Client.Components
       }
     }
 
-    public virtual void Subscribe()
+    public virtual async Task Subscribe()
     {
       try
       {
+        await Task.WhenAll(Adapters
+          .Values
+          .SelectMany(adapter => adapter
+            .Account
+            .Instruments
+            .Values
+            .Select(o => adapter.Subscribe(o))));
+
         IsSubscription = true;
-        Adapter.Account.Instruments.ForEach(o => Adapter.Subscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -75,12 +82,19 @@ namespace Client.Components
       }
     }
 
-    public virtual void Unsubscribe()
+    public virtual async Task Unsubscribe()
     {
       try
       {
+        await Task.WhenAll(Adapters
+          .Values
+          .SelectMany(adapter => adapter
+            .Account
+            .Instruments
+            .Values
+            .Select(o => adapter.Unsubscribe(o))));
+
         IsSubscription = false;
-        Adapter.Account.Instruments.ForEach(o => Adapter.Unsubscribe(o.Value));
       }
       catch (Exception e)
       {
@@ -90,10 +104,7 @@ namespace Client.Components
 
     public virtual void OpenState()
     {
-      if (Adapter?.Account is not null)
-      {
-        StatementsView.UpdateItems([Adapter.Account]);
-      }
+      StatementsView.UpdateItems(Adapters.Values.Select(o => o.Account).ToList());
     }
   }
 }

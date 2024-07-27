@@ -36,70 +36,95 @@ namespace Schwab.Mappers
     /// <summary>
     /// Get internal option
     /// </summary>
+    /// <param name="optionMessage"></param>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OptionModel GetOption(OptionMessage message)
+    public static DerivativeModel GetOption(OptionMessage optionMessage, OptionChainMessage message)
     {
-      var optionInstrument = new InstrumentModel
-      {
-        Leverage = message.Multiplier ?? 100,
-        Name = message.Symbol,
-      };
-
+      var asset = message.Underlying;
+      var price = message.UnderlyingPrice;
       var instrument = new InstrumentModel
       {
-        Leverage = message.Multiplier ?? 1,
-        Name = message.Symbol.Split(' ').FirstOrDefault(),
-      };
-
-      var bar = new BarModel
-      {
-        Low = message.LowPrice,
-        High = message.LowPrice,
-        Open = message.OpenPrice,
-        Close = message.ClosePrice
+        Exchange = asset?.ExchangeName,
+        Name = message.Symbol
       };
 
       var point = new PointModel
       {
-        Ask = message.Ask,
-        AskSize = message.AskSize ?? 0,
-        Bid = message.Bid,
-        BidSize = message.BidSize ?? 0,
-        Last = message.Last,
-        Bar = bar,
+        Ask = asset?.Ask ?? price,
+        Bid = asset?.Bid ?? price,
+        AskSize = asset?.AskSize ?? 0,
+        BidSize = asset?.BidSize ?? 0,
+        Last = asset?.Last ?? price,
         Instrument = instrument
       };
 
-      var greeks = new GreekModel
+      if (asset is not null)
       {
-        Rho = message.Rho ?? 0,
-        Vega = message.Vega ?? 0,
-        Delta = message.Delta ?? 0,
-        Gamma = message.Gamma ?? 0,
-        Theta = message.Theta ?? 0
+        point.Bar = new BarModel
+        {
+          Low = asset.LowPrice,
+          High = asset.HighPrice,
+          Open = asset.OpenPrice,
+          Close = asset.Close
+        };
+      }
+
+      var optionInstrument = new InstrumentModel
+      {
+        Leverage = optionMessage.Multiplier ?? 100,
+        Name = optionMessage.Symbol
       };
 
-      var option = new OptionModel
+      var optionBar = new BarModel
       {
-        OpenInterest = message.OpenInterest ?? 0,
-        Strike = message.StrikePrice,
-        IntrinsicValue = message.IntrinsicValue ?? 0,
-        Volatility = message.Volatility ?? 0,
-        Volume = message.TotalVolume ?? 0,
-        Option = point,
-        Greeks = greeks
+        Low = optionMessage.LowPrice,
+        High = optionMessage.HighPrice,
+        Open = optionMessage.OpenPrice,
+        Close = optionMessage.ClosePrice
       };
 
-      switch (message.PutCall.ToUpper())
+      var optionPoint = new PointModel
+      {
+        Ask = optionMessage.Ask,
+        Bid = optionMessage.Bid,
+        AskSize = optionMessage.AskSize ?? 0,
+        BidSize = optionMessage.BidSize ?? 0,
+        Last = optionMessage.Last,
+        Instrument = optionInstrument,
+        Bar = optionBar
+      };
+
+      var greeks = new VariableModel
+      {
+        Rho = optionMessage.Rho ?? 0,
+        Vega = optionMessage.Vega ?? 0,
+        Delta = optionMessage.Delta ?? 0,
+        Gamma = optionMessage.Gamma ?? 0,
+        Theta = optionMessage.Theta ?? 0
+      };
+
+      var option = new DerivativeModel
+      {
+        Strike = optionMessage.StrikePrice,
+        OpenInterest = optionMessage.OpenInterest ?? 0,
+        IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
+        Volatility = optionMessage.Volatility ?? 0,
+        Volume = optionMessage.TotalVolume ?? 0,
+        Contract = optionPoint,
+        Variables = greeks,
+        Basis = point
+      };
+
+      switch (optionMessage.PutCall.ToUpper())
       {
         case "PUT": option.Side = OptionSideEnum.Put; break;
         case "CALL": option.Side = OptionSideEnum.Call; break;
       }
 
-      if (message.ExpirationDate is not null)
+      if (optionMessage.ExpirationDate is not null)
       {
-        option.ExpirationDate = message.ExpirationDate;
+        option.Expiration = optionMessage.ExpirationDate;
       }
 
       return option;

@@ -22,16 +22,6 @@ namespace Terminal.Core.Models
     public string Instruction { get; set; }
 
     /// <summary>
-    /// Exchange
-    /// </summary>
-    public string Exchange { get; set; }
-
-    /// <summary>
-    /// Currency
-    /// </summary>
-    public string Currency { get; set; }
-
-    /// <summary>
     /// Type
     /// </summary>
     public OrderTypeEnum? Type { get; set; }
@@ -59,7 +49,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Order events
     /// </summary>
-    public Action<StateModel<OrderModel>> OrderStream { get; set; }
+    public Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Constructor
@@ -68,7 +58,6 @@ namespace Terminal.Core.Models
     {
       Orders = [];
       OrderStream = o => { };
-      Currency = nameof(CurrencyEnum.USD);
     }
 
     /// <summary>

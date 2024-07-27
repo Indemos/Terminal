@@ -36,7 +36,7 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static OptionModel GetOption(OptionSnapshotMessage message)
+    public static DerivativeModel GetOption(OptionSnapshotMessage message)
     {
       var point = new PointModel
       {
@@ -47,10 +47,10 @@ namespace Alpaca.Mappers
         Last = message.Quote.AskPrice ?? message.Quote.BidPrice
       };
 
-      var option = new OptionModel
+      var option = new DerivativeModel
       {
-        Point = point,
-        ExpirationDate = message.Quote.TimestampUtc
+        Contract = point,
+        Expiration = message.Quote.TimestampUtc
       };
 
       return option;

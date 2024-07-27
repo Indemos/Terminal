@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 
@@ -25,21 +26,28 @@ namespace Client.Pages
     /// </summary>
     const string _asset = "FAKEPACA";
 
-    protected virtual IAccount Account { get; set; }
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual IGateway Adapter
+    {
+      get => View.Adapters.Get("Demo");
+      set => View.Adapters["Demo"] = value;
+    }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
         await CreateViews();
+
         View.OnPreConnect = CreateAccounts;
         View.OnPostConnect = () =>
         {
-          View.DealsView.UpdateItems(Account.Positions);
-          View.OrdersView.UpdateItems(Account.ActiveOrders);
-          View.PositionsView.UpdateItems(Account.ActivePositions);
+          var account = Adapter.Account;
+
+          View.DealsView.UpdateItems(account.Positions);
+          View.OrdersView.UpdateItems(account.ActiveOrders);
+          View.PositionsView.UpdateItems(account.ActivePositions);
         };
       }
 
@@ -73,7 +81,7 @@ namespace Client.Pages
 
     protected virtual void CreateAccounts()
     {
-      Account = new Account
+      var account = new Account
       {
         Descriptor = "Demo",
         Instruments = new Dictionary<string, InstrumentModel>
@@ -82,9 +90,9 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter = new Adapter
+      Adapter = new Adapter
       {
-        Account = Account,
+        Account = account,
         ConsumerKey = Configuration["Alpaca:Token"],
         ConsumerSecret = Configuration["Alpaca:Secret"],
         StreamUri = "wss://stream.data.alpaca.markets/v2/test"
@@ -92,7 +100,7 @@ namespace Client.Pages
 
       Performance = new PerformanceIndicator { Name = "Balance" };
 
-      Account
+      account
         .Instruments
         .Values
         .ForEach(o => o.Points.CollectionChanged += (_, e) => e
@@ -103,7 +111,8 @@ namespace Client.Pages
 
     private async Task OnData(PointModel point)
     {
-      var instrument = Account.Instruments[_asset];
+      var account = Adapter.Account;
+      var instrument = account.Instruments[_asset];
       var series = instrument.Points;
 
       if (series.Count > 1)
@@ -113,17 +122,17 @@ namespace Client.Pages
 
       var chartPoints = new List<KeyValuePair<string, PointModel>>();
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
-      var performance = Performance.Calculate([Account]);
+      var performance = Performance.Calculate([account]);
 
       chartPoints.Add(KeyValuePair.Create("Ups", new PointModel { Time = point.Time, Last = Math.Max(0, point.Last.Value) }));
-      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = Account.Balance }));
+      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
       await View.ChartsView.UpdateItems(chartPoints, 100);
       await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(Account.Positions);
-      await View.OrdersView.UpdateItems(Account.ActiveOrders);
-      await View.PositionsView.UpdateItems(Account.ActivePositions);
+      await View.DealsView.UpdateItems(account.Positions);
+      await View.OrdersView.UpdateItems(account.ActiveOrders);
+      await View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
     private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
@@ -150,10 +159,10 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter.CreateOrders(orderBuy);
-      View.Adapter.CreateOrders(orderSell);
+      Adapter.CreateOrders(orderBuy);
+      Adapter.CreateOrders(orderSell);
 
-      var account = View.Adapter.Account;
+      var account = Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
       var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
 
@@ -163,7 +172,7 @@ namespace Client.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in View.Adapter.Account.ActivePositions.Values)
+      foreach (var position in Adapter.Account.ActivePositions.Values)
       {
         var side = OrderSideEnum.Buy;
 
@@ -183,7 +192,7 @@ namespace Client.Pages
           }
         };
 
-        View.Adapter.CreateOrders(order);
+        Adapter.CreateOrders(order);
 
         //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
       }

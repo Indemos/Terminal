@@ -211,7 +211,7 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -222,7 +222,7 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomScreenerModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -233,7 +233,7 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
     {
       throw new NotImplementedException();
     }
@@ -318,7 +318,7 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -352,7 +352,7 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 

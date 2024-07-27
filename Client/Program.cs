@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using MudBlazor;
 using MudBlazor.Services;
-using Terminal.Core.Validators;
 
 namespace Client
 {
@@ -11,7 +10,6 @@ namespace Client
   {
     public static void Main(string[] args)
     {
-      var validators = new Validators();
       var builder = WebApplication.CreateBuilder(args);
 
       builder.WebHost.UseStaticWebAssets();

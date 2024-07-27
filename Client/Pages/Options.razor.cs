@@ -1,18 +1,16 @@
 using Client.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using Schwab;
-using Schwab.Messages;
 using System;
 using System.Collections.Generic;
-using System.IO.Compression;
 using System.Linq;
-using System.Text;
-using System.Text.Json;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
+using Ib = InteractiveBrokers;
+using Sc = Schwab;
+using Scm = Schwab.Messages;
 
 namespace Client.Pages
 {
@@ -22,8 +20,13 @@ namespace Client.Pages
 
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
-    protected virtual Adapter SchwabAdapter { get; set; }
-    protected virtual InteractiveBrokers.Adapter IbAdapter { get; set; }
+    protected virtual Ib.Adapter IbAdapter { get; set; }
+    protected virtual Sc.Adapter ScAdapter { get; set; }
+    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
+    {
+      Name = "F",
+      Security = "STK"
+    };
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -31,31 +34,50 @@ namespace Client.Pages
       {
         View.OnPreConnect = () =>
         {
-          IbAdapter = CreateIbAccount();
-          SchwabAdapter = CreateSchwabAccount();
+          View.Adapters["Ib"] = IbAdapter = CreateIbAccount();
+          //View.Adapters["Sc"] = ScAdapter = CreateScAccount();
         };
 
-        View.OnPostConnect = async () => await OnData();
+        View.OnPostConnect = () =>
+        {
+          var order = new OrderModel
+          {
+            Transaction = new TransactionModel
+            {
+              Instrument = Instrument,
+            }
+          };
+
+          //await IbAdapter.CreateOrders(order);
+
+          //await OnData();
+
+          //var interval = new Timer();
+
+          //interval.Elapsed += async (o, e) => await OnData();
+          //interval.Interval = 5000;
+          //interval.Enabled = true;
+        };
       }
 
       await base.OnAfterRenderAsync(setup);
     }
 
-    protected virtual Adapter CreateSchwabAccount()
+    protected virtual Sc.Adapter CreateScAccount()
     {
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
         Instruments = new Dictionary<string, InstrumentModel>
         {
-          ["F"] = new InstrumentModel { Name = "F" }
+          [Instrument.Name] = Instrument
         }
       };
 
-      return new Adapter
+      return new Sc.Adapter
       {
         Account = account,
-        Scope = new ScopeMessage
+        Scope = new Scm.ScopeMessage
         {
           AccessToken = Configuration["Schwab:AccessToken"],
           RefreshToken = Configuration["Schwab:RefreshToken"],
@@ -65,18 +87,18 @@ namespace Client.Pages
       };
     }
 
-    protected virtual InteractiveBrokers.Adapter CreateIbAccount()
+    protected virtual Ib.Adapter CreateIbAccount()
     {
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
         Instruments = new Dictionary<string, InstrumentModel>
         {
-          ["F"] = new InstrumentModel { Name = "F" }
+          [Instrument.Name] = Instrument
         }
       };
 
-      return new InteractiveBrokers.Adapter
+      return new Ib.Adapter
       {
         Account = account
       };
@@ -84,34 +106,21 @@ namespace Client.Pages
 
     private async Task OnData()
     {
-      var optionArgs = new OptionScreenModel
+      var optionArgs = new OptionScreenerModel
       {
-        Name = "SPY",
+        Name = Instrument.Name,
         MinDate = DateTime.Now,
-        MaxDate = DateTime.Now.AddYears(1)
+        MaxDate = DateTime.Now.AddDays(1)
       };
 
-      var domArgs = new DomScreenModel
+      var domArgs = new DomScreenerModel
       {
-        Name = "SPY"
+        Name = Instrument.Name
       };
 
-      var dom = await View.Adapter.GetDom(domArgs, []);
-      var options = await View.Adapter.GetOptions(optionArgs, []);
-      var message = new SnapshotModel
-      {
-        Point = dom.Data.Bids.First(),
-        Options = options.Data
-      };
-      var content = JsonSerializer.Serialize(message);
-      var source = $"D:/Code/NET/Terminal/Data/SPY/{DateTime.UtcNow.Ticks}.zip";
-
-      using var archive = ZipFile.Open(source, ZipArchiveMode.Create);
-      using (var entry = archive.CreateEntry($"{DateTime.UtcNow.Ticks}").Open())
-      {
-        var bytes = Encoding.ASCII.GetBytes(content);
-        entry.Write(bytes);
-      }
+      var dom = await ScAdapter.GetDom(domArgs, []);
+      var options = await ScAdapter.GetOptions(optionArgs, []);
+      var price = dom.Data.Asks.First().Last;
     }
   }
 }

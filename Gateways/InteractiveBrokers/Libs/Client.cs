@@ -121,7 +121,7 @@ namespace InteractiveBrokers
 
     public int NextOrderId { get; set; }
 
-    public Action<int, int, string, string, Exception> Error;
+    public event Action<int, int, string, string, Exception> Error;
 
     void EWrapper.error(Exception e)
     {
@@ -147,7 +147,7 @@ namespace InteractiveBrokers
         Run(() => cb(id, errorCode, errorMsg, advancedOrderRejectJson, null), null);
     }
 
-    public Action ConnectionClosed;
+    public event Action ConnectionClosed;
 
     void EWrapper.connectionClosed()
     {
@@ -157,7 +157,7 @@ namespace InteractiveBrokers
         Run(() => cb(), null);
     }
 
-    public Action<long> CurrentTime;
+    public event Action<long> CurrentTime;
 
     void EWrapper.currentTime(long time)
     {
@@ -167,7 +167,7 @@ namespace InteractiveBrokers
         Run(() => cb(time), null);
     }
 
-    public Action<TickPriceMessage> TickPrice;
+    public event Action<TickPriceMessage> TickPrice;
 
     void EWrapper.tickPrice(int tickerId, int field, double price, TickAttrib attribs)
     {
@@ -177,7 +177,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickPriceMessage(tickerId, field, price, attribs)), null);
     }
 
-    public Action<TickSizeMessage> TickSize;
+    public event Action<TickSizeMessage> TickSize;
 
     void EWrapper.tickSize(int tickerId, int field, decimal size)
     {
@@ -187,7 +187,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickSizeMessage(tickerId, field, size)), null);
     }
 
-    public Action<int, int, string> TickString;
+    public event Action<int, int, string> TickString;
 
     void EWrapper.tickString(int tickerId, int tickType, string value)
     {
@@ -197,7 +197,7 @@ namespace InteractiveBrokers
         Run(() => cb(tickerId, tickType, value), null);
     }
 
-    public Action<TickGenericMessage> TickGeneric;
+    public event Action<TickGenericMessage> TickGeneric;
 
     void EWrapper.tickGeneric(int tickerId, int field, double value)
     {
@@ -207,7 +207,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickGenericMessage(tickerId, field, value)), null);
     }
 
-    public Action<int, int, double, string, double, int, string, double, double> TickEFP;
+    public event Action<int, int, double, string, double, int, string, double, double> TickEFP;
 
     void EWrapper.tickEFP(int tickerId, int tickType, double basisPoints, string formattedBasisPoints, double impliedFuture, int holdDays, string futureLastTradeDate, double dividendImpact, double dividendsToLastTradeDate)
     {
@@ -217,7 +217,7 @@ namespace InteractiveBrokers
         Run(() => cb(tickerId, tickType, basisPoints, formattedBasisPoints, impliedFuture, holdDays, futureLastTradeDate, dividendImpact, dividendsToLastTradeDate), null);
     }
 
-    public Action<int> TickSnapshotEnd;
+    public event Action<int> TickSnapshotEnd;
 
     void EWrapper.tickSnapshotEnd(int tickerId)
     {
@@ -227,7 +227,7 @@ namespace InteractiveBrokers
         Run(() => cb(tickerId), null);
     }
 
-    public Action<int> NextValidId;
+    public event Action<int> NextValidId;
 
     void EWrapper.nextValidId(int orderId)
     {
@@ -239,7 +239,7 @@ namespace InteractiveBrokers
       NextOrderId = orderId;
     }
 
-    public Action<int, DeltaNeutralContract> DeltaNeutralValidation;
+    public event Action<int, DeltaNeutralContract> DeltaNeutralValidation;
 
     void EWrapper.deltaNeutralValidation(int reqId, DeltaNeutralContract deltaNeutralContract)
     {
@@ -249,7 +249,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, deltaNeutralContract), null);
     }
 
-    public Action<ManagedAccountsMessage> ManagedAccounts;
+    public event Action<ManagedAccountsMessage> ManagedAccounts;
 
     void EWrapper.managedAccounts(string accountsList)
     {
@@ -259,7 +259,7 @@ namespace InteractiveBrokers
         Run(() => cb(new ManagedAccountsMessage(accountsList)), null);
     }
 
-    public Action<TickOptionMessage> TickOptionCommunication;
+    public event Action<TickOptionMessage> TickOptionCommunication;
 
     void EWrapper.tickOptionComputation(int tickerId, int field, int tickAttrib, double impliedVolatility, double delta, double optPrice, double pvDividend, double gamma, double vega, double theta, double undPrice)
     {
@@ -269,7 +269,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickOptionMessage(tickerId, field, tickAttrib, impliedVolatility, delta, optPrice, pvDividend, gamma, vega, theta, undPrice)), null);
     }
 
-    public Action<AccountSummaryMessage> AccountSummary;
+    public event Action<AccountSummaryMessage> AccountSummary;
 
     void EWrapper.accountSummary(int reqId, string account, string tag, string value, string currency)
     {
@@ -279,7 +279,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AccountSummaryMessage(reqId, account, tag, value, currency)), null);
     }
 
-    public Action<AccountSummaryEndMessage> AccountSummaryEnd;
+    public event Action<AccountSummaryEndMessage> AccountSummaryEnd;
 
     void EWrapper.accountSummaryEnd(int reqId)
     {
@@ -289,7 +289,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AccountSummaryEndMessage(reqId)), null);
     }
 
-    public Action<AccountValueMessage> UpdateAccountValue;
+    public event Action<AccountValueMessage> UpdateAccountValue;
 
     void EWrapper.updateAccountValue(string key, string value, string currency, string accountName)
     {
@@ -299,7 +299,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AccountValueMessage(key, value, currency, accountName)), null);
     }
 
-    public Action<UpdatePortfolioMessage> UpdatePortfolio;
+    public event Action<UpdatePortfolioMessage> UpdatePortfolio;
 
     void EWrapper.updatePortfolio(Contract contract, decimal position, double marketPrice, double marketValue, double averageCost, double unrealizedPNL, double realizedPNL, string accountName)
     {
@@ -309,7 +309,7 @@ namespace InteractiveBrokers
         Run(() => cb(new UpdatePortfolioMessage(contract, position, marketPrice, marketValue, averageCost, unrealizedPNL, realizedPNL, accountName)), null);
     }
 
-    public Action<UpdateAccountTimeMessage> UpdateAccountTime;
+    public event Action<UpdateAccountTimeMessage> UpdateAccountTime;
 
     void EWrapper.updateAccountTime(string timestamp)
     {
@@ -319,7 +319,7 @@ namespace InteractiveBrokers
         Run(() => cb(new UpdateAccountTimeMessage(timestamp)), null);
     }
 
-    public Action<AccountDownloadEndMessage> AccountDownloadEnd;
+    public event Action<AccountDownloadEndMessage> AccountDownloadEnd;
 
     void EWrapper.accountDownloadEnd(string account)
     {
@@ -329,7 +329,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AccountDownloadEndMessage(account)), null);
     }
 
-    public Action<OrderStatusMessage> OrderStatus;
+    public event Action<OrderStatusMessage> OrderStatus;
 
     void EWrapper.orderStatus(int orderId, string status, decimal filled, decimal remaining, double avgFillPrice, int permId, int parentId, double lastFillPrice, int clientId, string whyHeld, double mktCapPrice)
     {
@@ -339,7 +339,7 @@ namespace InteractiveBrokers
         Run(() => cb(new OrderStatusMessage(orderId, status, filled, remaining, avgFillPrice, permId, parentId, lastFillPrice, clientId, whyHeld, mktCapPrice)), null);
     }
 
-    public Action<OpenOrderMessage> OpenOrder;
+    public event Action<OpenOrderMessage> OpenOrder;
 
     void EWrapper.openOrder(int orderId, Contract contract, Order order, OrderState orderState)
     {
@@ -349,7 +349,7 @@ namespace InteractiveBrokers
         Run(() => cb(new OpenOrderMessage(orderId, contract, order, orderState)), null);
     }
 
-    public Action OpenOrderEnd;
+    public event Action OpenOrderEnd;
 
     void EWrapper.openOrderEnd()
     {
@@ -359,7 +359,7 @@ namespace InteractiveBrokers
         Run(() => cb(), null);
     }
 
-    public Action<ContractDetailsMessage> ContractDetails;
+    public event Action<ContractDetailsMessage> ContractDetails;
 
     void EWrapper.contractDetails(int reqId, ContractDetails contractDetails)
     {
@@ -369,7 +369,7 @@ namespace InteractiveBrokers
         Run(() => cb(new ContractDetailsMessage(reqId, contractDetails)), null);
     }
 
-    public Action<int> ContractDetailsEnd;
+    public event Action<int> ContractDetailsEnd;
 
     void EWrapper.contractDetailsEnd(int reqId)
     {
@@ -379,7 +379,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<ExecutionMessage> ExecDetails;
+    public event Action<ExecutionMessage> ExecDetails;
 
     void EWrapper.execDetails(int reqId, Contract contract, Execution execution)
     {
@@ -389,7 +389,7 @@ namespace InteractiveBrokers
         Run(() => cb(new ExecutionMessage(reqId, contract, execution)), null);
     }
 
-    public Action<int> ExecDetailsEnd;
+    public event Action<int> ExecDetailsEnd;
 
     void EWrapper.execDetailsEnd(int reqId)
     {
@@ -399,7 +399,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<CommissionReport> CommissionReport;
+    public event Action<CommissionReport> CommissionReport;
 
     void EWrapper.commissionReport(CommissionReport commissionReport)
     {
@@ -409,7 +409,7 @@ namespace InteractiveBrokers
         Run(() => cb(commissionReport), null);
     }
 
-    public Action<FundamentalsMessage> FundamentalData;
+    public event Action<FundamentalsMessage> FundamentalData;
 
     void EWrapper.fundamentalData(int reqId, string data)
     {
@@ -419,7 +419,7 @@ namespace InteractiveBrokers
         Run(() => cb(new FundamentalsMessage(data)), null);
     }
 
-    public Action<HistoricalDataMessage> HistoricalData;
+    public event Action<HistoricalDataMessage> HistoricalData;
 
     void EWrapper.historicalData(int reqId, Bar bar)
     {
@@ -429,7 +429,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalDataMessage(reqId, bar)), null);
     }
 
-    public Action<HistoricalDataEndMessage> HistoricalDataEnd;
+    public event Action<HistoricalDataEndMessage> HistoricalDataEnd;
 
     void EWrapper.historicalDataEnd(int reqId, string startDate, string endDate)
     {
@@ -439,7 +439,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalDataEndMessage(reqId, startDate, endDate)), null);
     }
 
-    public Action<MarketDataTypeMessage> MarketDataType;
+    public event Action<MarketDataTypeMessage> MarketDataType;
 
     void EWrapper.marketDataType(int reqId, int marketDataType)
     {
@@ -449,7 +449,7 @@ namespace InteractiveBrokers
         Run(() => cb(new MarketDataTypeMessage(reqId, marketDataType)), null);
     }
 
-    public Action<DeepBookMessage> UpdateMktDepth;
+    public event Action<DeepBookMessage> UpdateMktDepth;
 
     void EWrapper.updateMktDepth(int tickerId, int position, int operation, int side, double price, decimal size)
     {
@@ -459,7 +459,7 @@ namespace InteractiveBrokers
         Run(() => cb(new DeepBookMessage(tickerId, position, operation, side, price, size, "", false)), null);
     }
 
-    public Action<DeepBookMessage> UpdateMktDepthL2;
+    public event Action<DeepBookMessage> UpdateMktDepthL2;
 
     void EWrapper.updateMktDepthL2(int tickerId, int position, string marketMaker, int operation, int side, double price, decimal size, bool isSmartDepth)
     {
@@ -469,7 +469,7 @@ namespace InteractiveBrokers
         Run(() => cb(new DeepBookMessage(tickerId, position, operation, side, price, size, marketMaker, isSmartDepth)), null);
     }
 
-    public Action<int, int, string, string> UpdateNewsBulletin;
+    public event Action<int, int, string, string> UpdateNewsBulletin;
 
     void EWrapper.updateNewsBulletin(int msgId, int msgType, string message, string origExchange)
     {
@@ -479,7 +479,7 @@ namespace InteractiveBrokers
         Run(() => cb(msgId, msgType, message, origExchange), null);
     }
 
-    public Action<PositionMessage> Position;
+    public event Action<PositionMessage> Position;
 
     void EWrapper.position(string account, Contract contract, decimal pos, double avgCost)
     {
@@ -489,7 +489,7 @@ namespace InteractiveBrokers
         Run(() => cb(new PositionMessage(account, contract, pos, avgCost)), null);
     }
 
-    public Action PositionEnd;
+    public event Action PositionEnd;
 
     void EWrapper.positionEnd()
     {
@@ -499,7 +499,7 @@ namespace InteractiveBrokers
         Run(() => cb(), null);
     }
 
-    public Action<RealTimeBarMessage> RealtimeBar;
+    public event Action<RealTimeBarMessage> RealtimeBar;
 
     void EWrapper.realtimeBar(int reqId, long time, double open, double high, double low, double close, decimal volume, decimal WAP, int count)
     {
@@ -509,7 +509,7 @@ namespace InteractiveBrokers
         Run(() => cb(new RealTimeBarMessage(reqId, time, open, high, low, close, volume, WAP, count)), null);
     }
 
-    public Action<string> ScannerParameters;
+    public event Action<string> ScannerParameters;
 
     void EWrapper.scannerParameters(string xml)
     {
@@ -519,7 +519,7 @@ namespace InteractiveBrokers
         Run(() => cb(xml), null);
     }
 
-    public Action<ScannerMessage> ScannerData;
+    public event Action<ScannerMessage> ScannerData;
 
     void EWrapper.scannerData(int reqId, int rank, ContractDetails contractDetails, string distance, string benchmark, string projection, string legsStr)
     {
@@ -529,7 +529,7 @@ namespace InteractiveBrokers
         Run(() => cb(new ScannerMessage(reqId, rank, contractDetails, distance, benchmark, projection, legsStr)), null);
     }
 
-    public Action<int> ScannerDataEnd;
+    public event Action<int> ScannerDataEnd;
 
     void EWrapper.scannerDataEnd(int reqId)
     {
@@ -539,7 +539,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<AdvisorDataMessage> ReceiveFA;
+    public event Action<AdvisorDataMessage> ReceiveFA;
 
     void EWrapper.receiveFA(int faDataType, string faXmlData)
     {
@@ -549,7 +549,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AdvisorDataMessage(faDataType, faXmlData)), null);
     }
 
-    public Action<BondContractDetailsMessage> BondContractDetails;
+    public event Action<BondContractDetailsMessage> BondContractDetails;
 
     void EWrapper.bondContractDetails(int requestId, ContractDetails contractDetails)
     {
@@ -559,7 +559,7 @@ namespace InteractiveBrokers
         Run(() => cb(new BondContractDetailsMessage(requestId, contractDetails)), null);
     }
 
-    public Action<string> VerifyMessageAPI;
+    public event Action<string> VerifyMessageAPI;
 
     void EWrapper.verifyMessageAPI(string apiData)
     {
@@ -568,7 +568,7 @@ namespace InteractiveBrokers
       if (cb != null)
         Run(() => cb(apiData), null);
     }
-    public Action<bool, string> VerifyCompleted;
+    public event Action<bool, string> VerifyCompleted;
 
     void EWrapper.verifyCompleted(bool isSuccessful, string errorText)
     {
@@ -578,7 +578,7 @@ namespace InteractiveBrokers
         Run(() => cb(isSuccessful, errorText), null);
     }
 
-    public Action<string, string> VerifyAndAuthMessageAPI;
+    public event Action<string, string> VerifyAndAuthMessageAPI;
 
     void EWrapper.verifyAndAuthMessageAPI(string apiData, string xyzChallenge)
     {
@@ -588,7 +588,7 @@ namespace InteractiveBrokers
         Run(() => cb(apiData, xyzChallenge), null);
     }
 
-    public Action<bool, string> VerifyAndAuthCompleted;
+    public event Action<bool, string> VerifyAndAuthCompleted;
 
     void EWrapper.verifyAndAuthCompleted(bool isSuccessful, string errorText)
     {
@@ -598,7 +598,7 @@ namespace InteractiveBrokers
         Run(() => cb(isSuccessful, errorText), null);
     }
 
-    public Action<int, string> DisplayGroupList;
+    public event Action<int, string> DisplayGroupList;
 
     void EWrapper.displayGroupList(int reqId, string groups)
     {
@@ -608,7 +608,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, groups), null);
     }
 
-    public Action<int, string> DisplayGroupUpdated;
+    public event Action<int, string> DisplayGroupUpdated;
 
     void EWrapper.displayGroupUpdated(int reqId, string contractInfo)
     {
@@ -625,7 +625,7 @@ namespace InteractiveBrokers
         ClientSocket.startApi();
     }
 
-    public Action<PositionMultiMessage> PositionMulti;
+    public event Action<PositionMultiMessage> PositionMulti;
 
     void EWrapper.positionMulti(int reqId, string account, string modelCode, Contract contract, decimal pos, double avgCost)
     {
@@ -635,7 +635,7 @@ namespace InteractiveBrokers
         Run(() => cb(new PositionMultiMessage(reqId, account, modelCode, contract, pos, avgCost)), null);
     }
 
-    public Action<int> PositionMultiEnd;
+    public event Action<int> PositionMultiEnd;
 
     void EWrapper.positionMultiEnd(int reqId)
     {
@@ -645,7 +645,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<AccountUpdateMultiMessage> AccountUpdateMulti;
+    public event Action<AccountUpdateMultiMessage> AccountUpdateMulti;
 
     void EWrapper.accountUpdateMulti(int reqId, string account, string modelCode, string key, string value, string currency)
     {
@@ -655,7 +655,7 @@ namespace InteractiveBrokers
         Run(() => cb(new AccountUpdateMultiMessage(reqId, account, modelCode, key, value, currency)), null);
     }
 
-    public Action<int> AccountUpdateMultiEnd;
+    public event Action<int> AccountUpdateMultiEnd;
 
     void EWrapper.accountUpdateMultiEnd(int reqId)
     {
@@ -665,7 +665,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<SecurityDefinitionOptionParameterMessage> SecurityDefinitionOptionParameter;
+    public event Action<SecurityDefinitionOptionParameterMessage> SecurityDefinitionOptionParameter;
 
     void EWrapper.securityDefinitionOptionParameter(int reqId, string exchange, int underlyingConId, string tradingClass, string multiplier, HashSet<string> expirations, HashSet<double> strikes)
     {
@@ -675,7 +675,7 @@ namespace InteractiveBrokers
         Run(() => cb(new SecurityDefinitionOptionParameterMessage(reqId, exchange, underlyingConId, tradingClass, multiplier, expirations, strikes)), null);
     }
 
-    public Action<int> SecurityDefinitionOptionParameterEnd;
+    public event Action<int> SecurityDefinitionOptionParameterEnd;
 
     void EWrapper.securityDefinitionOptionParameterEnd(int reqId)
     {
@@ -685,7 +685,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId), null);
     }
 
-    public Action<SoftDollarTiersMessage> SoftDollarTiers;
+    public event Action<SoftDollarTiersMessage> SoftDollarTiers;
 
     void EWrapper.softDollarTiers(int reqId, SoftDollarTier[] tiers)
     {
@@ -695,7 +695,7 @@ namespace InteractiveBrokers
         Run(() => cb(new SoftDollarTiersMessage(reqId, tiers)), null);
     }
 
-    public Action<FamilyCode[]> FamilyCodes;
+    public event Action<FamilyCode[]> FamilyCodes;
 
     void EWrapper.familyCodes(FamilyCode[] familyCodes)
     {
@@ -705,7 +705,7 @@ namespace InteractiveBrokers
         Run(() => cb(familyCodes), null);
     }
 
-    public Action<SymbolSamplesMessage> SymbolSamples;
+    public event Action<SymbolSamplesMessage> SymbolSamples;
 
     void EWrapper.symbolSamples(int reqId, ContractDescription[] contractDescriptions)
     {
@@ -716,7 +716,7 @@ namespace InteractiveBrokers
     }
 
 
-    public Action<DepthMktDataDescription[]> MktDepthExchanges;
+    public event Action<DepthMktDataDescription[]> MktDepthExchanges;
 
     void EWrapper.mktDepthExchanges(DepthMktDataDescription[] depthMktDataDescriptions)
     {
@@ -726,7 +726,7 @@ namespace InteractiveBrokers
         Run(() => cb(depthMktDataDescriptions), null);
     }
 
-    public Action<TickNewsMessage> TickNews;
+    public event Action<TickNewsMessage> TickNews;
 
     void EWrapper.tickNews(int tickerId, long timeStamp, string providerCode, string articleId, string headline, string extraData)
     {
@@ -736,7 +736,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickNewsMessage(tickerId, timeStamp, providerCode, articleId, headline, extraData)), null);
     }
 
-    public Action<int, Dictionary<int, KeyValuePair<string, char>>> SmartComponents;
+    public event Action<int, Dictionary<int, KeyValuePair<string, char>>> SmartComponents;
 
     void EWrapper.smartComponents(int reqId, Dictionary<int, KeyValuePair<string, char>> theMap)
     {
@@ -746,7 +746,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, theMap), null);
     }
 
-    public Action<TickReqParamsMessage> TickReqParams;
+    public event Action<TickReqParamsMessage> TickReqParams;
 
     void EWrapper.tickReqParams(int tickerId, double minTick, string bboExchange, int snapshotPermissions)
     {
@@ -756,7 +756,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickReqParamsMessage(tickerId, minTick, bboExchange, snapshotPermissions)), null);
     }
 
-    public Action<NewsProvider[]> NewsProviders;
+    public event Action<NewsProvider[]> NewsProviders;
 
     void EWrapper.newsProviders(NewsProvider[] newsProviders)
     {
@@ -766,7 +766,7 @@ namespace InteractiveBrokers
         Run(() => cb(newsProviders), null);
     }
 
-    public Action<NewsArticleMessage> NewsArticle;
+    public event Action<NewsArticleMessage> NewsArticle;
 
     void EWrapper.newsArticle(int requestId, int articleType, string articleText)
     {
@@ -776,7 +776,7 @@ namespace InteractiveBrokers
         Run(() => cb(new NewsArticleMessage(requestId, articleType, articleText)), null);
     }
 
-    public Action<HistoricalNewsMessage> HistoricalNews;
+    public event Action<HistoricalNewsMessage> HistoricalNews;
 
     void EWrapper.historicalNews(int requestId, string time, string providerCode, string articleId, string headline)
     {
@@ -786,7 +786,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalNewsMessage(requestId, time, providerCode, articleId, headline)), null);
     }
 
-    public Action<HistoricalNewsEndMessage> HistoricalNewsEnd;
+    public event Action<HistoricalNewsEndMessage> HistoricalNewsEnd;
 
     void EWrapper.historicalNewsEnd(int requestId, bool hasMore)
     {
@@ -796,7 +796,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalNewsEndMessage(requestId, hasMore)), null);
     }
 
-    public Action<HeadTimestampMessage> HeadTimestamp;
+    public event Action<HeadTimestampMessage> HeadTimestamp;
 
     void EWrapper.headTimestamp(int reqId, string headTimestamp)
     {
@@ -806,7 +806,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HeadTimestampMessage(reqId, headTimestamp)), null);
     }
 
-    public Action<HistogramDataMessage> HistogramData;
+    public event Action<HistogramDataMessage> HistogramData;
 
     void EWrapper.histogramData(int reqId, HistogramEntry[] data)
     {
@@ -816,7 +816,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistogramDataMessage(reqId, data)), null);
     }
 
-    public Action<HistoricalDataMessage> HistoricalDataUpdate;
+    public event Action<HistoricalDataMessage> HistoricalDataUpdate;
 
     void EWrapper.historicalDataUpdate(int reqId, Bar bar)
     {
@@ -826,7 +826,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalDataMessage(reqId, bar)), null);
     }
 
-    public Action<int, int, string> RerouteMktDataReq;
+    public event Action<int, int, string> RerouteMktDataReq;
 
     void EWrapper.rerouteMktDataReq(int reqId, int conId, string exchange)
     {
@@ -836,7 +836,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, conId, exchange), null);
     }
 
-    public Action<int, int, string> RerouteMktDepthReq;
+    public event Action<int, int, string> RerouteMktDepthReq;
 
     void EWrapper.rerouteMktDepthReq(int reqId, int conId, string exchange)
     {
@@ -846,7 +846,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, conId, exchange), null);
     }
 
-    public Action<MarketRuleMessage> MarketRule;
+    public event Action<MarketRuleMessage> MarketRule;
 
     void EWrapper.marketRule(int marketRuleId, PriceIncrement[] priceIncrements)
     {
@@ -856,7 +856,7 @@ namespace InteractiveBrokers
         Run(() => cb(new MarketRuleMessage(marketRuleId, priceIncrements)), null);
     }
 
-    public Action<PnLMessage> Pnl;
+    public event Action<PnLMessage> Pnl;
 
     void EWrapper.pnl(int reqId, double dailyPnL, double unrealizedPnL, double realizedPnL)
     {
@@ -866,7 +866,7 @@ namespace InteractiveBrokers
         Run(() => cb(new PnLMessage(reqId, dailyPnL, unrealizedPnL, realizedPnL)), null);
     }
 
-    public Action<PnLSingleMessage> PnlSingle;
+    public event Action<PnLSingleMessage> PnlSingle;
 
     void EWrapper.pnlSingle(int reqId, decimal pos, double dailyPnL, double unrealizedPnL, double realizedPnL, double value)
     {
@@ -876,7 +876,7 @@ namespace InteractiveBrokers
         Run(() => cb(new PnLSingleMessage(reqId, pos, dailyPnL, unrealizedPnL, realizedPnL, value)), null);
     }
 
-    public Action<HistoricalTickMessage> historicalTick;
+    public event Action<HistoricalTickMessage> historicalTick;
 
     void EWrapper.historicalTicks(int reqId, HistoricalTick[] ticks, bool done)
     {
@@ -886,7 +886,7 @@ namespace InteractiveBrokers
         ticks.ToList().ForEach(tick => Run(() => cb(new HistoricalTickMessage(reqId, tick.Time, tick.Price, tick.Size)), null));
     }
 
-    public Action<HistoricalTickBidAskMessage> historicalTickBidAsk;
+    public event Action<HistoricalTickBidAskMessage> historicalTickBidAsk;
 
     void EWrapper.historicalTicksBidAsk(int reqId, HistoricalTickBidAsk[] ticks, bool done)
     {
@@ -897,7 +897,7 @@ namespace InteractiveBrokers
             cb(new HistoricalTickBidAskMessage(reqId, tick.Time, tick.TickAttribBidAsk, tick.PriceBid, tick.PriceAsk, tick.SizeBid, tick.SizeAsk)), null));
     }
 
-    public Action<HistoricalTickLastMessage> historicalTickLast;
+    public event Action<HistoricalTickLastMessage> historicalTickLast;
 
     void EWrapper.historicalTicksLast(int reqId, HistoricalTickLast[] ticks, bool done)
     {
@@ -908,7 +908,7 @@ namespace InteractiveBrokers
             cb(new HistoricalTickLastMessage(reqId, tick.Time, tick.TickAttribLast, tick.Price, tick.Size, tick.Exchange, tick.SpecialConditions)), null));
     }
 
-    public Action<TickByTickAllLastMessage> tickByTickAllLast;
+    public event Action<TickByTickAllLastMessage> tickByTickAllLast;
 
     void EWrapper.tickByTickAllLast(int reqId, int tickType, long time, double price, decimal size, TickAttribLast tickAttribLast, string exchange, string specialConditions)
     {
@@ -918,7 +918,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickByTickAllLastMessage(reqId, tickType, time, price, size, tickAttribLast, exchange, specialConditions)), null);
     }
 
-    public Action<TickByTickBidAskMessage> tickByTickBidAsk;
+    public event Action<TickByTickBidAskMessage> tickByTickBidAsk;
 
     void EWrapper.tickByTickBidAsk(int reqId, long time, double bidPrice, double askPrice, decimal bidSize, decimal askSize, TickAttribBidAsk tickAttribBidAsk)
     {
@@ -928,7 +928,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickByTickBidAskMessage(reqId, time, bidPrice, askPrice, bidSize, askSize, tickAttribBidAsk)), null);
     }
 
-    public Action<TickByTickMidPointMessage> tickByTickMidPoint;
+    public event Action<TickByTickMidPointMessage> tickByTickMidPoint;
 
     void EWrapper.tickByTickMidPoint(int reqId, long time, double midPoint)
     {
@@ -938,7 +938,7 @@ namespace InteractiveBrokers
         Run(() => cb(new TickByTickMidPointMessage(reqId, time, midPoint)), null);
     }
 
-    public Action<OrderBoundMessage> OrderBound;
+    public event Action<OrderBoundMessage> OrderBound;
 
     void EWrapper.orderBound(long orderId, int apiClientId, int apiOrderId)
     {
@@ -948,7 +948,7 @@ namespace InteractiveBrokers
         Run(() => cb(new OrderBoundMessage(orderId, apiClientId, apiOrderId)), null);
     }
 
-    public Action<CompletedOrderMessage> CompletedOrder;
+    public event Action<CompletedOrderMessage> CompletedOrder;
 
     void EWrapper.completedOrder(Contract contract, Order order, OrderState orderState)
     {
@@ -958,7 +958,7 @@ namespace InteractiveBrokers
         Run(() => cb(new CompletedOrderMessage(contract, order, orderState)), null);
     }
 
-    public Action CompletedOrdersEnd;
+    public event Action CompletedOrdersEnd;
 
     void EWrapper.completedOrdersEnd()
     {
@@ -968,7 +968,7 @@ namespace InteractiveBrokers
         Run(() => cb(), null);
     }
 
-    public Action<int, string> ReplaceFAEnd;
+    public event Action<int, string> ReplaceFAEnd;
 
     void EWrapper.replaceFAEnd(int reqId, string text)
     {
@@ -978,7 +978,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, text), null);
     }
 
-    public Action<int, string> WshMetaData;
+    public event Action<int, string> WshMetaData;
 
     public void wshMetaData(int reqId, string dataJson)
     {
@@ -988,7 +988,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, dataJson), null);
     }
 
-    public Action<int, string> WshEventData;
+    public event Action<int, string> WshEventData;
 
     public void wshEventData(int reqId, string dataJson)
     {
@@ -998,7 +998,7 @@ namespace InteractiveBrokers
         Run(() => cb(reqId, dataJson), null);
     }
 
-    public Action<HistoricalScheduleMessage> HistoricalSchedule;
+    public event Action<HistoricalScheduleMessage> HistoricalSchedule;
 
     public void historicalSchedule(int reqId, string startDateTime, string endDateTime, string timeZone, HistoricalSession[] sessions)
     {
@@ -1008,7 +1008,7 @@ namespace InteractiveBrokers
         Run(() => cb(new HistoricalScheduleMessage(reqId, startDateTime, endDateTime, timeZone, sessions)), null);
     }
 
-    public Action<string> UserInfo;
+    public event Action<string> UserInfo;
 
     void EWrapper.userInfo(int reqId, string whiteBrandingId)
     {

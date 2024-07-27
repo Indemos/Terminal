@@ -17,14 +17,9 @@ namespace Terminal.Core.Domains
     public string Security { get; set; }
 
     /// <summary>
-    /// Long swap rate for keeping position overnight
+    /// Exchange
     /// </summary>
-    public double? SwapLong { get; set; }
-
-    /// <summary>
-    /// Short swap rate for keeping position overnight
-    /// </summary>
-    public double? SwapShort { get; set; }
+    public string Exchange { get; set; }
 
     /// <summary>
     /// Commission
@@ -57,6 +52,11 @@ namespace Terminal.Core.Domains
     public TimeSpan? TimeFrame { get; set; }
 
     /// <summary>
+    /// Base currency contract
+    /// </summary>
+    public CurrencyModel Currency { get; set; }
+
+    /// <summary>
     /// List of all ticks from the server
     /// </summary>
     public ObservableGroupCollection<PointModel> Points { get; set; }
@@ -71,13 +71,11 @@ namespace Terminal.Core.Domains
     /// </summary>
     public InstrumentModel()
     {
-      SwapLong = 0;
-      SwapShort = 0;
+      Leverage = 1;
       StepSize = 0.01;
       StepValue = 0.01;
       Commission = 0;
       ContractSize = 1;
-      Leverage = 1;
 
       Points = [];
       PointGroups = [];

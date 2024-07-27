@@ -6,12 +6,12 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 
@@ -27,21 +27,28 @@ namespace Client.Pages
     const string _assetX = "GOOGL";
     const string _assetY = "GOOG";
 
-    protected virtual IAccount Account { get; set; }
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual IGateway Adapter
+    {
+      get => View.Adapters.Get("Demo");
+      set => View.Adapters["Demo"] = value;
+    }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
         await CreateViews();
+
         View.OnPreConnect = CreateAccounts;
         View.OnPostConnect = () =>
         {
-          View.DealsView.UpdateItems(Account.Positions);
-          View.OrdersView.UpdateItems(Account.ActiveOrders);
-          View.PositionsView.UpdateItems(Account.ActivePositions);
+          var account = Adapter.Account;
+
+          View.DealsView.UpdateItems(account.Positions);
+          View.OrdersView.UpdateItems(account.ActiveOrders);
+          View.PositionsView.UpdateItems(account.ActivePositions);
         };
       }
 
@@ -76,7 +83,7 @@ namespace Client.Pages
 
     protected virtual void CreateAccounts()
     {
-      Account = new Account
+      var account = new Account
       {
         Balance = 25000,
         Instruments = new Dictionary<string, InstrumentModel>
@@ -86,16 +93,16 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter = new Adapter
+      Adapter = new Adapter
       {
         Speed = 1,
-        Account = Account,
+        Account = account,
         Source = Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
 
-      Account
+      account
         .Instruments
         .Values
         .ForEach(o => o.Points.CollectionChanged += (_, e) => e
@@ -106,8 +113,9 @@ namespace Client.Pages
 
     private async Task OnData(PointModel point)
     {
-      var instrumentX = Account.Instruments[_assetX];
-      var instrumentY = Account.Instruments[_assetY];
+      var account = Adapter.Account;
+      var instrumentX = account.Instruments[_assetX];
+      var instrumentY = account.Instruments[_assetY];
       var seriesX = instrumentX.Points;
       var seriesY = instrumentY.Points;
 
@@ -118,7 +126,7 @@ namespace Client.Pages
 
       var chartPoints = new List<KeyValuePair<string, PointModel>>();
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
-      var performance = Performance.Calculate([Account]);
+      var performance = Performance.Calculate([account]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var xAsk = xPoint.Ask;
@@ -128,10 +136,10 @@ namespace Client.Pages
       var spread = (xAsk - xBid) + (yAsk - yBid);
       var expenses = spread * 2;
 
-      if (Account.ActivePositions.Count == 2)
+      if (account.ActivePositions.Count == 2)
       {
-        var buy = Account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
-        var sell = Account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
+        var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
+        var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
 
         switch (true)
         {
@@ -140,7 +148,7 @@ namespace Client.Pages
         }
       }
 
-      if (Account.ActiveOrders.Any() is false && Account.ActivePositions.Any() is false)
+      if (account.ActiveOrders.Any() is false && account.ActivePositions.Any() is false)
       {
         switch (true)
         {
@@ -154,14 +162,14 @@ namespace Client.Pages
         ((yBid - xAsk) - expenses).Value);
 
       chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = Math.Max(0, range) }));
-      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = Account.Balance }));
+      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
       await View.ChartsView.UpdateItems(chartPoints, 100);
       await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(Account.Positions);
-      await View.OrdersView.UpdateItems(Account.ActiveOrders);
-      await View.PositionsView.UpdateItems(Account.ActivePositions);
+      await View.DealsView.UpdateItems(account.Positions);
+      await View.OrdersView.UpdateItems(account.ActiveOrders);
+      await View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
     private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
@@ -188,10 +196,10 @@ namespace Client.Pages
         }
       };
 
-      View.Adapter.CreateOrders(orderBuy);
-      View.Adapter.CreateOrders(orderSell);
+      Adapter.CreateOrders(orderBuy);
+      Adapter.CreateOrders(orderSell);
 
-      var account = View.Adapter.Account;
+      var account = Adapter.Account;
       var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
       var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
 
@@ -201,7 +209,7 @@ namespace Client.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in View.Adapter.Account.ActivePositions.Values)
+      foreach (var position in Adapter.Account.ActivePositions.Values)
       {
         var side = OrderSideEnum.Buy;
 
@@ -221,12 +229,12 @@ namespace Client.Pages
           }
         };
 
-        View.Adapter.CreateOrders(order);
+        Adapter.CreateOrders(order);
 
         //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
       }
     }
 
-    public void Dispose() => View?.Adapter?.Disconnect();
+    public void Dispose() => Adapter?.Disconnect();
   }
 }

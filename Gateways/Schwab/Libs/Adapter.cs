@@ -81,10 +81,9 @@ namespace Schwab
         _sender = new Service();
 
         await GetAccount([]);
+        await UpdateToken("/v1/oauth/token");
 
         var interval = new Timer(TimeSpan.FromMinutes(1));
-
-        await UpdateToken("/v1/oauth/token");
 
         interval.Enabled = true;
         interval.Elapsed += async (sender, e) => await UpdateToken("/v1/oauth/token");
@@ -162,9 +161,9 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
-      var response = new ResponseModel<IList<OptionModel>>();
+      var response = new ResponseModel<IList<DerivativeModel>>();
 
       try
       {
@@ -172,18 +171,23 @@ namespace Schwab
         {
           ["symbol"] = screener.Name,
           ["toDate"] = $"{screener.MaxDate:yyyy-MM-dd}",
-          ["fromDate"] = $"{screener.MinDate:yyyy-MM-dd}"
+          ["fromDate"] = $"{screener.MinDate:yyyy-MM-dd}",
+          ["strikeCount"] = screener.Count ?? int.MaxValue
 
         }.Merge(criteria);
 
         var optionResponse = await SendData<OptionChainMessage>($"/marketdata/v1/chains?{props}");
 
-        response.Data = optionResponse
-          .Data
-          .PutExpDateMap
-          ?.Concat(optionResponse.Data.CallExpDateMap)
-          ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
-          ?.Select(InternalMap.GetOption)?.ToList() ?? [];
+        if (optionResponse.Data is not null)
+        {
+          response.Data = optionResponse
+            .Data
+            .PutExpDateMap
+            ?.Concat(optionResponse.Data.CallExpDateMap)
+            ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
+            ?.Select(option => InternalMap.GetOption(option, optionResponse.Data))
+            ?.ToList() ?? [];
+        }
       }
       catch (Exception e)
       {
@@ -199,7 +203,7 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(DomScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<DomModel>();
 
@@ -231,7 +235,7 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
@@ -346,7 +350,7 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -379,7 +383,7 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>();
 

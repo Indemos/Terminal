@@ -6,15 +6,14 @@ namespace Terminal.Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class OptionValidator : AbstractValidator<OptionModel>
+  public class OptionValidator : AbstractValidator<DerivativeModel>
   {
     public OptionValidator()
     {
       RuleFor(o => o.Side).NotEmpty();
       RuleFor(o => o.Strike).NotEmpty();
-      RuleFor(o => o.ExpirationDate).NotEmpty();
-      RuleFor(o => o.Option).NotEmpty().SetValidator(new PointValidator());
-      RuleFor(o => o.Point).NotEmpty().SetValidator(new PointValidator());
+      RuleFor(o => o.Expiration).NotEmpty();
+      RuleFor(o => o.Contract).NotEmpty().SetValidator(new PointValidator());
     }
   }
 }

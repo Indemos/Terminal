@@ -14,11 +14,6 @@ namespace Terminal.Core.Domains
   public interface IAccount
   {
     /// <summary>
-    /// Leverage
-    /// </summary>
-    double? Leverage { get; set; }
-
-    /// <summary>
     /// Balance
     /// </summary>
     double? Balance { get; set; }
@@ -32,11 +27,6 @@ namespace Terminal.Core.Domains
     /// Name
     /// </summary>
     string Descriptor { get; set; }
-
-    /// <summary>
-    /// Currency
-    /// </summary>
-    string Currency { get; set; }
 
     /// <summary>
     /// History of orders
@@ -70,11 +60,6 @@ namespace Terminal.Core.Domains
   public class Account : IAccount
   {
     /// <summary>
-    /// Leverage
-    /// </summary>
-    public virtual double? Leverage { get; set; }
-
-    /// <summary>
     /// Balance
     /// </summary>
     public virtual double? Balance { get; set; }
@@ -88,11 +73,6 @@ namespace Terminal.Core.Domains
     /// Name
     /// </summary>
     public virtual string Descriptor { get; set; }
-
-    /// <summary>
-    /// Currency
-    /// </summary>
-    public virtual string Currency { get; set; }
 
     /// <summary>
     /// History of completed orders
@@ -125,9 +105,7 @@ namespace Terminal.Core.Domains
     public Account()
     {
       Balance = 0.0;
-      Leverage = 1.0;
       InitialBalance = 0.0;
-      Currency = nameof(CurrencyEnum.USD);
 
       Orders = [];
       Positions = [];

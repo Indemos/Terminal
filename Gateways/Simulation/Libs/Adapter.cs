@@ -1,5 +1,4 @@
 using Distribution.Services;
-using SkiaSharp;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -101,7 +100,7 @@ namespace Simulation
       interval.AutoReset = true;
       interval.Elapsed += (sender, e) => scheduler.Send(() =>
       {
-        var point = GetSnapshot(_instruments, points);
+        var point = GetState(_instruments, points);
 
         if (point is not null)
         {
@@ -202,7 +201,7 @@ namespace Simulation
     /// Update order state
     /// </summary>
     /// <param name="message"></param>
-    protected virtual void OnOrderUpdate(StateModel<OrderModel> message)
+    protected virtual void OnOrderUpdate(MessageModel<OrderModel> message)
     {
       switch (message.Action)
       {
@@ -277,7 +276,7 @@ namespace Simulation
       Account.Orders.Add(nextOrder);
       Account.ActivePositions.Add(nextOrder.Transaction.Id, nextPosition);
 
-      var message = new StateModel<OrderModel>
+      var message = new MessageModel<OrderModel>
       {
         Action = ActionEnum.Create,
         Next = nextOrder
@@ -343,7 +342,7 @@ namespace Simulation
       Account.ActivePositions.Add(nextPosition.Order.Transaction.Id, nextPosition);
       Account.Orders.Add(nextOrder);
 
-      var message = new StateModel<OrderModel>
+      var message = new MessageModel<OrderModel>
       {
         Action = ActionEnum.Update,
         Next = nextOrder
@@ -386,7 +385,7 @@ namespace Simulation
       Account.Positions.Add(previousPosition);
       Account.Orders.Add(nextOrder);
 
-      var message = new StateModel<OrderModel>
+      var message = new MessageModel<OrderModel>
       {
         Action = ActionEnum.Update,
         Next = nextOrder
@@ -464,7 +463,7 @@ namespace Simulation
     /// <param name="streams"></param>
     /// <param name="points"></param>
     /// <returns></returns>
-    protected virtual PointModel GetSnapshot(
+    protected virtual PointModel GetState(
       IDictionary<string, IEnumerator<string>> streams,
       IDictionary<string, PointModel> points)
     {
@@ -480,7 +479,7 @@ namespace Simulation
 
           if (string.IsNullOrEmpty(stream.Value.Current) is false)
           {
-            points[stream.Key] = GetSnapshotContent(stream.Key, stream.Value.Current).Point;
+            points[stream.Key] = GetStateContent(stream.Key, stream.Value.Current);
           }
         }
 
@@ -509,7 +508,7 @@ namespace Simulation
     /// <param name="name"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    protected virtual SnapshotModel GetSnapshotContent(string name, string source)
+    protected virtual PointModel GetStateContent(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -519,20 +518,20 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          var optionMessage = JsonSerializer.Deserialize<SnapshotModel>(content);
+          var optionMessage = JsonSerializer.Deserialize<PointModel>(content);
 
-          optionMessage.Point.Snapshot = source;
-          optionMessage.Point.Instrument = new InstrumentModel { Name = name };
+          optionMessage.State = source;
+          optionMessage.Instrument = new InstrumentModel { Name = name };
 
           return optionMessage;
         }
       }
 
       var inputMessage = File.ReadAllText(source);
-      var pointMessage = JsonSerializer.Deserialize<SnapshotModel>(inputMessage);
+      var pointMessage = JsonSerializer.Deserialize<PointModel>(inputMessage);
 
-      pointMessage.Point.Snapshot = source;
-      pointMessage.Point.Instrument = new InstrumentModel { Name = name };
+      pointMessage.State = source;
+      pointMessage.Instrument = new InstrumentModel { Name = name };
 
       return pointMessage;
     }
@@ -543,7 +542,7 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(DomScreenerModel screener, Hashtable criteria)
     {
       var point = Account.Instruments[screener.Name].Points.LastOrDefault();
       var response = new ResponseModel<DomModel>
@@ -564,7 +563,7 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PointModel>>
       {
@@ -580,11 +579,11 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
       var source = $"{criteria["snapshot"]}";
       var document = new FileInfo(source);
-      var response = new ResponseModel<IList<OptionModel>>();
+      var response = new ResponseModel<IList<DerivativeModel>>();
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
       {
@@ -592,7 +591,14 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          response.Data = JsonSerializer.Deserialize<SnapshotModel>(content).Options;
+          var point = JsonSerializer.Deserialize<PointModel>(content).Derivatives;
+
+          response.Data = point["Options"]
+            .Where(o => screener.MinPrice is null || o.Strike >= screener.MinPrice)
+            .Where(o => screener.MaxPrice is null || o.Strike <= screener.MaxPrice)
+            .Where(o => screener.MinDate is null || o.Expiration >= screener.MinDate)
+            .Where(o => screener.MaxDate is null || o.Expiration <= screener.MaxDate)
+            .ToList();
         }
       }
 
@@ -620,7 +626,7 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<PositionModel>>
       {
@@ -636,7 +642,7 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
     {
       var response = new ResponseModel<IList<OrderModel>>
       {

@@ -20,7 +20,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Tape
     /// </summary>
-    Action<StateModel<OrderModel>> OrderStream { get; set; }
+    Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Connect
@@ -59,7 +59,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<DomModel>> GetDom(DomScreenModel screener, Hashtable criteria);
+    Task<ResponseModel<DomModel>> GetDom(DomScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
@@ -67,7 +67,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get options
@@ -75,7 +75,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -83,7 +83,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get orders
@@ -91,7 +91,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Send new orders
@@ -119,7 +119,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Tape
     /// </summary>
-    public virtual Action<StateModel<OrderModel>> OrderStream { get; set; }
+    public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Constructor
@@ -167,7 +167,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<DomModel>> GetDom(DomScreenModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<DomModel>> GetDom(DomScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get historical bars
@@ -175,7 +175,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get options
@@ -183,7 +183,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OptionModel>>> GetOptions(OptionScreenModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -191,7 +191,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get orders
@@ -199,7 +199,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Send new orders

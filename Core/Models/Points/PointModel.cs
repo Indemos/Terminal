@@ -34,9 +34,9 @@ namespace Terminal.Core.Models
     public double? Last { get; set; }
 
     /// <summary>
-    /// Reference to market state at the current time
+    /// Reference to the current market data state
     /// </summary>
-    public string Snapshot { get; set; }
+    public string State { get; set; }
 
     /// <summary>
     /// Time stamp
@@ -54,6 +54,11 @@ namespace Terminal.Core.Models
     public BarModel Bar { get; set; }
 
     /// <summary>
+    /// Depth of market
+    /// </summary>
+    public DomModel Dom { get; set; }
+
+    /// <summary>
     /// Reference to the instrument
     /// </summary>
     public InstrumentModel Instrument { get; set; }
@@ -64,12 +69,18 @@ namespace Terminal.Core.Models
     public IDictionary<string, PointModel> Series { get; set; }
 
     /// <summary>
+    /// List of option contracts for the current point
+    /// </summary>
+    public virtual IDictionary<string, IList<DerivativeModel>> Derivatives { get; set; }
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public PointModel()
     {
       Time = DateTime.Now;
       Series = new Dictionary<string, PointModel>();
+      Derivatives = new Dictionary<string, IList<DerivativeModel>>();
     }
 
     /// <summary>

@@ -1,6 +1,5 @@
 using IBApi;
 using InteractiveBrokers.Messages;
-using System.Linq;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
@@ -17,21 +16,22 @@ namespace InteractiveBrokers.Mappers
     {
       var action = orderModel.Transaction;
       var order = new Order();
-      var contract = new Contract();
-
-      contract.Symbol = action.Instrument.Name;
-      contract.Exchange = orderModel.Exchange ?? "SMART";
-      contract.SecType = action.Instrument.Security ?? "STK";
-      contract.Currency = orderModel.Currency ?? nameof(CurrencyEnum.USD);
-
-      if (string.Equals(action.Instrument.Security, "OPT"))
+      var contract = new Contract
       {
-        var option = action.Option;
+        Symbol = action.Instrument.Name,
+        SecType = action.Instrument.Security ?? "STK",
+        Exchange = action.Instrument.Exchange ?? "SMART",
+        Currency = action.Instrument.Currency?.Name ?? nameof(CurrencyEnum.USD)
+      };
 
-        contract.LocalSymbol = option.Option.Instrument.Name;
-        contract.Multiplier = $"{option.Option.Instrument.Leverage}";
+      if (string.Equals(contract.SecType, "OPT"))
+      {
+        var option = action.Derivative;
+
         contract.Strike = option.Strike.Value;
-        contract.LastTradeDateOrContractMonth = $"{option.ExpirationDate:yyyyMMdd}";
+        contract.LocalSymbol = option.Contract.Instrument.Name;
+        contract.Multiplier = $"{option.Contract.Instrument.Leverage}";
+        contract.LastTradeDateOrContractMonth = $"{option.Expiration:yyyyMMdd}";
 
         switch (option.Side)
         {

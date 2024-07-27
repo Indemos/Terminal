@@ -52,9 +52,9 @@ namespace Terminal.Core.Models
     public InstrumentModel Instrument { get; set; }
 
     /// <summary>
-    /// Option
+    /// Options and futures
     /// </summary>
-    public OptionModel Option { get; set; }
+    public DerivativeModel Derivative { get; set; }
 
     /// <summary>
     /// Constructor
