@@ -1,4 +1,5 @@
 using System;
+using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
@@ -7,31 +8,41 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Strike count
     /// </summary>
-    public int? Count { get; set; }
+    public virtual int? Count { get; set; }
 
     /// <summary>
     /// Symbol name
     /// </summary>
-    public string Name { get; set; }
+    public virtual string Name { get; set; }
 
     /// <summary>
     /// Min strike
     /// </summary>
-    public double? MinPrice { get; set; }
+    public virtual double? MinPrice { get; set; }
 
     /// <summary>
     /// Max strike
     /// </summary>
-    public double? MaxPrice { get; set; }
+    public virtual double? MaxPrice { get; set; }
 
     /// <summary>
     /// Start date
     /// </summary>
-    public DateTime? MinDate { get; set; }
+    public virtual DateTime? MinDate { get; set; }
 
     /// <summary>
     /// End date
     /// </summary>
-    public DateTime? MaxDate { get; set; }
+    public virtual DateTime? MaxDate { get; set; }
+
+    /// <summary>
+    /// Side
+    /// </summary>
+    public virtual OptionSideEnum? Side { get; set; }
+
+    /// <summary>
+    /// Symbol data
+    /// </summary>
+    public virtual PointModel Point { get; set; }
   }
 }

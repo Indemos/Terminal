@@ -8,11 +8,11 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Order status
     /// </summary>
-    public string Status { get; set; }
+    public virtual string Status { get; set; }
 
     /// <summary>
     /// Symbols
     /// </summary>
-    public IList<string> Names { get; set; }
+    public virtual IList<string> Names { get; set; }
   }
 }

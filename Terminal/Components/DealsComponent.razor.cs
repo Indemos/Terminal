@@ -1,0 +1,39 @@
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
+using System.Threading.Tasks;
+using Terminal.Records;
+using Terminal.Core.Enums;
+using Terminal.Core.Models;
+
+namespace Terminal.Components
+{
+  public partial class DealsComponent
+  {
+    /// <summary>
+    /// Table records
+    /// </summary>
+    protected virtual IList<ActiveOrderRecord> Items { get; set; } = [];
+
+    /// <summary>
+    /// Update table records 
+    /// </summary>
+    /// <param name="items"></param>
+    public virtual Task UpdateItems(ObservableCollection<PositionModel> items)
+    {
+      Items = items.Select(o => new ActiveOrderRecord
+      {
+        Time = o.Order.Transaction.Time,
+        Name = o.Order.Transaction.Instrument.Name,
+        Side = o.Order.Side ?? OrderSideEnum.None,
+        Size = o.Order.Transaction.Volume ?? 0,
+        ClosePrice = o.Order.Transaction.Price ?? 0,
+        OpenPrice = o.Price ?? 0,
+        Gain = o.GainLoss ?? 0
+
+      }).ToList();
+
+      return Render(() => { });
+    }
+  }
+}

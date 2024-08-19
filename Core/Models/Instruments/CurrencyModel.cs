@@ -8,17 +8,17 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Currency
     /// </summary>
-    public string Name { get; set; }
+    public virtual string Name { get; set; }
 
     /// <summary>
     /// Long swap rate for keeping position overnight
     /// </summary>
-    public double? SwapLong { get; set; }
+    public virtual double? SwapLong { get; set; }
 
     /// <summary>
     /// Short swap rate for keeping position overnight
     /// </summary>
-    public double? SwapShort { get; set; }
+    public virtual double? SwapShort { get; set; }
 
     /// <summary>
     /// Constructor
@@ -33,6 +33,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public object Clone() => MemberwiseClone() as CurrencyModel;
+    public virtual object Clone() => MemberwiseClone() as CurrencyModel;
   }
 }

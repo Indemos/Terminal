@@ -7,31 +7,31 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Delta
     /// </summary>
-    public double? Delta { get; set; }
+    public virtual double? Delta { get; set; }
 
     /// <summary>
     /// Gamma
     /// </summary>
-    public double? Gamma { get; set; }
+    public virtual double? Gamma { get; set; }
 
     /// <summary>
     /// Rho
     /// </summary>
-    public double? Rho { get; set; }
+    public virtual double? Rho { get; set; }
 
     /// <summary>
     /// Theta
     /// </summary>
-    public double? Theta { get; set; }
+    public virtual double? Theta { get; set; }
 
     /// <summary>
     /// Vega
     /// </summary>
-    public double? Vega { get; set; }
+    public virtual double? Vega { get; set; }
 
     /// <summary>
     /// Clone
     /// </summary>
-    public object Clone() => MemberwiseClone() as VariableModel;
+    public virtual object Clone() => MemberwiseClone() as VariableModel;
   }
 }

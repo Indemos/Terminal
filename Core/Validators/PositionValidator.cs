@@ -10,7 +10,6 @@ namespace Terminal.Core.Validators
   {
     public PositionValidator()
     {
-      RuleFor(o => o.Orders).NotEmpty();
       RuleFor(o => o.Order).NotEmpty().SetValidator(new OrderValidator());
     }
   }

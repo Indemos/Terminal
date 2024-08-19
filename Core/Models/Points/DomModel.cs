@@ -4,7 +4,7 @@ namespace Terminal.Core.Models
 {
   public class DomModel
   {
-    public IList<PointModel> Asks { get; set; }
-    public IList<PointModel> Bids { get; set; }
+    public virtual IList<PointModel> Asks { get; set; }
+    public virtual IList<PointModel> Bids { get; set; }
   }
 }

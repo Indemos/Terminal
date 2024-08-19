@@ -11,67 +11,67 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Bid
     /// </summary>
-    public double? Bid { get; set; }
+    public virtual double? Bid { get; set; }
 
     /// <summary>
     /// Ask
     /// </summary>
-    public double? Ask { get; set; }
+    public virtual double? Ask { get; set; }
 
     /// <summary>
     /// Volume of the bid 
     /// </summary>
-    public double? BidSize { get; set; }
+    public virtual double? BidSize { get; set; }
 
     /// <summary>
     /// Volume of the ask
     /// </summary>
-    public double? AskSize { get; set; }
+    public virtual double? AskSize { get; set; }
 
     /// <summary>
     /// Last price or value
     /// </summary>
-    public double? Last { get; set; }
+    public virtual double? Last { get; set; }
 
     /// <summary>
     /// Reference to the current market data state
     /// </summary>
-    public string State { get; set; }
+    public virtual string State { get; set; }
 
     /// <summary>
     /// Time stamp
     /// </summary>
-    public DateTime? Time { get; set; }
+    public virtual DateTime? Time { get; set; }
 
     /// <summary>
     /// Aggregation period for the quotes
     /// </summary>
-    public TimeSpan? TimeFrame { get; set; }
+    public virtual TimeSpan? TimeFrame { get; set; }
 
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    public BarModel Bar { get; set; }
+    public virtual BarModel Bar { get; set; }
 
     /// <summary>
     /// Depth of market
     /// </summary>
-    public DomModel Dom { get; set; }
+    public virtual DomModel Dom { get; set; }
 
     /// <summary>
     /// Reference to the instrument
     /// </summary>
-    public InstrumentModel Instrument { get; set; }
+    public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// Values from related series synced with the current data point, e.g. moving average or another indicator
     /// </summary>
-    public IDictionary<string, PointModel> Series { get; set; }
+    public virtual IDictionary<string, PointModel> Series { get; set; }
 
     /// <summary>
     /// List of option contracts for the current point
     /// </summary>
-    public virtual IDictionary<string, IList<DerivativeModel>> Derivatives { get; set; }
+    public virtual IDictionary<string, IList<InstrumentModel>> Derivatives { get; set; }
 
     /// <summary>
     /// Constructor
@@ -80,14 +80,14 @@ namespace Terminal.Core.Models
     {
       Time = DateTime.Now;
       Series = new Dictionary<string, PointModel>();
-      Derivatives = new Dictionary<string, IList<DerivativeModel>>();
+      Derivatives = new Dictionary<string, IList<InstrumentModel>>();
     }
 
     /// <summary>
     /// Clone
     /// </summary>
     /// <returns></returns>
-    public object Clone()
+    public virtual object Clone()
     {
       var clone = MemberwiseClone() as PointModel;
 
@@ -100,15 +100,25 @@ namespace Terminal.Core.Models
     /// Grouping index
     /// </summary>
     /// <returns></returns>
-    public long GetIndex() => Time.Value.Ticks;
+    public virtual long GetIndex()
+    {
+      if (TimeFrame is not null)
+      {
+        return Time.Round(TimeFrame).Value.Ticks;
+      }
+
+      return Time.Value.Ticks;
+    }
 
     /// <summary>
     /// Grouping implementation
     /// </summary>
     /// <param name="previous"></param>
     /// <returns></returns>
-    public IGroup Update(IGroup previous)
+    public virtual IGroup Update(IGroup previous)
     {
+      Bar ??= new BarModel();
+
       if (previous is not null)
       {
         var o = previous as PointModel;
@@ -118,7 +128,6 @@ namespace Terminal.Core.Models
         Bid ??= o.Bid ?? price;
         AskSize += o.AskSize ?? 0.0;
         BidSize += o.BidSize ?? 0.0;
-        Bar ??= new BarModel();
         Bar.Close = Last = price;
         Bar.Open = o.Bar?.Open ?? Bar.Open ?? price;
         Bar.Low = Math.Min(Bar.Low ?? price, o.Bar?.Low ?? price);

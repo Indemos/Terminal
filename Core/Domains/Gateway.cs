@@ -75,7 +75,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -183,7 +183,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<DerivativeModel>>> GetOptions(OptionScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get positions
@@ -217,84 +217,6 @@ namespace Terminal.Core.Domains
     /// Dispose
     /// </summary>
     public virtual void Dispose() => Disconnect();
-
-    /// <summary>
-    /// Set missing order properties
-    /// </summary>
-    /// <param name="orders"></param>
-    protected virtual IList<OrderModel> CorrectOrders(params OrderModel[] orders)
-    {
-      foreach (var nextOrder in orders)
-      {
-        nextOrder.Type ??= OrderTypeEnum.Market;
-        nextOrder.TimeSpan ??= OrderTimeSpanEnum.Gtc;
-        nextOrder.Price ??= GetOpenPrice(nextOrder);
-        nextOrder.Transaction ??= new TransactionModel();
-        nextOrder.Transaction.Time ??= DateTime.Now;
-        nextOrder.Transaction.Status ??= OrderStatusEnum.None;
-        nextOrder.Transaction.Operation ??= OperationEnum.In;
-      }
-
-      return orders;
-    }
-
-    /// <summary>
-    /// Ensure all properties have correct values
-    /// </summary>
-    /// <param name="orders"></param>
-    protected virtual ResponseMapModel<OrderModel> ValidateOrders(params OrderModel[] orders)
-    {
-      var orderRules = InstanceService<OrderPriceValidator>.Instance;
-      var response = new ResponseMapModel<OrderModel>();
-
-      foreach (var order in orders)
-      {
-        var errors = new List<ErrorModel>();
-
-        errors.AddRange(orderRules.Validate(order).Errors.Select(o => new ErrorModel
-        {
-          ErrorCode = o.ErrorCode,
-          ErrorMessage = o.ErrorMessage,
-          PropertyName = o.PropertyName
-        }));
-
-        errors.AddRange(order.Orders.SelectMany(o => orderRules.Validate(o).Errors.Select(o => new ErrorModel
-        {
-          ErrorCode = o.ErrorCode,
-          ErrorMessage = o.ErrorMessage,
-          PropertyName = o.PropertyName
-        })));
-
-        response.Count += errors.Count;
-        response.Items.Add(new ResponseModel<OrderModel>
-        {
-          Data = order,
-          Errors = errors
-        });
-      }
-
-      return response;
-    }
-
-    /// <summary>
-    /// Define open price based on order
-    /// </summary>
-    /// <param name="nextOrder"></param>
-    protected virtual double? GetOpenPrice(OrderModel nextOrder)
-    {
-      var pointModel = nextOrder?.Transaction?.Instrument?.Points?.LastOrDefault();
-
-      if (pointModel is not null)
-      {
-        switch (nextOrder?.Side)
-        {
-          case OrderSideEnum.Buy: return pointModel.Ask;
-          case OrderSideEnum.Sell: return pointModel.Bid;
-        }
-      }
-
-      return null;
-    }
 
     /// <summary>
     /// Update points

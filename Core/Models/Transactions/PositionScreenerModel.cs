@@ -7,6 +7,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Symbols
     /// </summary>
-    public IList<string> Names { get; set; }
+    public virtual IList<string> Names { get; set; }
   }
 }

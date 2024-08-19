@@ -9,47 +9,47 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Price the makes order active, e.g. limit price for stop limit order
     /// </summary>
-    public double? ActivationPrice { get; set; }
+    public virtual double? ActivationPrice { get; set; }
 
     /// <summary>
     /// Desired price for the order to fill, e.g. stop price for stop order and limit price for limit order
     /// </summary>
-    public double? Price { get; set; }
-
-    /// <summary>
-    /// Custom order type
-    /// </summary>
-    public string Instruction { get; set; }
+    public virtual double? Price { get; set; }
 
     /// <summary>
     /// Type
     /// </summary>
-    public OrderTypeEnum? Type { get; set; }
+    public virtual OrderTypeEnum? Type { get; set; }
 
     /// <summary>
     /// Side
     /// </summary>
-    public OrderSideEnum? Side { get; set; }
+    public virtual OrderSideEnum? Side { get; set; }
 
     /// <summary>
     /// Time in force
     /// </summary>
-    public OrderTimeSpanEnum? TimeSpan { get; set; }
+    public virtual OrderTimeSpanEnum? TimeSpan { get; set; }
+
+    /// <summary>
+    /// Custom order type
+    /// </summary>
+    public virtual InstructionEnum? Instruction { get; set; }
 
     /// <summary>
     /// Transaction
     /// </summary>
-    public TransactionModel Transaction { get; set; }
+    public virtual TransactionModel Transaction { get; set; }
 
     /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
-    public IList<OrderModel> Orders { get; set; }
+    public virtual IList<OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Order events
     /// </summary>
-    public Action<MessageModel<OrderModel>> OrderStream { get; set; }
+    public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Constructor
@@ -63,7 +63,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public object Clone()
+    public virtual object Clone()
     {
       var clone = MemberwiseClone() as OrderModel;
 

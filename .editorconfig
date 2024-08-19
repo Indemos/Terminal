@@ -14,3 +14,4 @@ indent_size = 2
 dotnet_diagnostic.CA2227.severity = none
 dotnet_diagnostic.CA1305.severity = none
 dotnet_diagnostic.CA1062.severity = none
+dotnet_diagnostic.CS9057.severity = none

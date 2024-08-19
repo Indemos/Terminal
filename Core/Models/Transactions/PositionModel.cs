@@ -8,111 +8,124 @@ namespace Terminal.Core.Models
   public class PositionModel : ICloneable
   {
     /// <summary>
+    /// Open price
+    /// </summary>
+    public virtual double? Price { get; set; }
+
+    /// <summary>
     /// Actual PnL measured in account's currency
     /// </summary>
-    public double? GainLoss { get; set; }
+    public virtual double? GainLoss { get; set; }
 
     /// <summary>
     /// Min possible PnL in account's currency
     /// </summary>
-    public double? GainLossMin { get; set; }
+    public virtual double? GainLossMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in account's currency
     /// </summary>
-    public double? GainLossMax { get; set; }
+    public virtual double? GainLossMax { get; set; }
 
     /// <summary>
     /// Actual PnL in points
     /// </summary>
-    public double? GainLossPoints { get; set; }
+    public virtual double? GainLossPoints { get; set; }
 
     /// <summary>
     /// Min possible PnL in points
     /// </summary>
-    public double? GainLossPointsMin { get; set; }
+    public virtual double? GainLossPointsMin { get; set; }
 
     /// <summary>
     /// Max possible PnL in points
     /// </summary>
-    public double? GainLossPointsMax { get; set; }
+    public virtual double? GainLossPointsMax { get; set; }
 
     /// <summary>
     /// Aggregated order
     /// </summary>
-    public OrderModel Order { get; set; }
-
-    /// <summary>
-    /// Related orders
-    /// </summary>
-    public IList<OrderModel> Orders { get; set; }
-
-    /// <summary>
-    /// Close price estimate
-    /// </summary>
-    public double? ClosePriceEstimate
-    {
-      get
-      {
-        var point = Order.Transaction.Instrument.Points.LastOrDefault();
-
-        if (point is not null)
-        {
-          switch (Order.Side)
-          {
-            case OrderSideEnum.Buy: return point.Bid;
-            case OrderSideEnum.Sell: return point.Ask;
-          }
-        }
-
-        return null;
-      }
-    }
+    public virtual OrderModel Order { get; set; }
 
     /// <summary>
     /// Estimated PnL in account's currency
     /// </summary>
-    public double? GainLossEstimate => GetGainLossEstimate(Order.Transaction.Price);
+    public virtual double? GainLossEstimate => GetGainLossEstimate();
 
     /// <summary>
     /// Estimated PnL in points
     /// </summary>
-    public double? GainLossPointsEstimate => GetGainLossPointsEstimate(Order.Transaction.Price);
+    public virtual double? GainLossPointsEstimate => GetGainLossPointsEstimate();
 
     /// <summary>
     /// Cummulative estimated PnL in account's currency for all positions in the same direction
     /// </summary>
-    public double? GainLossAverageEstimate => GetGainLossPointsEstimate();
+    public virtual double? GainLossAverageEstimate => GetGainLossPointsEstimate();
 
     /// <summary>
     /// Cummulative estimated PnL in points for all positions in the same direction
     /// </summary>
-    public double? GainLossPointsAverageEstimate => GetGainLossEstimate();
+    public virtual double? GainLossPointsAverageEstimate => GetGainLossEstimate();
+
+    /// <summary>
+    /// Estimate current or close price for one of the instruments in the order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public virtual double? GetSidePriceEstimate(OrderModel order)
+    {
+      var point = order.Transaction.Instrument.Point;
+
+      if (point is not null)
+      {
+        switch (order.Side)
+        {
+          case OrderSideEnum.Buy: return point.Bid;
+          case OrderSideEnum.Sell: return point.Ask;
+        }
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Position direction
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected double? GetSide(OrderModel order)
+    {
+      switch (order.Side)
+      {
+        case OrderSideEnum.Buy: return 1;
+        case OrderSideEnum.Sell: return -1;
+      }
+
+      return null;
+    }
 
     /// <summary>
     /// Estimated PnL in points
     /// </summary>
-    /// <param name="price"></param>
     /// <returns></returns>
-    protected virtual double? GetGainLossPointsEstimate(double? price = null)
+    protected double? GetGainLossPointsEstimate()
     {
-      var direction = 0;
+      var estimate = 0.0;
 
-      switch (Order.Side)
+      if (Equals(Order.Instruction, InstructionEnum.Group))
       {
-        case OrderSideEnum.Buy: direction = 1; break;
-        case OrderSideEnum.Sell: direction = -1; break;
+        estimate = Order
+          .Orders
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Sum(o => ((GetSidePriceEstimate(o) - o.Transaction.Price) * GetSide(o)) ?? 0);
+      }
+      else
+      {
+        estimate = ((GetSidePriceEstimate(Order) - Order.Transaction.Price) * GetSide(Order)) ?? 0;
       }
 
-      var estimate = ((ClosePriceEstimate - Order.Transaction.Price) * direction) ?? 0.0;
-
-      if (price is not null)
-      {
-        estimate = ((ClosePriceEstimate - price) * direction) ?? 0.0;
-
-        GainLossPointsMin = Math.Min(GainLossPointsMin ?? estimate, estimate);
-        GainLossPointsMax = Math.Max(GainLossPointsMax ?? estimate, estimate);
-      }
+      GainLossPointsMin = Math.Min(GainLossPointsMin ?? estimate, estimate);
+      GainLossPointsMax = Math.Max(GainLossPointsMax ?? estimate, estimate);
 
       return estimate;
     }
@@ -120,35 +133,23 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Estimated PnL in account's currency
     /// </summary>
-    /// <param name="price"></param>
     /// <returns></returns>
-    protected virtual double? GetGainLossEstimate(double? price = null)
+    protected double? GetGainLossEstimate()
     {
       var action = Order.Transaction;
       var step = action.Instrument.StepValue / action.Instrument.StepSize;
-      var estimate = action.Volume * (GetGainLossPointsEstimate(price) * step - action.Instrument.Commission) ?? 0.0;
+      var estimate = action.Volume * (GetGainLossPointsEstimate() * step - action.Instrument.Commission) ?? 0.0;
 
-      if (price is not null)
-      {
-        GainLossMin = Math.Min(GainLossMin ?? estimate, estimate);
-        GainLossMax = Math.Max(GainLossMax ?? estimate, estimate);
-      }
+      GainLossMin = Math.Min(GainLossMin ?? estimate, estimate);
+      GainLossMax = Math.Max(GainLossMax ?? estimate, estimate);
 
       return estimate;
-    }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public PositionModel()
-    {
-      Orders = [];
     }
 
     /// <summary>
     /// Clone
     /// </summary>
-    public object Clone()
+    public virtual object Clone()
     {
       var clone = MemberwiseClone() as PositionModel;
 

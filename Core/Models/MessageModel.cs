@@ -7,16 +7,16 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Event type
     /// </summary>
-    public ActionEnum Action { get; set; }
+    public virtual ActionEnum Action { get; set; }
 
     /// <summary>
     /// Current or next value to be set
     /// </summary>
-    public T Next { get; set; }
+    public virtual T Next { get; set; }
 
     /// <summary>
     /// Previous value
     /// </summary>
-    public T Previous { get; set; }
+    public virtual T Previous { get; set; }
   }
 }

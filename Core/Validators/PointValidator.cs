@@ -14,7 +14,6 @@ namespace Terminal.Core.Validators
       RuleFor(o => o.Ask).NotEmpty();
       RuleFor(o => o.Last).NotEmpty();
       RuleFor(o => o.Time).NotEmpty();
-      RuleFor(o => o.Instrument).NotEmpty().SetValidator(new InstrumentValidator());
     }
   }
 }

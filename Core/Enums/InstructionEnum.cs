@@ -3,7 +3,8 @@ namespace Terminal.Core.Enums
   public enum InstructionEnum : byte
   {
     None = 0,
-    Brace = 1,
-    Combination = 2
+    Side = 1,
+    Brace = 2,
+    Group = 3
   }
 }

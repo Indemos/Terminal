@@ -5,21 +5,21 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Symbol name
     /// </summary>
-    public string Name { get; set; }
+    public virtual string Name { get; set; }
 
     /// <summary>
     /// Security type
     /// </summary>
-    public string Security { get; set; }
+    public virtual string Security { get; set; }
 
     /// <summary>
     /// Exchange
     /// </summary>
-    public string Exchange { get; set; }
+    public virtual string Exchange { get; set; }
 
     /// <summary>
     /// Currency
     /// </summary>
-    public string Currency { get; set; }
+    public virtual string Currency { get; set; }
   }
 }

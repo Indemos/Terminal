@@ -7,11 +7,11 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Item
     /// </summary>
-    public T Data { get; set; }
+    public virtual T Data { get; set; }
 
     /// <summary>
     /// Items
     /// </summary>
-    public IList<ErrorModel> Errors { get; set; } = [];
+    public virtual IList<ErrorModel> Errors { get; set; } = [];
   }
 }
