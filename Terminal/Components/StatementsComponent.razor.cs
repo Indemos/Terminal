@@ -23,54 +23,41 @@ namespace Terminal.Components
     public virtual Task UpdateItems(IList<IAccount> accounts)
     {
       var values = new List<InputData>();
-      var positions = accounts.SelectMany(account => account.Positions).OrderBy(o => o.Order.Transaction.Time).ToList();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
+      var orders = accounts
+        .SelectMany(account => account.Positions.SelectMany(o => o.Order.Orders.Concat([o.Order])))
+        .OrderBy(o => o.Transaction.Time)
+        .ToList();
 
-      if (positions.Any())
+      if (orders.Any())
       {
         values.Add(new InputData
         {
-          Time = positions.First().Order.Transaction.Time.Value,
+          Time = orders.First().Transaction.Time.Value,
           Value = 0,
           Min = 0,
           Max = 0
         });
       }
 
-      for (var i = 0; i < positions.Count; i++)
+      for (var i = 0; i < orders.Count; i++)
       {
-        var position = positions[i];
+        var o = orders[i];
 
         values.Add(new InputData
         {
-          Time = position.Order.Transaction.Time.Value,
-          Value = position.GainLoss.Value,
-          Min = position.GainLossMin.Value,
-          Max = position.GainLossMax.Value,
-          Commission = position.Order.Transaction.Instrument.Commission.Value * 2,
-          Direction = GetDirection(position)
+          Min = o.GainMin.Value,
+          Max = o.GainMax.Value,
+          Time = o.Transaction.Time.Value,
+          Direction = o.GetDirection().Value,
+          Value = o.GetGainEstimate(o.Transaction.Price).Value,
+          Commission = o.Transaction.Instrument.Commission.Value * 2
         });
       }
 
       Stats = new Score { Items = values, Balance = balance }.Calculate();
 
       return InvokeAsync(StateHasChanged);
-    }
-
-    /// <summary>
-    /// Order side to bonary direction
-    /// </summary>
-    /// <param name="position"></param>
-    /// <returns></returns>
-    protected virtual int GetDirection(PositionModel position)
-    {
-      switch (position.Order.Side)
-      {
-        case OrderSideEnum.Buy: return 1;
-        case OrderSideEnum.Sell: return -1;
-      }
-
-      return 0;
     }
 
     /// <summary>

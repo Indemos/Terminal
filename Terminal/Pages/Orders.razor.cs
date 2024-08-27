@@ -143,7 +143,7 @@ namespace Terminal.Pages
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          Volume = 1,
+          CurrentVolume = 1,
           Instrument = assetSell
         }
       };
@@ -154,7 +154,7 @@ namespace Terminal.Pages
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          Volume = 1,
+          CurrentVolume = 1,
           Instrument = assetBuy
         }
       };
@@ -163,8 +163,8 @@ namespace Terminal.Pages
       Adapter.CreateOrders(orderSell);
 
       var account = Adapter.Account;
-      var buy = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Buy);
-      var sell = account.ActivePositions.Values.First(o => o.Order.Side == OrderSideEnum.Sell);
+      var buy = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Buy);
+      var sell = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Sell);
 
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
@@ -172,7 +172,7 @@ namespace Terminal.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in Adapter.Account.ActivePositions.Values)
+      foreach (var position in Adapter.Account.ActivePositions)
       {
         var side = OrderSideEnum.Buy;
 
@@ -187,7 +187,7 @@ namespace Terminal.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Order.Transaction.Volume,
+            CurrentVolume = position.Order.Transaction.CurrentVolume,
             Instrument = position.Order.Transaction.Instrument
           }
         };

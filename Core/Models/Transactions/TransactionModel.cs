@@ -37,11 +37,6 @@ namespace Terminal.Core.Models
     public virtual DateTime? Time { get; set; }
 
     /// <summary>
-    /// Transaction type, e.g. withdrawal or order placement
-    /// </summary>
-    public virtual OperationEnum? Operation { get; set; }
-
-    /// <summary>
     /// Status of the order, e.g. Pending
     /// </summary>
     public virtual OrderStatusEnum? Status { get; set; }

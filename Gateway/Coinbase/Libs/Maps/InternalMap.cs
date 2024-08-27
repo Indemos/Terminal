@@ -90,17 +90,12 @@ namespace Coinbase.Mappers
         //Side = GetPositionSide(position.Side)
       };
 
-      var gainLossPoints = 0; //  position.AverageEntryPrice - position.AssetCurrentPrice;
       var gainLoss = 0; // position.CostBasis - position.MarketValue;
 
       return new PositionModel
       {
-        GainLossPointsMax = gainLossPoints,
-        GainLossPointsMin = gainLossPoints,
-        GainLossPoints = gainLossPoints,
-        GainLossMax = gainLoss,
-        GainLossMin = gainLoss,
-        GainLoss = gainLoss,
+        GainMax = gainLoss,
+        GainMin = gainLoss,
         Order = order
       };
     }

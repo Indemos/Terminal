@@ -34,11 +34,6 @@ namespace Terminal.Core.Models
     public virtual double? Last { get; set; }
 
     /// <summary>
-    /// Reference to the current market data state
-    /// </summary>
-    public virtual string State { get; set; }
-
-    /// <summary>
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }

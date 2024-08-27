@@ -9,10 +9,10 @@ using Terminal.Core.Services;
 
 namespace Terminal.Core.Indicators
 {
-    /// <summary>
-    /// Calculation mode
-    /// </summary>
-    public enum AveragePriceEnum : byte
+  /// <summary>
+  /// Calculation mode
+  /// </summary>
+  public enum AveragePriceEnum : byte
   {
     Bid = 1,
     Ask = 2,
@@ -38,14 +38,14 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<double> Values { get; protected set; } = [];
 
     /// <summary>
     /// Calculate single value
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override MovingAverageIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override MovingAverageIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 

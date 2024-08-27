@@ -6,9 +6,10 @@ namespace Terminal.Records
   /// <summary>
   /// Template record
   /// </summary>
-  public struct ActiveOrderRecord
+  public struct PositionRecord
   {
     public string Name { get; set; }
+    public string Group { get; set; }
     public double Size { get; set; }
     public double Gain { get; set; }
     public double OpenPrice { get; set; }

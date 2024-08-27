@@ -1,6 +1,8 @@
+using Distribution.Models;
 using Distribution.Services;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.IO;
@@ -11,6 +13,7 @@ using System.Threading.Tasks;
 using System.Timers;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Simulation
@@ -57,8 +60,10 @@ namespace Simulation
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<IList<ErrorModel>> Connect()
+    public override async Task<ResponseModel<StatusEnum>> Connect()
     {
+      var response = new ResponseModel<StatusEnum>();
+
       await Disconnect();
 
       SetupAccounts(Account);
@@ -73,10 +78,11 @@ namespace Simulation
 
       _instruments.ForEach(o => _connections.Add(o.Value));
 
-      Account.Positions.CollectionChanged += OnPositionUpdate;
       Account.Instruments.ForEach(async o => await Subscribe(o.Value));
 
-      return null;
+      response.Data = StatusEnum.Success;
+
+      return response;
     }
 
     /// <summary>
@@ -84,8 +90,10 @@ namespace Simulation
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
+      var response = new ResponseModel<StatusEnum>();
+
       await Unsubscribe(instrument);
 
       Account.Instruments[instrument.Name].Points.CollectionChanged += OnPointUpdate;
@@ -93,10 +101,11 @@ namespace Simulation
       var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
       var scheduler = InstanceService<ScheduleService>.Instance;
+      var options = new OptionModel { IsRemovable = false };
       var interval = new Timer(span);
 
       interval.Enabled = true;
-      interval.AutoReset = true;
+      interval.AutoReset = false;
       interval.Elapsed += (sender, e) => scheduler.Send(() =>
       {
         var point = GetState(_instruments, points);
@@ -114,30 +123,34 @@ namespace Simulation
           point.Instrument = instrument;
           point.TimeFrame = instrument.TimeFrame;
 
+          instrument.Point = point;
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, point.TimeFrame);
-        }
 
-        interval.Enabled = true;
-      });
+          interval.Enabled = true;
+        }
+      }, options);
 
       _subscriptions[instrument.Name] = interval;
 
-      return null;
+      response.Data = StatusEnum.Success;
+
+      return response;
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<IList<ErrorModel>> Disconnect()
+    public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
+      var response = new ResponseModel<StatusEnum>();
+
       Account.Instruments.ForEach(async o => await Unsubscribe(o.Value));
-      Account.Positions.CollectionChanged -= OnPositionUpdate;
 
       _connections?.ForEach(o => o?.Dispose());
       _connections?.Clear();
 
-      return Task.FromResult<IList<ErrorModel>>(null);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -145,8 +158,10 @@ namespace Simulation
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
+      var response = new ResponseModel<StatusEnum>();
+
       Account.Instruments[instrument.Name].Points.CollectionChanged -= OnPointUpdate;
 
       if (_subscriptions.ContainsKey(instrument.Name))
@@ -155,16 +170,16 @@ namespace Simulation
         _subscriptions.Remove(instrument.Name);
       }
 
-      return Task.FromResult<IList<ErrorModel>>(null);
+      return Task.FromResult(response);
     }
 
     /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
@@ -184,15 +199,15 @@ namespace Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
+      var orderIds = orders.Select(o => o.Transaction.Id).ToList();
 
-      foreach (var nextOrder in orders)
-      {
-        Account.ActiveOrders[nextOrder.Transaction.Id].Transaction.Status = OrderStatusEnum.Canceled;
-        Account.ActiveOrders.Remove(nextOrder.Transaction.Id);
-      }
+      Account.ActiveOrders = new ConcurrentQueue<OrderModel>(Account
+        .ActiveOrders
+        .Where(o => orderIds.Contains(o.Transaction.Id) is false)
+        .ToList());
 
       return Task.FromResult(response);
     }
@@ -211,18 +226,6 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Update balance after processing position
-    /// </summary>
-    /// <param name="message"></param>
-    protected virtual void OnPositionUpdate(object sender, NotifyCollectionChangedEventArgs e)
-    {
-      foreach (PositionModel message in e.NewItems)
-      {
-        Account.Balance += message.GainLoss;
-      }
-    }
-
-    /// <summary>
     /// Process pending order
     /// </summary>
     /// <param name="nextOrder"></param>
@@ -231,28 +234,9 @@ namespace Simulation
     {
       nextOrder.Transaction.Status = OrderStatusEnum.Placed;
 
-      Account.Orders.Add(nextOrder);
-      Account.ActiveOrders.Add(nextOrder.Transaction.Id, nextOrder);
+      Account.ActiveOrders.Enqueue(nextOrder);
 
       return nextOrder;
-    }
-
-    /// <summary>
-    /// Define open price based on order
-    /// </summary>
-    /// <param name="nextOrder"></param>
-    protected virtual double? GetOpenPrice(OrderModel nextOrder, PointModel point)
-    {
-      if (point is not null)
-      {
-        switch (nextOrder?.Side)
-        {
-          case OrderSideEnum.Buy: return point.Ask;
-          case OrderSideEnum.Sell: return point.Bid;
-        }
-      }
-
-      return null;
     }
 
     /// <summary>
@@ -262,37 +246,62 @@ namespace Simulation
     /// <returns></returns>
     protected virtual PositionModel SendOrder(OrderModel nextOrder)
     {
-      var point = nextOrder?.Transaction?.Instrument?.Points?.LastOrDefault();
-      var nextPosition = CreatePosition(nextOrder, point);
+      var positions = Account.ActivePositions.ToList();
+      var nextPosition = CreatePosition(nextOrder);
       var groupOrders = nextPosition
         .Order
         .Orders
         .Where(o => Equals(o.Instruction, InstructionEnum.Side))
         .ToList();
 
-      nextOrder.Transaction.Status = OrderStatusEnum.Filled;
+      Account.ActivePositions.Clear();
 
-      foreach (var posData in Account.ActivePositions)
+      foreach (var position in positions)
       {
-        var position = posData.Value;
-        var name = position.Order.Transaction.Instrument;
+        UpdateSide(position.Order, nextPosition.Order);
 
-        if (Equals(position.Order.Instruction, InstructionEnum.Group))
+        nextPosition
+          .Order
+          .Orders
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .ForEach(o => UpdateSide(position.Order, o));
+
+        position
+          .Order
+          .Orders
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .ForEach(o => UpdateSide(o, nextPosition.Order));
+
+        position
+          .Order
+          .Orders
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .ForEach(o => o
+            .Orders
+            .Where(subOrder => Equals(subOrder.Instruction, InstructionEnum.Side))
+            .ForEach(subOrder => UpdateSide(subOrder, nextPosition.Order)));
+
+        var sum =
+          position.Order.Transaction.CurrentVolume +
+          position.Order.Orders.Sum(o => o.Transaction.CurrentVolume);
+
+        switch (true)
         {
-          foreach (var groupOrder in groupOrders)
-          {
-            Account.ActivePositions[posData.Key] = Equals(name, groupOrder.Transaction.Instrument) ?
-              UpdatePosition(position, groupOrder) :
-              Account.ActivePositions[posData.Key];
-          }
-
-          continue;
+          case true when sum.Is(0): Account.Positions.Enqueue(position); break;
+          case true when sum.Is(0) is false: Account.ActivePositions.Enqueue(position); break;
         }
-
-        Account.ActivePositions[posData.Key] = Equals(name, nextPosition.Order.Transaction.Instrument) ?
-          UpdatePosition(position, nextPosition.Order) :
-          Account.ActivePositions[posData.Key];
       }
+
+      var nextSum =
+        nextPosition.Order.Transaction.CurrentVolume +
+        nextPosition.Order.Orders.Sum(o => o.Transaction.CurrentVolume);
+
+      if (nextSum.Is(0) is false)
+      {
+        Account.ActivePositions.Enqueue(nextPosition);
+      }
+
+      Account.Orders.Enqueue(nextPosition.Order);
 
       return nextPosition;
     }
@@ -302,27 +311,36 @@ namespace Simulation
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual PositionModel CreatePosition(OrderModel order, PointModel point)
+    protected virtual PositionModel CreatePosition(OrderModel order)
     {
+      void updateOrder(OrderModel o)
+      {
+        o.Type ??= OrderTypeEnum.Market;
+        o.TimeSpan ??= OrderTimeSpanEnum.Gtc;
+        o.Price = o.GetPriceEstimate();
+        o.Transaction ??= new TransactionModel();
+        o.Transaction.Time ??= DateTime.Now;
+        o.Transaction.Status = OrderStatusEnum.Filled;
+        o.Transaction.CurrentVolume = o.Transaction.Volume;
+        o.Transaction.Price = o.Price;
+      }
+
+      var position = new PositionModel();
       var nextOrder = order.Clone() as OrderModel;
 
-      nextOrder.Type ??= OrderTypeEnum.Market;
-      nextOrder.TimeSpan ??= OrderTimeSpanEnum.Gtc;
-      nextOrder.Price ??= GetOpenPrice(nextOrder, point);
-      nextOrder.Transaction ??= new TransactionModel();
-      nextOrder.Transaction.Time ??= DateTime.Now;
-      nextOrder.Transaction.Status ??= OrderStatusEnum.None;
-      nextOrder.Transaction.Operation ??= OperationEnum.In;
-      nextOrder.Transaction.Status = OrderStatusEnum.Filled;
-      nextOrder.Transaction.Price = nextOrder.Price;
-
-      var nextPosition = new PositionModel
+      if (nextOrder.Transaction is not null)
       {
-        Price = nextOrder.Price,
-        Order = nextOrder
-      };
+        updateOrder(nextOrder);
+      }
 
-      return nextPosition;
+      nextOrder
+        .Orders
+        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .ForEach(o => updateOrder(o));
+
+      position.Order = nextOrder;
+
+      return position;
     }
 
     /// <summary>
@@ -332,8 +350,8 @@ namespace Simulation
     /// <returns></returns>
     protected virtual double? GetGroupPrice(params OrderModel[] orders)
     {
-      var numerator = orders.Sum(o => o.Transaction.Volume * o.Transaction.Price);
-      var denominator = orders.Sum(o => o.Transaction.Volume);
+      var numerator = orders.Sum(o => o.Transaction.CurrentVolume * o.Transaction.Price);
+      var denominator = orders.Sum(o => o.Transaction.CurrentVolume);
 
       return numerator / denominator;
     }
@@ -344,55 +362,61 @@ namespace Simulation
     /// <param name="order"></param>
     /// <param name="update"></param>
     /// <returns></returns>
-    protected virtual OrderModel UpdateGroup(OrderModel order, OrderModel update)
+    protected virtual ResponseModel<OrderModel> UpdateSide(OrderModel order, OrderModel update)
     {
-      var nextOrder = order.Clone() as OrderModel;
-      var action = nextOrder.Transaction;
+      var response = new ResponseModel<OrderModel>();
+      var orderName = order.Transaction.Instrument.Name;
+      var updateName = update.Transaction.Instrument.Name;
+
+      if (Equals(updateName, orderName) is false)
+      {
+        response.Errors.Add(new ErrorModel { ErrorMessage = nameof(StatusEnum.Error) });
+        return response;
+      }
+
+      var action = order.Transaction;
+
+      if (action.CurrentVolume.Is(0))
+      {
+        response.Errors.Add(new ErrorModel { ErrorMessage = nameof(StatusEnum.Error) });
+        return response;
+      }
 
       action.Time = update.Transaction.Time;
       action.Descriptor = update.Transaction.Descriptor ?? action.Descriptor;
 
-      if (Equals(update.Side, nextOrder.Side))
+      if (Equals(update.Side, order.Side))
       {
-        action.Volume += update.Transaction.Volume;
-        action.Price = GetGroupPrice(nextOrder, update);
+        action.CurrentVolume += update.Transaction.Volume;
+        action.Volume = action.CurrentVolume;
+        action.Price = GetGroupPrice(order, update);
+        order.Price = action.Price;
       }
       else
       {
-        action.Price = update.Price;
-        action.Volume = Math.Abs(action.Volume.Value - update.Transaction.Volume.Value);
-      }
+        var volume = action.CurrentVolume - update.Transaction.Volume;
 
-      return nextOrder;
-    }
+        action.CurrentVolume = Math.Abs(volume ?? 0);
 
-    /// <summary>
-    /// Create position when there is a position 
-    /// </summary>
-    /// <param name="position"></param>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected virtual PositionModel UpdatePosition(PositionModel position, OrderModel order)
-    {
-      if (Equals(position.Order.Transaction.Instrument, order.Transaction.Instrument))
-      {
-        var nextPosition = position.Clone() as PositionModel;
-        nextPosition.Order = UpdateGroup(nextPosition.Order, order);
-        return nextPosition;
-      }
-
-      for (var i = 0; i < position.Order.Orders.Count; i++)
-      {
-        if (Equals(position.Order.Orders[i].Transaction.Instrument, order.Transaction.Instrument))
+        if (volume < 0)
         {
-          position.Order.Orders[i] = UpdateGroup(position.Order.Orders[i], order);
+          action.Volume = action.CurrentVolume;
+          action.Price = update.Price;
+          order.Price = action.Price;
+          order.Side = Equals(order.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+        }
+
+        if (volume.Is(0))
+        {
+          action.Price = update.Price;
+          Account.Balance += order.GetGainEstimate();
         }
       }
 
-      position.GainLoss = position.GainLossEstimate;
-      position.GainLossPoints = position.GainLossPointsEstimate;
+      update.Transaction.CurrentVolume = 0;
+      response.Data = order;
 
-      return position;
+      return response;
     }
 
     /// <summary>
@@ -404,13 +428,12 @@ namespace Simulation
       var positionOrders = Account
         .ActivePositions
         .SelectMany(position => position
-          .Value
           .Order
           .Orders
           .Where(order => Equals(order.Instruction, InstructionEnum.Brace)));
 
-      var estimates = Account.ActivePositions.Select(o => o.Value.GainLossEstimate).ToList();
-      var activeOrders = Account.ActiveOrders.Values.Concat(positionOrders);
+      var estimates = Account.ActivePositions.Select(o => o.GetGainEstimate()).ToList();
+      var activeOrders = Account.ActiveOrders.Concat(positionOrders);
 
       foreach (var order in activeOrders)
       {
@@ -556,10 +579,7 @@ namespace Simulation
         using (var content = archive.Entries.First().Open())
         {
           var optionMessage = JsonSerializer.Deserialize<PointModel>(content);
-
-          optionMessage.State = source;
           optionMessage.Instrument = new InstrumentModel { Name = name };
-
           return optionMessage;
         }
       }
@@ -567,7 +587,6 @@ namespace Simulation
       var inputMessage = File.ReadAllText(source);
       var pointMessage = JsonSerializer.Deserialize<PointModel>(inputMessage);
 
-      pointMessage.State = source;
       pointMessage.Instrument = new InstrumentModel { Name = name };
 
       return pointMessage;
@@ -692,7 +711,7 @@ namespace Simulation
     {
       var response = new ResponseModel<IList<PositionModel>>
       {
-        Data = [.. Account.ActivePositions.Values]
+        Data = [.. Account.ActivePositions]
       };
 
       return Task.FromResult(response);
@@ -708,7 +727,7 @@ namespace Simulation
     {
       var response = new ResponseModel<IList<OrderModel>>
       {
-        Data = [.. Account.ActiveOrders.Values]
+        Data = [.. Account.ActiveOrders]
       };
 
       return Task.FromResult(response);

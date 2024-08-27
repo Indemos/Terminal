@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
@@ -8,11 +7,11 @@ using Terminal.Core.Models;
 
 namespace Terminal.Core.Indicators
 {
-    /// <summary>
-    /// Implementation
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class AverageTrueRangeIndicator : Indicator<PointModel, AverageTrueRangeIndicator>
+  /// <summary>
+  /// Implementation
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  public class AverageTrueRangeIndicator : Indicator<PointModel, AverageTrueRangeIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -22,14 +21,14 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<double> Values { get; protected set; } = [];
 
     /// <summary>
     /// Calculate single value
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override AverageTrueRangeIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override AverageTrueRangeIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
       var previousPoint = collection.ElementAtOrDefault(collection.Count - 2);
@@ -45,7 +44,7 @@ namespace Terminal.Core.Indicators
 
       if (Values.Count > Interval)
       {
-        value = (Values.Last() * Math.Max(Interval - 1, 0) + value) / Interval; 
+        value = (Values.Last() * Math.Max(Interval - 1, 0) + value) / Interval;
       }
 
       switch (Values.Count < collection.Count)

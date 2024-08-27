@@ -105,14 +105,14 @@ namespace Terminal.Tests
       {
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 1, Instrument = instrumentX }
+        Transaction = new() { CurrentVolume = 1, Instrument = instrumentX }
       };
 
       var orderY = new OrderModel
       {
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 1, Instrument = instrumentY }
+        Transaction = new() { CurrentVolume = 1, Instrument = instrumentY }
       };
 
       base.CreateOrders(orderX);

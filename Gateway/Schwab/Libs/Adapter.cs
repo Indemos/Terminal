@@ -5,16 +5,17 @@ using Schwab.Mappers;
 using Schwab.Messages;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using System.Timers;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
@@ -71,9 +72,9 @@ namespace Schwab
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<IList<ErrorModel>> Connect()
+    public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -94,13 +95,15 @@ namespace Schwab
         _connections.Add(interval);
 
         Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
@@ -108,40 +111,44 @@ namespace Schwab
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
         await Unsubscribe(instrument);
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<IList<ErrorModel>> Disconnect()
+    public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
         _connections?.ForEach(o => o?.Dispose());
         _connections?.Clear();
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult<IList<ErrorModel>>(errors);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -149,11 +156,14 @@ namespace Schwab
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>
+      {
+        Data = StatusEnum.Success
+      };
 
-      return Task.FromResult<IList<ErrorModel>>(errors);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -272,13 +282,13 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await CreateOrder(order));
+        response.Data.Add((await CreateOrder(order)).Data);
       }
 
       return response;
@@ -289,13 +299,13 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await DeleteOrder(order));
+        response.Data.Add((await DeleteOrder(order)).Data);
       }
 
       return response;
@@ -321,17 +331,16 @@ namespace Schwab
         var orders = await GetOrders(null, criteria);
 
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
-        Account.ActivePositions = account
+        Account.ActivePositions = new ConcurrentQueue<PositionModel>(account
           .Data
           .SecuritiesAccount
           .Positions
-          .Select(InternalMap.GetPosition)
-          .ToDictionary(o => o.Order.Transaction.Id);
+          .Select(InternalMap.GetPosition));
 
         Account
           .ActiveOrders
-          .Select(o => o.Value.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Select(o => o.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
 
@@ -509,7 +518,7 @@ namespace Schwab
 
           inResponse.Data.Transaction.Id = orderId;
           inResponse.Data.Transaction.Status = Terminal.Core.Enums.OrderStatusEnum.Filled;
-          Account.ActiveOrders.Add(order.Transaction.Id, order);
+          Account.ActiveOrders.Enqueue(order);
         }
       }
       catch (Exception e)

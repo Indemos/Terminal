@@ -187,8 +187,8 @@ namespace Schwab.Mappers
         Instrument = instrument,
         Price = message.AveragePrice,
         Descriptor = message.Instrument.Symbol,
-        Volume = message.LongQuantity + message.ShortQuantity,
-        CurrentVolume = message.LongQuantity + message.ShortQuantity
+        CurrentVolume = message.LongQuantity + message.ShortQuantity,
+        Volume = message.LongQuantity + message.ShortQuantity
       };
 
       var order = new OrderModel
@@ -198,17 +198,12 @@ namespace Schwab.Mappers
         Side = GetPositionSide(message)
       };
 
-      var gainLossPoints = 0.0;
       var gainLoss = message.LongOpenProfitLoss;
 
       return new PositionModel
       {
-        GainLossPointsMax = gainLossPoints,
-        GainLossPointsMin = gainLossPoints,
-        GainLossPoints = gainLossPoints,
-        GainLossMax = gainLoss,
-        GainLossMin = gainLoss,
-        GainLoss = gainLoss,
+        GainMax = gainLoss,
+        GainMin = gainLoss,
         Order = order
       };
     }

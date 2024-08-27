@@ -1,3 +1,4 @@
+using Distribution.Models;
 using Distribution.Services;
 using IBApi;
 using InteractiveBrokers.Messages;
@@ -1017,6 +1018,6 @@ namespace InteractiveBrokers
         Run(() => cb(whiteBrandingId), null);
     }
 
-    protected void Run(Action cb, object state) => sc.Send(cb, false);
+    protected void Run(Action cb, object state) => sc.Send(cb, new OptionModel { IsRemovable = false });
   }
 }

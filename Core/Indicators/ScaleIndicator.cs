@@ -1,7 +1,6 @@
 using Distribution.Services;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
@@ -10,11 +9,11 @@ using Terminal.Core.Services;
 
 namespace Terminal.Core.Indicators
 {
-    /// <summary>
-    /// Implementation
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    public class ScaleIndicator : Indicator<PointModel, ScaleIndicator>
+  /// <summary>
+  /// Implementation
+  /// </summary>
+  /// <typeparam name="T"></typeparam>
+  public class ScaleIndicator : Indicator<PointModel, ScaleIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -34,7 +33,7 @@ namespace Terminal.Core.Indicators
     /// <summary>
     /// Preserve last calculated value
     /// </summary>
-    public IList<double> Values { get; protected set; } = new List<double>();
+    public IList<double> Values { get; protected set; } = [];
 
     /// <summary>
     /// Preserve last calculated min value
@@ -51,7 +50,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override ScaleIndicator Calculate(ObservableCollection<PointModel> collection)
+    public override ScaleIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 

@@ -6,6 +6,7 @@ using Distribution.Stream;
 using Distribution.Stream.Extensions;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -16,6 +17,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
 namespace Coinbase
@@ -95,9 +97,9 @@ namespace Coinbase
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<IList<ErrorModel>> Connect()
+    public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -118,18 +120,20 @@ namespace Coinbase
         _connections.Add(scheduler);
 
         Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
-    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -144,33 +148,37 @@ namespace Coinbase
             ProductIds = [.. Account.Instruments.Keys]
           });
         }
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<IList<ErrorModel>> Disconnect()
+    public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
         _connections?.ForEach(o => o?.Dispose());
         _connections?.Clear();
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult<IList<ErrorModel>>(errors);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -178,9 +186,9 @@ namespace Coinbase
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -196,13 +204,15 @@ namespace Coinbase
 
         _subscriptions?.ForEach(o => o.Dispose());
         _subscriptions?.Clear();
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
@@ -243,13 +253,13 @@ namespace Coinbase
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await CreateOrder(order));
+        response.Data.Add((await CreateOrder(order)).Data);
       }
 
       return response;
@@ -260,7 +270,7 @@ namespace Coinbase
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
       throw new NotImplementedException();
     }
@@ -284,21 +294,20 @@ namespace Coinbase
         {
           var positions = await SendData<PortfolioBreakdownsMessage>($"/api/v3/brokerage/portfolios/{portfolio.Uuid}");
 
-          Account.ActivePositions = positions
+          Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions
             .Data
             .Breakdown
             .SpotPositions
-            .Select(InternalMap.GetPosition)
-            .ToDictionary(o => o.Order.Transaction.Id, o => o);
+            .Select(InternalMap.GetPosition));
         }
 
         Account.Balance = account.Data.AvailableBalance;
-        Account.ActiveOrders = orders.Data.ToDictionary(o => o.Transaction.Id, o => o);
+        Account.ActiveOrders = new ConcurrentQueue<OrderModel>(orders.Data);
 
         Account
           .ActiveOrders
-          .Select(o => o.Value.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Select(o => o.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
 
@@ -364,12 +373,11 @@ namespace Coinbase
         {
           var positions = await SendData<PortfolioBreakdownsMessage>($"/api/v3/brokerage/portfolios/{portfolio.Uuid}");
 
-          Account.ActivePositions = positions
+          Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions
             .Data
             .Breakdown
             .SpotPositions
-            .Select(InternalMap.GetPosition)
-            .ToDictionary(o => o.Order.Transaction.Id, o => o);
+            .Select(InternalMap.GetPosition));
         }
 
       }

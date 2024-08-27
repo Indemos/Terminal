@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -31,22 +32,22 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// History of orders
     /// </summary>
-    ObservableCollection<OrderModel> Orders { get; set; }
+    ConcurrentQueue<OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Completed trades
     /// </summary>
-    ObservableCollection<PositionModel> Positions { get; set; }
+    ConcurrentQueue<PositionModel> Positions { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    IDictionary<string, OrderModel> ActiveOrders { get; set; }
+    ConcurrentQueue<OrderModel> ActiveOrders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    IDictionary<string, PositionModel> ActivePositions { get; set; }
+    ConcurrentQueue<PositionModel> ActivePositions { get; set; }
 
     /// <summary>
     /// List of instruments
@@ -77,22 +78,22 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// History of completed orders
     /// </summary>
-    public virtual ObservableCollection<OrderModel> Orders { get; set; }
+    public virtual ConcurrentQueue<OrderModel> Orders { get; set; }
 
     /// <summary>
     /// History of completed deals, closed positions
     /// </summary>
-    public virtual ObservableCollection<PositionModel> Positions { get; set; }
+    public virtual ConcurrentQueue<PositionModel> Positions { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    public virtual IDictionary<string, OrderModel> ActiveOrders { get; set; }
+    public virtual ConcurrentQueue<OrderModel> ActiveOrders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    public virtual IDictionary<string, PositionModel> ActivePositions { get; set; }
+    public virtual ConcurrentQueue<PositionModel> ActivePositions { get; set; }
 
     /// <summary>
     /// List of instruments
@@ -109,9 +110,9 @@ namespace Terminal.Core.Domains
 
       Orders = [];
       Positions = [];
+      ActiveOrders = [];
+      ActivePositions = [];
       Instruments = new Dictionary<string, InstrumentModel>();
-      ActiveOrders = new Dictionary<string, OrderModel>();
-      ActivePositions = new Dictionary<string, PositionModel>();
     }
   }
 }

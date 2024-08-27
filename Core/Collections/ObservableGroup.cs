@@ -20,7 +20,7 @@ namespace Terminal.Core.Collections
     IGroup Update(IGroup previous);
   }
 
-  public class ObservableGroupCollection<T> : ObservableCollection<T> where T : IGroup
+  public class ObservableGroup<T> : ObservableCollection<T> where T : IGroup
   {
     /// <summary>
     /// Groups
@@ -30,7 +30,7 @@ namespace Terminal.Core.Collections
     /// <summary>
     /// Constructor
     /// </summary>
-    public ObservableGroupCollection()
+    public ObservableGroup()
     {
       Groups = new Dictionary<long, int>();
     }

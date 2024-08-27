@@ -7,6 +7,6 @@ namespace Derivative.Models
   public class SectionModel
   {
     public CanvasView View { get; set; }
-    public ObservableGroupCollection<PointModel> Collection { get; set; }
+    public ObservableGroup<PointModel> Collection { get; set; }
   }
 }

@@ -1,12 +1,9 @@
-using Distribution.Services;
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
-using Terminal.Core.Validators;
 
 namespace Terminal.Core.Domains
 {
@@ -20,31 +17,36 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Tape
     /// </summary>
+    Action<MessageModel<PointModel>> PointStream { get; set; }
+
+    /// <summary>
+    /// Tape
+    /// </summary>
     Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
     /// Connect
     /// </summary>
-    Task<IList<ErrorModel>> Connect();
+    Task<ResponseModel<StatusEnum>> Connect();
 
     /// <summary>
     /// Disconnect
     /// </summary>
-    Task<IList<ErrorModel>> Disconnect();
+    Task<ResponseModel<StatusEnum>> Disconnect();
 
     /// <summary>
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument);
+    Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument);
+    Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Get account state
@@ -97,13 +99,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
+    Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
+    Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders);
   }
 
   /// <summary>
@@ -119,6 +121,11 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Tape
     /// </summary>
+    public virtual Action<MessageModel<PointModel>> PointStream { get; set; }
+
+    /// <summary>
+    /// Tape
+    /// </summary>
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
@@ -126,33 +133,34 @@ namespace Terminal.Core.Domains
     /// </summary>
     public Gateway()
     {
+      PointStream = o => { };
       OrderStream = o => { };
     }
 
     /// <summary>
     /// Connect
     /// </summary>
-    public abstract Task<IList<ErrorModel>> Connect();
+    public abstract Task<ResponseModel<StatusEnum>> Connect();
 
     /// <summary>
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public abstract Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument);
+    public abstract Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Disconnect
     /// </summary>
     /// <returns></returns>
-    public abstract Task<IList<ErrorModel>> Disconnect();
+    public abstract Task<ResponseModel<StatusEnum>> Disconnect();
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public abstract Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument);
+    public abstract Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Get account state
@@ -205,13 +213,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Dispose

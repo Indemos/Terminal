@@ -3,11 +3,13 @@ using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Messages;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
@@ -67,9 +69,9 @@ namespace InteractiveBrokers
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<IList<ErrorModel>> Connect()
+    public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -80,13 +82,15 @@ namespace InteractiveBrokers
         SubscribeToOrders();
 
         Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
@@ -94,9 +98,9 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -111,23 +115,29 @@ namespace InteractiveBrokers
         };
 
         _client.ClientSocket.reqTickByTickData(_subscriptions[instrument.Name] = Id, contract, "BidAsk", 0, true);
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<IList<ErrorModel>> Disconnect()
+    public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
+      var response = new ResponseModel<StatusEnum>();
+
       _client?.ClientSocket?.eDisconnect();
 
-      return Task.FromResult<IList<ErrorModel>>([]);
+      response.Data = StatusEnum.Success;
+
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -135,9 +145,9 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -146,13 +156,15 @@ namespace InteractiveBrokers
           _client?.ClientSocket?.cancelTickByTickData(id);
           _subscriptions.Remove(instrument.Name);
         }
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult<IList<ErrorModel>>(errors);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -246,13 +258,13 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await CreateOrder(order));
+        response.Data.Add((await CreateOrder(order)).Data);
       }
 
       return response;
@@ -263,13 +275,13 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await DeleteOrder(order));
+        response.Data.Add((await DeleteOrder(order)).Data);
       }
 
       return response;
@@ -331,13 +343,13 @@ namespace InteractiveBrokers
         var orders = await GetOrders(null, criteria);
         var positions = await GetPositions(null, criteria);
 
-        Account.ActiveOrders = orders.Data?.ToDictionary(o => o.Transaction.Id) ?? [];
-        Account.ActivePositions = positions.Data?.ToDictionary(o => o.Order.Transaction.Id) ?? [];
+        Account.ActiveOrders = new ConcurrentQueue<OrderModel>(orders.Data ?? []);
+        Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions.Data ?? []);
 
         Account
           .ActiveOrders
-          .Select(o => o.Value.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Select(o => o.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
 
@@ -575,7 +587,7 @@ namespace InteractiveBrokers
 
         if (string.Equals(exResponse.OrderState.Status, "Submitted", StringComparison.InvariantCultureIgnoreCase))
         {
-          Account.ActiveOrders.Add(order.Transaction.Id, order);
+          Account.ActiveOrders.Enqueue(order);
         }
       }
       catch (Exception e)

@@ -1,4 +1,4 @@
-using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using Terminal.Core.Models;
 
 namespace Terminal.Core.Domains
@@ -23,7 +23,7 @@ namespace Terminal.Core.Domains
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    TOutput Calculate(ObservableCollection<TInput> collection);
+    TOutput Calculate(IList<TInput> collection);
   }
 
   /// <summary>
@@ -53,6 +53,6 @@ namespace Terminal.Core.Domains
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    public virtual TOutput Calculate(ObservableCollection<TInput> collection) => default;
+    public virtual TOutput Calculate(IList<TInput> collection) => default;
   }
 }

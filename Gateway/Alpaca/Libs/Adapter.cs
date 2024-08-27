@@ -5,6 +5,7 @@ using Distribution.Stream;
 using Distribution.Stream.Extensions;
 using System;
 using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -15,6 +16,7 @@ using System.Text.Json.Nodes;
 using System.Threading;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
@@ -71,9 +73,9 @@ namespace Alpaca
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<IList<ErrorModel>> Connect()
+    public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -99,13 +101,15 @@ namespace Alpaca
         _connections.Add(scheduler);
 
         Account.Instruments.ForEach(async o => await Subscribe(o.Value));
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
@@ -113,9 +117,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Subscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -126,33 +130,37 @@ namespace Alpaca
           Trades = [instrument.Name],
           Quotes = [instrument.Name]
         });
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override Task<IList<ErrorModel>> Disconnect()
+    public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
         _connections?.ForEach(o => o?.Dispose());
         _connections?.Clear();
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return Task.FromResult<IList<ErrorModel>>(errors);
+      return Task.FromResult(response);
     }
 
     /// <summary>
@@ -160,9 +168,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override async Task<IList<ErrorModel>> Unsubscribe(InstrumentModel instrument)
+    public override async Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var errors = new List<ErrorModel>();
+      var response = new ResponseModel<StatusEnum>();
 
       try
       {
@@ -172,13 +180,15 @@ namespace Alpaca
           Trades = [instrument.Name],
           Quotes = [instrument.Name]
         });
+
+        response.Data = StatusEnum.Success;
       }
       catch (Exception e)
       {
-        errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
+        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
       }
 
-      return errors;
+      return response;
     }
 
     /// <summary>
@@ -197,13 +207,13 @@ namespace Alpaca
         var orders = await GetOrders(null, criteria);
 
         Account.Balance = account.Data.Equity;
-        Account.ActiveOrders = orders.Data.ToDictionary(o => o.Transaction.Id);
-        Account.ActivePositions = positions.Data.ToDictionary(o => o.Order.Transaction.Id);
+        Account.ActiveOrders = new ConcurrentQueue<OrderModel>(orders.Data ?? []);
+        Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions.Data ?? []);
 
         Account
           .ActiveOrders
-          .Select(o => o.Value.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Value.Order.Transaction.Instrument.Name))
+          .Select(o => o.Transaction.Instrument.Name)
+          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
 
@@ -390,13 +400,13 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await CreateOrder(order));
+        response.Data.Add((await CreateOrder(order)).Data);
       }
 
       return response;
@@ -407,13 +417,13 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseMapModel<OrderModel>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseMapModel<OrderModel>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Items.Add(await DeleteOrder(order));
+        response.Data.Add((await DeleteOrder(order)).Data);
       }
 
       return response;
@@ -521,7 +531,7 @@ namespace Alpaca
         Id = orderMessage.TradeId,
         Time = orderMessage.TimestampUtc,
         Price = orderMessage.Price,
-        Volume = orderMessage.Size,
+        CurrentVolume = orderMessage.Size,
         Instrument = new InstrumentModel { Name = orderMessage.Symbol }
       };
 
@@ -591,7 +601,7 @@ namespace Alpaca
 
         if ((int)exResponse.Message.StatusCode < 400)
         {
-          Account.ActiveOrders.Add(order.Transaction.Id, order);
+          Account.ActiveOrders.Enqueue(order);
         }
       }
       catch (Exception e)
@@ -621,7 +631,9 @@ namespace Alpaca
 
         if ((int)exResponse.Message.StatusCode < 400)
         {
-          Account.ActiveOrders.Remove(order.Transaction.Id);
+          Account.ActiveOrders = new ConcurrentQueue<OrderModel>(Account
+            .ActiveOrders
+            .Where(o => Equals(o.Transaction.Id, order.Transaction.Id) is false));
         }
       }
       catch (Exception e)

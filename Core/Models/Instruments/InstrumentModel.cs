@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using Terminal.Core.Collections;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -75,12 +76,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    public virtual ObservableGroupCollection<PointModel> Points { get; set; }
+    public virtual ObservableGroup<PointModel> Points { get; set; }
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public virtual ObservableGroupCollection<PointModel> PointGroups { get; set; }
+    public virtual ObservableGroup<PointModel> PointGroups { get; set; }
 
     /// <summary>
     /// Constructor

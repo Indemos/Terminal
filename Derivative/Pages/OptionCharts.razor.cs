@@ -5,11 +5,12 @@ using Canvas.Core.Models;
 using Canvas.Core.Services;
 using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
+using Derivative.Models;
+using Derivative.Pages.Popups;
+using Derivative.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using MudBlazor;
-using Derivative.Models;
-using Derivative.Services;
 using Schwab;
 using Schwab.Messages;
 using SkiaSharp;
@@ -22,9 +23,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Derivative.Pages.Popups;
-using System.Text.Json;
-using Distribution.Stream;
 
 namespace Derivative.Pages
 {
@@ -111,9 +109,9 @@ namespace Derivative.Pages
         await Group(caption, response.Group, options, async (view, records) =>
         {
           await ShowBalance(
-            responseData.Price,
             responseData.ExpressionUp,
             responseData.ExpressionDown,
+            responseData.Price,
             view,
             records);
         });
@@ -221,10 +219,14 @@ namespace Derivative.Pages
 
             if (DataService.Options.TryGetValue(data.Name, out var items) && items is not null)
             {
-              var rangeItems = items
-                .Where(o => o.Derivative.Expiration.Value.Date >= data.Range.Start.Value.Date)
-                .Where(o => o.Derivative.Expiration.Value.Date <= data.Range.End.Value.Date)
-                .ToList();
+              var rangeItems = items.Where(o =>
+              {
+                var min = o.Derivative.Expiration.Value.Date >= data.Range.Start.Value.Date;
+                var max = o.Derivative.Expiration.Value.Date <= data.Range.End.Value.Date;
+
+                return min && max;
+
+              }).ToList();
 
               await action(caption, data, rangeItems);
             }
@@ -237,7 +239,7 @@ namespace Derivative.Pages
                 ["strikeCount"] = 100,
                 ["symbol"] = data.Name?.ToUpper(),
                 ["fromDate"] = $"{data.Range.Start:yyyy-MM-dd}",
-                ["toDate"] = $"{data.Range.Start:yyyy-MM-dd}"
+                ["toDate"] = $"{data.Range.End:yyyy-MM-dd}"
               });
 
               await action(caption, data, options.Data);
@@ -266,55 +268,62 @@ namespace Derivative.Pages
       CanvasView view,
       IList<InstrumentModel> options)
     {
-      var groups = options
-        .OrderBy(o => o.Derivative.Strike)
-        .GroupBy(o => o.Derivative.Strike, o => o)
-        .ToList();
-
-      var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-      var comDown = new ComponentModel { Color = SKColors.OrangeRed };
-      var points = groups.Select((group, i) =>
+      try
       {
-        var ups = Compute(expressionUp, [.. group]);
-        var downs = -Compute(expressionDown, [.. group]);
+        var groups = options
+          .OrderBy(o => o.Derivative.Strike)
+          .GroupBy(o => o.Derivative.Strike, o => o)
+          .ToList();
 
-        return new Shape
+        var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+        var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+        var points = groups.Select((group, i) =>
         {
-          X = i,
-          Groups = new Dictionary<string, IShape>
+          var ups = Compute(expressionUp, [.. group]);
+          var downs = -Compute(expressionDown, [.. group]);
+
+          return new Shape
           {
-            ["Indicators"] = new Shape
+            X = i,
+            Groups = new Dictionary<string, IShape>
             {
-              Groups = new Dictionary<string, IShape>
+              ["Indicators"] = new Shape
               {
-                ["Ups"] = new BarShape { Y = ups, Component = comUp },
-                ["Downs"] = new BarShape { Y = downs, Component = comDown }
+                Groups = new Dictionary<string, IShape>
+                {
+                  ["Ups"] = new BarShape { Y = ups, Component = comUp },
+                  ["Downs"] = new BarShape { Y = downs, Component = comDown }
+                }
               }
             }
-          }
-        } as IShape;
+          } as IShape;
 
-      }).ToList();
+        }).ToList();
 
-      string showIndex(double o)
-      {
-        var index = Math.Max(Math.Min((int)Math.Round(o), groups.Count - 1), 0);
-        var group = groups.ElementAtOrDefault(index) ?? default;
-        var price = group?.ElementAtOrDefault(0)?.Derivative?.Strike;
+        string showIndex(double o)
+        {
+          var index = Math.Max(Math.Min((int)Math.Round(o), groups.Count - 1), 0);
+          var group = groups.ElementAtOrDefault(index) ?? default;
+          var price = group?.ElementAtOrDefault(0)?.Derivative?.Strike;
 
-        return price is null ? null : $"{price}";
+          return price is null ? null : $"{price}";
+        }
+
+        var composer = new GroupComposer
+        {
+          Name = "Indicators",
+          Items = points,
+          ShowIndex = showIndex,
+          View = view
+        };
+
+        await composer.Create<CanvasEngine>();
+        await composer.Update();
       }
-
-      var composer = new GroupComposer
+      catch (Exception e)
       {
-        Name = "Indicators",
-        Items = points,
-        ShowIndex = showIndex,
-        View = view
-      };
-
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
+        Snackbar.Add("Invalid expression: " + e.Message);
+      }
     }
 
     /// <summary>
@@ -326,86 +335,96 @@ namespace Derivative.Pages
     /// <param name="options"></param>
     /// <returns></returns>
     protected async Task ShowBalance(
-      double price,
       string expressionUp,
       string expressionDown,
+      double price,
       CanvasView view,
       IList<InstrumentModel> options)
     {
-      var groups = options
-        .OrderBy(o => o.Derivative.Strike)
-        .GroupBy(o => o.Derivative.Strike, o => o)
-        .ToList();
-
-      var index = groups
-        .Select((o, i) => new { Index = i, Data = o })
-        .FirstOrDefault(o => o.Data.Key > price)
-        ?.Index ?? 0;
-
-      if (index is 0)
+      try
       {
-        index = groups.Count / 2;
-      }
-
-      var indexUp = index;
-      var indexDown = index;
-      var sumUp = 0.0;
-      var sumDown = 0.0;
-      var points = new IShape[groups.Count];
-      var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-      var comDown = new ComponentModel { Color = SKColors.OrangeRed };
-
-      for (var i = 0; i < groups.Count; i++)
-      {
-        if (indexUp < groups.Count)
+        if (price is 0)
         {
-          var sum = Compute(expressionUp, [.. groups.ElementAtOrDefault(indexUp)]);
-
-          points[indexUp] = new Shape();
-          points[indexUp].Groups = new Dictionary<string, IShape>();
-          points[indexUp].Groups["Indicators"] = new Shape();
-          points[indexUp].Groups["Indicators"].Groups = new Dictionary<string, IShape>();
-          points[indexUp].Groups["Indicators"].Groups["Ups"] = new AreaShape { Y = sumUp + sum, Component = comUp };
-
-          sumUp += sum;
+          price = options.FirstOrDefault()?.Basis?.Point?.Last ?? 0;
         }
 
-        if (indexDown >= 0)
+        var groups = options
+          .OrderBy(o => o.Derivative.Strike)
+          .GroupBy(o => o.Derivative.Strike, o => o)
+          .ToList();
+
+        var index = groups
+          .Select((o, i) => new { Index = i, Data = o })
+          .FirstOrDefault(o => o.Data.Key >= price)
+          ?.Index ?? 0;
+
+        if (index is 0)
         {
-          var sum = Compute(expressionDown, [.. groups.ElementAtOrDefault(indexDown)]);
-
-          points[indexDown] = new Shape();
-          points[indexDown].Groups = new Dictionary<string, IShape>();
-          points[indexDown].Groups["Indicators"] = new Shape();
-          points[indexDown].Groups["Indicators"].Groups = new Dictionary<string, IShape>();
-          points[indexDown].Groups["Indicators"].Groups["Downs"] = new AreaShape { Y = sumDown + sum, Component = comDown };
-
-          sumDown += sum;
+          index = groups.Count / 2;
         }
 
-        indexUp++;
-        indexDown--;
+        var indexUp = index;
+        var indexDown = index;
+        var sumUp = 0.0;
+        var sumDown = 0.0;
+        var points = new IShape[groups.Count];
+        var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+        var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+
+        for (var i = 0; i < groups.Count; i++)
+        {
+          if (indexUp < groups.Count)
+          {
+            var sum = Compute(expressionUp, [.. groups.ElementAtOrDefault(indexUp)]);
+
+            sumUp += sum;
+            points[indexUp] = new Shape();
+            points[indexUp].Groups = new Dictionary<string, IShape>();
+            points[indexUp].Groups["Indicators"] = new Shape();
+            points[indexUp].Groups["Indicators"].Groups = new Dictionary<string, IShape>();
+            points[indexUp].Groups["Indicators"].Groups["Ups"] = new AreaShape { Y = sumUp, Component = comUp };
+          }
+
+          if (indexDown >= 0)
+          {
+            var sum = Compute(expressionDown, [.. groups.ElementAtOrDefault(indexDown)]);
+
+            sumDown += sum;
+            points[indexDown] = new Shape();
+            points[indexDown].Groups = new Dictionary<string, IShape>();
+            points[indexDown].Groups["Indicators"] = new Shape();
+            points[indexDown].Groups["Indicators"].Groups = new Dictionary<string, IShape>();
+            points[indexDown].Groups["Indicators"].Groups["Downs"] = new AreaShape { Y = sumDown, Component = comDown };
+          }
+
+          indexUp++;
+          indexDown--;
+        }
+
+        string showIndex(double o)
+        {
+          var index = Math.Max(Math.Min((int)Math.Round(o), groups.Count - 1), 0);
+          var group = groups.ElementAtOrDefault(index) ?? default;
+          var price = group.ElementAtOrDefault(0)?.Derivative?.Strike;
+
+          return price is null ? null : $"{price}";
+        }
+
+        var composer = new GroupComposer
+        {
+          Name = "Indicators",
+          Items = points,
+          ShowIndex = showIndex,
+          View = view
+        };
+
+        await composer.Create<CanvasEngine>();
+        await composer.Update();
       }
-
-      string showIndex(double o)
+      catch (Exception e)
       {
-        var index = Math.Max(Math.Min((int)Math.Round(o), groups.Count - 1), 0);
-        var group = groups.ElementAtOrDefault(index) ?? default;
-        var price = group.ElementAtOrDefault(0)?.Derivative?.Strike;
-
-        return price is null ? null : $"{price}";
+        Snackbar.Add("Invalid expression: " + e.Message);
       }
-
-      var composer = new GroupComposer
-      {
-        Name = "Indicators",
-        Items = points,
-        ShowIndex = showIndex,
-        View = view
-      };
-
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
     }
 
     /// <summary>
@@ -417,71 +436,79 @@ namespace Derivative.Pages
     /// <returns></returns>
     protected async Task ShowMaps(string expression, CanvasView view, IList<InstrumentModel> options)
     {
-      var groups = options
-        .OrderBy(o => o.Derivative.Strike)
-        .GroupBy(o => o.Derivative.Strike, o => o)
-        .ToDictionary(o => o.Key.Value, o => o
-          .OrderBy(option => option.Derivative.Expiration)
-          .GroupBy(option => option.Derivative.Expiration)
-          .ToDictionary(group => group.Key.Value, 
-           group => Compute(expression, [.. group])));
-
-      var min = groups.Min(o => o.Value.Values.Min());
-      var max = groups.Max(o => o.Value.Values.Max());
-      var colorService = new ColorService { Min = min, Max = max, Mode = ShadeEnum.Intensity };
-      var expirationMap = new Dictionary<string, DateTime>();
-      var points = groups.Select(group =>
+      try
       {
-        return new ColorMapShape
+        var groups = options
+          .OrderBy(o => o.Derivative.Strike)
+          .GroupBy(o => o.Derivative.Strike, o => o)
+          .ToDictionary(o => o.Key.Value, o => o
+            .OrderBy(option => option.Derivative.Expiration)
+            .GroupBy(option => option.Derivative.Expiration)
+            .ToDictionary(group => group.Key.Value,
+             group => Compute(expression, [.. group])));
+
+        var min = groups.Min(o => o.Value.Values.Min());
+        var max = groups.Max(o => o.Value.Values.Max());
+        var colorService = new ColorService { Min = min, Max = max, Mode = ShadeEnum.Intensity };
+        var expirationMap = new Dictionary<string, DateTime>();
+        var points = groups.Select(group =>
         {
-          Points = group.Value.Select(date =>
+          return new ColorMapShape
           {
-            expirationMap[$"{date.Key}"] = date.Key;
-
-            return new ComponentModel
+            Points = group.Value.Select(date =>
             {
-              Size = date.Value,
-              Color = colorService.GetColor(date.Value)
-            } as ComponentModel?;
+              expirationMap[$"{date.Key}"] = date.Key;
 
-          }).ToList()
+              return new ComponentModel
+              {
+                Size = date.Value,
+                Color = colorService.GetColor(date.Value)
+              } as ComponentModel?;
+
+            }).ToList()
+          };
+        }).ToArray();
+
+        var expirations = expirationMap
+          .Values
+          .OrderBy(o => o)
+          .Select(o => $"{o:yyyy-MM-dd}")
+          .ToList();
+
+        string showIndex(double o)
+        {
+          var index = Math.Min(Math.Max((int)o, 0), points.Length - 1);
+          var name = groups.Keys.ElementAtOrDefault(index);
+
+          return $"{name}";
+        }
+
+        string showValue(double o)
+        {
+          var index = Math.Min(Math.Max((int)o, 0), expirations.Count - 1);
+          var caption = expirations.ElementAtOrDefault(index);
+
+          return $"{caption}";
+        }
+
+        var composer = new MapComposer
+        {
+          Name = "Indicators",
+          Items = points,
+          Dimension = points.Max(o => o.Points.Count),
+          ValueCount = Math.Min(expirations.Count, 5),
+          ShowIndex = showIndex,
+          ShowValue = showValue,
+          View = view
         };
-      }).ToArray();
-      var expirations = expirationMap
-        .Values
-        .OrderBy(o => o)
-        .Select(o => $"{o:yyyy-MM-dd}")
-        .ToList();
 
-      string showIndex(double o)
-      {
-        var index = Math.Min(Math.Max((int)o, 0), points.Length - 1);
-        var name = groups.Keys.ElementAtOrDefault(index);
-
-        return $"{name}";
+        await composer.Create<CanvasEngine>();
+        await composer.Update();
       }
-
-      string showValue(double o)
+      catch (Exception e)
       {
-        var index = Math.Min(Math.Max((int)o, 0), expirations.Count - 1);
-        var caption = expirations.ElementAtOrDefault(index);
-
-        return $"{caption}";
+        Snackbar.Add("Invalid expression: " + e.Message);
       }
-
-      var composer = new MapComposer
-      {
-        Name = "Indicators",
-        Items = points,
-        Dimension = points.Max(o => o.Points.Count),
-        ValueCount = Math.Min(expirations.Count, 5),
-        ShowIndex = showIndex,
-        ShowValue = showValue,
-        View = view
-      };
-
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
     }
 
     /// <summary>

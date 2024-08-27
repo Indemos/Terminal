@@ -117,17 +117,12 @@ namespace InteractiveBrokers.Mappers
         Side = GetPositionSide(message.Contract)
       };
 
-      var gainLossPoints = 0.0;
       var gainLoss = 0.0;
 
       return new PositionModel
       {
-        GainLossPointsMax = gainLossPoints,
-        GainLossPointsMin = gainLossPoints,
-        GainLossPoints = gainLossPoints,
-        GainLossMax = gainLoss,
-        GainLossMin = gainLoss,
-        GainLoss = gainLoss,
+        GainMax = gainLoss,
+        GainMin = gainLoss,
         Order = order
       };
     }

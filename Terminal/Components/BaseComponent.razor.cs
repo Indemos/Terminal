@@ -1,3 +1,4 @@
+using Distribution.Models;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -15,10 +16,23 @@ namespace Terminal.Components
     /// <summary>
     /// Render
     /// </summary>
-    protected virtual Task Render(Action action, bool isRemovable = true) => Updater.Send(() =>
+    protected virtual Task Render(Action action = null, bool isRemovable = true)
     {
-      action();
-      InvokeAsync(StateHasChanged);
-    }, isRemovable).Task;
+      var options = new OptionModel
+      {
+        IsRemovable = false
+      };
+
+      return Updater.Send(() =>
+      {
+        if (action is not null)
+        {
+          action();
+        }
+
+        InvokeAsync(StateHasChanged);
+
+      }, options).Task;
+    }
   }
 }

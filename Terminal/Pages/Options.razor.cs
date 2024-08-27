@@ -1,11 +1,10 @@
-using Terminal.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Components;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
@@ -228,7 +227,7 @@ namespace Terminal.Pages
             Price = shortPut.Point.Bid,
             Transaction = new()
             {
-              Volume = 1,
+              CurrentVolume = 1,
               Instrument = shortPut
             }
           },
@@ -240,7 +239,7 @@ namespace Terminal.Pages
             Price = shortCall.Point.Bid,
             Transaction = new()
             {
-              Volume = 1,
+              CurrentVolume = 1,
               Instrument = shortCall
             }
           }

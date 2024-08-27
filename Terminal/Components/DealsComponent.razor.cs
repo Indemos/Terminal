@@ -1,39 +1,64 @@
+using MudBlazor;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using Terminal.Records;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
+using Terminal.Records;
 
 namespace Terminal.Components
 {
   public partial class DealsComponent
   {
+    protected TableGroupDefinition<PositionRecord> GroupDefinition = new()
+    {
+      GroupName = "Group",
+      Indentation = false,
+      Expandable = true,
+      IsInitiallyExpanded = true,
+      Selector = (e) => e.Group
+    };
+
     /// <summary>
     /// Table records
     /// </summary>
-    protected virtual IList<ActiveOrderRecord> Items { get; set; } = [];
+    protected virtual IList<PositionRecord> Items { get; set; } = [];
 
     /// <summary>
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(ObservableCollection<PositionModel> items)
+    public virtual Task UpdateItems(IEnumerable<PositionModel> items)
     {
-      Items = items.Select(o => new ActiveOrderRecord
+      static PositionRecord getRecord(OrderModel o)
       {
-        Time = o.Order.Transaction.Time,
-        Name = o.Order.Transaction.Instrument.Name,
-        Side = o.Order.Side ?? OrderSideEnum.None,
-        Size = o.Order.Transaction.Volume ?? 0,
-        ClosePrice = o.Order.Transaction.Price ?? 0,
-        OpenPrice = o.Price ?? 0,
-        Gain = o.GainLoss ?? 0
+        return new PositionRecord
+        {
+          Time = o.Transaction.Time,
+          Name = o.Transaction.Instrument.Name,
+          Group = o.Transaction.Instrument.Basis?.Name ?? o.Transaction.Instrument.Name,
+          Side = o.Side ?? OrderSideEnum.None,
+          Size = o.Transaction.Volume ?? 0,
+          OpenPrice = o.Price ?? 0,
+          ClosePrice = o.Transaction.Price ?? 0,
+          Gain = o.GetGainEstimate(o.Transaction.Price) ?? 0
+        };
+      }
+
+      Items = items.SelectMany(pos =>
+      {
+        var record = getRecord(pos.Order);
+        var subRecords = pos
+          .Order
+          .Orders
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Select(o => getRecord(o));
+
+        return subRecords.Concat([record]);
 
       }).ToList();
 
-      return Render(() => { });
+      return Render();
     }
   }
 }
