@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 
@@ -88,11 +89,45 @@ namespace Terminal.Core.Models
     }
 
     /// <summary>
-    /// Estimate current or close price for one of the instruments in the order
+    /// Position direction
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public virtual double? GetPriceEstimate()
+    public double? GetVolume()
+    {
+      var volume = Transaction?.CurrentVolume ?? 0;
+      var sideVolume = Orders.Sum(o => o.Transaction?.CurrentVolume ?? 0);
+
+      return volume + sideVolume;
+    }
+
+    /// <summary>
+    /// Estimate open price for one of the instruments in the order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public virtual double? GetOpenEstimate()
+    {
+      var point = Transaction.Instrument.Point;
+
+      if (point is not null)
+      {
+        switch (Side)
+        {
+          case OrderSideEnum.Buy: return point.Ask;
+          case OrderSideEnum.Sell: return point.Bid;
+        }
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// Estimate close price for one of the instruments in the order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    public virtual double? GetCloseEstimate()
     {
       var point = Transaction.Instrument.Point;
 
@@ -117,7 +152,7 @@ namespace Terminal.Core.Models
     {
       if (Transaction is not null)
       {
-        return (((price ?? GetPriceEstimate()) - Price) * GetDirection()) ?? 0;
+        return (((price ?? GetCloseEstimate()) - Price) * GetDirection()) ?? 0;
       }
 
       return 0;

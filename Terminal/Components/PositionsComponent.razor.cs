@@ -40,7 +40,7 @@ namespace Terminal.Components
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.Transaction.CurrentVolume ?? 0,
           OpenPrice = o.Price ?? 0,
-          ClosePrice = o.GetPriceEstimate() ?? 0,
+          ClosePrice = o.GetCloseEstimate() ?? 0,
           Gain = o.GetGainEstimate() ?? 0
         };
       }

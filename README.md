@@ -1,8 +1,8 @@
-# Trading Terminal and Backtester - Web Version
+# Trading Terminal and Backtester
 
 All-in-one. 
 Trading terminal with generic gateway implementation, tick backtester, charting, and performance evaluator for trading strategies.
-Currently, supports stocks with experimental extension for FX, options, and futures. 
+Supports stocks, FX, options, and futures with experimental support for crypto-currencies. 
 
 # Status 
 
@@ -13,16 +13,17 @@ Currently, supports stocks with experimental extension for FX, options, and futu
 # Disclaimer
 
 The app is in active development state and can be updated without any notice. 
-May contain references to other apps in [this list](https://github.com/Indemos) that were NOT included in the current repository.
+May contain references to other libraries in [this list](https://github.com/Indemos) that were NOT included in the current repository.
 
 # Structure
 
 * **Core** - cross-platform .NET Core class library with main functionality 
 * **Chart** - [canvas](https://github.com/Indemos/Canvas) visualization
-* **Estimator** - class [library](https://github.com/Indemos/Statistics) measuring performance metrics and statistics
+* **Estimator** - class [library](https://github.com/Indemos/Estimator) measuring performance metrics and statistics
 * **Data** - catalog with historical data, any format is acceptable as long as you implement your own parser
-* **Connector** - gateway implementations for brokers and exchanges, including historical and [simulated data](https://github.com/Indemos/Terminal-Connector-Simulation)
-* **Client** - sample application that puts together orders, positions, performance metrics, and charts 
+* **Gateway** - gateway implementations for brokers and exchanges, including historical and simulated data
+* **Terminal** - application that puts together orders, positions, performance metrics, and charts 
+* **Derivative** - application visualizing data from option chains 
 
 # Gateways 
 
@@ -30,12 +31,12 @@ May contain references to other apps in [this list](https://github.com/Indemos) 
 * Alpaca
 * Simulation - virtual orders and market data 
 
-In order to create connector for preferred broker, implement interface `IConnectorModel`.
+In order to create connector for preferred broker, implement interface `IGateway`.
 
 # Trading Strategies
 
-[Examples](https://github.com/Indemos/Terminal/tree/main/Client/Pages) of simple trading strategies can be found in `Client` catalog.
+[Examples](https://github.com/Indemos/Terminal/tree/main/Terminal/Pages) of simple trading strategies can be found in `Terminal` catalog.
 
 # Preview 
 
-![](Screens/Preview.gif)
+![](Screens/Preview.png)

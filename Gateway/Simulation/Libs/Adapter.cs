@@ -281,9 +281,7 @@ namespace Simulation
             .Where(subOrder => Equals(subOrder.Instruction, InstructionEnum.Side))
             .ForEach(subOrder => UpdateSide(subOrder, nextPosition.Order)));
 
-        var sum =
-          position.Order.Transaction.CurrentVolume +
-          position.Order.Orders.Sum(o => o.Transaction.CurrentVolume);
+        var sum = position.Order.GetVolume();
 
         switch (true)
         {
@@ -292,9 +290,7 @@ namespace Simulation
         }
       }
 
-      var nextSum =
-        nextPosition.Order.Transaction.CurrentVolume +
-        nextPosition.Order.Orders.Sum(o => o.Transaction.CurrentVolume);
+      var nextSum = nextPosition.Order.GetVolume();
 
       if (nextSum.Is(0) is false)
       {
@@ -313,11 +309,11 @@ namespace Simulation
     /// <returns></returns>
     protected virtual PositionModel CreatePosition(OrderModel order)
     {
-      void updateOrder(OrderModel o)
+      void updateOrder(OrderModel o, OrderModel group = null)
       {
-        o.Type ??= OrderTypeEnum.Market;
-        o.TimeSpan ??= OrderTimeSpanEnum.Gtc;
-        o.Price = o.GetPriceEstimate();
+        o.Price = o.GetOpenEstimate();
+        o.Type ??= group?.Type ?? OrderTypeEnum.Market;
+        o.TimeSpan ??= group?.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         o.Transaction ??= new TransactionModel();
         o.Transaction.Time ??= DateTime.Now;
         o.Transaction.Status = OrderStatusEnum.Filled;
@@ -326,19 +322,18 @@ namespace Simulation
       }
 
       var position = new PositionModel();
-      var nextOrder = order.Clone() as OrderModel;
 
-      if (nextOrder.Transaction is not null)
+      if (order.Transaction is not null)
       {
-        updateOrder(nextOrder);
+        updateOrder(order);
       }
 
-      nextOrder
+      order
         .Orders
         .Where(o => Equals(o.Instruction, InstructionEnum.Side))
-        .ForEach(o => updateOrder(o));
+        .ForEach(o => updateOrder(o, order));
 
-      position.Order = nextOrder;
+      position.Order = order;
 
       return position;
     }
@@ -365,8 +360,8 @@ namespace Simulation
     protected virtual ResponseModel<OrderModel> UpdateSide(OrderModel order, OrderModel update)
     {
       var response = new ResponseModel<OrderModel>();
-      var orderName = order.Transaction.Instrument.Name;
-      var updateName = update.Transaction.Instrument.Name;
+      var orderName = order.Transaction?.Instrument?.Name;
+      var updateName = update.Transaction?.Instrument?.Name;
 
       if (Equals(updateName, orderName) is false)
       {
