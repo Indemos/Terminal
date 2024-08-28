@@ -109,7 +109,7 @@ namespace Terminal.Tests
       base.CreateOrders(order);
 
       var position = Account.ActivePositions.First();
-      var openPrice = Equals(position.Order.Side, OrderSideEnum.Buy) ? point.Bid : point.Ask;
+      var openPrice = Equals(position.Order.Side, OrderSideEnum.Buy) ? point.Ask : point.Bid;
 
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
