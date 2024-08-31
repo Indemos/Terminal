@@ -48,14 +48,18 @@ namespace Terminal.Components
       Items = items.SelectMany((pos, i) =>
       {
         var group = $"{i + 1}";
-        var record = getRecord(group, pos.Order);
         var subRecords = pos
           .Order
           .Orders
-          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Where(o => Equals(o.Instruction, InstructionEnum.Side) && o.Transaction is not null)
           .Select(o => getRecord(group, o));
 
-        return subRecords.Concat([record]);
+        if (pos.Order.Transaction is not null)
+        {
+          subRecords = subRecords.Append(getRecord(group, pos.Order));
+        }
+
+        return subRecords;
 
       }).ToList();
 

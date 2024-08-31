@@ -1,5 +1,6 @@
 using Distribution.Models;
 using Distribution.Services;
+using Distribution.Stream;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -21,6 +22,11 @@ namespace Simulation
 {
   public class Adapter : Gateway, IDisposable
   {
+    /// <summary>
+    /// HTTP service
+    /// </summary>
+    protected Service _sender;
+
     /// <summary>
     /// Disposable connections
     /// </summary>
@@ -115,7 +121,7 @@ namespace Simulation
         {
           var instrument = Account.Instruments[point.Instrument.Name];
 
-          if (instrument.Points.Any())
+          if (instrument.Points.Count > 0)
           {
             instrument.Points.Last().Derivatives.Clear();
             instrument.PointGroups.Last().Derivatives.Clear();
@@ -187,7 +193,7 @@ namespace Simulation
         .SelectMany(o => validator.Validate(o).Errors.Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))
         .ToList();
 
-      if (response.Errors.Any())
+      if (response.Errors.Count > 0)
       {
         return Task.FromResult(response);
       }
@@ -429,9 +435,9 @@ namespace Simulation
 
       var orders = Account
         .ActivePositions
-        .SelectMany(o => o.Order.Orders.Concat([o.Order]))
-        .Concat(Account.ActiveOrders.SelectMany(o => o.Orders.Concat([o])))
-        .Where(o => Equals(o.Transaction.Status, OrderStatusEnum.Pending));
+        .SelectMany(o => o.Order.Orders.Append(o.Order))
+        .Concat(Account.ActiveOrders.SelectMany(o => o.Orders.Append(o)))
+        .Where(o => Equals(o?.Transaction?.Status, OrderStatusEnum.Pending));
 
       foreach (var order in orders)
       {
@@ -526,7 +532,7 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          var optionMessage = JsonSerializer.Deserialize<PointModel>(content);
+          var optionMessage = JsonSerializer.Deserialize<PointModel>(content, _sender.Options);
           optionMessage.Instrument = new InstrumentModel { Name = name };
           return optionMessage;
         }
@@ -585,17 +591,6 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
-      return Task.FromResult(GetPointOptions(screener, criteria));
-    }
-
-    /// <summary>
-    /// Option chain
-    /// </summary>
-    /// <param name="screener"></param>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    protected virtual ResponseModel<IList<InstrumentModel>> GetPointOptions(OptionScreenerModel screener, Hashtable criteria)
-    {
       var response = new ResponseModel<IList<InstrumentModel>>
       {
         Data = screener
@@ -609,7 +604,7 @@ namespace Simulation
         .ToList()
       };
 
-      return response;
+      return Task.FromResult(response);
     }
 
     /// <summary>

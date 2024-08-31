@@ -47,14 +47,18 @@ namespace Terminal.Components
 
       Items = items.SelectMany(pos =>
       {
-        var record = getRecord(pos.Order);
         var subRecords = pos
           .Order
           .Orders
           .Where(o => Equals(o.Instruction, InstructionEnum.Side))
           .Select(o => getRecord(o));
 
-        return subRecords.Concat([record]);
+        if (pos.Order.Transaction is not null)
+        {
+          subRecords = subRecords.Append(getRecord(pos.Order));
+        }
+
+        return subRecords;
 
       }).ToList();
 

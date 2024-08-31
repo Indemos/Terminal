@@ -36,7 +36,7 @@ namespace Alpaca.Mappers
         case OrderTypeEnum.StopLimit: message.StopPrice = order.ActivationPrice; message.LimitPrice = order.Price; break;
       }
 
-      if (order.Orders.Any())
+      if (order.Orders.Count > 0)
       {
         message.OrderClass = "bracket";
 

@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
-using Terminal.Core.Enums;
-using Terminal.Core.Models;
 
 namespace Terminal.Components
 {
@@ -25,11 +23,11 @@ namespace Terminal.Components
       var values = new List<InputData>();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
       var orders = accounts
-        .SelectMany(account => account.Positions.SelectMany(o => o.Order.Orders.Concat([o.Order])))
+        .SelectMany(account => account.Positions.SelectMany(o => o.Order.Orders.Append(o.Order)))
         .OrderBy(o => o.Transaction.Time)
         .ToList();
 
-      if (orders.Any())
+      if (orders.Count > 0)
       {
         values.Add(new InputData
         {

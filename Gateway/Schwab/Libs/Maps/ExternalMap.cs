@@ -48,7 +48,7 @@ namespace Schwab.Mappers
         .Orders
         .Where(o => Equals(o.Instruction, InstructionEnum.Side))
         .Select(GetOrderItem)
-        .Concat([GetOrderItem(order)])
+        .Append(GetOrderItem(order))
         .ToList();
 
       message.ChildOrderStrategies = order
@@ -67,7 +67,7 @@ namespace Schwab.Mappers
         message.OrderLegCollection.Add(GetOrderItem(order));
       }
 
-      if (message.ChildOrderStrategies.Any())
+      if (message.ChildOrderStrategies.Count > 0)
       {
         message.OrderStrategyType = "TRIGGER";
       }

@@ -1,6 +1,5 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -54,11 +53,11 @@ namespace Terminal.Pages
             }
           };
 
-          //var interval = new Timer();
+          var account = View.Adapters["Sim"].Account;
 
-          //interval.Elapsed += async (o, e) => await OnData();
-          //interval.Interval = 5000;
-          //interval.Enabled = true;
+          View.DealsView.UpdateItems(account.Positions);
+          View.OrdersView.UpdateItems(account.ActiveOrders);
+          View.PositionsView.UpdateItems(account.ActivePositions);
         };
       }
 
@@ -154,7 +153,7 @@ namespace Terminal.Pages
       var simAdapter = View.Adapters["Sim"];
       var account = simAdapter.Account;
 
-      if (account.ActiveOrders.Count == 0 && account.ActivePositions.Count == 0)
+      if (account.ActiveOrders.Count is 0 && account.ActivePositions.Count is 0)
       {
         var options = await GetOptions(point);
         var orders = GetShortStraddle(point, options);
@@ -164,6 +163,10 @@ namespace Terminal.Pages
       if (account.ActivePositions.Count > 1)
       {
       }
+
+      await View.DealsView.UpdateItems(account.Positions);
+      await View.OrdersView.UpdateItems(account.ActiveOrders);
+      await View.PositionsView.UpdateItems(account.ActivePositions);
     }
 
     /// <summary>
@@ -178,8 +181,8 @@ namespace Terminal.Pages
       var optionArgs = new OptionScreenerModel
       {
         Name = Instrument.Name,
-        MinDate = DateTime.Now,
-        MaxDate = DateTime.Now.AddDays(3),
+        MinDate = point.Time,
+        MaxDate = point.Time.Value.AddDays(1),
         Point = point
       };
 
@@ -217,31 +220,23 @@ namespace Terminal.Pages
 
       var order = new OrderModel
       {
+        Type = OrderTypeEnum.Market,
+        Instruction = InstructionEnum.Group,
         Orders =
         [
           new OrderModel
           {
             Side = OrderSideEnum.Sell,
-            Type = OrderTypeEnum.Limit,
             Instruction = InstructionEnum.Side,
             Price = shortPut.Point.Bid,
-            Transaction = new()
-            {
-              CurrentVolume = 1,
-              Instrument = shortPut
-            }
+            Transaction = new() { Volume = 1, Instrument = shortPut }
           },
           new OrderModel
           {
             Side = OrderSideEnum.Sell,
-            Type = OrderTypeEnum.Limit,
             Instruction = InstructionEnum.Side,
             Price = shortCall.Point.Bid,
-            Transaction = new()
-            {
-              CurrentVolume = 1,
-              Instrument = shortCall
-            }
+            Transaction = new() { Volume = 1, Instrument = shortCall }
           }
         ]
       };

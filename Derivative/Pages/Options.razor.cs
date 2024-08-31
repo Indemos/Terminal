@@ -26,7 +26,7 @@ using Terminal.Core.Models;
 
 namespace Derivative.Pages
 {
-  public partial class OptionCharts
+  public partial class Options
   {
     [Inject] ISnackbar Snackbar { get; set; }
     [Inject] IDialogService ModalService { get; set; }

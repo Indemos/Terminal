@@ -1,6 +1,5 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
-using Terminal.Components;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Simulation;
@@ -9,13 +8,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Components;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
-using System.Collections.Concurrent;
-using MudBlazor;
 
 namespace Terminal.Pages
 {
@@ -121,7 +119,7 @@ namespace Terminal.Pages
       var seriesX = instrumentX.Points;
       var seriesY = instrumentY.Points;
 
-      if (seriesX.Any() is false || seriesY.Any() is false)
+      if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }

@@ -1,6 +1,6 @@
 @inherits BaseComponent
 
-@if (Stats.Any())
+@if (Stats.Count > 0)
 {
   <div class="statements">
     @foreach (var group in Stats)
