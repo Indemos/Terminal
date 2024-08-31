@@ -15,6 +15,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Validators;
 
 namespace Simulation
 {
@@ -180,6 +181,16 @@ namespace Simulation
     public override Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>>();
+      var validator = InstanceService<OrderPriceValidator>.Instance;
+
+      response.Errors = orders
+        .SelectMany(o => validator.Validate(o).Errors.Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))
+        .ToList();
+
+      if (response.Errors.Any())
+      {
+        return Task.FromResult(response);
+      }
 
       foreach (var order in orders)
       {
@@ -213,26 +224,17 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Update order state
-    /// </summary>
-    /// <param name="message"></param>
-    protected virtual void OnOrderUpdate(MessageModel<OrderModel> message)
-    {
-      switch (message.Action)
-      {
-        case ActionEnum.Create: CreateOrders(message.Next); break;
-        case ActionEnum.Delete: DeleteOrders(message.Next); break;
-      }
-    }
-
-    /// <summary>
     /// Process pending order
     /// </summary>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
     protected virtual OrderModel SendPendingOrder(OrderModel nextOrder)
     {
-      nextOrder.Transaction.Status = OrderStatusEnum.Placed;
+      nextOrder.Transaction.Status = OrderStatusEnum.Pending;
+      nextOrder
+        .Orders
+        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .ForEach(o => o.Transaction.Status = OrderStatusEnum.Pending);
 
       Account.ActiveOrders.Enqueue(nextOrder);
 
@@ -276,10 +278,11 @@ namespace Simulation
           .Order
           .Orders
           .Where(o => Equals(o.Instruction, InstructionEnum.Side))
-          .ForEach(o => o
+          .ForEach(posSubOrder => nextPosition
+            .Order
             .Orders
-            .Where(subOrder => Equals(subOrder.Instruction, InstructionEnum.Side))
-            .ForEach(subOrder => UpdateSide(subOrder, nextPosition.Order)));
+            .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+            .ForEach(nextSubOrder => UpdateSide(posSubOrder, nextSubOrder)));
 
         var sum = position.Order.GetVolume();
 
@@ -328,10 +331,14 @@ namespace Simulation
         updateOrder(order);
       }
 
-      order
-        .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
-        .ForEach(o => updateOrder(o, order));
+      foreach (var o in order.Orders)
+      {
+        switch (o.Instruction)
+        {
+          case InstructionEnum.Side: updateOrder(o, order); break;
+          case InstructionEnum.Brace: o.Transaction.Status = OrderStatusEnum.Pending; break;
+        }
+      }
 
       position.Order = order;
 
@@ -360,55 +367,50 @@ namespace Simulation
     protected virtual ResponseModel<OrderModel> UpdateSide(OrderModel order, OrderModel update)
     {
       var response = new ResponseModel<OrderModel>();
-      var orderName = order.Transaction?.Instrument?.Name;
-      var updateName = update.Transaction?.Instrument?.Name;
+      var orderAction = order.Transaction;
+      var updateAction = update.Transaction;
+      var orderName = orderAction?.Instrument?.Name;
+      var updateName = updateAction?.Instrument?.Name;
+      var orderVolume = orderAction?.CurrentVolume ?? 0;
+      var updateVolume = updateAction?.CurrentVolume ?? 0;
 
-      if (Equals(updateName, orderName) is false)
+      if (orderVolume.Is(0) || updateVolume.Is(0) || string.Equals(updateName, orderName) is false)
       {
         response.Errors.Add(new ErrorModel { ErrorMessage = nameof(StatusEnum.Error) });
         return response;
       }
-
-      var action = order.Transaction;
-
-      if (action.CurrentVolume.Is(0))
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = nameof(StatusEnum.Error) });
-        return response;
-      }
-
-      action.Time = update.Transaction.Time;
-      action.Descriptor = update.Transaction.Descriptor ?? action.Descriptor;
 
       if (Equals(update.Side, order.Side))
       {
-        action.CurrentVolume += update.Transaction.Volume;
-        action.Volume = action.CurrentVolume;
-        action.Price = GetGroupPrice(order, update);
-        order.Price = action.Price;
+        orderAction.CurrentVolume += updateAction.Volume;
+        orderAction.Volume = orderAction.CurrentVolume;
+        orderAction.Price = GetGroupPrice(order, update);
+        order.Price = orderAction.Price;
       }
       else
       {
-        var volume = action.CurrentVolume - update.Transaction.Volume;
+        var volume = orderAction.CurrentVolume - updateAction.Volume;
 
-        action.CurrentVolume = Math.Abs(volume ?? 0);
+        orderAction.CurrentVolume = Math.Abs(volume ?? 0);
 
         if (volume < 0)
         {
-          action.Volume = action.CurrentVolume;
-          action.Price = update.Price;
-          order.Price = action.Price;
+          orderAction.Price = update.Price;
+          orderAction.Volume = orderAction.CurrentVolume;
           order.Side = Equals(order.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+          order.Price = update.Price;
         }
 
         if (volume.Is(0))
         {
-          action.Price = update.Price;
+          orderAction.Price = update.Price;
           Account.Balance += order.GetGainEstimate();
         }
       }
 
-      update.Transaction.CurrentVolume = 0;
+      orderAction.Time = updateAction.Time;
+      orderAction.Descriptor = updateAction.Descriptor ?? orderAction.Descriptor;
+      updateAction.CurrentVolume = 0;
       response.Data = order;
 
       return response;
@@ -420,31 +422,20 @@ namespace Simulation
     /// <param name="message"></param>
     protected virtual void OnPointUpdate(object sender, NotifyCollectionChangedEventArgs e)
     {
-      var positionOrders = Account
+      var estimates = Account
         .ActivePositions
-        .SelectMany(position => position
-          .Order
-          .Orders
-          .Where(order => Equals(order.Instruction, InstructionEnum.Brace)));
+        .Select(o => o.GetGainEstimate())
+        .ToList();
 
-      var estimates = Account.ActivePositions.Select(o => o.GetGainEstimate()).ToList();
-      var activeOrders = Account.ActiveOrders.Concat(positionOrders);
+      var orders = Account
+        .ActivePositions
+        .SelectMany(o => o.Order.Orders.Concat([o.Order]))
+        .Concat(Account.ActiveOrders.SelectMany(o => o.Orders.Concat([o])))
+        .Where(o => Equals(o.Transaction.Status, OrderStatusEnum.Pending));
 
-      foreach (var order in activeOrders)
+      foreach (var order in orders)
       {
-        var point = order.Transaction.Instrument.Points.LastOrDefault();
-
-        if (Equals(order.Instruction, InstructionEnum.Group))
-        {
-          if (GetGroupOrderState(order))
-          {
-            SendOrder(order);
-          }
-
-          continue;
-        }
-
-        if (GetOrderState(order, point))
+        if (IsOrderExecutable(order))
         {
           SendOrder(order);
         }
@@ -452,62 +443,26 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Check if group of pending orders can be executed
-    /// </summary>
-    /// <param name="groupOrder"></param>
-    /// <returns></returns>
-    protected virtual bool GetGroupOrderState(OrderModel groupOrder)
-    {
-      var executable = true;
-      var groupPoint = groupOrder.Transaction.Instrument.Points.LastOrDefault();
-      var groupOrders = groupOrder.Orders.Where(o => Equals(o.Instruction, InstructionEnum.Side));
-
-      foreach (var order in groupOrders)
-      {
-        var point = order.Transaction.Instrument.Points.LastOrDefault();
-
-        if (Equals(order.Transaction.Instrument.Type, InstrumentTypeEnum.Options))
-        {
-          executable = executable && GetOrderState(order, GetPointOption(order, groupPoint).Point);
-          continue;
-        }
-
-        executable = executable && GetOrderState(order, groupPoint);
-      }
-
-      return executable;
-    }
-
-    /// <summary>
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="order"></param>
-    /// <param name="point"></param>
     /// <returns></returns>
-    protected virtual bool GetOrderState(OrderModel order, PointModel point)
+    protected virtual bool IsOrderExecutable(OrderModel order)
     {
       var isExecutable = false;
+      var point = order.Transaction.Instrument.Point;
+      var isBuyStopLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
+      var isSellStopLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
+
+      order.Type = isBuyStopLimit || isSellStopLimit ? OrderTypeEnum.Limit : order.Type;
+
       var isBuyStop = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Stop;
       var isSellStop = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Stop;
       var isBuyLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.Limit;
       var isSellLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.Limit;
-      var isBuyStopLimit = order.Side is OrderSideEnum.Buy && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
-      var isSellStopLimit = order.Side is OrderSideEnum.Sell && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
 
-      if (isBuyStopLimit || isSellStopLimit)
-      {
-        order.Type = OrderTypeEnum.Limit;
-      }
-
-      if (isBuyStop || isSellLimit)
-      {
-        isExecutable = point.Ask >= order.Price;
-      }
-
-      if (isSellStop || isBuyLimit)
-      {
-        isExecutable = point.Bid <= order.Price;
-      }
+      isExecutable = isBuyStop || isSellLimit ? point.Ask >= order.Price : isExecutable;
+      isExecutable = isSellStop || isBuyLimit ? point.Bid <= order.Price : isExecutable;
 
       return isExecutable;
     }
@@ -518,9 +473,7 @@ namespace Simulation
     /// <param name="streams"></param>
     /// <param name="points"></param>
     /// <returns></returns>
-    protected virtual PointModel GetState(
-      IDictionary<string, IEnumerator<string>> streams,
-      IDictionary<string, PointModel> points)
+    protected virtual PointModel GetState(IDictionary<string, IEnumerator<string>> streams, IDictionary<string, PointModel> points)
     {
       var index = string.Empty;
 
@@ -636,28 +589,6 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Check if group of pending orders can be executed
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    protected virtual InstrumentModel GetPointOption(OrderModel order, PointModel point)
-    {
-      var option = order.Transaction.Instrument.Derivative;
-      var optionScreener = new OptionScreenerModel
-      {
-        Point = point,
-        Side = option.Side,
-        MinPrice = option.Strike,
-        MaxPrice = option.Strike,
-        MinDate = option.Expiration,
-        MaxDate = option.Expiration
-      };
-
-      return GetPointOptions(optionScreener, []).Data.FirstOrDefault();
-    }
-
-    /// <summary>
     /// Option chain
     /// </summary>
     /// <param name="screener"></param>
@@ -669,12 +600,12 @@ namespace Simulation
       {
         Data = screener
         .Point
-        .Derivatives[nameof(InstrumentTypeEnum.Options)]
+        .Derivatives[nameof(InstrumentEnum.Options)]
         .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener?.Side))
-        .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener?.MinPrice)
-        .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener?.MaxPrice)
         .Where(o => screener?.MinDate is null || o.Derivative.Expiration >= screener?.MinDate)
         .Where(o => screener?.MaxDate is null || o.Derivative.Expiration <= screener?.MaxDate)
+        .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener?.MinPrice)
+        .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener?.MaxPrice)
         .ToList()
       };
 

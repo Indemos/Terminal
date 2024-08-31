@@ -100,7 +100,7 @@ namespace Schwab.Mappers
         case OrderSideEnum.Sell: response.Instruction = "SELL"; break;
       }
 
-      if (Equals(order.Transaction.Instrument.Type, InstrumentTypeEnum.Options))
+      if (Equals(order.Transaction.Instrument.Type, InstrumentEnum.Options))
       {
         switch (order.Side)
         {
@@ -117,12 +117,12 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static string GetInstrumentType(InstrumentTypeEnum? message)
+    public static string GetInstrumentType(InstrumentEnum? message)
     {
       switch (message)
       {
-        case InstrumentTypeEnum.Shares: return "Equity";
-        case InstrumentTypeEnum.Options: return "Option";
+        case InstrumentEnum.Shares: return "Equity";
+        case InstrumentEnum.Options: return "Option";
       }
 
       return null;

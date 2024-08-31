@@ -549,7 +549,7 @@ namespace Schwab
         }
 
         inResponse.Data = order;
-        inResponse.Data.Transaction.Status = Terminal.Core.Enums.OrderStatusEnum.Closed;
+        inResponse.Data.Transaction.Status = Terminal.Core.Enums.OrderStatusEnum.Canceled;
       }
       catch (Exception e)
       {

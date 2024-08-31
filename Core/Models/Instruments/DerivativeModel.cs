@@ -21,11 +21,6 @@ namespace Terminal.Core.Models
     public virtual double? IntrinsicValue { get; set; }
 
     /// <summary>
-    /// Volume
-    /// </summary>
-    public virtual double? Volume { get; set; }
-
-    /// <summary>
     /// Volatility
     /// </summary>
     public virtual double? Volatility { get; set; }

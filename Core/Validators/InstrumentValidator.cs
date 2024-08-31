@@ -3,10 +3,10 @@ using Terminal.Core.Domains;
 
 namespace Terminal.Core.Validators
 {
-    /// <summary>
-    /// Validation rules
-    /// </summary>
-    public class InstrumentValidator : AbstractValidator<InstrumentModel>
+  /// <summary>
+  /// Validation rules
+  /// </summary>
+  public class InstrumentValidator : AbstractValidator<InstrumentModel>
   {
     public InstrumentValidator()
     {
@@ -16,6 +16,7 @@ namespace Terminal.Core.Validators
       RuleFor(o => o.StepSize).NotEmpty();
       RuleFor(o => o.StepValue).NotEmpty();
       RuleFor(o => o.Leverage).NotEmpty();
+      RuleFor(o => o.Point).NotEmpty().SetValidator(new PointValidator());
     }
   }
 }

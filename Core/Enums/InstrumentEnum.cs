@@ -1,6 +1,6 @@
 namespace Terminal.Core.Enums
 {
-  public enum InstrumentTypeEnum : byte
+  public enum InstrumentEnum : byte
   {
     None = 0,
     Bonds = 1,

@@ -30,13 +30,13 @@ namespace Terminal.Components
     /// <param name="items"></param>
     public virtual Task UpdateItems(IEnumerable<PositionModel> items)
     {
-      static PositionRecord getRecord(OrderModel o)
+      static PositionRecord getRecord(string group, OrderModel o)
       {
         return new PositionRecord
         {
+          Group = group,
           Time = o.Transaction.Time,
           Name = o.Transaction.Instrument.Name,
-          Group = o.Transaction.Instrument.Basis?.Name ?? o.Transaction.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.Transaction.CurrentVolume ?? 0,
           OpenPrice = o.Price ?? 0,
@@ -45,14 +45,15 @@ namespace Terminal.Components
         };
       }
 
-      Items = items.SelectMany(pos =>
+      Items = items.SelectMany((pos, i) =>
       {
-        var record = getRecord(pos.Order);
+        var group = $"{i + 1}";
+        var record = getRecord(group, pos.Order);
         var subRecords = pos
           .Order
           .Orders
           .Where(o => Equals(o.Instruction, InstructionEnum.Side))
-          .Select(o => getRecord(o));
+          .Select(o => getRecord(group, o));
 
         return subRecords.Concat([record]);
 

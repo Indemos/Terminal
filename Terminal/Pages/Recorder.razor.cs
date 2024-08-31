@@ -101,7 +101,7 @@ namespace Terminal.Pages
 
         message.Derivatives = new Dictionary<string, IList<InstrumentModel>>
         {
-          [nameof(InstrumentTypeEnum.Options)] = options.Data
+          [nameof(InstrumentEnum.Options)] = options.Data
         };
 
         Directory.CreateDirectory(location);

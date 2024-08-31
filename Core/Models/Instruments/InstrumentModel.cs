@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Concurrent;
 using Terminal.Core.Collections;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -51,7 +50,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Instrument type
     /// </summary>
-    public virtual InstrumentTypeEnum? Type { get; set; }
+    public virtual InstrumentEnum? Type { get; set; }
 
     /// <summary>
     /// Current price data 

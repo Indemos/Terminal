@@ -218,16 +218,16 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static InstrumentTypeEnum? GetInstrumentType(string message)
+    public static InstrumentEnum? GetInstrumentType(string message)
     {
       switch (message)
       {
-        case "BOND": return InstrumentTypeEnum.Bonds;
-        case "OPT": return InstrumentTypeEnum.Shares;
-        case "STK": return InstrumentTypeEnum.Options;
-        case "FUT": return InstrumentTypeEnum.Futures;
-        case "CFD": return InstrumentTypeEnum.Contracts;
-        case "CASH": return InstrumentTypeEnum.Currencies;
+        case "BOND": return InstrumentEnum.Bonds;
+        case "OPT": return InstrumentEnum.Shares;
+        case "STK": return InstrumentEnum.Options;
+        case "FUT": return InstrumentEnum.Futures;
+        case "CFD": return InstrumentEnum.Contracts;
+        case "CASH": return InstrumentEnum.Currencies;
       }
 
       return null;

@@ -211,7 +211,7 @@ namespace Derivative.Pages
 
       try
       {
-        ce.Variables["Volume"] = o.Volume;
+        ce.Variables["Volume"] = option.Point.Volume;
         ce.Variables["Volatility"] = o.Volatility;
         ce.Variables["OpenInterest"] = o.OpenInterest;
         ce.Variables["IntrinsicValue"] = o.IntrinsicValue;
@@ -224,7 +224,7 @@ namespace Derivative.Pages
 
         if (Equals(o.Side, OptionSideEnum.Put))
         {
-          ce.Variables["PVolume"] = o.Volume;
+          ce.Variables["PVolume"] = option.Point.Volume;
           ce.Variables["PVolatility"] = o.Volatility;
           ce.Variables["POpenInterest"] = o.OpenInterest;
           ce.Variables["PIntrinsicValue"] = o.IntrinsicValue;
@@ -260,7 +260,7 @@ namespace Derivative.Pages
           ce.Variables["PTheta"] = 0.0;
           ce.Variables["PDelta"] = 0.0;
 
-          ce.Variables["CVolume"] = o.Volume;
+          ce.Variables["CVolume"] = option.Point.Volume;
           ce.Variables["CVolatility"] = o.Volatility;
           ce.Variables["COpenInterest"] = o.OpenInterest;
           ce.Variables["CIntrinsicValue"] = o.IntrinsicValue;

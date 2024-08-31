@@ -25,7 +25,7 @@ namespace Terminal.Pages
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
       Name = "SPY",
-      Type = InstrumentTypeEnum.Shares
+      Type = InstrumentEnum.Shares
     };
 
     /// <summary>

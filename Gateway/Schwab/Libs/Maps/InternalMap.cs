@@ -84,6 +84,7 @@ namespace Schwab.Mappers
         Bid = optionMessage.Bid,
         AskSize = optionMessage.AskSize ?? 0,
         BidSize = optionMessage.BidSize ?? 0,
+        Volume = optionMessage.TotalVolume ?? 0,
         Last = optionMessage.Last,
         Bar = optionBar
       };
@@ -112,7 +113,6 @@ namespace Schwab.Mappers
         OpenInterest = optionMessage.OpenInterest ?? 0,
         IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
         Volatility = optionMessage.Volatility ?? 0,
-        Volume = optionMessage.TotalVolume ?? 0,
         Variable = greeks
       };
 

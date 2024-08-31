@@ -535,7 +535,7 @@ namespace Derivative.Pages
         vars[$"{side}{nameof(v.Delta)}"] = vars.Get($"{side}{nameof(v.Delta)}") + v.Delta.Value;
         vars[$"{side}{nameof(x.BidSize)}"] = vars.Get($"{side}{nameof(x.BidSize)}") + x.BidSize.Value;
         vars[$"{side}{nameof(x.AskSize)}"] = vars.Get($"{side}{nameof(x.AskSize)}") + x.AskSize.Value;
-        vars[$"{side}{nameof(o.Volume)}"] = vars.Get($"{side}{nameof(o.Volume)}") + o.Volume.Value;
+        vars[$"{side}{nameof(x.Volume)}"] = vars.Get($"{side}{nameof(x.Volume)}") + x.Volume.Value;
         vars[$"{side}{nameof(o.Volatility)}"] = vars.Get($"{side}{nameof(o.Volatility)}") + o.Volatility.Value;
         vars[$"{side}{nameof(o.OpenInterest)}"] = vars.Get($"{side}{nameof(o.OpenInterest)}") + o.OpenInterest.Value;
         vars[$"{side}{nameof(o.IntrinsicValue)}"] = vars.Get($"{side}{nameof(o.IntrinsicValue)}") + o.IntrinsicValue.Value;

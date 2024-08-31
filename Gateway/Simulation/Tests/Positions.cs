@@ -1,4 +1,3 @@
-using Microsoft.VisualBasic;
 using Simulation;
 using System;
 using System.Linq;
@@ -36,18 +35,19 @@ namespace Terminal.Tests
       var point = new PointModel()
       {
         Bid = price,
-        Ask = price
+        Ask = price,
+        Last = price
       };
 
       var order = new OrderModel
       {
         Side = orderSide,
         Type = orderType,
+        Price = orderPrice,
         ActivationPrice = activationPrice,
         Transaction = new()
         {
           Volume = 1,
-          Price = orderPrice,
           Instrument = new InstrumentModel()
           {
             Name = "X",
@@ -67,7 +67,7 @@ namespace Terminal.Tests
       Assert.Empty(Account.ActivePositions);
 
       Assert.Equal(order, Account.ActiveOrders.First());
-      Assert.Equal(order.Transaction.Status, OrderStatusEnum.Placed);
+      Assert.Equal(order.Transaction.Status, OrderStatusEnum.Pending);
     }
 
     [Theory]
@@ -83,7 +83,8 @@ namespace Terminal.Tests
       var point = new PointModel()
       {
         Bid = bid,
-        Ask = ask
+        Ask = ask,
+        Last = bid ?? ask
       };
 
       var instrument = new InstrumentModel()
@@ -127,11 +128,12 @@ namespace Terminal.Tests
     [Fact]
     public void CreateMarketOrderWithBrackets()
     {
-      var price = 15;
+      var price = 155;
       var point = new PointModel()
       {
         Bid = price,
-        Ask = price
+        Ask = price,
+        Last = price
       };
 
       var instrument = new InstrumentModel()
@@ -143,49 +145,74 @@ namespace Terminal.Tests
 
       var SL = new OrderModel
       {
+        Price = price + 5,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         Transaction = new()
         {
           Volume = 1,
-          Price = 5,
           Instrument = instrument
         }
       };
 
       var TP = new OrderModel
       {
+        Price = price - 5,
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         Transaction = new()
         {
           Volume = 1,
-          Price = 15,
           Instrument = instrument
         }
       };
 
       var order = new OrderModel
       {
+        Price = price,
         Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
         Transaction = new()
         {
           Volume = 1,
-          Price = price,
           Instrument = instrument
         }
       };
 
       base.CreateOrders(order);
 
+      Assert.Single(Account.Orders);
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
-      Assert.Single(Account.Orders);
       Assert.Single(Account.ActivePositions);
+
+      // Trigger SL
+
+      base.SetupAccounts();
+
+      var balance = Account.Balance;
+      var newPoint = new PointModel
+      {
+        Bid = point.Bid - 15,
+        Ask = point.Ask - 10,
+        Last = point.Last - 15
+      };
+
+      instrument.Point = newPoint;
+      instrument.Points.Add(newPoint);
+
+      Assert.Equal(balance, 50000);
+
+      base.OnPointUpdate(null, null);
+
+      Assert.Equal(2, Account.Orders.Count);
+      Assert.Single(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
+      Assert.Empty(Account.ActivePositions);
+      Assert.Equal(Account.Balance, balance + (newPoint.Bid - point.Ask));
     }
 
     [Fact]
@@ -194,20 +221,20 @@ namespace Terminal.Tests
       var basis = new InstrumentModel
       {
         Name = "SPY",
-        Point = new PointModel { Bid = 545, Ask = 550 }
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
       };
 
       var optionLong = new InstrumentModel
       {
         Name = "SPY 240814C00493000",
-        Point = new PointModel { Bid = 1.45, Ask = 1.55 },
+        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 },
         Basis = basis
       };
 
       var optionShort = new InstrumentModel
       {
         Name = "SPY 240814P00493000",
-        Point = new PointModel { Bid = 1.15, Ask = 1.25 },
+        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 },
         Basis = basis
       };
 
@@ -288,20 +315,20 @@ namespace Terminal.Tests
       var basis = new InstrumentModel
       {
         Name = "SPY",
-        Point = new PointModel { Bid = 545, Ask = 550 }
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
       };
 
       var optionLong = new InstrumentModel
       {
         Name = "SPY 240814C00493000",
-        Point = new PointModel { Bid = 1.45, Ask = 1.55 },
+        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 },
         Basis = basis
       };
 
       var optionShort = new InstrumentModel
       {
         Name = "SPY 240814P00493000",
-        Point = new PointModel { Bid = 1.15, Ask = 1.25 },
+        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 },
         Basis = basis
       };
 
@@ -393,34 +420,138 @@ namespace Terminal.Tests
       Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
 
-      // Reverse 
+      // Close side
 
-      var reverse = new OrderModel
+      var close = new OrderModel
       {
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 2, Instrument = optionShort },
+        Transaction = new() { Volume = Account.ActivePositions.First().Order.Orders.First().Transaction.Volume, Instrument = basis },
       };
 
-      base.CreateOrders(reverse);
+      base.CreateOrders(close);
 
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.ActiveOrders);
       Assert.Equal(4, Account.Orders.Count);
       Assert.Single(Account.ActivePositions);
 
-      var reverseOrder = Account.ActivePositions.First().Order;
-      var reverseShort = reverseOrder.Orders.ElementAt(2);
+      // Close position
 
-      Assert.Equal(reverseShort.Side, OrderSideEnum.Sell);
-      Assert.Equal(reverseShort.Type, OrderTypeEnum.Market);
-      Assert.Equal(reverseShort.Price, optionShort.Point.Bid);
-      Assert.Equal(reverseShort.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(reverseShort.Transaction.Time);
-      Assert.Equal(reverseShort.Transaction.CurrentVolume, 1);
-      Assert.Equal(reverseShort.Transaction.CurrentVolume, reverseShort.Transaction.Volume);
-      Assert.Equal(reverseShort.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(reverseShort.Transaction.Price, reverseShort.Price);
+      var closePosition = new OrderModel
+      {
+        Type = OrderTypeEnum.Market,
+        Instruction = InstructionEnum.Group,
+        Orders =
+        [
+          new OrderModel
+          {
+            Side = OrderSideEnum.Sell,
+            Instruction = InstructionEnum.Side,
+            Transaction = new() { Volume = 1, Instrument = optionLong }
+          },
+          new OrderModel
+          {
+            Side = OrderSideEnum.Sell,
+            Instruction = InstructionEnum.Side,
+            Transaction = new() { Volume = 1, Instrument = optionShort }
+          }
+        ]
+      };
+
+      base.CreateOrders(closePosition);
+
+      Assert.Single(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
+      Assert.Equal(5, Account.Orders.Count);
+      Assert.Empty(Account.ActivePositions);
+    }
+
+    [Fact]
+    public void ReversePosition()
+    {
+      var instrument = new InstrumentModel
+      {
+        Name = "MSFT",
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+      };
+
+      var order = new OrderModel
+      {
+        Side = OrderSideEnum.Buy,
+        Type = OrderTypeEnum.Market,
+        Transaction = new() { Volume = 5, Instrument = instrument },
+      };
+
+      base.CreateOrders(order);
+
+      var reverse = new OrderModel
+      {
+        Side = OrderSideEnum.Sell,
+        Type = OrderTypeEnum.Market,
+        Transaction = new() { Volume = 10, Instrument = instrument },
+      };
+
+      base.CreateOrders(reverse);
+
+      Assert.Empty(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
+      Assert.Equal(2, Account.Orders.Count);
+      Assert.Single(Account.ActivePositions);
+
+      var reverseOrder = Account.ActivePositions.First().Order;
+
+      Assert.Equal(reverseOrder.Side, OrderSideEnum.Sell);
+      Assert.Equal(reverseOrder.Type, OrderTypeEnum.Market);
+      Assert.Equal(reverseOrder.Price, instrument.Point.Bid);
+      Assert.Equal(reverseOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.NotNull(reverseOrder.Transaction.Time);
+      Assert.Equal(reverseOrder.Transaction.CurrentVolume, 5);
+      Assert.Equal(reverseOrder.Transaction.CurrentVolume, reverseOrder.Transaction.Volume);
+      Assert.Equal(reverseOrder.Transaction.Status, OrderStatusEnum.Filled);
+      Assert.Equal(reverseOrder.Transaction.Price, reverseOrder.Price);
+    }
+
+    [Fact]
+    public void SeparatePosition()
+    {
+      var orderX = new OrderModel
+      {
+        Side = OrderSideEnum.Buy,
+        Type = OrderTypeEnum.Market,
+        Transaction = new()
+        {
+          Volume = 5,
+          Instrument = new InstrumentModel
+          {
+            Name = "SPY",
+            Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+          }
+        },
+      };
+
+      var orderY = new OrderModel
+      {
+        Side = OrderSideEnum.Buy,
+        Type = OrderTypeEnum.Market,
+        Transaction = new()
+        {
+          Volume = 5,
+          Instrument = new InstrumentModel
+          {
+            Name = "MSFT",
+            Point = new PointModel { Bid = 145, Ask = 150, Last = 150 }
+          }
+        },
+      };
+
+      base.CreateOrders(orderX);
+      base.CreateOrders(orderY);
+
+      Assert.Empty(Account.Positions);
+      Assert.Empty(Account.ActiveOrders);
+      Assert.Equal(2, Account.Orders.Count);
+      Assert.Equal(2, Account.ActivePositions.Count);
     }
   }
 }

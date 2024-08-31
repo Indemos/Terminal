@@ -166,9 +166,9 @@ namespace Terminal.Core.Models
     public double? GetGainEstimate(double? price = null)
     {
       var estimate = 0.0;
+      var volume = Transaction.CurrentVolume;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
-      var volume = Transaction.CurrentVolume;
 
       if (volume.Is(0))
       {

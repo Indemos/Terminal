@@ -34,6 +34,11 @@ namespace Terminal.Core.Models
     public virtual double? Last { get; set; }
 
     /// <summary>
+    /// Instrument volume
+    /// </summary>
+    public virtual double? Volume { get; set; }
+
+    /// <summary>
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }

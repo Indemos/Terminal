@@ -12,6 +12,7 @@ namespace Terminal.Core.Validators
     {
       Include(new PointValidator());
 
+      RuleFor(o => o.Volume).NotEmpty();
       RuleFor(o => o.BidSize).NotEmpty();
       RuleFor(o => o.AskSize).NotEmpty();
     }
