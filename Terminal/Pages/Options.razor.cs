@@ -209,12 +209,12 @@ namespace Terminal.Pages
     protected virtual OrderModel[] GetShortStraddle(PointModel point, IList<InstrumentModel> options)
     {
       var shortPut = options
-        .Where(o => Equals(o.Derivative.Side, OptionSideEnum.Put))
+        .Where(o => o.Derivative.Side is OptionSideEnum.Put)
         .Where(o => o.Derivative.Strike >= point.Last)
         .FirstOrDefault();
 
       var shortCall = options
-        .Where(o => Equals(o.Derivative.Side, OptionSideEnum.Call))
+        .Where(o => o.Derivative.Side is OptionSideEnum.Call)
         .Where(o => o.Derivative.Strike >= point.Last)
         .FirstOrDefault();
 

@@ -36,7 +36,7 @@ namespace Terminal.Core.Models
 
       estimate += Order
         .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .Where(o => o.Instruction is InstructionEnum.Side)
         .Sum(o => o.GetGainEstimate()) ?? 0.0;
 
       GainMin = Math.Min(GainMin ?? estimate, estimate);

@@ -633,7 +633,7 @@ namespace Alpaca
         {
           Account.ActiveOrders = new ConcurrentQueue<OrderModel>(Account
             .ActiveOrders
-            .Where(o => Equals(o.Transaction.Id, order.Transaction.Id) is false));
+            .Where(o => string.Equals(o.Transaction.Id, order.Transaction.Id) is false));
         }
       }
       catch (Exception e)

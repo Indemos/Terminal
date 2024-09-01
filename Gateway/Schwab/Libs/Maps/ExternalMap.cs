@@ -46,14 +46,14 @@ namespace Schwab.Mappers
 
       message.OrderLegCollection = order
         .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .Where(o => o.Instruction is InstructionEnum.Side)
         .Select(GetOrderItem)
         .Append(GetOrderItem(order))
         .ToList();
 
       message.ChildOrderStrategies = order
         .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Brace))
+        .Where(o => o.Instruction is InstructionEnum.Brace)
         .Select(o =>
         {
           var subOrder = GetOrder(o);
@@ -62,7 +62,7 @@ namespace Schwab.Mappers
         })
         .ToList();
 
-      if (Equals(order.Instruction, InstructionEnum.Group))
+      if (order.Instruction is InstructionEnum.Group)
       {
         message.OrderLegCollection.Add(GetOrderItem(order));
       }
@@ -100,7 +100,7 @@ namespace Schwab.Mappers
         case OrderSideEnum.Sell: response.Instruction = "SELL"; break;
       }
 
-      if (Equals(order.Transaction.Instrument.Type, InstrumentEnum.Options))
+      if (order.Transaction.Instrument.Type is InstrumentEnum.Options)
       {
         switch (order.Side)
         {

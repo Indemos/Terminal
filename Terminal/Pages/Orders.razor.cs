@@ -176,7 +176,7 @@ namespace Terminal.Pages
       {
         var side = OrderSideEnum.Buy;
 
-        if (Equals(position.Order.Side, OrderSideEnum.Buy))
+        if (position.Order.Side is OrderSideEnum.Buy)
         {
           side = OrderSideEnum.Sell;
         }

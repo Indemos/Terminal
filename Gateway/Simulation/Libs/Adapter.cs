@@ -6,6 +6,7 @@ using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Diagnostics.Metrics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -239,7 +240,7 @@ namespace Simulation
       nextOrder.Transaction.Status = OrderStatusEnum.Pending;
       nextOrder
         .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .Where(o => o.Instruction is InstructionEnum.Side)
         .ForEach(o => o.Transaction.Status = OrderStatusEnum.Pending);
 
       Account.ActiveOrders.Enqueue(nextOrder);
@@ -259,7 +260,7 @@ namespace Simulation
       var groupOrders = nextPosition
         .Order
         .Orders
-        .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+        .Where(o => o.Instruction is InstructionEnum.Side)
         .ToList();
 
       Account.ActivePositions.Clear();
@@ -271,23 +272,23 @@ namespace Simulation
         nextPosition
           .Order
           .Orders
-          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Where(o => o.Instruction is InstructionEnum.Side)
           .ForEach(o => UpdateSide(position.Order, o));
 
         position
           .Order
           .Orders
-          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Where(o => o.Instruction is InstructionEnum.Side)
           .ForEach(o => UpdateSide(o, nextPosition.Order));
 
         position
           .Order
           .Orders
-          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Where(o => o.Instruction is InstructionEnum.Side)
           .ForEach(posSubOrder => nextPosition
             .Order
             .Orders
-            .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+            .Where(o => o.Instruction is InstructionEnum.Side)
             .ForEach(nextSubOrder => UpdateSide(posSubOrder, nextSubOrder)));
 
         var sum = position.Order.GetVolume();
@@ -403,7 +404,7 @@ namespace Simulation
         {
           orderAction.Price = update.Price;
           orderAction.Volume = orderAction.CurrentVolume;
-          order.Side = Equals(order.Side, OrderSideEnum.Buy) ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+          order.Side = order.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
           order.Price = update.Price;
         }
 
@@ -437,7 +438,7 @@ namespace Simulation
         .ActivePositions
         .SelectMany(o => o.Order.Orders.Append(o.Order))
         .Concat(Account.ActiveOrders.SelectMany(o => o.Orders.Append(o)))
-        .Where(o => Equals(o?.Transaction?.Status, OrderStatusEnum.Pending));
+        .Where(o => o?.Transaction?.Status is OrderStatusEnum.Pending);
 
       foreach (var order in orders)
       {
@@ -591,11 +592,27 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
+      var instruments = Account
+        .ActivePositions
+        .SelectMany(o => o.Order.Orders.Append(o.Order))
+        .Where(o => o?.Transaction?.Instrument?.Name is not null)
+        .GroupBy(o => o.Transaction.Instrument.Name)
+        .ToDictionary(o => o.Key, o => null as InstrumentModel);
+
       var response = new ResponseModel<IList<InstrumentModel>>
       {
         Data = screener
         .Point
         .Derivatives[nameof(InstrumentEnum.Options)]
+        .Select(o =>
+        {
+          if (instruments.ContainsKey(o.Name))
+          {
+            instruments[o.Name] = o;
+          }
+
+          return o;
+        })
         .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener?.Side))
         .Where(o => screener?.MinDate is null || o.Derivative.Expiration >= screener?.MinDate)
         .Where(o => screener?.MaxDate is null || o.Derivative.Expiration <= screener?.MaxDate)

@@ -57,7 +57,7 @@ namespace Terminal.Tests
         }
       };
 
-      var openPrice = Equals(order.Side, OrderSideEnum.Buy) ? point.Bid : point.Ask;
+      var openPrice = order.Side is OrderSideEnum.Buy ? point.Bid : point.Ask;
 
       base.CreateOrders(order);
 
@@ -110,7 +110,7 @@ namespace Terminal.Tests
       base.CreateOrders(order);
 
       var position = Account.ActivePositions.First();
-      var openPrice = Equals(position.Order.Side, OrderSideEnum.Buy) ? point.Ask : point.Bid;
+      var openPrice = position.Order.Side is OrderSideEnum.Buy ? point.Ask : point.Bid;
 
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.ActiveOrders);

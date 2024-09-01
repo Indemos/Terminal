@@ -14,7 +14,7 @@ namespace Terminal.Core.Validators
     {
       RuleFor(o => o.Type).NotEmpty();
 
-      When(o => Equals(o.Instruction, InstructionEnum.Group) || o.Orders.Where(o => Equals(o.Instruction, InstructionEnum.Side)).Any(), () =>
+      When(o => o.Instruction is InstructionEnum.Group || o.Orders.Where(o => o.Instruction is InstructionEnum.Side).Any(), () =>
       {
         RuleFor(o => o.Transaction).Empty();
         RuleFor(o => o.Side).Empty();

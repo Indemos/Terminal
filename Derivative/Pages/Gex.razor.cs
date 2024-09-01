@@ -222,7 +222,7 @@ namespace Derivative.Pages
         ce.Variables["Theta"] = o.Variable.Theta;
         ce.Variables["Delta"] = o.Variable.Delta;
 
-        if (Equals(o.Side, OptionSideEnum.Put))
+        if (o.Side is OptionSideEnum.Put)
         {
           ce.Variables["PVolume"] = option.Point.Volume;
           ce.Variables["PVolatility"] = o.Volatility;
@@ -247,7 +247,7 @@ namespace Derivative.Pages
           ce.Variables["CDelta"] = 0.0;
         }
 
-        if (Equals(o.Side, OptionSideEnum.Call))
+        if (o.Side is OptionSideEnum.Call)
         {
           ce.Variables["PVolume"] = 0.0;
           ce.Variables["PVolatility"] = 0.0;

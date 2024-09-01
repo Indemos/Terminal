@@ -47,7 +47,7 @@ namespace Terminal.Components
       {
         var subRecords = order
           .Orders
-          .Where(o => Equals(o.Instruction, InstructionEnum.Side))
+          .Where(o => o.Instruction is InstructionEnum.Side && o.Transaction is not null)
           .Select(o => getRecord(order));
 
         if (order.Transaction is not null)
