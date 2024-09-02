@@ -20,6 +20,7 @@ using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
+using System.Collections.Concurrent;
 
 namespace Terminal.Pages
 {
@@ -52,7 +53,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           ["SPY"] = new InstrumentModel { Name = "SPY" }
         }

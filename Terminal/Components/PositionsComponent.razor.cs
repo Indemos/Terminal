@@ -65,5 +65,10 @@ namespace Terminal.Components
 
       return Render();
     }
+
+    /// <summary>
+    /// Clear records
+    /// </summary>
+    public virtual void Clear() => Render(Items.Clear, false);
   }
 }

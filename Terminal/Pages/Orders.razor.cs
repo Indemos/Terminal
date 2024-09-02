@@ -14,6 +14,7 @@ using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
+using System.Collections.Concurrent;
 
 namespace Terminal.Pages
 {
@@ -84,7 +85,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Descriptor = "Demo",
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [_asset] = new InstrumentModel { Name = _asset }
         }

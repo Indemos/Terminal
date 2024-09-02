@@ -52,7 +52,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of instruments
     /// </summary>
-    IDictionary<string, InstrumentModel> Instruments { get; set; }
+    ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
   }
 
   /// <summary>
@@ -98,7 +98,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// List of instruments
     /// </summary>
-    public virtual IDictionary<string, InstrumentModel> Instruments { get; set; }
+    public virtual ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
 
     /// <summary>
     /// Constructor
@@ -112,7 +112,7 @@ namespace Terminal.Core.Domains
       Positions = [];
       ActiveOrders = [];
       ActivePositions = [];
-      Instruments = new Dictionary<string, InstrumentModel>();
+      Instruments = [];
     }
   }
 }

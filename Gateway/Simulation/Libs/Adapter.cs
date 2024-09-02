@@ -63,6 +63,7 @@ namespace Simulation
       _connections = [];
       _subscriptions = new Dictionary<string, IDisposable>();
       _instruments = new Dictionary<string, IEnumerator<string>>();
+      _sender = new Service();
     }
 
     /// <summary>
@@ -592,12 +593,12 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
-      var instruments = Account
+      var orders = Account
         .ActivePositions
         .SelectMany(o => o.Order.Orders.Append(o.Order))
         .Where(o => o?.Transaction?.Instrument?.Name is not null)
         .GroupBy(o => o.Transaction.Instrument.Name)
-        .ToDictionary(o => o.Key, o => null as InstrumentModel);
+        .ToDictionary(o => o.Key, o => o);
 
       var response = new ResponseModel<IList<InstrumentModel>>
       {
@@ -606,9 +607,9 @@ namespace Simulation
         .Derivatives[nameof(InstrumentEnum.Options)]
         .Select(o =>
         {
-          if (instruments.ContainsKey(o.Name))
+          if (orders.ContainsKey(o.Name))
           {
-            instruments[o.Name] = o;
+            orders[o.Name].ForEach(order => order.Transaction.Instrument.Point = o.Point);
           }
 
           return o;

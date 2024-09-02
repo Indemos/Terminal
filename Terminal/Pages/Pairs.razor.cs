@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -86,7 +87,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Balance = 25000,
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [_assetX] = new InstrumentModel { Name = _assetX },
           [_assetY] = new InstrumentModel { Name = _assetY }

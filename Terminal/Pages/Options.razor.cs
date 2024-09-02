@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -73,7 +74,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
         }
@@ -101,7 +102,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
         }
@@ -122,7 +123,7 @@ namespace Terminal.Pages
       var account = new Account
       {
         Balance = 25000,
-        Instruments = new Dictionary<string, InstrumentModel>
+        Instruments = new ConcurrentDictionary<string, InstrumentModel>
         {
           [Instrument.Name] = Instrument
         }
@@ -152,10 +153,10 @@ namespace Terminal.Pages
     {
       var simAdapter = View.Adapters["Sim"];
       var account = simAdapter.Account;
+      var options = await GetOptions(point);
 
       if (account.ActiveOrders.Count is 0 && account.ActivePositions.Count is 0)
       {
-        var options = await GetOptions(point);
         var orders = GetShortStraddle(point, options);
         var orderResponse = await simAdapter.CreateOrders(orders);
       }

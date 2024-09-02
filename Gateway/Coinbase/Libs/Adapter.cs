@@ -309,7 +309,7 @@ namespace Coinbase
           .Select(o => o.Transaction.Instrument.Name)
           .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
-          .ForEach(o => Account.Instruments.Add(o, new InstrumentModel { Name = o }));
+          .ForEach(o => Account.Instruments[o] = new InstrumentModel { Name = o });
 
         response.Data = Account;
       }

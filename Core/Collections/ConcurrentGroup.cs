@@ -1,22 +1,21 @@
 using System;
-using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Collections.Concurrent;
 
 namespace Terminal.Core.Collections
 {
-  public class ObservableGroup<T> : ObservableCollection<T> where T : IGroup
+  public class ConcurrentGroup<T> : ConcurrentStack<T> where T : IGroup
   {
     /// <summary>
     /// Groups
     /// </summary>
-    protected virtual IDictionary<long, int> Groups { get; set; }
+    protected virtual ConcurrentDictionary<long, IGroup> Groups { get; set; }
 
     /// <summary>
     /// Constructor
     /// </summary>
-    public ObservableGroup()
+    public ConcurrentGroup()
     {
-      Groups = new Dictionary<long, int>();
+      Groups = [];
     }
 
     /// <summary>
@@ -28,15 +27,15 @@ namespace Terminal.Core.Collections
     {
       var index = item.GetIndex();
 
-      if (Groups.TryGetValue(index, out var position))
+      if (Groups.TryGetValue(index, out var current))
       {
-        this[position] = (T)item.Update(this[position]);
+        item.Update(current);
         return;
       }
 
-      Groups[index] = Count;
+      Groups[index] = item;
 
-      Add((T)item.Update(null));
+      Push((T)item.Update(null));
     }
   }
 }

@@ -52,6 +52,9 @@ namespace Terminal.Components
 
         ChartsView.Clear();
         ReportsView.Clear();
+        DealsView.Clear();
+        OrdersView.Clear();
+        PositionsView.Clear();
 
         IsConnection = false;
         IsSubscription = false;
