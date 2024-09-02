@@ -116,7 +116,7 @@ namespace Terminal.Pages
       var instrument = account.Instruments[_asset];
       var series = instrument.Points;
 
-      if (series.Count > 1)
+      if (series.Count > 0)
       {
         return;
       }

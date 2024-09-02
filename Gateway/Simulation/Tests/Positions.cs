@@ -416,7 +416,7 @@ namespace Terminal.Tests
       Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(decreaseShort.Transaction.Time);
       Assert.Equal(decreaseShort.Transaction.CurrentVolume, 1);
-      Assert.NotEqual(decreaseShort.Transaction.CurrentVolume, decreaseShort.Transaction.Volume);
+      Assert.Equal(decreaseShort.Transaction.CurrentVolume, decreaseShort.Transaction.Volume);
       Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
 

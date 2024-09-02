@@ -401,6 +401,11 @@ namespace Simulation
 
         orderAction.CurrentVolume = Math.Abs(volume ?? 0);
 
+        if (volume > 0)
+        {
+          orderAction.Volume = orderAction.CurrentVolume;
+        }
+
         if (volume < 0)
         {
           orderAction.Price = update.Price;
@@ -607,9 +612,9 @@ namespace Simulation
         .Derivatives[nameof(InstrumentEnum.Options)]
         .Select(o =>
         {
-          if (orders.ContainsKey(o.Name))
+          if (orders.TryGetValue(o.Name, out var option))
           {
-            orders[o.Name].ForEach(order => order.Transaction.Instrument.Point = o.Point);
+            option.ForEach(order => order.Transaction.Instrument = o);
           }
 
           return o;

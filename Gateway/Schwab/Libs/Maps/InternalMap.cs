@@ -284,7 +284,7 @@ namespace Schwab.Mappers
           break;
       }
 
-      if (subOrders.Count > 1)
+      if (subOrders.Count > 0)
       {
         inOrder.Instruction = InstructionEnum.Group;
 

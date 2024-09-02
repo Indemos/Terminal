@@ -177,7 +177,7 @@ namespace Terminal.Core.Models
 
       if (Transaction is not null)
       {
-        estimate = (volume * GetPointsEstimate(price) * step - instrument.Commission) ?? 0;
+        estimate = (volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission) ?? 0;
       }
 
       GainMin = Math.Min(GainMin ?? estimate, estimate);
