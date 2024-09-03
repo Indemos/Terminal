@@ -221,7 +221,7 @@ namespace Terminal.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Order.Transaction.CurrentVolume,
+            Volume = position.Order.Transaction.Volume,
             Instrument = position.Order.Transaction.Instrument
           }
         };

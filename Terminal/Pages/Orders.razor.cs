@@ -144,7 +144,7 @@ namespace Terminal.Pages
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          CurrentVolume = 1,
+          Volume = 1,
           Instrument = assetSell
         }
       };
@@ -155,7 +155,7 @@ namespace Terminal.Pages
         Type = OrderTypeEnum.Market,
         Transaction = new()
         {
-          CurrentVolume = 1,
+          Volume = 1,
           Instrument = assetBuy
         }
       };
@@ -188,7 +188,7 @@ namespace Terminal.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            CurrentVolume = position.Order.Transaction.CurrentVolume,
+            Volume = position.Order.Transaction.Volume,
             Instrument = position.Order.Transaction.Instrument
           }
         };

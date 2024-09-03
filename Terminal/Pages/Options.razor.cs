@@ -1,5 +1,10 @@
+using Canvas.Core.Models;
+using Canvas.Core.Shapes;
+using IBApi;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using SkiaSharp;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -37,6 +42,10 @@ namespace Terminal.Pages
     {
       if (setup)
       {
+        await CreateViews();
+
+        Performance = new PerformanceIndicator { Name = "Balance" };
+
         View.OnPreConnect = () =>
         {
           View.Adapters["Sim"] = CreateSimAccount();
@@ -63,6 +72,36 @@ namespace Terminal.Pages
       }
 
       await base.OnAfterRenderAsync(setup);
+    }
+
+    /// <summary>
+    /// Charts setup
+    /// </summary>
+    /// <returns></returns>
+    protected virtual async Task CreateViews()
+    {
+      var indUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+      var indDown = new ComponentModel { Color = SKColors.OrangeRed };
+      var indAreas = new Shape();
+      var indCharts = new Shape();
+
+      indCharts.Groups["Ups"] = new ArrowShape { Component = indUp };
+      indCharts.Groups["Downs"] = new ArrowShape { Component = indDown };
+      indCharts.Groups["Range"] = new AreaShape { Component = indUp };
+      indAreas.Groups["Prices"] = indCharts;
+
+      await View.ChartsView.Create(indAreas);
+
+      var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
+      var pnlBalance = new ComponentModel { Color = SKColors.Black };
+      var pnlAreas = new Shape();
+      var pnlCharts = new Shape();
+
+      pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
+      pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
+      pnlAreas.Groups["Performance"] = pnlCharts;
+
+      await View.ReportsView.Create(pnlAreas);
     }
 
     /// <summary>
@@ -154,17 +193,34 @@ namespace Terminal.Pages
       var simAdapter = View.Adapters["Sim"];
       var account = simAdapter.Account;
       var options = await GetOptions(point);
+      var chartPoints = new List<KeyValuePair<string, PointModel>>();
+      var reportPoints = new List<KeyValuePair<string, PointModel>>();
+      var performance = Performance.Calculate([account]);
 
       if (account.ActiveOrders.Count is 0 && account.ActivePositions.Count is 0)
       {
         var orders = GetShortStraddle(point, options);
-        var orderResponse = await simAdapter.CreateOrders(orders);
+        var orderResponse = await simAdapter.CreateOrders([.. orders]);
       }
 
-      if (account.ActivePositions.Count > 1)
+      var delta = 0.0;
+
+      if (account.ActivePositions.Count > 0)
       {
+        var orders = GetShortHedge(point);
+
+        if (orders.Count > 0)
+        {
+          var orderResponse = await simAdapter.CreateOrders([.. orders]);
+        }
       }
 
+      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = delta }));
+      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
+      reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
+
+      await View.ChartsView.UpdateItems(chartPoints);
+      await View.ReportsView.UpdateItems(reportPoints);
       await View.DealsView.UpdateItems(account.Positions);
       await View.OrdersView.UpdateItems(account.ActiveOrders);
       await View.PositionsView.UpdateItems(account.ActivePositions);
@@ -207,7 +263,7 @@ namespace Terminal.Pages
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected virtual OrderModel[] GetShortStraddle(PointModel point, IList<InstrumentModel> options)
+    protected virtual IList<OrderModel> GetShortStraddle(PointModel point, IList<InstrumentModel> options)
     {
       var shortPut = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Put)
@@ -243,6 +299,48 @@ namespace Terminal.Pages
       };
 
       return [order];
+    }
+
+    /// <summary>
+    /// Create short straddle strategy
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual IList<OrderModel> GetShortHedge(PointModel point)
+    {
+      double getDelta(OrderModel o)
+      {
+        var volume = o.Transaction?.Volume;
+        var leverage = o.Transaction?.Instrument?.Leverage;
+        var delta = o.Transaction?.Instrument?.Derivative?.Variable?.Delta;
+        var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
+
+        return ((delta ?? volume) * leverage * side) ?? 0;
+      }
+
+      var simAdapter = View.Adapters["Sim"];
+      var account = simAdapter.Account;
+      var delta = Math.Round(account
+        .ActivePositions
+        .Sum(pos => pos
+          .Order
+          .Orders
+          .Append(pos.Order)
+          .Sum(getDelta)));
+
+      if (Math.Abs(delta) > 0 && Math.Abs(delta) < 50)
+      {
+        var order = new OrderModel
+        {
+          Type = OrderTypeEnum.Market,
+          Side = delta < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
+          Transaction = new() { Volume = Math.Abs(delta), Instrument = point.Instrument }
+        };
+
+        return [order];
+      }
+
+      return [];
     }
   }
 }
