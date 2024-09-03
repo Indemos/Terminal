@@ -17,7 +17,7 @@ namespace Alpaca.Mappers
       var action = order.Transaction;
       var message = new OrderCreationMessage
       {
-        Quantity = action.CurrentVolume,
+        Quantity = action.Volume,
         Symbol = action.Instrument.Name,
         TimeInForce = GetTimeSpan(order.TimeSpan.Value),
         OrderType = "market"

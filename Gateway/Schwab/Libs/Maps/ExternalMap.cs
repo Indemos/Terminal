@@ -91,7 +91,7 @@ namespace Schwab.Mappers
       var response = new OrderLegMessage
       {
         Instrument = instrument,
-        Quantity = order.Transaction.CurrentVolume,
+        Quantity = order.Transaction.Volume,
       };
 
       switch (order.Side)
