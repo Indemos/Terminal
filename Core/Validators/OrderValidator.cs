@@ -13,6 +13,7 @@ namespace Terminal.Core.Validators
     public OrderValidator()
     {
       RuleFor(o => o.Type).NotEmpty();
+      RuleFor(o => o.Descriptor).NotEmpty();
 
       When(o => o.Instruction is InstructionEnum.Group || o.Orders.Where(o => o.Instruction is InstructionEnum.Side).Any(), () =>
       {
@@ -22,7 +23,10 @@ namespace Terminal.Core.Validators
 
       When(o => o.Transaction is not null, () =>
       {
+        RuleFor(o => o.Id).NotEmpty();
         RuleFor(o => o.Side).NotEmpty();
+        RuleFor(o => o.Transaction.Status).Empty();
+        RuleFor(o => o.Transaction.CurrentVolume).Empty();
         RuleFor(o => o.Transaction).SetValidator(new TransactionValidator());
       });
     }

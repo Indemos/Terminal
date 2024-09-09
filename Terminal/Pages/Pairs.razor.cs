@@ -47,9 +47,9 @@ namespace Terminal.Pages
         {
           var account = Adapter.Account;
 
-          View.DealsView.UpdateItems(account.Positions);
-          View.OrdersView.UpdateItems(account.ActiveOrders);
-          View.PositionsView.UpdateItems(account.ActivePositions);
+          View.DealsView.UpdateItems(account.Deals);
+          View.OrdersView.UpdateItems(account.Orders.Values);
+          View.PositionsView.UpdateItems(account.Positions.Values);
         };
       }
 
@@ -133,20 +133,20 @@ namespace Terminal.Pages
       var spread = (xPoint.Ask - xPoint.Bid) + (yPoint.Ask - yPoint.Bid);
       var expenses = spread * 2;
 
-      if (account.ActivePositions.Count == 2)
+      if (account.Positions.Count == 2)
       {
-        var buy = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Buy);
-        var sell = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Sell);
-        var gain = buy.Order.GetPointsEstimate() + sell.Order.GetPointsEstimate();
+        var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Buy);
+        var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Sell);
+        var gain = buy.Value.GetPointsEstimate() + sell.Value.GetPointsEstimate();
 
         switch (true)
         {
           case true when gain > expenses: ClosePositions(); break;
-          case true when gain < -expenses: OpenPositions(buy.Order.Transaction.Instrument, sell.Order.Transaction.Instrument); break;
+          case true when gain < -expenses: OpenPositions(buy.Value.Transaction.Instrument, sell.Value.Transaction.Instrument); break;
         }
       }
 
-      if (account.ActivePositions.IsEmpty)
+      if (account.Positions.Count is 0)
       {
         switch (true)
         {
@@ -165,9 +165,9 @@ namespace Terminal.Pages
 
       View.ChartsView.UpdateItems(chartPoints, 100);
       View.ReportsView.UpdateItems(reportPoints);
-      View.DealsView.UpdateItems(account.Positions);
-      View.OrdersView.UpdateItems(account.ActiveOrders);
-      View.PositionsView.UpdateItems(account.ActivePositions);
+      View.DealsView.UpdateItems(account.Deals);
+      View.OrdersView.UpdateItems(account.Orders.Values);
+      View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
     private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
@@ -206,11 +206,11 @@ namespace Terminal.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in Adapter.Account.ActivePositions)
+      foreach (var position in Adapter.Account.Positions.ToList())
       {
         var side = OrderSideEnum.Buy;
 
-        if (position.Order.Side is OrderSideEnum.Buy)
+        if (position.Value.Side is OrderSideEnum.Buy)
         {
           side = OrderSideEnum.Sell;
         }
@@ -221,8 +221,8 @@ namespace Terminal.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Order.Transaction.Volume,
-            Instrument = position.Order.Transaction.Instrument
+            Volume = position.Value.Transaction.Volume,
+            Instrument = position.Value.Transaction.Instrument
           }
         };
 

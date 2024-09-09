@@ -3,10 +3,8 @@ using Distribution.Services;
 using Distribution.Stream;
 using System;
 using System.Collections;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Specialized;
-using System.Diagnostics.Metrics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -202,12 +200,17 @@ namespace Simulation
 
       foreach (var order in orders)
       {
-        switch (order.Type)
+        var nextOrders = CreateGroup(order);
+
+        foreach (var nextOrder in nextOrders)
         {
-          case OrderTypeEnum.Stop:
-          case OrderTypeEnum.Limit:
-          case OrderTypeEnum.StopLimit: SendPendingOrder(order); break;
-          case OrderTypeEnum.Market: SendOrder(order); break;
+          switch (nextOrder.Type)
+          {
+            case OrderTypeEnum.Stop:
+            case OrderTypeEnum.Limit:
+            case OrderTypeEnum.StopLimit: SendPendingOrder(nextOrder); break;
+            case OrderTypeEnum.Market: SendOrder(nextOrder); break;
+          }
         }
       }
 
@@ -220,13 +223,18 @@ namespace Simulation
     /// <param name="orders"></param>
     public override Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-      var orderIds = orders.Select(o => o.Transaction.Id).ToList();
+      var response = new ResponseModel<IList<OrderModel>>
+      {
+        Data = [.. orders.Select(order =>
+        {
+          if (Account.Orders.TryGetValue(order.Id, out var o))
+          {
+            Account.Orders.Remove(order.Id, out var item);
+          }
 
-      Account.ActiveOrders = new ConcurrentQueue<OrderModel>(Account
-        .ActiveOrders
-        .Where(o => orderIds.Contains(o.Transaction.Id) is false)
-        .ToList());
+          return o;
+        })]
+      };
 
       return Task.FromResult(response);
     }
@@ -234,83 +242,50 @@ namespace Simulation
     /// <summary>
     /// Process pending order
     /// </summary>
-    /// <param name="nextOrder"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual OrderModel SendPendingOrder(OrderModel nextOrder)
+    protected virtual OrderModel SendPendingOrder(OrderModel order)
     {
+      var nextOrder = order.Clone() as OrderModel;
+
       nextOrder.Transaction.Status = OrderStatusEnum.Pending;
-      nextOrder
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side)
-        .ForEach(o => o.Transaction.Status = OrderStatusEnum.Pending);
+      Account.Orders[nextOrder.Id] = nextOrder;
 
-      Account.ActiveOrders.Enqueue(nextOrder);
-
-      return nextOrder;
+      return order;
     }
 
     /// <summary>
     /// Position opening logic 
     /// </summary>
-    /// <param name="nextOrder"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual PositionModel SendOrder(OrderModel nextOrder)
+    protected virtual OrderModel SendOrder(OrderModel order)
     {
-      var positions = Account.ActivePositions.ToList();
-      var nextPosition = CreatePosition(nextOrder);
-      var groupOrders = nextPosition
-        .Order
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side)
-        .ToList();
-
-      Account.ActivePositions.Clear();
-
-      foreach (var position in positions)
+      if (Account.Positions.TryGetValue(order.Name, out var currentOrder))
       {
-        UpdateSide(position.Order, nextPosition.Order);
+        var (inOrder, outOrder) = Equals(currentOrder.Side, order.Side) ?
+          IncreaseSide(currentOrder, order) :
+          DecreaseSide(currentOrder, order);
 
-        nextPosition
-          .Order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side)
-          .ForEach(o => UpdateSide(position.Order, o));
+        Account.Positions.Remove(order.Name, out var item);
 
-        position
-          .Order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side)
-          .ForEach(o => UpdateSide(o, nextPosition.Order));
-
-        position
-          .Order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side)
-          .ForEach(posSubOrder => nextPosition
-            .Order
-            .Orders
-            .Where(o => o.Instruction is InstructionEnum.Side)
-            .ForEach(nextSubOrder => UpdateSide(posSubOrder, nextSubOrder)));
-
-        var sum = position.Order.GetVolume();
-
-        switch (true)
+        if (inOrder?.Transaction?.Volume.Is(0) is false)
         {
-          case true when sum.Is(0): Account.Positions.Enqueue(position); break;
-          case true when sum.Is(0) is false: Account.ActivePositions.Enqueue(position); break;
+          Account.Positions[order.Name] = inOrder;
         }
+
+        if (outOrder?.Transaction?.Volume.Is(0) is false)
+        {
+          Account.Deals.Enqueue(outOrder);
+          Account.Balance += outOrder.GetGainEstimate();
+        }
+
+        return order;
       }
 
-      var nextSum = nextPosition.Order.GetVolume();
+      Account.Positions[order.Name] = order;
 
-      if (nextSum.Is(0) is false)
-      {
-        Account.ActivePositions.Enqueue(nextPosition);
-      }
-
-      Account.Orders.Enqueue(nextPosition.Order);
-
-      return nextPosition;
+      return order;
     }
 
     /// <summary>
@@ -318,39 +293,45 @@ namespace Simulation
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual PositionModel CreatePosition(OrderModel order)
+    protected virtual IList<OrderModel> CreateGroup(OrderModel order)
     {
-      void updateOrder(OrderModel o, OrderModel group = null)
+      OrderModel updateOrder(OrderModel o, OrderModel group = null)
       {
-        o.Price = o.GetOpenEstimate();
-        o.Type ??= group?.Type ?? OrderTypeEnum.Market;
-        o.TimeSpan ??= group?.TimeSpan ?? OrderTimeSpanEnum.Gtc;
-        o.Transaction ??= new TransactionModel();
-        o.Transaction.Time ??= DateTime.Now;
-        o.Transaction.Status = OrderStatusEnum.Filled;
-        o.Transaction.CurrentVolume = o.Transaction.Volume;
-        o.Transaction.Price = o.Price;
+        var nextOrder = o.Clone() as OrderModel;
+
+        nextOrder.Price = nextOrder.GetOpenEstimate();
+        nextOrder.Type ??= group?.Type ?? OrderTypeEnum.Market;
+        nextOrder.TimeSpan ??= group?.TimeSpan ?? OrderTimeSpanEnum.Gtc;
+        nextOrder.Instruction ??= InstructionEnum.Side;
+        nextOrder.Transaction.Time ??= DateTime.Now;
+        nextOrder.Transaction.Status = OrderStatusEnum.Filled;
+        nextOrder.Transaction.CurrentVolume = nextOrder.Transaction.Volume;
+        nextOrder.Transaction.Price = nextOrder.Price;
+
+        return nextOrder;
       }
 
-      var position = new PositionModel();
+      var nextOrders = new List<OrderModel>();
 
       if (order.Transaction is not null)
       {
-        updateOrder(order);
+        nextOrders.Add(updateOrder(order));
       }
 
       foreach (var o in order.Orders)
       {
+        o.Descriptor = order.Descriptor;
+
         switch (o.Instruction)
         {
-          case InstructionEnum.Side: updateOrder(o, order); break;
-          case InstructionEnum.Brace: o.Transaction.Status = OrderStatusEnum.Pending; break;
+          case InstructionEnum.Side: nextOrders.Add(updateOrder(o, order)); break;
+          case InstructionEnum.Brace: SendPendingOrder(o); break;
         }
       }
 
-      position.Order = order;
+      order.Orders.Clear();
 
-      return position;
+      return nextOrders;
     }
 
     /// <summary>
@@ -367,66 +348,65 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Match orders
+    /// Increase size of the order
     /// </summary>
     /// <param name="order"></param>
     /// <param name="update"></param>
     /// <returns></returns>
-    protected virtual ResponseModel<OrderModel> UpdateSide(OrderModel order, OrderModel update)
+    protected virtual (OrderModel, OrderModel) IncreaseSide(OrderModel order, OrderModel update)
     {
-      var response = new ResponseModel<OrderModel>();
-      var orderAction = order.Transaction;
-      var updateAction = update.Transaction;
-      var orderName = orderAction?.Instrument?.Name;
-      var updateName = updateAction?.Instrument?.Name;
-      var orderVolume = orderAction?.CurrentVolume ?? 0;
-      var updateVolume = updateAction?.CurrentVolume ?? 0;
+      var nextOrder = order.Clone() as OrderModel;
+      var volume = nextOrder.Transaction.CurrentVolume + update.Transaction.Volume;
 
-      if (orderVolume.Is(0) || updateVolume.Is(0) || string.Equals(updateName, orderName) is false)
+      nextOrder.Transaction.Volume = volume;
+      nextOrder.Transaction.CurrentVolume = volume;
+      nextOrder.Transaction.Time = update.Transaction.Time;
+      nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
+      nextOrder.Transaction.Price = GetGroupPrice(nextOrder, update);
+      nextOrder.Price = nextOrder.Transaction.Price;
+
+      return (nextOrder, null);
+    }
+
+    /// <summary>
+    /// Decrease size of the order
+    /// </summary>
+    /// <param name="nextOrder"></param>
+    /// <param name="update"></param>
+    /// <returns></returns>
+    protected virtual (OrderModel, OrderModel) DecreaseSide(OrderModel order, OrderModel update)
+    {
+      var nextOrder = order.Clone() as OrderModel;
+      var previousOrder = order.Clone() as OrderModel;
+      var updateVolume = update.Transaction.Volume ?? 0;
+      var previousVolume = nextOrder.Transaction.CurrentVolume ?? 0;
+      var nextVolume = Math.Abs(previousVolume - updateVolume);
+
+      nextOrder.Transaction.Volume = nextVolume;
+      nextOrder.Transaction.CurrentVolume = nextVolume;
+      nextOrder.Transaction.Time = update.Transaction.Time;
+      nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
+
+      previousOrder.Transaction.Price = update.Price;
+
+      switch (true)
       {
-        response.Errors.Add(new ErrorModel { ErrorMessage = nameof(StatusEnum.Error) });
-        return response;
+        case true when nextVolume.Is(0):
+        case true when previousVolume > updateVolume:
+          previousOrder.Transaction.Volume = updateVolume;
+          previousOrder.Transaction.CurrentVolume = updateVolume;
+          break;
+
+        case true when previousVolume < updateVolume:
+          nextOrder.Price = update.Price;
+          nextOrder.Transaction.Price = update.Price;
+          nextOrder.Side = nextOrder.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
+          previousOrder.Transaction.Volume = previousVolume;
+          previousOrder.Transaction.CurrentVolume = previousVolume;
+          break;
       }
 
-      if (Equals(update.Side, order.Side))
-      {
-        orderAction.CurrentVolume += updateAction.Volume;
-        orderAction.Volume = orderAction.CurrentVolume;
-        orderAction.Price = GetGroupPrice(order, update);
-        order.Price = orderAction.Price;
-      }
-      else
-      {
-        var volume = orderAction.CurrentVolume - updateAction.Volume;
-
-        orderAction.CurrentVolume = Math.Abs(volume ?? 0);
-
-        if (volume > 0)
-        {
-          orderAction.Volume = orderAction.CurrentVolume;
-        }
-
-        if (volume < 0)
-        {
-          orderAction.Price = update.Price;
-          orderAction.Volume = orderAction.CurrentVolume;
-          order.Side = order.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy;
-          order.Price = update.Price;
-        }
-
-        if (volume.Is(0))
-        {
-          orderAction.Price = update.Price;
-          Account.Balance += order.GetGainEstimate();
-        }
-      }
-
-      orderAction.Time = updateAction.Time;
-      orderAction.Descriptor = updateAction.Descriptor ?? orderAction.Descriptor;
-      updateAction.CurrentVolume = 0;
-      response.Data = order;
-
-      return response;
+      return (nextVolume.Is(0) ? null : nextOrder, previousOrder);
     }
 
     /// <summary>
@@ -436,21 +416,19 @@ namespace Simulation
     protected virtual void OnPointUpdate(object sender, NotifyCollectionChangedEventArgs e)
     {
       var estimates = Account
-        .ActivePositions
-        .Select(o => o.GetGainEstimate())
+        .Positions
+        .Select(o => o.Value.GetGainEstimate())
         .ToList();
 
-      var orders = Account
-        .ActivePositions
-        .SelectMany(o => o.Order.Orders.Append(o.Order))
-        .Concat(Account.ActiveOrders.SelectMany(o => o.Orders.Append(o)))
-        .Where(o => o?.Transaction?.Status is OrderStatusEnum.Pending);
-
-      foreach (var order in orders)
+      foreach (var order in Account.Orders.Values)
       {
         if (IsOrderExecutable(order))
         {
           SendOrder(order);
+          Account.Orders = Account
+            .Orders
+            .Where(o => Equals(o.Value.Descriptor, order.Descriptor) is false)
+            .ToDictionary(o => o.Key, o => o.Value);
         }
       }
     }
@@ -599,8 +577,9 @@ namespace Simulation
     public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(OptionScreenerModel screener, Hashtable criteria)
     {
       var orders = Account
-        .ActivePositions
-        .SelectMany(o => o.Order.Orders.Append(o.Order))
+        .Positions
+        .Values
+        .SelectMany(o => o.Orders.Append(o))
         .Where(o => o?.Transaction?.Instrument?.Name is not null)
         .GroupBy(o => o.Transaction.Instrument.Name)
         .ToDictionary(o => o.Key, o => o);
@@ -651,11 +630,11 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
-      var response = new ResponseModel<IList<PositionModel>>
+      var response = new ResponseModel<IList<OrderModel>>
       {
-        Data = [.. Account.ActivePositions]
+        Data = [.. Account.Positions.Values]
       };
 
       return Task.FromResult(response);
@@ -671,7 +650,7 @@ namespace Simulation
     {
       var response = new ResponseModel<IList<OrderModel>>
       {
-        Data = [.. Account.ActiveOrders]
+        Data = [.. Account.Orders.Values]
       };
 
       return Task.FromResult(response);

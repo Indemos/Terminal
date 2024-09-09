@@ -30,29 +30,24 @@ namespace Terminal.Core.Domains
     string Descriptor { get; set; }
 
     /// <summary>
-    /// History of orders
-    /// </summary>
-    ConcurrentQueue<OrderModel> Orders { get; set; }
-
-    /// <summary>
     /// Completed trades
     /// </summary>
-    ConcurrentQueue<PositionModel> Positions { get; set; }
+    ConcurrentQueue<OrderModel> Deals { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    ConcurrentQueue<OrderModel> ActiveOrders { get; set; }
+    IDictionary<string, OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    ConcurrentQueue<PositionModel> ActivePositions { get; set; }
+    IDictionary<string, OrderModel> Positions { get; set; }
 
     /// <summary>
     /// List of instruments
     /// </summary>
-    ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
+    IDictionary<string, InstrumentModel> Instruments { get; set; }
   }
 
   /// <summary>
@@ -76,29 +71,24 @@ namespace Terminal.Core.Domains
     public virtual string Descriptor { get; set; }
 
     /// <summary>
-    /// History of completed orders
-    /// </summary>
-    public virtual ConcurrentQueue<OrderModel> Orders { get; set; }
-
-    /// <summary>
     /// History of completed deals, closed positions
     /// </summary>
-    public virtual ConcurrentQueue<PositionModel> Positions { get; set; }
+    public virtual ConcurrentQueue<OrderModel> Deals { get; set; }
 
     /// <summary>
     /// Active orders
     /// </summary>
-    public virtual ConcurrentQueue<OrderModel> ActiveOrders { get; set; }
+    public virtual IDictionary<string, OrderModel> Orders { get; set; }
 
     /// <summary>
     /// Active positions
     /// </summary>
-    public virtual ConcurrentQueue<PositionModel> ActivePositions { get; set; }
+    public virtual IDictionary<string, OrderModel> Positions { get; set; }
 
     /// <summary>
     /// List of instruments
     /// </summary>
-    public virtual ConcurrentDictionary<string, InstrumentModel> Instruments { get; set; }
+    public virtual IDictionary<string, InstrumentModel> Instruments { get; set; }
 
     /// <summary>
     /// Constructor
@@ -108,11 +98,10 @@ namespace Terminal.Core.Domains
       Balance = 0.0;
       InitialBalance = 0.0;
 
-      Orders = [];
-      Positions = [];
-      ActiveOrders = [];
-      ActivePositions = [];
-      Instruments = [];
+      Deals = [];
+      Orders = new ConcurrentDictionary<string, OrderModel>();
+      Positions = new ConcurrentDictionary<string, OrderModel>();
+      Instruments = new ConcurrentDictionary<string, InstrumentModel>();
     }
   }
 }

@@ -124,7 +124,7 @@ namespace Alpaca.Mappers
 
       var action = new TransactionModel
       {
-        Id = $"{message.OrderId}",
+        Id = message.OrderId,
         Descriptor = message.ClientOrderId,
         Instrument = instrument,
         CurrentVolume = message.FilledQuantity,
@@ -168,7 +168,7 @@ namespace Alpaca.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMessage message)
+    public static OrderModel GetPosition(PositionMessage message)
     {
       var instrument = new InstrumentModel
       {
@@ -177,7 +177,7 @@ namespace Alpaca.Mappers
 
       var action = new TransactionModel
       {
-        Id = $"{message.AssetId}",
+        Id = message.AssetId,
         Descriptor = message.Symbol,
         Instrument = instrument,
         Price = message.AverageEntryPrice,
@@ -195,11 +195,10 @@ namespace Alpaca.Mappers
       var gainLossPoints = message.AverageEntryPrice - message.AssetCurrentPrice;
       var gainLoss = message.CostBasis - message.MarketValue;
 
-      return new PositionModel
+      return new OrderModel
       {
         GainMax = gainLoss,
-        GainMin = gainLoss,
-        Order = order
+        GainMin = gainLoss
       };
     }
 

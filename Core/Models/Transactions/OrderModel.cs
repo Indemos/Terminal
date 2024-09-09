@@ -2,12 +2,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 
 namespace Terminal.Core.Models
 {
   public class OrderModel : ICloneable
   {
+    /// <summary>
+    /// Id
+    /// </summary>
+    public virtual string Id => Transaction?.Id;
+
+    /// <summary>
+    /// Name
+    /// </summary>
+    public virtual string Name => Transaction?.Instrument?.Name;
+
+    /// <summary>
+    /// Group
+    /// </summary>
+    public virtual string Descriptor { get; set; }
+
     /// <summary>
     /// Min possible PnL in account's currency
     /// </summary>
@@ -70,6 +84,7 @@ namespace Terminal.Core.Models
     {
       Orders = [];
       OrderStream = o => { };
+      Descriptor = $"{Guid.NewGuid():N}".ToUpper();
     }
 
     /// <summary>
@@ -110,13 +125,10 @@ namespace Terminal.Core.Models
     {
       var point = Transaction.Instrument.Point;
 
-      if (point is not null)
+      switch (Side)
       {
-        switch (Side)
-        {
-          case OrderSideEnum.Buy: return point.Ask;
-          case OrderSideEnum.Sell: return point.Bid;
-        }
+        case OrderSideEnum.Buy: return point.Ask;
+        case OrderSideEnum.Sell: return point.Bid;
       }
 
       return null;
@@ -131,13 +143,10 @@ namespace Terminal.Core.Models
     {
       var point = Transaction.Instrument.Point;
 
-      if (point is not null)
+      switch (Side)
       {
-        switch (Side)
-        {
-          case OrderSideEnum.Buy: return point.Bid;
-          case OrderSideEnum.Sell: return point.Ask;
-        }
+        case OrderSideEnum.Buy: return point.Bid;
+        case OrderSideEnum.Sell: return point.Ask;
       }
 
       return null;
@@ -150,12 +159,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetPointsEstimate(double? price = null)
     {
-      if (Transaction is not null)
-      {
-        return (((price ?? GetCloseEstimate()) - Price) * GetDirection()) ?? 0;
-      }
-
-      return 0;
+      return (((price ?? GetCloseEstimate()) - Price) * GetDirection()) ?? 0;
     }
 
     /// <summary>
@@ -165,20 +169,10 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetGainEstimate(double? price = null)
     {
-      var estimate = 0.0;
       var volume = Transaction.CurrentVolume;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
-
-      if (volume.Is(0))
-      {
-        volume = Transaction.Volume;
-      }
-
-      if (Transaction is not null)
-      {
-        estimate = (volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission) ?? 0;
-      }
+      var estimate = (volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission) ?? 0;
 
       GainMin = Math.Min(GainMin ?? estimate, estimate);
       GainMax = Math.Max(GainMax ?? estimate, estimate);

@@ -85,7 +85,7 @@ namespace Terminal.Core.Domains
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria);
 
     /// <summary>
     /// Get orders
@@ -199,7 +199,7 @@ namespace Terminal.Core.Domains
     /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel args, Hashtable criteria);
 
     /// <summary>
     /// Get orders

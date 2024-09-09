@@ -18,7 +18,7 @@ namespace Terminal.Core.Indicators
     /// <returns></returns>
     public PerformanceIndicator Calculate(IList<IAccount> accounts)
     {
-      Point.Last = accounts.Sum(o => o.Balance + o.ActivePositions.Sum(v => v.GetGainEstimate()));
+      Point.Last = accounts.Sum(o => o.Balance + o.Positions.Sum(v => v.Value.GetGainEstimate()));
 
       return this;
     }

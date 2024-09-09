@@ -292,22 +292,25 @@ namespace Coinbase
 
         foreach (var portfolio in portfolios.Data.Portfolios)
         {
-          var positions = await SendData<PortfolioBreakdownsMessage>($"/api/v3/brokerage/portfolios/{portfolio.Uuid}");
-
-          Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions
+          var positions = (await GetPositions(null, criteria))
             .Data
-            .Breakdown
-            .SpotPositions
-            .Select(InternalMap.GetPosition));
+            .GroupBy(o => o.Name)
+            .ToDictionary(o => o.Key, o => o.FirstOrDefault());
+
+          Account.Positions = positions;
         }
 
         Account.Balance = account.Data.AvailableBalance;
-        Account.ActiveOrders = new ConcurrentQueue<OrderModel>(orders.Data);
+        Account.Orders = orders
+          .Data
+          .GroupBy(o => o.Name)
+          .ToDictionary(o => o.Key, o => o.FirstOrDefault());
 
         Account
-          .ActiveOrders
+          .Orders
+          .Values
           .Select(o => o.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
+          .Concat(Account.Positions.Select(o => o.Value.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments[o] = new InstrumentModel { Name = o });
 
@@ -361,9 +364,9 @@ namespace Coinbase
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
-      var response = new ResponseModel<IList<PositionModel>>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       try
       {
@@ -372,12 +375,15 @@ namespace Coinbase
         foreach (var portfolio in portfolios.Data.Portfolios)
         {
           var positions = await SendData<PortfolioBreakdownsMessage>($"/api/v3/brokerage/portfolios/{portfolio.Uuid}");
-
-          Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions
+          var activePositions = positions
             .Data
             .Breakdown
             .SpotPositions
-            .Select(InternalMap.GetPosition));
+            .Select(InternalMap.GetPosition)
+            .GroupBy(o => o.Name)
+            .ToDictionary(o => o.Key, o => o.FirstOrDefault());
+
+          Account.Positions = new ConcurrentDictionary<string, OrderModel>();
         }
 
       }

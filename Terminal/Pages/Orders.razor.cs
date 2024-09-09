@@ -46,9 +46,9 @@ namespace Terminal.Pages
         {
           var account = Adapter.Account;
 
-          View.DealsView.UpdateItems(account.Positions);
-          View.OrdersView.UpdateItems(account.ActiveOrders);
-          View.PositionsView.UpdateItems(account.ActivePositions);
+          View.DealsView.UpdateItems(account.Deals);
+          View.OrdersView.UpdateItems(account.Orders.Values);
+          View.PositionsView.UpdateItems(account.Positions.Values);
         };
       }
 
@@ -131,9 +131,9 @@ namespace Terminal.Pages
 
       await View.ChartsView.UpdateItems(chartPoints, 100);
       await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(account.Positions);
-      await View.OrdersView.UpdateItems(account.ActiveOrders);
-      await View.PositionsView.UpdateItems(account.ActivePositions);
+      await View.DealsView.UpdateItems(account.Deals);
+      await View.OrdersView.UpdateItems(account.Orders.Values);
+      await View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
     private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
@@ -164,8 +164,8 @@ namespace Terminal.Pages
       Adapter.CreateOrders(orderSell);
 
       var account = Adapter.Account;
-      var buy = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Buy);
-      var sell = account.ActivePositions.First(o => o.Order.Side == OrderSideEnum.Sell);
+      var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Buy);
+      var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Sell);
 
       //points.Add(new PointModel { Time = buy.Time, Name = nameof(OrderSideEnum.Buy), Last = buy.OpenPrices.Last().Price });
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
@@ -173,11 +173,11 @@ namespace Terminal.Pages
 
     private void ClosePositions()
     {
-      foreach (var position in Adapter.Account.ActivePositions)
+      foreach (var position in Adapter.Account.Positions)
       {
         var side = OrderSideEnum.Buy;
 
-        if (position.Order.Side is OrderSideEnum.Buy)
+        if (position.Value.Side is OrderSideEnum.Buy)
         {
           side = OrderSideEnum.Sell;
         }
@@ -188,8 +188,8 @@ namespace Terminal.Pages
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
-            Volume = position.Order.Transaction.Volume,
-            Instrument = position.Order.Transaction.Instrument
+            Volume = position.Value.Transaction.Volume,
+            Instrument = position.Value.Transaction.Instrument
           }
         };
 

@@ -93,7 +93,7 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMultiMessage message)
+    public static OrderModel GetPosition(PositionMultiMessage message)
     {
       var instrument = new InstrumentModel
       {
@@ -102,8 +102,8 @@ namespace InteractiveBrokers.Mappers
 
       var action = new TransactionModel
       {
+        Id = instrument.Name,
         Instrument = instrument,
-        Id = $"{instrument.Name}",
         Descriptor = instrument.Name,
         Price = message.AverageCost,
         CurrentVolume = (double)message.Position,
@@ -119,11 +119,10 @@ namespace InteractiveBrokers.Mappers
 
       var gainLoss = 0.0;
 
-      return new PositionModel
+      return new OrderModel
       {
         GainMax = gainLoss,
-        GainMin = gainLoss,
-        Order = order
+        GainMin = gainLoss
       };
     }
 

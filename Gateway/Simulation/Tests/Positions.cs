@@ -1,6 +1,7 @@
 using Simulation;
 using System;
 using System.Linq;
+using System.Text.Json;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -61,13 +62,18 @@ namespace Terminal.Tests
 
       base.CreateOrders(order);
 
-      Assert.Empty(Account.Orders);
+      Assert.Empty(Account.Deals);
+      Assert.Single(Account.Orders);
       Assert.Empty(Account.Positions);
-      Assert.Single(Account.ActiveOrders);
-      Assert.Empty(Account.ActivePositions);
 
-      Assert.Equal(order, Account.ActiveOrders.First());
-      Assert.Equal(order.Transaction.Status, OrderStatusEnum.Pending);
+      var outOrder = Account.Orders[order.Id];
+
+      Assert.Equal(outOrder.Type, orderType);
+      Assert.Equal(outOrder.Price, openPrice);
+      Assert.Equal(outOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.NotEmpty(outOrder.Transaction.Id);
+      Assert.Equal(outOrder.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(outOrder.Transaction.Status, OrderStatusEnum.Pending);
     }
 
     [Theory]
@@ -109,20 +115,24 @@ namespace Terminal.Tests
 
       base.CreateOrders(order);
 
-      var position = Account.ActivePositions.First();
-      var openPrice = position.Order.Side is OrderSideEnum.Buy ? point.Ask : point.Bid;
+      var position = Account.Positions[order.Name];
+      var openPrice = position.Side is OrderSideEnum.Buy ? point.Ask : point.Bid;
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Single(Account.Orders);
-      Assert.Single(Account.ActivePositions);
+      Assert.Empty(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Single(Account.Positions);
 
-      Assert.Equal(position.Order.Price, openPrice);
-      Assert.Equal(position.Order.Transaction.Price, openPrice);
-      Assert.Equal(position.Order.Type, OrderTypeEnum.Market);
-      Assert.Equal(position.Order.TimeSpan, OrderTimeSpanEnum.Gtc);
-      Assert.Equal(position.Order.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.NotEmpty(position.Order.Transaction.Id);
+      Assert.Equal(position.Price, openPrice);
+      Assert.Equal(position.Instruction, InstructionEnum.Side);
+      Assert.Equal(position.Transaction.Price, openPrice);
+      Assert.Equal(position.Type, OrderTypeEnum.Market);
+      Assert.Equal(position.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
+      Assert.Equal(position.Transaction.Id, order.Transaction.Id);
+      Assert.Equal(position.Transaction.Volume, order.Transaction.Volume);
+      Assert.Equal(position.Transaction.CurrentVolume, order.Transaction.Volume);
+      Assert.NotEmpty(position.Transaction.Id);
+      Assert.NotNull(position.Transaction.Volume);
     }
 
     [Fact]
@@ -184,10 +194,9 @@ namespace Terminal.Tests
 
       base.CreateOrders(order);
 
-      Assert.Single(Account.Orders);
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Single(Account.ActivePositions);
+      Assert.Empty(Account.Deals);
+      Assert.Equal(2, Account.Orders.Count);
+      Assert.Single(Account.Positions);
 
       // Trigger SL
 
@@ -208,10 +217,9 @@ namespace Terminal.Tests
 
       base.OnPointUpdate(null, null);
 
-      Assert.Equal(2, Account.Orders.Count);
-      Assert.Single(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Empty(Account.ActivePositions);
+      Assert.Single(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Empty(Account.Positions);
       Assert.Equal(Account.Balance, balance + (newPoint.Bid - point.Ask));
     }
 
@@ -268,15 +276,13 @@ namespace Terminal.Tests
 
       base.CreateOrders(order);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Single(Account.Orders);
-      Assert.Single(Account.ActivePositions);
+      Assert.Empty(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(3, Account.Positions.Count);
 
-      var openOrder = Account.ActivePositions.First().Order;
-      var openShare = openOrder.Orders.ElementAt(0);
-      var openLong = openOrder.Orders.ElementAt(1);
-      var openShort = openOrder.Orders.ElementAt(2);
+      var openShare = Account.Positions[basis.Name];
+      var openLong = Account.Positions[optionLong.Name];
+      var openShort = Account.Positions[optionShort.Name];
 
       Assert.Equal(openShare.Side, OrderSideEnum.Buy);
       Assert.Equal(openShare.Type, OrderTypeEnum.Market);
@@ -373,13 +379,11 @@ namespace Terminal.Tests
 
       base.CreateOrders(increase);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(2, Account.Orders.Count);
-      Assert.Single(Account.ActivePositions);
+      Assert.Empty(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(3, Account.Positions.Count);
 
-      var increaseOrder = Account.ActivePositions.First().Order;
-      var increaseShare = increaseOrder.Orders.ElementAt(0);
+      var increaseShare = Account.Positions[basis.Name];
 
       Assert.Equal(increaseShare.Side, OrderSideEnum.Buy);
       Assert.Equal(increaseShare.Type, OrderTypeEnum.Market);
@@ -402,13 +406,11 @@ namespace Terminal.Tests
 
       base.CreateOrders(decrease);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(3, Account.Orders.Count);
-      Assert.Single(Account.ActivePositions);
+      Assert.Single(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(3, Account.Positions.Count);
 
-      var decreaseOrder = Account.ActivePositions.First().Order;
-      var decreaseShort = decreaseOrder.Orders.ElementAt(2);
+      var decreaseShort = Account.Positions[optionShort.Name];
 
       Assert.Equal(decreaseShort.Side, OrderSideEnum.Buy);
       Assert.Equal(decreaseShort.Type, OrderTypeEnum.Market);
@@ -426,15 +428,14 @@ namespace Terminal.Tests
       {
         Side = OrderSideEnum.Sell,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = Account.ActivePositions.First().Order.Orders.First().Transaction.Volume, Instrument = basis },
+        Transaction = new() { Volume = Account.Positions[basis.Name].Transaction.Volume, Instrument = basis },
       };
 
       base.CreateOrders(close);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(4, Account.Orders.Count);
-      Assert.Single(Account.ActivePositions);
+      Assert.Equal(2, Account.Deals.Count);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(2, Account.Positions.Count);
 
       // Close position
 
@@ -461,10 +462,9 @@ namespace Terminal.Tests
 
       base.CreateOrders(closePosition);
 
-      Assert.Single(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(5, Account.Orders.Count);
-      Assert.Empty(Account.ActivePositions);
+      Assert.Empty(Account.Positions);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(4, Account.Deals.Count);
     }
 
     [Fact]
@@ -494,12 +494,11 @@ namespace Terminal.Tests
 
       base.CreateOrders(reverse);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(2, Account.Orders.Count);
-      Assert.Single(Account.ActivePositions);
+      Assert.Single(Account.Deals);
+      Assert.Empty(Account.Orders);
+      Assert.Single(Account.Positions);
 
-      var reverseOrder = Account.ActivePositions.First().Order;
+      var reverseOrder = Account.Positions[instrument.Name];
 
       Assert.Equal(reverseOrder.Side, OrderSideEnum.Sell);
       Assert.Equal(reverseOrder.Type, OrderTypeEnum.Market);
@@ -548,10 +547,8 @@ namespace Terminal.Tests
       base.CreateOrders(orderX);
       base.CreateOrders(orderY);
 
-      Assert.Empty(Account.Positions);
-      Assert.Empty(Account.ActiveOrders);
-      Assert.Equal(2, Account.Orders.Count);
-      Assert.Equal(2, Account.ActivePositions.Count);
+      Assert.Empty(Account.Orders);
+      Assert.Equal(2, Account.Positions.Count);
     }
   }
 }

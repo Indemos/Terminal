@@ -65,9 +65,9 @@ namespace Terminal.Pages
 
           var account = View.Adapters["Sim"].Account;
 
-          View.DealsView.UpdateItems(account.Positions);
-          View.OrdersView.UpdateItems(account.ActiveOrders);
-          View.PositionsView.UpdateItems(account.ActivePositions);
+          View.DealsView.UpdateItems(account.Deals);
+          View.OrdersView.UpdateItems(account.Orders.Values);
+          View.PositionsView.UpdateItems(account.Positions.Values);
         };
       }
 
@@ -85,8 +85,8 @@ namespace Terminal.Pages
       var indAreas = new Shape();
       var indCharts = new Shape();
 
-      indCharts.Groups["Ups"] = new ArrowShape { Component = indUp };
-      indCharts.Groups["Downs"] = new ArrowShape { Component = indDown };
+      indCharts.Groups["Ups"] = new AreaShape { Component = indUp };
+      indCharts.Groups["Downs"] = new AreaShape { Component = indDown };
       indCharts.Groups["Range"] = new AreaShape { Component = indUp };
       indAreas.Groups["Prices"] = indCharts;
 
@@ -197,17 +197,27 @@ namespace Terminal.Pages
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
       var performance = Performance.Calculate([account]);
 
-      if (account.ActiveOrders.Count is 0 && account.ActivePositions.Count is 0)
+      if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var orders = GetShortStraddle(point, options);
         var orderResponse = await simAdapter.CreateOrders([.. orders]);
       }
 
-      var delta = 0.0;
+      var basisDelta = account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .Sum(getDelta);
 
-      if (account.ActivePositions.Count > 0)
+      var optionDelta = account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Sum(getDelta);
+
+      if (account.Positions.Count > 0)
       {
-        var orders = GetShortHedge(point);
+        var orders = GetShortHedge(point, basisDelta, optionDelta);
 
         if (orders.Count > 0)
         {
@@ -215,15 +225,16 @@ namespace Terminal.Pages
         }
       }
 
-      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = delta }));
+      chartPoints.Add(KeyValuePair.Create("Ups", new PointModel { Time = point.Time, Last = basisDelta }));
+      chartPoints.Add(KeyValuePair.Create("Downs", new PointModel { Time = point.Time, Last = optionDelta }));
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
       await View.ChartsView.UpdateItems(chartPoints);
       await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(account.Positions);
-      await View.OrdersView.UpdateItems(account.ActiveOrders);
-      await View.PositionsView.UpdateItems(account.ActivePositions);
+      await View.DealsView.UpdateItems(account.Deals);
+      await View.OrdersView.UpdateItems(account.Orders.Values);
+      await View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
     /// <summary>
@@ -305,30 +316,16 @@ namespace Terminal.Pages
     /// Create short straddle strategy
     /// </summary>
     /// <param name="point"></param>
+    /// <param name="basisDelta"></param>
+    /// <param name="optionDelta"></param>
     /// <returns></returns>
-    protected virtual IList<OrderModel> GetShortHedge(PointModel point)
+    protected virtual IList<OrderModel> GetShortHedge(PointModel point, double basisDelta, double optionDelta)
     {
-      double getDelta(OrderModel o)
-      {
-        var volume = o.Transaction?.Volume;
-        var leverage = o.Transaction?.Instrument?.Leverage;
-        var delta = o.Transaction?.Instrument?.Derivative?.Variable?.Delta;
-        var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
+      var account = View.Adapters["Sim"].Account;
+      var gain = account.Positions.Sum(o => o.Value.GetGainEstimate());
+      var delta = Math.Round(basisDelta + optionDelta);
 
-        return ((delta ?? volume) * leverage * side) ?? 0;
-      }
-
-      var simAdapter = View.Adapters["Sim"];
-      var account = simAdapter.Account;
-      var delta = Math.Round(account
-        .ActivePositions
-        .Sum(pos => pos
-          .Order
-          .Orders
-          .Append(pos.Order)
-          .Sum(getDelta)));
-
-      if (Math.Abs(delta) > 0 && Math.Abs(delta) < 50)
+      if (Math.Abs(delta) > 0)
       {
         var order = new OrderModel
         {
@@ -341,6 +338,16 @@ namespace Terminal.Pages
       }
 
       return [];
+    }
+
+    protected virtual double getDelta(OrderModel o)
+    {
+      var volume = o.Transaction?.Volume;
+      var leverage = o.Transaction?.Instrument?.Leverage;
+      var delta = o.Transaction?.Instrument?.Derivative?.Variable?.Delta;
+      var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
+
+      return ((delta ?? volume) * leverage * side) ?? 0;
     }
   }
 }

@@ -329,18 +329,19 @@ namespace Schwab
 
         var account = await SendData<AccountsMessage>($"/trader/v1/accounts/{_accountCode}?{accountProps.Query()}");
         var orders = await GetOrders(null, criteria);
+        var positions = await GetPositions(null, criteria);
+        var activeOrders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault());
+        var activePositions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault());
 
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
-        Account.ActivePositions = new ConcurrentQueue<PositionModel>(account
-          .Data
-          .SecuritiesAccount
-          .Positions
-          .Select(InternalMap.GetPosition));
+        Account.Orders = new ConcurrentDictionary<string, OrderModel>(activeOrders);
+        Account.Positions = new ConcurrentDictionary<string, OrderModel>(activePositions);
 
         Account
-          .ActiveOrders
+          .Orders
+          .Values
           .Select(o => o.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
+          .Concat(Account.Positions.Select(o => o.Value.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments[o] = new InstrumentModel { Name = o });
 
@@ -393,9 +394,9 @@ namespace Schwab
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
-      var response = new ResponseModel<IList<PositionModel>>();
+      var response = new ResponseModel<IList<OrderModel>>();
 
       try
       {
@@ -518,7 +519,8 @@ namespace Schwab
 
           inResponse.Data.Transaction.Id = orderId;
           inResponse.Data.Transaction.Status = Terminal.Core.Enums.OrderStatusEnum.Filled;
-          Account.ActiveOrders.Enqueue(order);
+
+          Account.Orders[order.Id] = order;
         }
       }
       catch (Exception e)
@@ -540,7 +542,7 @@ namespace Schwab
 
       try
       {
-        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
+        var exResponse = await SendData<OrderMessage>($"/trader/v1/accounts/{_accountCode}/orders/{order.Id}", HttpMethod.Delete);
 
         if ((int)exResponse.Message.StatusCode >= 400)
         {

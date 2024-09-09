@@ -23,7 +23,7 @@ namespace Terminal.Components
       var values = new List<InputData>();
       var balance = accounts.Sum(o => o.InitialBalance).Value;
       var orders = accounts
-        .SelectMany(account => account.Positions.SelectMany(o => o.Order.Orders.Append(o.Order)))
+        .SelectMany(account => account.Deals.SelectMany(o => o.Orders.Append(o)))
         .OrderBy(o => o.Transaction.Time)
         .ToList();
 

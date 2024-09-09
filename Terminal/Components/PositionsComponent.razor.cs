@@ -28,13 +28,13 @@ namespace Terminal.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(IEnumerable<PositionModel> items)
+    public virtual Task UpdateItems(IEnumerable<OrderModel> items)
     {
-      static PositionRecord getRecord(string group, OrderModel o)
+      static PositionRecord getRecord(OrderModel o)
       {
         return new PositionRecord
         {
-          Group = group,
+          Group = o.Descriptor,
           Time = o.Transaction.Time,
           Name = o.Transaction.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
@@ -45,23 +45,7 @@ namespace Terminal.Components
         };
       }
 
-      Items = items.SelectMany((pos, i) =>
-      {
-        var group = $"{i + 1}";
-        var subRecords = pos
-          .Order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side && o.Transaction is not null)
-          .Select(o => getRecord(group, o));
-
-        if (pos.Order.Transaction is not null)
-        {
-          subRecords = subRecords.Append(getRecord(group, pos.Order));
-        }
-
-        return subRecords;
-
-      }).ToList();
+      Items = [.. items.Select((order, i) => getRecord(order))];
 
       return Render();
     }

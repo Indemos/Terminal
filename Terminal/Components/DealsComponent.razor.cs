@@ -28,7 +28,7 @@ namespace Terminal.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(IEnumerable<PositionModel> items)
+    public virtual Task UpdateItems(IEnumerable<OrderModel> items)
     {
       static PositionRecord getRecord(OrderModel o)
       {
@@ -45,22 +45,7 @@ namespace Terminal.Components
         };
       }
 
-      Items = items.SelectMany(pos =>
-      {
-        var subRecords = pos
-          .Order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side && o.Transaction is not null)
-          .Select(o => getRecord(o));
-
-        if (pos.Order.Transaction is not null)
-        {
-          subRecords = subRecords.Append(getRecord(pos.Order));
-        }
-
-        return subRecords;
-
-      }).ToList();
+      Items = [.. items.Select(getRecord)];
 
       return Render();
     }

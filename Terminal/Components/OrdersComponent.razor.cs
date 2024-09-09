@@ -34,7 +34,7 @@ namespace Terminal.Components
       {
         return new OrderRecord
         {
-          Group = o.Transaction.Id,
+          Group = o.Id,
           Time = o.Transaction.Time,
           Name = o.Transaction.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
@@ -43,21 +43,7 @@ namespace Terminal.Components
         };
       }
 
-      Items = items.SelectMany(order =>
-      {
-        var subRecords = order
-          .Orders
-          .Where(o => o.Instruction is InstructionEnum.Side && o.Transaction is not null)
-          .Select(o => getRecord(order));
-
-        if (order.Transaction is not null)
-        {
-          subRecords = subRecords.Append(getRecord(order));
-        }
-
-        return subRecords;
-
-      }).ToList();
+      Items = [.. items.Select(getRecord)];
 
       return Render();
     }

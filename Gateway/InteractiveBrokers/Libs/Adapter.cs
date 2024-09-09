@@ -342,14 +342,17 @@ namespace InteractiveBrokers
 
         var orders = await GetOrders(null, criteria);
         var positions = await GetPositions(null, criteria);
+        var activeOrders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault());
+        var activePositions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault());
 
-        Account.ActiveOrders = new ConcurrentQueue<OrderModel>(orders.Data ?? []);
-        Account.ActivePositions = new ConcurrentQueue<PositionModel>(positions.Data ?? []);
+        Account.Orders = new ConcurrentDictionary<string, OrderModel>(activeOrders);
+        Account.Positions = new ConcurrentDictionary<string, OrderModel>(activePositions);
 
         Account
-          .ActiveOrders
+          .Orders
+          .Values
           .Select(o => o.Transaction.Instrument.Name)
-          .Concat(Account.ActivePositions.Select(o => o.Order.Transaction.Instrument.Name))
+          .Concat(Account.Positions.Select(o => o.Value.Transaction.Instrument.Name))
           .Where(o => Account.Instruments.ContainsKey(o) is false)
           .ForEach(o => Account.Instruments[o] = new InstrumentModel { Name = o });
 
@@ -408,9 +411,9 @@ namespace InteractiveBrokers
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PositionModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
     {
-      var response = new ResponseModel<IList<PositionModel>>();
+      var response = new ResponseModel<IList<OrderModel>>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
       var id = Id;
 
@@ -587,7 +590,7 @@ namespace InteractiveBrokers
 
         if (string.Equals(exResponse.OrderState.Status, "Submitted", StringComparison.InvariantCultureIgnoreCase))
         {
-          Account.ActiveOrders.Enqueue(order);
+          Account.Orders[order.Id] = order;
         }
       }
       catch (Exception e)
@@ -612,7 +615,7 @@ namespace InteractiveBrokers
         //var exResponse = await SendData<OrderMessage>($"/v2/orders/{order.Transaction.Id}", HttpMethod.Delete);
 
         //inResponse.Data = order;
-        //inResponse.Data.Transaction.Id = $"{exResponse.Data.OrderId}";
+        //inResponse.Data.Transaction.Id = exResponse.Data.OrderId;
         //inResponse.Data.Transaction.Status = InternalMap.GetStatus(exResponse.Data.OrderStatus);
 
         //if ((int)exResponse.Message.StatusCode < 400)

@@ -22,7 +22,7 @@ namespace Coinbase.Mappers
 
       var action = new TransactionModel
       {
-        //Id = $"{order.OrderId}",
+        //Id = order.OrderId,
         //Descriptor = order.ClientOrderId,
         //Instrument = instrument,
         //CurrentVolume = order.FilledQuantity,
@@ -66,7 +66,7 @@ namespace Coinbase.Mappers
     /// </summary>
     /// <param name="position"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(SpotPositionMessage position)
+    public static OrderModel GetPosition(SpotPositionMessage position)
     {
       var instrument = new InstrumentModel
       {
@@ -75,7 +75,7 @@ namespace Coinbase.Mappers
 
       var action = new TransactionModel
       {
-        //Id = $"{position.AssetId}",
+        //Id = position.AssetId,
         //Descriptor = position.Symbol,
         //Instrument = instrument,
         //Price = position.AverageEntryPrice,
@@ -92,11 +92,10 @@ namespace Coinbase.Mappers
 
       var gainLoss = 0; // position.CostBasis - position.MarketValue;
 
-      return new PositionModel
+      return new OrderModel
       {
         GainMax = gainLoss,
-        GainMin = gainLoss,
-        Order = order
+        GainMin = gainLoss
       };
     }
 

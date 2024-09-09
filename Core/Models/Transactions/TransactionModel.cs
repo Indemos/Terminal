@@ -51,7 +51,7 @@ namespace Terminal.Core.Models
     /// </summary>
     public TransactionModel()
     {
-      Id = $"{Guid.NewGuid()}";
+      Id = $"{Guid.NewGuid():N}".ToUpper();
       Time = DateTime.Now;
     }
 

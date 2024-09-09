@@ -175,7 +175,7 @@ namespace Schwab.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    public static PositionModel GetPosition(PositionMessage message)
+    public static OrderModel GetPosition(PositionMessage message)
     {
       var instrument = new InstrumentModel
       {
@@ -200,11 +200,10 @@ namespace Schwab.Mappers
 
       var gainLoss = message.LongOpenProfitLoss;
 
-      return new PositionModel
+      return new OrderModel
       {
         GainMax = gainLoss,
-        GainMin = gainLoss,
-        Order = order
+        GainMin = gainLoss
       };
     }
 
@@ -242,7 +241,7 @@ namespace Schwab.Mappers
 
       var action = new TransactionModel
       {
-        Id = $"{message.OrderId}",
+        Id = message.OrderId,
         Descriptor = message.OrderId,
         Instrument = instrument,
         CurrentVolume = message.FilledQuantity,
