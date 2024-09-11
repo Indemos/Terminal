@@ -112,7 +112,7 @@ namespace Terminal.Pages
           .ForEach(o => OnData(o)));
     }
 
-    private void OnData(PointModel point)
+    protected async void OnData(PointModel point)
     {
       var account = Adapter.Account;
       var instrumentX = account.Instruments[_assetX];
@@ -141,7 +141,7 @@ namespace Terminal.Pages
 
         switch (true)
         {
-          case true when gain > expenses: ClosePositions(); break;
+          case true when gain > expenses: await ClosePositions(); break;
           case true when gain < -expenses: OpenPositions(buy.Value.Transaction.Instrument, sell.Value.Transaction.Instrument); break;
         }
       }
@@ -163,14 +163,14 @@ namespace Terminal.Pages
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
-      View.ChartsView.UpdateItems(chartPoints, 100);
-      View.ReportsView.UpdateItems(reportPoints);
-      View.DealsView.UpdateItems(account.Deals);
-      View.OrdersView.UpdateItems(account.Orders.Values);
-      View.PositionsView.UpdateItems(account.Positions.Values);
+      await View.ChartsView.UpdateItems(chartPoints, 100);
+      await View.ReportsView.UpdateItems(reportPoints);
+      await View.DealsView.UpdateItems(account.Deals);
+      await View.OrdersView.UpdateItems(account.Orders.Values);
+      await View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
-    private void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
+    protected void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
       var orderSell = new OrderModel
       {
@@ -204,7 +204,7 @@ namespace Terminal.Pages
       //points.Add(new PointModel { Time = sell.Time, Name = nameof(OrderSideEnum.Sell), Last = sell.OpenPrices.Last().Price });
     }
 
-    private void ClosePositions()
+    protected async Task ClosePositions()
     {
       foreach (var position in Adapter.Account.Positions.ToList())
       {
@@ -226,9 +226,7 @@ namespace Terminal.Pages
           }
         };
 
-        Adapter.CreateOrders(order);
-
-        //points.Add(new PointModel { Time = order.Time, Name = nameof(OrderSideEnum.Buy), Last = price });
+        await Adapter.CreateOrders(order);
       }
     }
 

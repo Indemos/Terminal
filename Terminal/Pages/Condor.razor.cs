@@ -1,10 +1,8 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
-using IBApi;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using SkiaSharp;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,7 +19,7 @@ using Sim = Simulation;
 
 namespace Terminal.Pages
 {
-  public partial class Options
+  public partial class Condor
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -188,7 +186,7 @@ namespace Terminal.Pages
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    private async Task OnData(PointModel point)
+    protected async Task OnData(PointModel point)
     {
       var simAdapter = View.Adapters["Sim"];
       var account = simAdapter.Account;
@@ -199,7 +197,7 @@ namespace Terminal.Pages
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetShortStraddle(point, options);
+        var orders = GetCondor(point, options);
         var orderResponse = await simAdapter.CreateOrders([.. orders]);
       }
 
@@ -214,16 +212,6 @@ namespace Terminal.Pages
         .Values
         .Where(o => o.Transaction.Instrument.Derivative is not null)
         .Sum(getDelta);
-
-      if (account.Positions.Count > 0)
-      {
-        var orders = GetShortHedge(point, basisDelta, optionDelta);
-
-        if (orders.Count > 0)
-        {
-          var orderResponse = await simAdapter.CreateOrders([.. orders]);
-        }
-      }
 
       chartPoints.Add(KeyValuePair.Create("Ups", new PointModel { Time = point.Time, Last = basisDelta }));
       chartPoints.Add(KeyValuePair.Create("Downs", new PointModel { Time = point.Time, Last = optionDelta }));
@@ -274,16 +262,26 @@ namespace Terminal.Pages
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected virtual IList<OrderModel> GetShortStraddle(PointModel point, IList<InstrumentModel> options)
+    protected virtual IList<OrderModel> GetCondor(PointModel point, IList<InstrumentModel> options)
     {
       var shortPut = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Put)
         .Where(o => o.Derivative.Strike >= point.Last)
         .FirstOrDefault();
 
+      var longPut = options
+        .Where(o => o.Derivative.Side is OptionSideEnum.Put)
+        .Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - 3)
+        .LastOrDefault();
+
       var shortCall = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Call)
         .Where(o => o.Derivative.Strike >= point.Last)
+        .FirstOrDefault();
+
+      var longCall = options
+        .Where(o => o.Derivative.Side is OptionSideEnum.Call)
+        .Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + 3)
         .FirstOrDefault();
 
       var order = new OrderModel
@@ -294,50 +292,32 @@ namespace Terminal.Pages
         [
           new OrderModel
           {
+            Side = OrderSideEnum.Buy,
+            Instruction = InstructionEnum.Side,
+            Transaction = new() { Volume = 1, Instrument = longPut }
+          },
+          new OrderModel
+          {
+            Side = OrderSideEnum.Buy,
+            Instruction = InstructionEnum.Side,
+            Transaction = new() { Volume = 1, Instrument = longCall }
+          },
+          new OrderModel
+          {
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Price = shortPut.Point.Bid,
             Transaction = new() { Volume = 1, Instrument = shortPut }
           },
           new OrderModel
           {
             Side = OrderSideEnum.Sell,
             Instruction = InstructionEnum.Side,
-            Price = shortCall.Point.Bid,
             Transaction = new() { Volume = 1, Instrument = shortCall }
           }
         ]
       };
 
       return [order];
-    }
-
-    /// <summary>
-    /// Create short straddle strategy
-    /// </summary>
-    /// <param name="point"></param>
-    /// <param name="basisDelta"></param>
-    /// <param name="optionDelta"></param>
-    /// <returns></returns>
-    protected virtual IList<OrderModel> GetShortHedge(PointModel point, double basisDelta, double optionDelta)
-    {
-      var account = View.Adapters["Sim"].Account;
-      var gain = account.Positions.Sum(o => o.Value.GetGainEstimate());
-      var delta = Math.Round(basisDelta + optionDelta);
-
-      if (Math.Abs(delta) > 0)
-      {
-        var order = new OrderModel
-        {
-          Type = OrderTypeEnum.Market,
-          Side = delta < 0 ? OrderSideEnum.Buy : OrderSideEnum.Sell,
-          Transaction = new() { Volume = Math.Abs(delta), Instrument = point.Instrument }
-        };
-
-        return [order];
-      }
-
-      return [];
     }
 
     protected virtual double getDelta(OrderModel o)
