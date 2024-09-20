@@ -13,7 +13,7 @@ namespace Terminal.Core.Indicators
   /// Implementation
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public class RelativeStrengthIndicator : Indicator<PointModel, RelativeStrengthIndicator>
+  public class RsiIndicator : Indicator<PointModel, RsiIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -30,7 +30,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override RelativeStrengthIndicator Calculate(IList<PointModel> collection)
+    public override RsiIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -60,17 +60,13 @@ namespace Terminal.Core.Indicators
       var average = averageDown.Is(0) ? 1.0 : averageUp / averageDown;
       var value = 100.0 - 100.0 / (1.0 + average);
 
-      switch (Values.Count < collection.Count)
-      {
-        case true: Values.Add(value); break;
-        case false: Values[collection.Count - 1] = value; break;
-      }
+      Values.Add(value);
 
       var series = currentPoint.Series[Name] =
         currentPoint.Series.Get(Name) ??
-        new RelativeStrengthIndicator().Point;
+        new RsiIndicator().Point;
 
-      Point.Last = series.Last = series.Bar.Close = value;
+      Point.Last = series.Last = value;
 
       return this;
     }

@@ -1,0 +1,100 @@
+using Canvas.Core.Models;
+using Canvas.Core.Shapes;
+using SkiaSharp;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+using Terminal.Components;
+using Terminal.Core.Enums;
+using Terminal.Core.Indicators;
+using Terminal.Core.Models;
+
+namespace Terminal.Pages.Options
+{
+  public partial class CreditSpreadReversal
+  {
+    public virtual OptionPageComponent OptionView { get; set; }
+    public virtual RsiIndicator Rsi { get; set; }
+
+    /// <summary>
+    /// Setup views and adapters
+    /// </summary>
+    /// <param name="setup"></param>
+    /// <returns></returns>
+    protected override async Task OnAfterRenderAsync(bool setup)
+    {
+      if (setup)
+      {
+        Rsi = new RsiIndicator
+        {
+          Interval = 15,
+          Name = nameof(Rsi)
+        };
+
+        var groups = Enumerable.Range(0, 2).Select(o => new Shape()).ToList();
+
+        groups[0].Groups["Bars"] = new CandleShape();
+        groups[1].Groups["Rsi"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
+
+        await OptionView.OnLoad(OnData, groups, TimeSpan.FromMinutes(5));
+      }
+
+      await base.OnAfterRenderAsync(setup);
+    }
+
+    /// <summary>
+    /// Process tick data
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected async Task OnData(PointModel point)
+    {
+      await OptionView.OnUpdate(point, async options =>
+      {
+        var adapter = OptionView.View.Adapters["Sim"];
+        var account = adapter.Account;
+        var rsi = Rsi.Calculate(account.Instruments.Values.First().PointGroups);
+        var chartPoints = new List<KeyValuePair<string, PointModel>>();
+        var posSide = account
+          .Positions
+          .FirstOrDefault()
+          .Value
+          ?.Transaction
+          ?.Instrument
+          ?.Derivative
+          ?.Side;
+
+        if (rsi.Values.Count > rsi.Interval)
+        {
+          if (rsi.Point.Last < 30 && posSide is not OptionSideEnum.Put)
+          {
+            var orders = OptionView.GetCreditSpread(OptionSideEnum.Put, point, options);
+
+            if (orders.Count > 0)
+            {
+              await OptionView.ClosePositions();
+              await adapter.CreateOrders([.. orders]);
+            }
+          }
+
+          if (rsi.Point.Last > 70 && posSide is not OptionSideEnum.Call)
+          {
+            var orders = OptionView.GetCreditSpread(OptionSideEnum.Call, point, options);
+
+            if (orders.Count > 0)
+            {
+              await OptionView.ClosePositions();
+              await adapter.CreateOrders([.. orders]);
+            }
+          }
+        }
+
+        chartPoints.Add(KeyValuePair.Create("Bars", point));
+        chartPoints.Add(KeyValuePair.Create("Rsi", new PointModel { Time = point.Time, Last = rsi.Point.Last }));
+
+        await OptionView.View.ChartsView.UpdateItems(chartPoints);
+      });
+    }
+  }
+}

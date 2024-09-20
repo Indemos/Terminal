@@ -1,7 +1,6 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
-using Microsoft.AspNetCore.DataProtection.KeyManagement;
 using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
@@ -13,15 +12,17 @@ using System.Threading.Tasks;
 using Terminal.Components;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 
-namespace Terminal.Pages
+namespace Terminal.Pages.Shares
 {
-  public partial class GammaLead
+  public partial class RenkoFollower
   {
     [Inject] IConfiguration Configuration { get; set; }
 
+    protected virtual double Price { get; set; }
     protected virtual PageComponent View { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
@@ -41,7 +42,7 @@ namespace Terminal.Pages
       {
         await CreateViews();
 
-        Performance = new PerformanceIndicator { Name = "Balance" };
+        Performance = new PerformanceIndicator { Name = nameof(Performance) };
 
         View.OnPreConnect = () =>
         {
@@ -75,25 +76,23 @@ namespace Terminal.Pages
     /// <returns></returns>
     protected virtual async Task CreateViews()
     {
-      var indUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-      var indDown = new ComponentModel { Color = SKColors.OrangeRed };
       var indAreas = new Shape();
-      var indCharts = new Shape();
+      var indCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
 
-      indCharts.Groups["Ups"] = new AreaShape { Component = indUp };
-      indCharts.Groups["Downs"] = new AreaShape { Component = indDown };
-      indCharts.Groups["Range"] = new AreaShape { Component = indUp };
-      indAreas.Groups["Prices"] = indCharts;
+      indCharts[0].Groups["Price"] = new LineShape();
+
+      for (var i = 0; i < indCharts.Count; i++)
+      {
+        indAreas.Groups[$"{i}"] = indCharts[i];
+      }
 
       await View.ChartsView.Create(indAreas);
 
-      var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
-      var pnlBalance = new ComponentModel { Color = SKColors.Black };
       var pnlAreas = new Shape();
       var pnlCharts = new Shape();
 
-      pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
-      pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
+      pnlCharts.Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 } };
+      pnlCharts.Groups["Balance"] = new AreaShape { Component = new ComponentModel { Color = SKColors.Black } };
       pnlAreas.Groups["Performance"] = pnlCharts;
 
       await View.ReportsView.Create(pnlAreas);
@@ -136,117 +135,51 @@ namespace Terminal.Pages
     /// <returns></returns>
     protected async Task OnData(PointModel point)
     {
+      var step = 0.50;
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var options = await GetOptions(point);
       var chartPoints = new List<KeyValuePair<string, PointModel>>();
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
       var performance = Performance.Calculate([account]);
-      var gammaStrike = GetMaxGamma(point, options);
 
-      if (account.Orders.Count is 0 && account.Positions.Count is 0)
+      Price = Price.Is(0) ? point.Last.Value : Price;
+
+      if (Math.Abs((point.Last - Price).Value) > step)
       {
-        var orders = GetNextOrder(gammaStrike.Key.Value, point, options);
-        var orderResponse = await adapter.CreateOrders([.. orders]);
-      }
+        var side = OrderSideEnum.Buy;
+        var position = account.Positions.FirstOrDefault().Value;
 
-      if (account.Positions.Count > 0)
-      {
-        var pos = account.Positions.FirstOrDefault().Value;
-        var openStrike = pos.Transaction.Instrument.Derivative.Strike;
-        var isUp = pos.Side is OrderSideEnum.Buy && openStrike < gammaStrike.Key;
-        var isDown = pos.Side is OrderSideEnum.Sell && openStrike > gammaStrike.Key;
+        if (point.Last < Price)
+        {
+          side = OrderSideEnum.Sell;
+        }
 
-        if (Equals(openStrike, gammaStrike.Key) is false && !isUp && !isDown)
+        if (position is not null && Equals(side, position.Side) is false)
         {
           await ClosePositions();
-          var orders = GetNextOrder(gammaStrike.Key.Value, point, options);
-          var orderResponse = await adapter.CreateOrders([.. orders]);
         }
+
+        var order = new OrderModel
+        {
+          Side = side,
+          Type = OrderTypeEnum.Market,
+          Transaction = new() { Volume = 100, Instrument = Instrument }
+        };
+
+        Price = point.Last.Value;
+        chartPoints.Add(KeyValuePair.Create("Price", new PointModel { Time = point.Time, Last = Price }));
+
+        await adapter.CreateOrders(order);
+        await View.ChartsView.UpdateItems(chartPoints);
       }
 
-      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = gammaStrike.Key }));
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
-      await View.ChartsView.UpdateItems(chartPoints);
       await View.ReportsView.UpdateItems(reportPoints);
       await View.DealsView.UpdateItems(account.Deals);
       await View.OrdersView.UpdateItems(account.Orders.Values);
       await View.PositionsView.UpdateItems(account.Positions.Values);
-    }
-
-    /// <summary>
-    /// Get option chain
-    /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    protected virtual async Task<IList<InstrumentModel>> GetOptions(PointModel point)
-    {
-      var adapter = View.Adapters["Sim"];
-      var account = adapter.Account;
-      var optionArgs = new OptionScreenerModel
-      {
-        Name = Instrument.Name,
-        MinDate = point.Time,
-        MaxDate = point.Time.Value.AddDays(1),
-        Point = point
-      };
-
-      var options = await adapter.GetOptions(optionArgs, []);
-      var nextDayOptions = options
-        .Data
-        .OrderBy(o => o.Derivative.Expiration)
-        .ThenBy(o => o.Derivative.Strike)
-        .ThenBy(o => o.Derivative.Side)
-        .GroupBy(o => o.Derivative.Expiration)
-        .ToDictionary(o => o.Key, o => o.ToList())
-        .FirstOrDefault()
-        .Value;
-
-      return nextDayOptions;
-    }
-
-    /// <summary>
-    /// Get strike with max gamma
-    /// </summary>
-    /// <param name="point"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    protected virtual KeyValuePair<double?, double?> GetMaxGamma(PointModel point, IList<InstrumentModel> options)
-    {
-      var option = options
-        .GroupBy(o => o.Derivative.Strike)
-        .ToDictionary(o => o.Key, o => o.Sum(v => v.Derivative.Variable.Gamma))
-        .OrderByDescending(o => o.Value)
-        .FirstOrDefault();
-
-      return option;
-    }
-
-    /// <summary>
-    /// Create short straddle strategy
-    /// </summary>
-    /// <param name="strike"></param>
-    /// <param name="point"></param>
-    /// <param name="options"></param>
-    /// <returns></returns>
-    protected virtual IList<OrderModel> GetNextOrder(double strike, PointModel point, IList<InstrumentModel> options)
-    {
-      var side = point.Last < strike ? OptionSideEnum.Call : OptionSideEnum.Put;
-      var nextOption = options
-        .Where(o => Equals(o.Derivative.Side, side))
-        .Where(o => o.Derivative.Strike >= strike)
-        .FirstOrDefault();
-
-      var order = new OrderModel
-      {
-        Side = OrderSideEnum.Buy,
-        Type = OrderTypeEnum.Market,
-        Transaction = new() { Volume = 1, Instrument = nextOption }
-      };
-
-      return [order];
     }
 
     /// <summary>

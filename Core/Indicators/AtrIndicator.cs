@@ -11,7 +11,7 @@ namespace Terminal.Core.Indicators
   /// Implementation
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public class AverageTrueRangeIndicator : Indicator<PointModel, AverageTrueRangeIndicator>
+  public class AtrIndicator : Indicator<PointModel, AtrIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -28,7 +28,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override AverageTrueRangeIndicator Calculate(IList<PointModel> collection)
+    public override AtrIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.ElementAtOrDefault(collection.Count - 1);
       var previousPoint = collection.ElementAtOrDefault(collection.Count - 2);
@@ -47,17 +47,13 @@ namespace Terminal.Core.Indicators
         value = (Values.Last() * Math.Max(Interval - 1, 0) + value) / Interval;
       }
 
-      switch (Values.Count < collection.Count)
-      {
-        case true: Values.Add(value); break;
-        case false: Values[collection.Count - 1] = value; break;
-      }
+      Values.Add(value);
 
       var series = currentPoint.Series[Name] =
         currentPoint.Series.Get(Name) ??
-        new AverageTrueRangeIndicator().Point;
+        new AtrIndicator().Point;
 
-      Point.Last = series.Last = series.Bar.Close = value;
+      Point.Last = series.Last = value;
 
       return this;
     }

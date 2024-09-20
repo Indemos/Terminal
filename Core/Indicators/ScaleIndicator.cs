@@ -70,11 +70,7 @@ namespace Terminal.Core.Indicators
         value = Min + (value - _min.Value) * (Max - Min) / (_max.Value - _min.Value);
       }
 
-      switch (Values.Count < collection.Count)
-      {
-        case true: Values.Add(value); break;
-        case false: Values[collection.Count - 1] = value; break;
-      }
+      Values.Add(value);
 
       var series = currentPoint.Series[Name] =
         currentPoint.Series.Get(Name) ??

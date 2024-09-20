@@ -39,7 +39,7 @@ namespace Terminal.Core.Indicators
         case -1: value = currentPoint.BidSize.Value; break;
       }
 
-      Point.Last = Point.Bar.Close = seriesItem.Last = seriesItem.Bar.Close = value;
+      Point.Last = seriesItem.Last = value;
 
       return this;
     }

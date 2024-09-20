@@ -2,6 +2,7 @@ using Canvas.Core.Engines;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -13,6 +14,16 @@ namespace Terminal.Components
 {
   public partial class ChartsComponent : IDisposable
   {
+    /// <summary>
+    /// Upside style
+    /// </summary>
+    protected virtual ComponentModel UpSide { get; set; }
+
+    /// <summary>
+    /// Downside style
+    /// </summary>
+    protected virtual ComponentModel DownSide { get; set; }
+
     /// <summary>
     /// Reference to view control
     /// </summary>
@@ -39,12 +50,16 @@ namespace Terminal.Components
     /// <param name="group"></param>
     public virtual async Task Create(IShape group)
     {
+      UpSide = new ComponentModel { Color = SKColors.DeepSkyBlue };
+      DownSide = new ComponentModel { Color = SKColors.OrangeRed };
+
       (View.Item = group)
         .Groups
         .ForEach(view => view.Value.Groups
         .ForEach(series => Maps[series.Key] = view.Key));
 
       await View.CreateViews<CanvasEngine>();
+      await InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
@@ -88,6 +103,7 @@ namespace Terminal.Components
             currentBar.H = inputValue?.Bar?.High;
             currentBar.O = inputValue?.Bar?.Open;
             currentBar.C = inputValue?.Bar?.Close;
+            currentBar.Component = currentBar.C > currentBar.O ? UpSide : DownSide;
           }
         }
       }

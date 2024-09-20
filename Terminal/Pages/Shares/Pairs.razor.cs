@@ -16,7 +16,7 @@ using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 
-namespace Terminal.Pages
+namespace Terminal.Pages.Shares
 {
   public partial class Pairs : IDisposable
   {

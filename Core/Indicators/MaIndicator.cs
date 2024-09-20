@@ -1,6 +1,5 @@
 using Distribution.Services;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
@@ -23,7 +22,7 @@ namespace Terminal.Core.Indicators
   /// Implementation
   /// </summary>
   /// <typeparam name="T"></typeparam>
-  public class MovingAverageIndicator : Indicator<PointModel, MovingAverageIndicator>
+  public class MaIndicator : Indicator<PointModel, MaIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -45,7 +44,7 @@ namespace Terminal.Core.Indicators
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override MovingAverageIndicator Calculate(IList<PointModel> collection)
+    public override MaIndicator Calculate(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -63,16 +62,12 @@ namespace Terminal.Core.Indicators
         case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
       }
 
-      switch (Values.Count < collection.Count)
-      {
-        case true: Values.Add(value); break;
-        case false: Values[collection.Count - 1] = value; break;
-      }
+      Values.Add(value);
 
-      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MovingAverageIndicator().Point;
+      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MaIndicator().Point;
       var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
 
-      Point.Last = series.Last = series.Bar.Close = average.Is(0) ? value : average;
+      Point.Last = series.Last = average.Is(0) ? value : average;
 
       return this;
     }

@@ -2,7 +2,9 @@ using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using Simulation;
 using SkiaSharp;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,14 +14,10 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
-using Ib = InteractiveBrokers;
-using Sc = Schwab;
-using Scm = Schwab.Messages;
-using Sim = Simulation;
 
-namespace Terminal.Pages
+namespace Terminal.Pages.Options
 {
-  public partial class Condor
+  public partial class DebitSpreadHedge
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -47,8 +45,6 @@ namespace Terminal.Pages
         View.OnPreConnect = () =>
         {
           View.Adapters["Sim"] = CreateSimAccount();
-          //View.Adapters["Ib"] = CreateIbAccount();
-          //View.Adapters["Sc"] = CreateScAccount();
         };
 
         View.OnPostConnect = () =>
@@ -103,59 +99,10 @@ namespace Terminal.Pages
     }
 
     /// <summary>
-    /// Setup Schwab account
-    /// </summary>
-    /// <returns></returns>
-    protected virtual Sc.Adapter CreateScAccount()
-    {
-      var account = new Account
-      {
-        Descriptor = Configuration["Schwab:Account"],
-        Instruments = new ConcurrentDictionary<string, InstrumentModel>
-        {
-          [Instrument.Name] = Instrument
-        }
-      };
-
-      return new Sc.Adapter
-      {
-        Account = account,
-        Scope = new Scm.ScopeMessage
-        {
-          AccessToken = Configuration["Schwab:AccessToken"],
-          RefreshToken = Configuration["Schwab:RefreshToken"],
-          ConsumerKey = Configuration["Schwab:ConsumerKey"],
-          ConsumerSecret = Configuration["Schwab:ConsumerSecret"],
-        }
-      };
-    }
-
-    /// <summary>
-    /// Setup Interactive Brokers account
-    /// </summary>
-    /// <returns></returns>
-    protected virtual Ib.Adapter CreateIbAccount()
-    {
-      var account = new Account
-      {
-        Descriptor = Configuration["InteractiveBrokers:Account"],
-        Instruments = new ConcurrentDictionary<string, InstrumentModel>
-        {
-          [Instrument.Name] = Instrument
-        }
-      };
-
-      return new Ib.Adapter
-      {
-        Account = account
-      };
-    }
-
-    /// <summary>
     /// Setup simulation account
     /// </summary>
     /// <returns></returns>
-    protected virtual Sim.Adapter CreateSimAccount()
+    protected virtual Adapter CreateSimAccount()
     {
       var account = new Account
       {
@@ -174,7 +121,7 @@ namespace Terminal.Pages
           .OfType<PointModel>()
           .ForEach(async o => await OnData(o)));
 
-      return new Sim.Adapter
+      return new Adapter
       {
         Account = account,
         Source = Configuration["Simulation:Source"]
@@ -188,33 +135,35 @@ namespace Terminal.Pages
     /// <returns></returns>
     protected async Task OnData(PointModel point)
     {
-      var simAdapter = View.Adapters["Sim"];
-      var account = simAdapter.Account;
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
       var options = await GetOptions(point);
       var chartPoints = new List<KeyValuePair<string, PointModel>>();
       var reportPoints = new List<KeyValuePair<string, PointModel>>();
       var performance = Performance.Calculate([account]);
+      var strike = GetStrike(point, options);
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetCondor(point, options);
-        var orderResponse = await simAdapter.CreateOrders([.. orders]);
+        var order = GetNextOrder(strike.Key.Value, point, options);
+        var orderResponse = await adapter.CreateOrders(order);
       }
 
-      var basisDelta = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
-        .Sum(getDelta);
+      if (account.Positions.Count > 0 && Equals(Math.Round(point.Last.Value), Math.Round(strike.Key.Value)) is false)
+      {
+        var nextOrder = GetNextOrder(strike.Key.Value, point, options);
+        var curOrder = account.Positions.Values.First();
+        var nextSide = nextOrder.Transaction.Instrument.Derivative.Side;
+        var curSide = curOrder.Transaction.Instrument.Derivative.Side;
 
-      var optionDelta = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .Sum(getDelta);
+        if (!Equals(nextSide, curSide))
+        {
+          await ClosePositions();
+          var orderResponse = await adapter.CreateOrders(nextOrder);
+        }
+      }
 
-      chartPoints.Add(KeyValuePair.Create("Ups", new PointModel { Time = point.Time, Last = basisDelta }));
-      chartPoints.Add(KeyValuePair.Create("Downs", new PointModel { Time = point.Time, Last = optionDelta }));
+      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = strike.Key }));
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
@@ -232,8 +181,8 @@ namespace Terminal.Pages
     /// <returns></returns>
     protected virtual async Task<IList<InstrumentModel>> GetOptions(PointModel point)
     {
-      var simAdapter = View.Adapters["Sim"];
-      var account = simAdapter.Account;
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
       var optionArgs = new OptionScreenerModel
       {
         Name = Instrument.Name,
@@ -242,7 +191,7 @@ namespace Terminal.Pages
         Point = point
       };
 
-      var options = await simAdapter.GetOptions(optionArgs, []);
+      var options = await adapter.GetOptions(optionArgs, []);
       var nextDayOptions = options
         .Data
         .OrderBy(o => o.Derivative.Expiration)
@@ -257,77 +206,73 @@ namespace Terminal.Pages
     }
 
     /// <summary>
-    /// Create short straddle strategy
+    /// Get strike with max gamma
     /// </summary>
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected virtual IList<OrderModel> GetCondor(PointModel point, IList<InstrumentModel> options)
+    protected virtual KeyValuePair<double?, double> GetStrike(PointModel point, IList<InstrumentModel> options)
     {
-      var shortPut = options
-        .Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        .Where(o => o.Derivative.Strike >= point.Last)
+      var res = options
+        .GroupBy(o => o.Derivative.Strike)
+        .ToDictionary(
+          option => option.Key,
+          option =>
+            option.Where(o => o.Derivative.Side is OptionSideEnum.Call).Sum(v => v.Derivative.Variable.Gamma ?? 0) +
+            option.Where(o => o.Derivative.Side is OptionSideEnum.Put).Sum(v => v.Derivative.Variable.Gamma ?? 0))
+        .OrderByDescending(o => o.Value)
         .FirstOrDefault();
 
-      var longPut = options
-        .Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        .Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - 3)
-        .LastOrDefault();
+      return res;
+    }
 
-      var shortCall = options
-        .Where(o => o.Derivative.Side is OptionSideEnum.Call)
+    /// <summary>
+    /// Create short straddle strategy
+    /// </summary>
+    /// <param name="strike"></param>
+    /// <param name="point"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    protected virtual OrderModel GetNextOrder(double strike, PointModel point, IList<InstrumentModel> options)
+    {
+      var side = point.Last < strike ? OptionSideEnum.Call : OptionSideEnum.Put;
+      var nextOption = options
+        .Where(o => Equals(o.Derivative.Side, side))
         .Where(o => o.Derivative.Strike >= point.Last)
-        .FirstOrDefault();
-
-      var longCall = options
-        .Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        .Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + 3)
         .FirstOrDefault();
 
       var order = new OrderModel
       {
+        Side = OrderSideEnum.Buy,
         Type = OrderTypeEnum.Market,
-        Instruction = InstructionEnum.Group,
-        Orders =
-        [
-          new OrderModel
-          {
-            Side = OrderSideEnum.Buy,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = longPut }
-          },
-          new OrderModel
-          {
-            Side = OrderSideEnum.Buy,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = longCall }
-          },
-          new OrderModel
-          {
-            Side = OrderSideEnum.Sell,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = shortPut }
-          },
-          new OrderModel
-          {
-            Side = OrderSideEnum.Sell,
-            Instruction = InstructionEnum.Side,
-            Transaction = new() { Volume = 1, Instrument = shortCall }
-          }
-        ]
+        Transaction = new() { Volume = 1, Instrument = nextOption }
       };
 
-      return [order];
+      return order;
     }
 
-    protected virtual double getDelta(OrderModel o)
+    /// <summary>
+    /// Close all positions
+    /// </summary>
+    protected async Task ClosePositions()
     {
-      var volume = o.Transaction?.Volume;
-      var leverage = o.Transaction?.Instrument?.Leverage;
-      var delta = o.Transaction?.Instrument?.Derivative?.Variable?.Delta;
-      var side = o.Side is OrderSideEnum.Buy ? 1.0 : -1.0;
+      var adapter = View.Adapters["Sim"];
 
-      return ((delta ?? volume) * leverage * side) ?? 0;
+      foreach (var position in adapter.Account.Positions.Values.ToList())
+      {
+        var order = new OrderModel
+        {
+          Side = position.Side is OrderSideEnum.Buy ? OrderSideEnum.Sell : OrderSideEnum.Buy,
+          Type = OrderTypeEnum.Market,
+          Transaction = new()
+          {
+            Volume = position.Transaction.Volume,
+            Instrument = position.Transaction.Instrument
+          }
+        };
+
+        await adapter.CreateOrders(order);
+      }
     }
   }
 }

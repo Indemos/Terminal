@@ -1,5 +1,5 @@
 @inherits BaseComponent
 
-<div class="views">
+<div class="views" style="height: @($"{(View?.Item?.Groups?.Count ?? 1) * 30}vh")">
   <CanvasGroupView @ref="View"></CanvasGroupView>
 </div>
