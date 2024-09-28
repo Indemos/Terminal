@@ -75,8 +75,8 @@ namespace Terminal.Pages.Shares
       var pnlAreas = new Shape();
       var pnlCharts = new Shape();
 
-      pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
       pnlCharts.Groups["Balance"] = new AreaShape { Component = pnlBalance };
+      pnlCharts.Groups["PnL"] = new LineShape { Component = pnlGain };
       pnlAreas.Groups["Performance"] = pnlCharts;
 
       await View.ReportsView.Create(pnlAreas);

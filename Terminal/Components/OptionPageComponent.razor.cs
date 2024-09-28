@@ -101,8 +101,8 @@ namespace Terminal.Components
       var positionAreas = new Shape();
       var positionCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
 
-      positionCharts[0].Groups["OptionDelta"] = new BarShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[0].Groups["BasisDelta"] = new BarShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[0].Groups["OptionDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[0].Groups["BasisDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
       positionCharts[1].Groups["LongDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
       positionCharts[1].Groups["ShortDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
       positionCharts[2].Groups["LongGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
@@ -126,8 +126,8 @@ namespace Terminal.Components
       var balanceAreas = new Shape();
       var balanceCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
 
-      balanceCharts[0].Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 } };
       balanceCharts[0].Groups["Balance"] = new AreaShape { Component = new ComponentModel { Color = SKColors.Black } };
+      balanceCharts[0].Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 } };
 
       for (var i = 0; i < balanceCharts.Count; i++)
       {
@@ -148,13 +148,13 @@ namespace Terminal.Components
 
       // Premium
 
-      var premiumAreas = new Shape();
-      var premiumCharts = new Shape();
+      //var premiumAreas = new Shape();
+      //var premiumCharts = new Shape();
 
-      premiumCharts.Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
-      premiumAreas.Groups["Prediction"] = premiumCharts;
+      //premiumCharts.Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
+      //premiumAreas.Groups["Prediction"] = premiumCharts;
 
-      await PremiumView.Create(premiumAreas);
+      //await PremiumView.Create(premiumAreas);
     }
 
     /// <summary>
