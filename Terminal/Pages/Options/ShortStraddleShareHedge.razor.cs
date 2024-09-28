@@ -1,5 +1,7 @@
+using System;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Domains;
 using Terminal.Core.Models;
 
 namespace Terminal.Pages.Options
@@ -17,6 +19,12 @@ namespace Terminal.Pages.Options
     {
       if (setup)
       {
+        OptionView.Instrument = new InstrumentModel
+        {
+          Name = "SPY",
+          TimeFrame = TimeSpan.FromMinutes(5)
+        };
+
         await OptionView.OnLoad(OnData);
       }
 

@@ -117,24 +117,20 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual IGroup Update(IGroup previous)
     {
+      var o = previous as PointModel;
+      var price = (Last ?? Bid ?? Ask ?? o?.Last ?? o?.Bid ?? o?.Ask).Value;
+
+      Ask ??= o?.Ask ?? price;
+      Bid ??= o?.Bid ?? price;
+      AskSize += o?.AskSize ?? 0.0;
+      BidSize += o?.BidSize ?? 0.0;
+      TimeFrame ??= o?.TimeFrame;
+      Time = Time.Round(TimeFrame) ?? o?.Time;
       Bar ??= new BarModel();
-
-      if (previous is not null)
-      {
-        var o = previous as PointModel;
-        var price = (Last ?? Bid ?? Ask ?? o.Last ?? o.Bid ?? o.Ask).Value;
-
-        Ask ??= o.Ask ?? price;
-        Bid ??= o.Bid ?? price;
-        AskSize += o.AskSize ?? 0.0;
-        BidSize += o.BidSize ?? 0.0;
-        Bar.Close = Last = price;
-        Bar.Open = o.Bar?.Open ?? Bar.Open ?? price;
-        Bar.Low = Math.Min(Bar.Low ?? price, o.Bar?.Low ?? price);
-        Bar.High = Math.Max(Bar.High ?? price, o.Bar?.High ?? price);
-        TimeFrame ??= o.TimeFrame;
-        Time = Time.Round(TimeFrame) ?? o.Time;
-      }
+      Bar.Close = Last = price;
+      Bar.Open = o?.Bar?.Open ?? Bar.Open ?? price;
+      Bar.Low = Math.Min(Bar.Low ?? price, o?.Bar?.Low ?? price);
+      Bar.High = Math.Max(Bar.High ?? price, o?.Bar?.High ?? price);
 
       return this;
     }

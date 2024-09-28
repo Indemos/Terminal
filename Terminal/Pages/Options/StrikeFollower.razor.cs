@@ -22,6 +22,12 @@ namespace Terminal.Pages.Options
     {
       if (setup)
       {
+        OptionView.Instrument = new InstrumentModel
+        {
+          Name = "SPY",
+          TimeFrame = TimeSpan.FromMinutes(5)
+        };
+
         await OptionView.OnLoad(OnData);
       }
 
@@ -133,7 +139,7 @@ namespace Terminal.Pages.Options
         return null;
       }
 
-      var side = price < strike ? OptionSideEnum.Call : OptionSideEnum.Put;
+      var side = price < strike ? Core.Enums.OptionSideEnum.Call : Core.Enums.OptionSideEnum.Put;
       var nextOption = options
         .Where(o => Equals(o.Derivative.Side, side))
         .Where(o => o.Derivative.Strike >= point.Last)

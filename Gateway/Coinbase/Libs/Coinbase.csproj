@@ -9,7 +9,7 @@
   <ItemGroup>
     <PackageReference Include="Distribution.Stream" Version="1.2.2" />
     <PackageReference Include="jose-jwt" Version="5.0.0" />
-    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.0.2" />
+    <PackageReference Include="System.IdentityModel.Tokens.Jwt" Version="8.1.0" />
   </ItemGroup>
 
   <ItemGroup>

@@ -83,7 +83,8 @@ namespace Terminal.Components
         if (Indices.TryGetValue(index, out IShape currentPoint) is false)
         {
           currentPoint = (Shapes.LastOrDefault()?.Clone() ?? View.Item.Clone()) as IShape;
-          currentPoint.X = index;
+          currentPoint.X = Shapes.Count;
+          Console.WriteLine(currentPoint.X);
 
           Shapes.Add(currentPoint);
           Indices[index] = currentPoint;
@@ -113,7 +114,7 @@ namespace Terminal.Components
         IndexDomain = [Shapes.Count - (count ?? Shapes.Count), Shapes.Count]
       };
 
-      return Render(() => View.Update(domain, Shapes));
+      return View.Update(domain, Shapes);
     }
 
     /// <summary>
@@ -123,7 +124,7 @@ namespace Terminal.Components
     {
       Shapes.Clear();
       Indices.Clear();
-      Render(() => View.Update(new DomainModel { IndexDomain = [0, 0] }, Shapes), false);
+      View.Update(new DomainModel { IndexDomain = [0, 0] }, Shapes);
     }
 
     /// <summary>

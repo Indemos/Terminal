@@ -15,6 +15,36 @@
 
   <MudExpansionPanels MultiExpansion="true">
 
+    @if (Header is not null)
+    {
+      <MudExpansionPanel>
+        <TitleContent>
+          <div class="d-flex">
+            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+            <MudText>Header</MudText>
+          </div>
+        </TitleContent>
+        <ChildContent>
+          @Header
+        </ChildContent>
+      </MudExpansionPanel>
+    }
+
+    @if (PositionMetrics is not null)
+    {
+      <MudExpansionPanel>
+        <TitleContent>
+          <div class="d-flex">
+            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+            <MudText>Position Metrics</MudText>
+          </div>
+        </TitleContent>
+        <ChildContent>
+          @PositionMetrics
+        </ChildContent>
+      </MudExpansionPanel>
+    }
+
     <MudExpansionPanel>
       <TitleContent>
         <div class="d-flex">

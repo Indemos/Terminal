@@ -1,5 +1,3 @@
-@inherits BaseComponent
-
 <MudTable Items="@Items" Hover="true" MultiSelection="false" SortLabel="Order" Elevation="0">
   <HeaderContent>
     <MudTh><MudTableSortLabel InitialDirection="SortDirection.Descending" SortBy="new Func<PositionRecord, object>(o => o.Time)">Time</MudTableSortLabel></MudTh>

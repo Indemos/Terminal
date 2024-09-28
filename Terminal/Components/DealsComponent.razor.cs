@@ -47,12 +47,12 @@ namespace Terminal.Components
 
       Items = [.. items.Select(getRecord)];
 
-      return Render();
+      return InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
     /// Clear records
     /// </summary>
-    public virtual void Clear() => Render(Items.Clear, false);
+    public virtual void Clear() => Items.Clear();
   }
 }

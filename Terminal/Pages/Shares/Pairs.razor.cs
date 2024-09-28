@@ -70,7 +70,7 @@ namespace Terminal.Pages.Shares
 
       await View.ChartsView.Create(indAreas);
 
-      var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 };
+      var pnlGain = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 };
       var pnlBalance = new ComponentModel { Color = SKColors.Black };
       var pnlAreas = new Shape();
       var pnlCharts = new Shape();

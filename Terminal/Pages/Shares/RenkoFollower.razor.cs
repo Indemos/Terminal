@@ -91,7 +91,7 @@ namespace Terminal.Pages.Shares
       var pnlAreas = new Shape();
       var pnlCharts = new Shape();
 
-      pnlCharts.Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 5 } };
+      pnlCharts.Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 } };
       pnlCharts.Groups["Balance"] = new AreaShape { Component = new ComponentModel { Color = SKColors.Black } };
       pnlAreas.Groups["Performance"] = pnlCharts;
 

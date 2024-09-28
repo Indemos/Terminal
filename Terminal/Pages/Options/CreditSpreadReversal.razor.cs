@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
@@ -26,18 +27,23 @@ namespace Terminal.Pages.Options
     {
       if (setup)
       {
+        OptionView.Instrument = new InstrumentModel
+        {
+          Name = "SPY",
+          TimeFrame = TimeSpan.FromMinutes(5)
+        };
+
         Rsi = new RsiIndicator
         {
-          Interval = 15,
+          Interval = 5,
           Name = nameof(Rsi)
         };
 
-        var groups = Enumerable.Range(0, 2).Select(o => new Shape()).ToList();
+        var groups = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
 
-        groups[0].Groups["Bars"] = new CandleShape();
-        groups[1].Groups["Rsi"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
+        groups[0].Groups["Rsi"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
 
-        await OptionView.OnLoad(OnData, groups, TimeSpan.FromMinutes(5));
+        await OptionView.OnLoad(OnData, groups);
       }
 
       await base.OnAfterRenderAsync(setup);
@@ -67,9 +73,9 @@ namespace Terminal.Pages.Options
 
         if (rsi.Values.Count > rsi.Interval)
         {
-          if (rsi.Point.Last < 30 && posSide is not OptionSideEnum.Put)
+          if (rsi.Point.Last < 30 && posSide is not Core.Enums.OptionSideEnum.Put)
           {
-            var orders = OptionView.GetCreditSpread(OptionSideEnum.Put, point, options);
+            var orders = OptionView.GetCreditSpread(Core.Enums.OptionSideEnum.Put, point, options);
 
             if (orders.Count > 0)
             {
@@ -78,9 +84,9 @@ namespace Terminal.Pages.Options
             }
           }
 
-          if (rsi.Point.Last > 70 && posSide is not OptionSideEnum.Call)
+          if (rsi.Point.Last > 70 && posSide is not Core.Enums.OptionSideEnum.Call)
           {
-            var orders = OptionView.GetCreditSpread(OptionSideEnum.Call, point, options);
+            var orders = OptionView.GetCreditSpread(Core.Enums.OptionSideEnum.Call, point, options);
 
             if (orders.Count > 0)
             {
@@ -90,7 +96,6 @@ namespace Terminal.Pages.Options
           }
         }
 
-        chartPoints.Add(KeyValuePair.Create("Bars", point));
         chartPoints.Add(KeyValuePair.Create("Rsi", new PointModel { Time = point.Time, Last = rsi.Point.Last }));
 
         await OptionView.View.ChartsView.UpdateItems(chartPoints);
