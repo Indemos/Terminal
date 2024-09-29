@@ -518,6 +518,25 @@ namespace Terminal.Components
     /// <summary>
     /// Hedge each delta change with shares
     /// </summary>
+    /// <param name="price"></param>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    public virtual async Task<IList<OrderModel>> GetDirectionHedge(double price, PointModel point)
+    {
+      switch (true)
+      {
+        case true when price > 0 && point.Last > Math.Abs(price): 
+        case true when price < 0 && point.Last < Math.Abs(price): await ClosePositions(InstrumentEnum.Shares); return [];
+        case true when price > 0 && point.Last < Math.Abs(price): 
+        case true when price < 0 && point.Last > Math.Abs(price): return GetShareHedge(point);
+      }
+
+      return [];
+    }
+
+    /// <summary>
+    /// Hedge each delta change with shares
+    /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
     public virtual IList<OrderModel> GetShareHedge(PointModel point)
@@ -557,7 +576,7 @@ namespace Terminal.Components
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    public virtual IList<OrderModel> GetShareInverse(PointModel point)
+    public virtual IList<OrderModel> GetShareDirection(PointModel point)
     {
       var account = View.Adapters["Sim"].Account;
       var basisDelta = account
@@ -591,7 +610,7 @@ namespace Terminal.Components
     }
 
     /// <summary>
-    /// Create short straddle strategy
+    /// Create credit spread strategy
     /// </summary>
     /// <param name="side"></param>
     /// <param name="point"></param>
@@ -627,30 +646,98 @@ namespace Terminal.Components
       {
         case Core.Enums.OptionSideEnum.Put:
 
-          var creditPut = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => Math.Abs(o.Derivative.Variable.Delta ?? 0) >= 0.3)
-            .FirstOrDefault();
+          var put = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.001))
+            .LastOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike < creditPut.Derivative.Strike)
+            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.005))
             .LastOrDefault();
 
           break;
 
         case Core.Enums.OptionSideEnum.Call:
 
-          var creditCall = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => Math.Abs(o.Derivative.Variable.Delta ?? 0) >= 0.3)
-            .LastOrDefault();
+          var call = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.001))
+            .FirstOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike > creditCall.Derivative.Strike)
+            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.005))
             .FirstOrDefault();
 
           break;
       }
 
       return [order];
+    }
+
+    /// <summary>
+    /// Create debit spread strategy
+    /// </summary>
+    /// <param name="side"></param>
+    /// <param name="point"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    public virtual IList<OrderModel> GetDebigSpread(Core.Enums.OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
+    {
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
+      var position = account.Positions.FirstOrDefault().Value;
+      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
+      var order = new OrderModel
+      {
+        Type = OrderTypeEnum.Market,
+        Orders =
+        [
+          new OrderModel
+          {
+            Side = OrderSideEnum.Buy,
+            Instruction = InstructionEnum.Side,
+            Transaction = new TransactionModel { Volume = 1 }
+          },
+          new OrderModel
+          {
+            Side = OrderSideEnum.Sell,
+            Instruction = InstructionEnum.Side,
+            Transaction = new TransactionModel { Volume = 1 }
+          }
+        ]
+      };
+
+      switch (side)
+      {
+        case Core.Enums.OptionSideEnum.Put:
+
+          var put = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.001))
+            .FirstOrDefault();
+
+          order.Orders[1].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.005))
+            .LastOrDefault();
+
+          break;
+
+        case Core.Enums.OptionSideEnum.Call:
+
+          var call = order.Orders[0].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.001))
+            .LastOrDefault();
+
+          order.Orders[1].Transaction.Instrument = sideOptions
+            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.005))
+            .FirstOrDefault();
+
+          break;
+      }
+
+      return [order];
+    }
+
+    public double GetPriceChange(double? currentPrice, double? percentChange)
+    {
+      return (currentPrice + currentPrice * percentChange).Value;
     }
   }
 }

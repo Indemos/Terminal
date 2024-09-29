@@ -12,7 +12,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Options
 {
-  public partial class CreditSpreadReversal
+  public partial class DebitSpreadReversal
   {
     public virtual OptionPageComponent OptionView { get; set; }
     public virtual RsiIndicator Rsi { get; set; }
@@ -64,8 +64,8 @@ namespace Terminal.Pages.Options
         var chartPoints = new List<KeyValuePair<string, PointModel>>();
         var posSide = account
           .Positions
-          .FirstOrDefault()
-          .Value
+          .Values
+          .FirstOrDefault(o => o.Transaction.Instrument.Derivative is not null)
           ?.Transaction
           ?.Instrument
           ?.Derivative
@@ -73,9 +73,9 @@ namespace Terminal.Pages.Options
 
         if (rsi.Values.Count > rsi.Interval)
         {
-          if (rsi.Point.Last < 30 && posSide is not Core.Enums.OptionSideEnum.Put)
+          if (rsi.Point.Last < 30 && posSide is not Core.Enums.OptionSideEnum.Call)
           {
-            var orders = OptionView.GetCreditSpread(Core.Enums.OptionSideEnum.Put, point, options);
+            var orders = OptionView.GetDebigSpread(Core.Enums.OptionSideEnum.Call, point, options);
 
             if (orders.Count > 0)
             {
@@ -85,9 +85,9 @@ namespace Terminal.Pages.Options
             }
           }
 
-          if (rsi.Point.Last > 70 && posSide is not Core.Enums.OptionSideEnum.Call)
+          if (rsi.Point.Last > 70 && posSide is not Core.Enums.OptionSideEnum.Put)
           {
-            var orders = OptionView.GetCreditSpread(Core.Enums.OptionSideEnum.Call, point, options);
+            var orders = OptionView.GetDebigSpread(Core.Enums.OptionSideEnum.Put, point, options);
 
             if (orders.Count > 0)
             {
@@ -98,12 +98,12 @@ namespace Terminal.Pages.Options
           }
         }
 
-        //var shareOrders = await OptionView.GetDirectionHedge(Price, point);
+        var shareOrders = await OptionView.GetDirectionHedge(Price, point);
 
-        //if (shareOrders.Count > 0)
-        //{
-        //  var orderResponse = await adapter.CreateOrders([.. shareOrders]);
-        //}
+        if (shareOrders.Count > 0)
+        {
+          var orderResponse = await adapter.CreateOrders([.. shareOrders]);
+        }
 
         chartPoints.Add(KeyValuePair.Create("Rsi", new PointModel { Time = point.Time, Last = rsi.Point.Last }));
 

@@ -6,7 +6,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortStraddleShareHedge
+  public partial class ShortStraddleHedge
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -51,11 +51,11 @@ namespace Terminal.Pages.Options
 
         if (account.Positions.Count > 0)
         {
-          var orders = OptionView.GetShareHedge(point);
+          var shareOrders = OptionView.GetShareHedge(point);
 
-          if (orders.Count > 0)
+          if (shareOrders.Count > 0)
           {
-            var orderResponse = await adapter.CreateOrders([.. orders]);
+            var orderResponse = await adapter.CreateOrders([.. shareOrders]);
           }
         }
       });

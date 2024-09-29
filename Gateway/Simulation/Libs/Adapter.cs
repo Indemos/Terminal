@@ -112,7 +112,7 @@ namespace Simulation
       var interval = new Timer(span);
 
       interval.Enabled = true;
-      interval.AutoReset = false;
+      interval.AutoReset = true;
       interval.Elapsed += (sender, e) => scheduler.Send(() =>
       {
         var point = GetState(_instruments, points);
@@ -133,8 +133,6 @@ namespace Simulation
           instrument.Point = point;
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, point.TimeFrame);
-
-          interval.Enabled = true;
         }
       }, options);
 

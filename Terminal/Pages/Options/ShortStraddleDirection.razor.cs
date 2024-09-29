@@ -6,7 +6,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortStraddleShareInverse
+  public partial class ShortStraddleDirection
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -51,7 +51,7 @@ namespace Terminal.Pages.Options
 
         if (account.Positions.Count > 0)
         {
-          var orders = OptionView.GetShareInverse(point);
+          var orders = OptionView.GetShareDirection(point);
 
           if (orders.Count > 0)
           {
