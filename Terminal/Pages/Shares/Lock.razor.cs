@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
-using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,7 +16,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Shares
 {
-  public partial class Pairs
+  public partial class Lock
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -55,7 +54,8 @@ namespace Terminal.Pages.Shares
       var indAreas = new Shape();
       var indCharts = new Shape();
 
-      indCharts.Groups["Range"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      indCharts.Groups["X"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      indCharts.Groups["Y"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
       indAreas.Groups["Prices"] = indCharts;
 
       await View.ChartsView.Create(indAreas);
@@ -113,77 +113,62 @@ namespace Terminal.Pages.Shares
         return;
       }
 
-      var chartPoints = new List<KeyValuePair<string, PointModel>>();
-      var reportPoints = new List<KeyValuePair<string, PointModel>>();
+      var pointX = seriesX.Last().Last;
+      var pointY = seriesY.Last().Last;
       var performance = Performance.Calculate([account]);
-      var xPoint = seriesX.Last();
-      var yPoint = seriesY.Last();
-      var spread = (xPoint.Ask - xPoint.Bid) + (yPoint.Ask - yPoint.Bid);
-      var expenses = spread * 2;
-
-      if (account.Positions.Count == 2)
-      {
-        var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Buy);
-        var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Sell);
-        var gain = buy.Value.GetPointsEstimate() + sell.Value.GetPointsEstimate();
-
-        switch (true)
-        {
-          case true when gain > expenses: await ClosePositions(); break;
-          case true when gain < -expenses: OpenPositions(buy.Value.Transaction.Instrument, sell.Value.Transaction.Instrument); break;
-        }
-      }
 
       if (account.Positions.Count is 0)
       {
-        switch (true)
+        await OpenPositions(100, 90);
+      }
+
+      if (account.Positions.Count > 0)
+      {
+        if (performance.Point.Last - account.Balance > 5)
         {
-          case true when (xPoint.Bid - yPoint.Ask) > expenses: OpenPositions(instrumentY, instrumentX); break;
-          case true when (yPoint.Bid - xPoint.Ask) > expenses: OpenPositions(instrumentX, instrumentY); break;
+          await ClosePositions();
         }
       }
 
-      var range = Math.Max(
-        (xPoint.Bid - yPoint.Ask - expenses).Value,
-        (yPoint.Bid - xPoint.Ask - expenses).Value);
-
-      chartPoints.Add(KeyValuePair.Create("Range", new PointModel { Time = point.Time, Last = Math.Max(0, range) }));
-      reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
-      reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
-
-      View.ChartsView.UpdateItems(chartPoints, 100);
-      View.ReportsView.UpdateItems(reportPoints);
       View.DealsView.UpdateItems(account.Deals);
       View.OrdersView.UpdateItems(account.Orders.Values);
       View.PositionsView.UpdateItems(account.Positions.Values);
+      View.ChartsView.UpdateItems(
+      [
+        KeyValuePair.Create("X", new PointModel { Time = point.Time, Last = pointX }),
+        KeyValuePair.Create("Y", new PointModel { Time = point.Time, Last = -pointY }),
+      ]);
+
+      View.ReportsView.UpdateItems(
+      [
+        KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }),
+        KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last })
+      ]);
     }
 
-    protected void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
+    protected async Task OpenPositions(double? amountX, double? amountY)
     {
       var adapter = View.Adapters["Sim"];
-      var orderSell = new OrderModel
-      {
-        Side = OrderSideEnum.Sell,
-        Type = OrderTypeEnum.Market,
-        Transaction = new()
-        {
-          Volume = 1,
-          Instrument = assetSell
-        }
-      };
+      var account = adapter.Account;
+      var instrumentX = account.Instruments[_assetX];
+      var instrumentY = account.Instruments[_assetY];
 
-      var orderBuy = new OrderModel
-      {
-        Side = OrderSideEnum.Buy,
-        Type = OrderTypeEnum.Market,
-        Transaction = new()
+      await ClosePositions();
+      await adapter.CreateOrders(
+      [
+        new OrderModel
         {
-          Volume = 1,
-          Instrument = assetBuy
+          Side = OrderSideEnum.Buy,
+          Type = OrderTypeEnum.Market,
+          Transaction = new() { Volume = amountX, Instrument = instrumentX }
+        },
+        new OrderModel
+        {
+          Side = OrderSideEnum.Sell,
+          Type = OrderTypeEnum.Market,
+          Transaction = new() { Volume = amountY, Instrument = instrumentY }
         }
-      };
-
-      adapter.CreateOrders(orderBuy, orderSell);
+      ]);
     }
 
     protected async Task ClosePositions()
@@ -212,6 +197,11 @@ namespace Terminal.Pages.Shares
 
         await adapter.CreateOrders(order);
       }
+    }
+
+    public double GetPriceChange(double? currentPrice, double? percentChange)
+    {
+      return (currentPrice * percentChange).Value;
     }
   }
 }

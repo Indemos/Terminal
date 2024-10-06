@@ -3,19 +3,23 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Components.Forms;
 using MudBlazor;
 using System;
+using Terminal.Core.Enums;
 
 namespace Derivative.Pages.Popups
 {
-  public partial class MapEditor : ComponentBase
+  public partial class OptionEditor : ComponentBase
   {
     [CascadingParameter] MudDialogInstance Popup { get; set; }
 
-    protected MapInputModel InputModel { get; set; } = new MapInputModel
+    protected OptionInputModel InputModel { get; set; } = new OptionInputModel
     {
       Name = "SPY",
-      Group = "Yes",
-      Range = new(DateTime.Now.Date, DateTime.Now.Date),
-      Expression = "(CVolume - COpenInterest) * CGamma - (PVolume - POpenInterest) * PGamma"
+      Price = 100,
+      Strike = 110,
+      Premium = 0,
+      Date = DateTime.Now.Date,
+      Side = OptionSideEnum.Call,
+      Position = OrderSideEnum.Buy
     };
 
     protected EditContext InputContext { get; set; }

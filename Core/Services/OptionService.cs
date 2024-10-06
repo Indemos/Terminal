@@ -3,15 +3,32 @@ using MathNet.Numerics.RootFinding;
 using System;
 using Terminal.Core.Enums;
 
-namespace Terminal
+namespace Terminal.Core.Services
 {
-  public class BlackScholes
+  public class OptionService
   {
+    /// <summary>
+    /// Asset or nothing
+    /// </summary>
+    /// <param name="S"></param>
+    /// <param name="K"></param>
+    /// <param name="T"></param>
+    /// <param name="sigma"></param>
+    /// <param name="r"></param>
+    /// <param name="q"></param>
+    /// <returns></returns>
     private static double D1(double S, double K, double T, double sigma, double r, double q)
     {
       return (Math.Log(S / K) + (r - q + (sigma * sigma) / 2) * T) / (sigma * Math.Sqrt(T));
     }
 
+    /// <summary>
+    /// Cash or nothing
+    /// </summary>
+    /// <param name="T"></param>
+    /// <param name="sigma"></param>
+    /// <param name="d1"></param>
+    /// <returns></returns>
     private static double D2(double T, double sigma, double d1)
     {
       return d1 - sigma * Math.Sqrt(T);

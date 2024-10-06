@@ -67,7 +67,7 @@ namespace Terminal.Components
     /// </summary>
     /// <param name="inputs"></param>
     /// <param name="count"></param>
-    public virtual Task UpdateItems(IList<KeyValuePair<string, PointModel>> inputs, int? count = null)
+    public virtual void UpdateItems(IList<KeyValuePair<string, PointModel>> inputs, int? count = null)
     {
       foreach (var input in inputs)
       {
@@ -84,7 +84,6 @@ namespace Terminal.Components
         {
           currentPoint = (Shapes.LastOrDefault()?.Clone() ?? View.Item.Clone()) as IShape;
           currentPoint.X = Shapes.Count;
-          Console.WriteLine(currentPoint.X);
 
           Shapes.Add(currentPoint);
           Indices[index] = currentPoint;
@@ -114,7 +113,7 @@ namespace Terminal.Components
         IndexDomain = [Shapes.Count - (count ?? Shapes.Count), Shapes.Count]
       };
 
-      return View.Update(domain, Shapes);
+      View.Update(domain, Shapes);
     }
 
     /// <summary>

@@ -28,31 +28,35 @@ namespace Terminal.Components
     /// Update table records 
     /// </summary>
     /// <param name="items"></param>
-    public virtual Task UpdateItems(IEnumerable<OrderModel> items)
+    public virtual void UpdateItems(IEnumerable<OrderModel> items)
     {
-      static PositionRecord getRecord(OrderModel o)
-      {
-        return new PositionRecord
-        {
-          Time = o.Transaction.Time,
-          Name = o.Transaction.Instrument.Name,
-          Group = o.Transaction.Instrument.Basis?.Name ?? o.Transaction.Instrument.Name,
-          Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Transaction.Volume ?? 0,
-          OpenPrice = o.Price ?? 0,
-          ClosePrice = o.Transaction.Price ?? 0,
-          Gain = o.GetGainEstimate(o.Transaction.Price) ?? 0
-        };
-      }
-
-      Items = [.. items.Select(getRecord)];
-
-      return InvokeAsync(StateHasChanged);
+      Items = [.. items.Select(GetRecord)];
+      InvokeAsync(StateHasChanged);
     }
 
     /// <summary>
     /// Clear records
     /// </summary>
     public virtual void Clear() => Items.Clear();
+
+    /// <summary>
+    /// Map
+    /// </summary>
+    /// <param name="o"></param>
+    /// <returns></returns>
+    private static PositionRecord GetRecord(OrderModel o)
+    {
+      return new PositionRecord
+      {
+        Time = o.Transaction.Time,
+        Name = o.Transaction.Instrument.Name,
+        Group = o.Transaction.Instrument.Basis?.Name ?? o.Transaction.Instrument.Name,
+        Side = o.Side ?? OrderSideEnum.None,
+        Size = o.Transaction.Volume ?? 0,
+        OpenPrice = o.Price ?? 0,
+        ClosePrice = o.Transaction.Price ?? 0,
+        Gain = o.GetGainEstimate(o.Transaction.Price) ?? 0
+      };
+    }
   }
 }

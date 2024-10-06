@@ -1,4 +1,3 @@
-using Distribution.Models;
 using Distribution.Services;
 using Distribution.Stream;
 using System;
@@ -108,7 +107,6 @@ namespace Simulation
       var span = TimeSpan.FromMicroseconds(Speed);
       var points = new Dictionary<string, PointModel>();
       var scheduler = InstanceService<ScheduleService>.Instance;
-      var options = new OptionModel { IsRemovable = false };
       var interval = new Timer(span);
 
       interval.Enabled = true;
@@ -133,8 +131,13 @@ namespace Simulation
           instrument.Point = point;
           instrument.Points.Add(point);
           instrument.PointGroups.Add(point, point.TimeFrame);
+
+          PointStream(new MessageModel<PointModel>
+          {
+            Next = instrument.PointGroups.Last()
+          });
         }
-      }, options);
+      });
 
       _subscriptions[instrument.Name] = interval;
 

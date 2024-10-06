@@ -107,7 +107,7 @@ namespace Terminal.Pages.Options
 
         chartPoints.Add(KeyValuePair.Create("Rsi", new PointModel { Time = point.Time, Last = rsi.Point.Last }));
 
-        await OptionView.View.ChartsView.UpdateItems(chartPoints);
+        OptionView.View.ChartsView.UpdateItems(chartPoints);
       });
     }
   }

@@ -74,18 +74,23 @@ namespace Terminal.Components
       // Indicators
 
       var priceAreas = new Shape();
-      var priceCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
+      var priceCharts = Enumerable.Range(0, 7).Select(o => new Shape()).ToList();
 
-      priceCharts[0].Groups["Gamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
-      priceCharts[1].Groups["Vega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
-      priceCharts[2].Groups["Theta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
-      priceCharts[3].Groups["PutBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[3].Groups["PutAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[4].Groups["CallBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[4].Groups["CallAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[5].Groups["PutRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[5].Groups["CallRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[5].Groups["PcRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
+      priceCharts[0].Groups["PutDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[0].Groups["CallDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[1].Groups["PutGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[1].Groups["CallGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[2].Groups["PutVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[2].Groups["CallVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[3].Groups["PutTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[3].Groups["CallTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[4].Groups["PutBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[4].Groups["PutAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[5].Groups["CallBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[5].Groups["CallAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[6].Groups["PutRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[6].Groups["CallRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[6].Groups["PcRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
 
       priceCharts = [.. (groups ?? []), .. priceCharts];
 
@@ -101,8 +106,8 @@ namespace Terminal.Components
       var positionAreas = new Shape();
       var positionCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
 
-      positionCharts[0].Groups["OptionDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
       positionCharts[0].Groups["BasisDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[0].Groups["OptionDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
       positionCharts[1].Groups["LongDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
       positionCharts[1].Groups["ShortDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
       positionCharts[2].Groups["LongGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
@@ -254,21 +259,28 @@ namespace Terminal.Components
       var account = adapter.Account;
       var options = await GetOptions(point);
 
-      action(options);
+      action([.. options]);
 
-      var putBids = options.Where(o => o.Derivative.Side is OptionSideEnum.Put).Sum(o => o.Point.BidSize ?? 0);
-      var putAsks = options.Where(o => o.Derivative.Side is OptionSideEnum.Put).Sum(o => o.Point.AskSize ?? 0);
-      var callBids = options.Where(o => o.Derivative.Side is OptionSideEnum.Call).Sum(o => o.Point.BidSize ?? 0);
-      var callAsks = options.Where(o => o.Derivative.Side is OptionSideEnum.Call).Sum(o => o.Point.AskSize ?? 0);
+      var puts = options.Where(o => o.Derivative.Side is OptionSideEnum.Put);
+      var calls = options.Where(o => o.Derivative.Side is OptionSideEnum.Call);
+      var putBids = puts.Sum(o => o.Point.BidSize ?? 0);
+      var putAsks = puts.Sum(o => o.Point.AskSize ?? 0);
+      var callBids = calls.Sum(o => o.Point.BidSize ?? 0);
+      var callAsks = calls.Sum(o => o.Point.AskSize ?? 0);
 
-      await FrameView.UpdateItems([
+      FrameView.UpdateItems([
         KeyValuePair.Create("Bars", point)
       ]);
 
-      await View.ChartsView.UpdateItems([
-        KeyValuePair.Create("Vega", new PointModel { Time = point.Time, Last = options.Sum(o => o.Derivative.Variable.Vega) }),
-        KeyValuePair.Create("Gamma", new PointModel { Time = point.Time, Last = options.Sum(o => o.Derivative.Variable.Gamma) }),
-        KeyValuePair.Create("Theta", new PointModel { Time = point.Time, Last = options.Sum(o => o.Derivative.Variable.Theta) }),
+      View.ChartsView.UpdateItems([
+        KeyValuePair.Create("PutDelta", new PointModel { Time = point.Time, Last = puts.Sum(o => o.Derivative.Variable.Delta) }),
+        KeyValuePair.Create("CallDelta", new PointModel { Time = point.Time, Last = calls.Sum(o => o.Derivative.Variable.Delta) }),
+        KeyValuePair.Create("PutVega", new PointModel { Time = point.Time, Last = -puts.Sum(o => o.Derivative.Variable.Vega) }),
+        KeyValuePair.Create("CallVega", new PointModel { Time = point.Time, Last = calls.Sum(o => o.Derivative.Variable.Vega) }),
+        KeyValuePair.Create("PutGamma", new PointModel { Time = point.Time, Last = -puts.Sum(o => o.Derivative.Variable.Gamma) }),
+        KeyValuePair.Create("CallGamma", new PointModel { Time = point.Time, Last = calls.Sum(o => o.Derivative.Variable.Gamma) }),
+        KeyValuePair.Create("PutTheta", new PointModel { Time = point.Time, Last = -puts.Sum(o => o.Derivative.Variable.Theta) }),
+        KeyValuePair.Create("CallTheta", new PointModel { Time = point.Time, Last = calls.Sum(o => o.Derivative.Variable.Theta) }),
         KeyValuePair.Create("PutBids", new PointModel { Time = point.Time, Last = putBids }),
         KeyValuePair.Create("PutAsks", new PointModel { Time = point.Time, Last = -putAsks }),
         KeyValuePair.Create("PutRatio", new PointModel { Time = point.Time, Last = putBids - putAsks }),
@@ -280,7 +292,7 @@ namespace Terminal.Components
 
       var performance = Performance.Calculate([account]);
 
-      await View.ReportsView.UpdateItems([
+      View.ReportsView.UpdateItems([
         KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }),
         KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last })
       ]);
@@ -288,22 +300,22 @@ namespace Terminal.Components
       var positions = account.Positions.Values;
       var basisPositions = positions.Where(o => o.Transaction.Instrument.Derivative is null);
       var optionPositions = positions.Where(o => o.Transaction.Instrument.Derivative is not null);
-      var puts = optionPositions.Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put);
-      var calls = optionPositions.Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call);
+      var posPuts = optionPositions.Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put);
+      var posCalls = optionPositions.Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call);
 
       var longs = basisPositions
         .Where(o => o.Side is OrderSideEnum.Buy)
-        .Concat(calls.Where(o => o.Side is OrderSideEnum.Buy))
-        .Concat(puts.Where(o => o.Side is OrderSideEnum.Sell));
+        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Buy))
+        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Sell));
 
       var shorts = basisPositions
         .Where(o => o.Side is OrderSideEnum.Sell)
-        .Concat(puts.Where(o => o.Side is OrderSideEnum.Buy))
-        .Concat(calls.Where(o => o.Side is OrderSideEnum.Sell));
+        .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Buy))
+        .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Sell));
 
       var x = optionPositions.Sum(GetDelta);
 
-      await PositionsView.UpdateItems([
+      PositionsView.UpdateItems([
         KeyValuePair.Create("OptionDelta", new PointModel { Time = point.Time, Last = optionPositions.Sum(GetDelta) }),
         KeyValuePair.Create("BasisDelta", new PointModel { Time = point.Time, Last = basisPositions.Sum(GetDelta) }),
         KeyValuePair.Create("LongDelta", new PointModel { Time = point.Time, Last = longs.Sum(GetDelta) }),
@@ -318,9 +330,9 @@ namespace Terminal.Components
         KeyValuePair.Create("ShortIv", new PointModel { Time = point.Time, Last = -shorts.Sum(o => o.Transaction.Instrument.Derivative?.Volatility ?? 0) })
       ]);
 
-      await View.DealsView.UpdateItems(account.Deals);
-      await View.OrdersView.UpdateItems(account.Orders.Values);
-      await View.PositionsView.UpdateItems(account.Positions.Values);
+      View.DealsView.UpdateItems(account.Deals);
+      View.OrdersView.UpdateItems(account.Orders.Values);
+      View.PositionsView.UpdateItems(account.Positions.Values);
 
       // Option estimate
 

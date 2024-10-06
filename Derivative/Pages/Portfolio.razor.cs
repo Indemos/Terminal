@@ -35,7 +35,11 @@ namespace Derivative.Pages
     /// <summary>
     /// Clear
     /// </summary>
-    public void OnClear() => Groups.Clear();
+    public void OnClear()
+    {
+      Count = 1;
+      Groups.Clear();
+    }
 
     /// <summary>
     /// Bar chart editor

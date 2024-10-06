@@ -18,7 +18,7 @@ using Terminal.Core.Models;
 
 namespace Terminal.Pages.Shares
 {
-  public partial class RenkoFollower
+  public partial class RangeBar
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -44,11 +44,7 @@ namespace Terminal.Pages.Shares
 
         Performance = new PerformanceIndicator { Name = nameof(Performance) };
 
-        View.OnPreConnect = () =>
-        {
-          View.Adapters["Sim"] = CreateSimAccount();
-        };
-
+        View.OnPreConnect = CreateAccounts;
         View.OnPostConnect = () =>
         {
           var order = new OrderModel
@@ -102,7 +98,7 @@ namespace Terminal.Pages.Shares
     /// Setup simulation account
     /// </summary>
     /// <returns></returns>
-    protected virtual Adapter CreateSimAccount()
+    protected virtual void CreateAccounts()
     {
       var account = new Account
       {
@@ -113,19 +109,17 @@ namespace Terminal.Pages.Shares
         }
       };
 
-      account
-        .Instruments
-        .Values
-        .ForEach(o => o.Points.CollectionChanged += (_, e) => e
-          .NewItems
-          .OfType<PointModel>()
-          .ForEach(async o => await OnData(o)));
-
-      return new Adapter
+      View.Adapters["Sim"] = new Adapter
       {
+        Speed = 1,
         Account = account,
         Source = Configuration["Simulation:Source"]
       };
+
+      View
+        .Adapters
+        .Values
+        .ForEach(adapter => adapter.PointStream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -170,16 +164,16 @@ namespace Terminal.Pages.Shares
         chartPoints.Add(KeyValuePair.Create("Price", new PointModel { Time = point.Time, Last = Price }));
 
         await adapter.CreateOrders(order);
-        await View.ChartsView.UpdateItems(chartPoints);
+        View.ChartsView.UpdateItems(chartPoints);
       }
 
       reportPoints.Add(KeyValuePair.Create("Balance", new PointModel { Time = point.Time, Last = account.Balance }));
       reportPoints.Add(KeyValuePair.Create("PnL", new PointModel { Time = point.Time, Last = performance.Point.Last }));
 
-      await View.ReportsView.UpdateItems(reportPoints);
-      await View.DealsView.UpdateItems(account.Deals);
-      await View.OrdersView.UpdateItems(account.Orders.Values);
-      await View.PositionsView.UpdateItems(account.Positions.Values);
+      View.ReportsView.UpdateItems(reportPoints);
+      View.DealsView.UpdateItems(account.Deals);
+      View.OrdersView.UpdateItems(account.Orders.Values);
+      View.PositionsView.UpdateItems(account.Positions.Values);
     }
 
     /// <summary>

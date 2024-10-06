@@ -55,7 +55,11 @@ namespace Derivative.Pages
     /// <summary>
     /// Clear
     /// </summary>
-    public void OnClear() => Groups.Clear();
+    public void OnClear()
+    {
+      Count = 1;
+      Groups.Clear();
+    }
 
     /// <summary>
     /// Description popup
@@ -85,7 +89,7 @@ namespace Derivative.Pages
       {
         var responseData = response as BarInputModel;
 
-        await Group(caption, response.Group, options, async (view, records) =>
+        await Group(caption, responseData.Group, options, async (view, records) =>
         {
           await ShowBars(
             responseData.ExpressionUp,
@@ -106,7 +110,7 @@ namespace Derivative.Pages
       {
         var responseData = response as BalanceInputModel;
 
-        await Group(caption, response.Group, options, async (view, records) =>
+        await Group(caption, responseData.Group, options, async (view, records) =>
         {
           await ShowBalance(
             responseData.ExpressionUp,
@@ -128,7 +132,7 @@ namespace Derivative.Pages
       {
         var responseData = response as MapInputModel;
 
-        await Group(caption, response.Group, options, async (view, records) =>
+        await Group(caption, responseData.Group, options, async (view, records) =>
         {
           await ShowMaps(
             responseData.Expression,
@@ -179,7 +183,7 @@ namespace Derivative.Pages
     /// <typeparam name="T"></typeparam>
     /// <param name="action"></param>
     /// <returns></returns>
-    protected async Task OnChart<T>(Func<string, BaseOptionInputModel, IList<InstrumentModel>, Task> action) where T : ComponentBase
+    protected async Task OnChart<T>(Func<string, dynamic, IList<InstrumentModel>, Task> action) where T : ComponentBase
     {
       var props = new DialogOptions
       {
@@ -199,7 +203,8 @@ namespace Derivative.Pages
 
           if (response.Canceled is false)
           {
-            var data = response.Data as BaseOptionInputModel;
+            dynamic data = response.Data;
+
             var adapter = new Adapter
             {
               Account = new Account
@@ -217,12 +222,12 @@ namespace Derivative.Pages
 
             var caption = $"{Count++} : {data.Name} : {data.Range.Start:yyyy-MM-dd} : {data.Range.End:yyyy-MM-dd}";
 
-            if (DataService.Options.TryGetValue(data.Name, out var items) && items is not null)
+            if (DataService.Options.TryGetValue($"{data.Name}", out var items) && items is not null)
             {
               var rangeItems = items.Where(o =>
               {
-                var min = o.Derivative.Expiration.Value.Date >= data.Range.Start.Value.Date;
-                var max = o.Derivative.Expiration.Value.Date <= data.Range.End.Value.Date;
+                var min = o.Derivative.Expiration.Value.Date >= data.Range.Start.Date;
+                var max = o.Derivative.Expiration.Value.Date <= data.Range.End.Date;
 
                 return min && max;
 
