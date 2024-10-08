@@ -6,16 +6,15 @@ using Canvas.Views.Web.Views;
 using Derivative.Models;
 using Derivative.Pages.Popups;
 using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Configuration;
 using MudBlazor;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Services;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace Derivative.Pages
 {
@@ -25,6 +24,7 @@ namespace Derivative.Pages
 
     protected int Count { get; set; } = 1;
     protected bool IsLoading { get; set; }
+    protected Dictionary<double, double> Sums { get; set; } = [];
     protected Dictionary<string, Dictionary<string, CanvasView>> Groups { get; set; } = [];
 
     /// <summary>
@@ -44,8 +44,12 @@ namespace Derivative.Pages
     {
       await OnChart<OptionEditor>(async (caption, response) =>
       {
-        Groups[caption] = new Dictionary<string, CanvasView> { [caption] = null };
-        await InvokeAsync(StateHasChanged);
+        if (Groups.ContainsKey(caption) is false)
+        {
+          Groups[caption] = new Dictionary<string, CanvasView> { [caption] = null };
+          await InvokeAsync(StateHasChanged);
+        }
+
         Groups[caption].ForEach(async o => await Show(o.Value, response));
       });
     }
@@ -79,7 +83,7 @@ namespace Derivative.Pages
             var inputModel = response.Data as OptionInputModel;
             var caption = $"{Count++} : {inputModel.Name}";
 
-            await action(caption, inputModel);
+            await action(inputModel.Name, inputModel);
           }
 
           IsLoading = false;
@@ -96,17 +100,19 @@ namespace Derivative.Pages
     /// <returns></returns>
     protected async Task Show(CanvasView view, OptionInputModel inputModel)
     {
-      var min = Math.Min(inputModel.Price, inputModel.Strike);
-      var max = Math.Max(inputModel.Price, inputModel.Strike);
-      var prices = Enumerable.Range((int)(min - min / 2), (int)(max + max / 2));
-      var chartPoints = prices.Select((o, i) =>
+      var plusPercents = Enumerable.Range(0, 20).Select((o, i) => o / 2.0 / 100.0);
+      var minusPercents = Enumerable.Range(1, 20).Select((o, i) => -o / 2.0 / 100.0).Reverse();
+      var chartPoints = minusPercents.Concat(plusPercents).Select((o, i) =>
       {
-        var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
+        var step = inputModel.Price + inputModel.Price * o;
+        var sum = GetEstimate(step, inputModel);
+
+        Sums[o] = Sums.TryGetValue(o, out var s) ? s + sum : sum;
 
         return new LineShape
         {
-          X = i,
-          Y = (OptionService.Premium(inputModel.Side, i, inputModel.Strike, 0.000001, 0.25, 0.05, 0) - inputModel.Premium) * direction,
+          X = step,
+          Y = Sums[o],
           Component = new ComponentModel { Size = 2, Color = SKColors.DeepSkyBlue }
 
         } as IShape;
@@ -118,11 +124,27 @@ namespace Derivative.Pages
         Space = 0.05,
         Name = inputModel.Name,
         Items = chartPoints,
-        View = view
+        View = view,
+        ShowIndex = o => $"{chartPoints.ElementAtOrDefault((int)o)?.X}"
       };
 
       await composer.Create<CanvasEngine>();
       await composer.Update();
+    }
+
+    protected double GetEstimate(double price, OptionInputModel inputModel)
+    {
+      var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
+
+      if (inputModel.Side is OptionSideEnum.Share)
+      {
+        return (price - inputModel.Price) * inputModel.Amount * direction;
+      }
+
+      var days = Math.Max((DateTime.Now - inputModel.Date).Value.TotalDays / 250.0, double.Epsilon);
+      var estimate = OptionService.Premium(inputModel.Side, price, inputModel.Strike, days, 0.25, 0.05, 0);
+
+      return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
     }
   }
 }

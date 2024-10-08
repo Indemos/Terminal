@@ -12,9 +12,11 @@
       <MudTextField Label="Price" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Price" For="@(() => InputModel.Price)"></MudTextField>
       <MudTextField Label="Strike" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Strike" For="@(() => InputModel.Strike)"></MudTextField>
       <MudTextField Label="Premium" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Premium" For="@(() => InputModel.Premium)"></MudTextField>
+      <MudTextField Label="Amount" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Amount" For="@(() => InputModel.Amount)"></MudTextField>
       <MudSelect Label="Side" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Side" For="@(() => InputModel.Side)">
         <MudSelectItem T="OptionSideEnum" Value="@(OptionSideEnum.Call)" />
         <MudSelectItem T="OptionSideEnum" Value="@(OptionSideEnum.Put)" />
+        <MudSelectItem T="OptionSideEnum" Value="@(OptionSideEnum.Share)" />
       </MudSelect>
       <MudSelect Label="Direction" Variant="Variant.Text" Margin="Margin.Dense" Class="mt-3" @bind-Value="InputModel.Position" For="@(() => InputModel.Position)">
         <MudSelectItem T="OrderSideEnum" Value="@(OrderSideEnum.Buy)" />

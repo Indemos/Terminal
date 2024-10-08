@@ -49,8 +49,12 @@ namespace Derivative.Pages
     {
       await OnChart<PortfolioEditor>(async (caption, response, items) =>
       {
-        Groups[caption] = new Dictionary<string, CanvasView> { [caption] = null };
-        await InvokeAsync(StateHasChanged);
+        if (Groups.ContainsKey(caption) is false)
+        {
+          Groups[caption] = new Dictionary<string, CanvasView> { [caption] = null };
+          await InvokeAsync(StateHasChanged);
+        }
+
         Groups[caption].ForEach(async o => await Show(o.Value, response, items));
       });
     }

@@ -19,6 +19,9 @@ namespace Derivative.Models
     public double Premium { get; set; }
 
     [Required]
+    public double Amount { get; set; }
+
+    [Required]
     public DateTime? Date { get; set; }
 
     [Required]

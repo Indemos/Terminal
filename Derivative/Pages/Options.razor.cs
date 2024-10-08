@@ -156,10 +156,14 @@ namespace Derivative.Pages
       IList<InstrumentModel> options,
       Func<CanvasView, IList<InstrumentModel>, Task> action)
     {
-      if (string.Equals(combine, "Yes"))
+      if (Groups.ContainsKey(caption) is false)
       {
         Groups[caption] = new Dictionary<string, CanvasView> { [caption] = null };
         await InvokeAsync(StateHasChanged);
+      }
+
+      if (string.Equals(combine, "Yes"))
+      {
         Groups[caption].ForEach(async o => await action(o.Value, options));
         return;
       }

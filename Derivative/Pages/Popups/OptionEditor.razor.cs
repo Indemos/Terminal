@@ -14,9 +14,10 @@ namespace Derivative.Pages.Popups
     protected OptionInputModel InputModel { get; set; } = new OptionInputModel
     {
       Name = "SPY",
-      Price = 100,
-      Strike = 110,
-      Premium = 0,
+      Price = 200,
+      Strike = 205,
+      Premium = 1.25,
+      Amount = 1,
       Date = DateTime.Now.Date,
       Side = OptionSideEnum.Call,
       Position = OrderSideEnum.Buy
