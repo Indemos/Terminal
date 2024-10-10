@@ -12,9 +12,14 @@ namespace Terminal.Components
   public partial class PageComponent
   {
     [Parameter]
-    public virtual RenderFragment Header { get; set; } = default;
+    public virtual RenderFragment HeaderView { get; set; } = default;
+
     [Parameter]
-    public virtual RenderFragment PositionMetrics { get; set; } = default;
+    public virtual RenderFragment ContentView { get; set; } = default;
+
+    [Parameter]
+    public virtual RenderFragment FooterView { get; set; } = default;
+
     public virtual bool IsConnection { get; set; }
     public virtual bool IsSubscription { get; set; }
     public virtual ChartsComponent ChartsView { get; set; }
@@ -25,9 +30,6 @@ namespace Terminal.Components
     public virtual StatementsComponent StatementsView { get; set; }
     public virtual Action OnPreConnect { get; set; } = () => { };
     public virtual Action OnPostConnect { get; set; } = () => { };
-    public virtual Action OnPostDisconnect { get; set; } = () => { };
-    public virtual Action OnPostSubscribe { get; set; } = () => { };
-    public virtual Action OnPostUnsubscribe { get; set; } = () => { };
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
 
     public virtual async Task Connect()
@@ -65,8 +67,6 @@ namespace Terminal.Components
 
         IsConnection = false;
         IsSubscription = false;
-
-        OnPostDisconnect();
       }
       catch (Exception e)
       {
@@ -87,8 +87,6 @@ namespace Terminal.Components
             .Select(o => adapter.Subscribe(o))));
 
         IsSubscription = true;
-
-        OnPostSubscribe();
       }
       catch (Exception e)
       {
@@ -109,8 +107,6 @@ namespace Terminal.Components
             .Select(o => adapter.Unsubscribe(o))));
 
         IsSubscription = false;
-
-        OnPostUnsubscribe();
       }
       catch (Exception e)
       {

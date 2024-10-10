@@ -1,8 +1,12 @@
 <PageComponent @ref="View">
-  <Header>
-    <ChartsComponent @ref="FrameView" />
-  </Header>
-  <PositionMetrics>
+  <HeaderView>
+    <ChartsComponent @ref="FramesView" />
+    <ChartsComponent @ref="PremiumsView" />
+  </HeaderView>
+  <ContentView>
     <ChartsComponent @ref="PositionsView" />
-  </PositionMetrics>
+  </ContentView>
+  <FooterView>
+    <ChartsComponent @ref="StrikesView" />
+  </FooterView>
 </PageComponent>

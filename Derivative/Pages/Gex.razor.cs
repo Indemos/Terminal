@@ -142,8 +142,8 @@ namespace Derivative.Pages
         View = section.View
       };
 
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
+      await section.View.Create<CanvasEngine>(() => composer);
+      await section.View.Update();
 
       var interval = new Timer();
 
@@ -195,7 +195,7 @@ namespace Derivative.Pages
 
       }).ToList();
 
-      await section.View.Composer.Update(new DomainModel { IndexDomain = [items.Count - 50, items.Count] });
+      await section.View.Update(new DimensionModel { IndexDomain = [items.Count - 50, items.Count] });
     }
 
     /// <summary>

@@ -15,7 +15,7 @@
 
   <MudExpansionPanels MultiExpansion="true">
 
-    @if (Header is not null)
+    @if (HeaderView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
@@ -25,22 +25,37 @@
           </div>
         </TitleContent>
         <ChildContent>
-          @Header
+          @HeaderView
         </ChildContent>
       </MudExpansionPanel>
     }
 
-    @if (PositionMetrics is not null)
+    @if (ContentView is not null)
     {
       <MudExpansionPanel>
         <TitleContent>
           <div class="d-flex">
             <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
-            <MudText>Position Metrics</MudText>
+            <MudText>Content</MudText>
           </div>
         </TitleContent>
         <ChildContent>
-          @PositionMetrics
+          @ContentView
+        </ChildContent>
+      </MudExpansionPanel>
+    }
+
+    @if (FooterView is not null)
+    {
+      <MudExpansionPanel>
+        <TitleContent>
+          <div class="d-flex">
+            <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+            <MudText>Footer</MudText>
+          </div>
+        </TitleContent>
+        <ChildContent>
+          @FooterView
         </ChildContent>
       </MudExpansionPanel>
     }

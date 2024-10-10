@@ -11,7 +11,6 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection.Metadata.Ecma335;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Services;
@@ -33,6 +32,7 @@ namespace Derivative.Pages
     public void OnClear()
     {
       Count = 1;
+      Sums.Clear();
       Groups.Clear();
     }
 
@@ -128,10 +128,16 @@ namespace Derivative.Pages
         ShowIndex = o => $"{chartPoints.ElementAtOrDefault((int)o)?.X}"
       };
 
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
+      await view.Create<CanvasEngine>(() => composer);
+      await view.Update();
     }
 
+    /// <summary>
+    /// Estimated PnL for shares or options
+    /// </summary>
+    /// <param name="price"></param>
+    /// <param name="inputModel"></param>
+    /// <returns></returns>
     protected double GetEstimate(double price, OptionInputModel inputModel)
     {
       var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;

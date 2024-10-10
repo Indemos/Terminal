@@ -174,8 +174,8 @@ namespace Derivative.Pages
         View = view
       };
 
-      await composer.Create<CanvasEngine>();
-      await composer.Update();
+      await view.Create<CanvasEngine>(() => composer);
+      await view.Update();
     }
 
     /// <summary>

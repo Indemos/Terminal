@@ -326,8 +326,8 @@ namespace Derivative.Pages
           View = view
         };
 
-        await composer.Create<CanvasEngine>();
-        await composer.Update();
+        await view.Create<CanvasEngine>(() => composer);
+        await view.Update();
       }
       catch (Exception e)
       {
@@ -427,8 +427,8 @@ namespace Derivative.Pages
           View = view
         };
 
-        await composer.Create<CanvasEngine>();
-        await composer.Update();
+        await view.Create<CanvasEngine>(() => composer);
+        await view.Update();
       }
       catch (Exception e)
       {
@@ -504,15 +504,15 @@ namespace Derivative.Pages
         {
           Name = "Indicators",
           Items = points,
-          Dimension = points.Max(o => o.Points.Count),
+          Range = points.Max(o => o.Points.Count),
           ValueCount = Math.Min(expirations.Count, 5),
           ShowIndex = showIndex,
           ShowValue = showValue,
           View = view
         };
 
-        await composer.Create<CanvasEngine>();
-        await composer.Update();
+        await view.Create<CanvasEngine>(() => composer);
+        await view.Update();
       }
       catch (Exception e)
       {

@@ -2,6 +2,7 @@ using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using MudBlazor;
 using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
@@ -12,6 +13,9 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
+using Terminal.Models;
+using static MudBlazor.Colors;
 using Ib = InteractiveBrokers;
 using Sc = Schwab;
 using Scm = Schwab.Messages;
@@ -24,8 +28,9 @@ namespace Terminal.Components
     [Inject] IConfiguration Configuration { get; set; }
 
     public virtual PageComponent View { get; set; }
-    public virtual ChartsComponent FrameView { get; set; }
-    public virtual ChartsComponent PremiumView { get; set; }
+    public virtual ChartsComponent FramesView { get; set; }
+    public virtual ChartsComponent StrikesView { get; set; }
+    public virtual ChartsComponent PremiumsView { get; set; }
     public virtual ChartsComponent PositionsView { get; set; }
     public virtual PerformanceIndicator Performance { get; set; }
     public virtual InstrumentModel Instrument { get; set; }
@@ -144,22 +149,44 @@ namespace Terminal.Components
       // Frame
 
       var spanAreas = new Shape();
-      var spanCharts = new Shape();
+      var spanCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
 
-      spanCharts.Groups["Bars"] = new CandleShape();
-      spanAreas.Groups["Frames"] = spanCharts;
+      spanCharts[0].Groups["Bars"] = new CandleShape();
 
-      await FrameView.Create(spanAreas);
+      for (var i = 0; i < spanCharts.Count; i++)
+      {
+        spanAreas.Groups[$"{i}"] = spanCharts[i];
+      }
+
+      await FramesView.Create(spanAreas);
 
       // Premium
 
-      //var premiumAreas = new Shape();
-      //var premiumCharts = new Shape();
+      var premiumAreas = new Shape();
+      var premiumCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
 
-      //premiumCharts.Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
-      //premiumAreas.Groups["Prediction"] = premiumCharts;
+      premiumCharts[0].Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
 
-      //await PremiumView.Create(premiumAreas);
+      for (var i = 0; i < premiumCharts.Count; i++)
+      {
+        premiumAreas.Groups[$"{i}"] = premiumCharts[i];
+      }
+
+      await PremiumsView.Create(premiumAreas);
+
+      // Strikes
+
+      var strikeAreas = new Shape();
+      var strikeCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
+
+      strikeCharts[0].Groups["Gamma"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
+
+      for (var i = 0; i < strikeCharts.Count; i++)
+      {
+        strikeAreas.Groups[$"{i}"] = strikeCharts[i];
+      }
+
+      await StrikesView.Create(strikeAreas);
     }
 
     /// <summary>
@@ -268,7 +295,7 @@ namespace Terminal.Components
       var callBids = calls.Sum(o => o.Point.BidSize ?? 0);
       var callAsks = calls.Sum(o => o.Point.AskSize ?? 0);
 
-      FrameView.UpdateItems([
+      FramesView.UpdateItems([
         KeyValuePair.Create("Bars", point)
       ]);
 
@@ -336,23 +363,57 @@ namespace Terminal.Components
 
       // Option estimate
 
-      //PremiumView.Clear();
+      //PremiumsView.Clear();
 
-      //var strikes = options.Select(o => o.Derivative.Strike.Value).Distinct().ToList();
-      //var estimatePoints = strikes.Select(o => KeyValuePair.Create("Risk", new PointModel { Last = 0 })).ToList();
+      var sums = new Dictionary<double, double>();
 
-      //foreach (var position in account.Positions.Values.Where(o => o.Transaction.Instrument.Derivative is not null))
-      //{
-      //  for (var i = 0; i < strikes.Count; i++)
-      //  {
-      //    if (position.Transaction.Instrument.Derivative.Side is Core.Enums.OptionSideEnum.Call) continue;
-      //    var optionType = position.Transaction.Instrument.Derivative.Side.Value;
-      //    var estimate = BlackScholes.Premium(optionType, point.Last.Value, strikes[i], 1.0 / 250.0, position.Transaction.Instrument.Derivative.Volatility.Value / 250.0, 0.05, 0);
-      //    estimatePoints[i].Value.Last += estimate;
-      //  }
-      //}
+      foreach (var pos in account.Positions.Values)
+      {
+        var plusPercents = Enumerable.Range(0, 20).Select((o, i) => o / 2.0 / 100.0);
+        var minusPercents = Enumerable.Range(1, 20).Select((o, i) => -o / 2.0 / 100.0).Reverse();
+        var inputModel = new OptionInputModel
+        {
+          Price = point.Last.Value,
+          Amount = pos.Transaction.Volume ?? 0,
+          Strike = pos.Transaction.Instrument?.Derivative?.Strike ?? 0,
+          Premium = pos.Transaction.Instrument?.Point?.Last ?? 0,
+          Date = pos.Transaction.Instrument?.Derivative?.Expiration,
+          Side = pos.Transaction.Instrument?.Derivative?.Side ?? 0,
+          Position = pos.Side.Value
+        };
 
-      //await PremiumView.UpdateItems(estimatePoints);
+        var chartPoints = minusPercents.Concat(plusPercents).Select((o, i) =>
+        {
+          var step = inputModel.Price + inputModel.Price * o;
+          var sum = GetEstimate(step, point.Time.Value, inputModel);
+          sums[o] = sums.TryGetValue(o, out var s) ? s + sum : sum;
+          return new LineShape { X = step, Y = sums[o] } as IShape;
+
+        }).ToList();
+
+        PremiumsView.UpdateItems("0", "Estimate", chartPoints);
+      }
+    }
+
+    /// <summary>
+    /// Estimated PnL for shares or options
+    /// </summary>
+    /// <param name="price"></param>
+    /// <param name="inputModel"></param>
+    /// <returns></returns>
+    protected double GetEstimate(double price, DateTime date, OptionInputModel inputModel)
+    {
+      var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
+
+      if (inputModel.Side is not OptionSideEnum.Put && inputModel.Side is not OptionSideEnum.Call)
+      {
+        return (price - inputModel.Price) * inputModel.Amount * direction;
+      }
+
+      var days = Math.Max((inputModel.Date - date).Value.TotalDays / 250.0, double.Epsilon);
+      var estimate = OptionService.Premium(inputModel.Side, price, inputModel.Strike, days, 0.25, 0.05, 0);
+
+      return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
     }
 
     /// <summary>

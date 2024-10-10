@@ -25,11 +25,6 @@ namespace Terminal.Components
     protected virtual ComponentModel DownSide { get; set; }
 
     /// <summary>
-    /// Reference to view control
-    /// </summary>
-    protected virtual CanvasGroupView View { get; set; }
-
-    /// <summary>
     /// Points
     /// </summary>
     protected virtual IList<IShape> Shapes { get; set; } = [];
@@ -43,6 +38,11 @@ namespace Terminal.Components
     /// Indices
     /// </summary>
     protected virtual IDictionary<long, IShape> Indices { get; set; } = new Dictionary<long, IShape>();
+
+    /// <summary>
+    /// Reference to view control
+    /// </summary>
+    public virtual CanvasGroupView View { get; set; }
 
     /// <summary>
     /// Define chart model
@@ -108,12 +108,38 @@ namespace Terminal.Components
         }
       }
 
-      var domain = new DomainModel
+      var domain = new DimensionModel
       {
         IndexDomain = [Shapes.Count - (count ?? Shapes.Count), Shapes.Count]
       };
 
       View.Update(domain, Shapes);
+    }
+
+
+    /// <summary>
+    /// Update
+    /// </summary>
+    /// <param name="inputs"></param>
+    /// <param name="count"></param>
+    public virtual void UpdateItems(string area, string series, IList<IShape> inputs, int? count = null)
+    {
+      var shapes = new List<IShape>();
+
+      foreach (var input in inputs)
+      {
+        var shape = View.Item.Clone() as IShape;
+
+        shape.Groups[area].Groups[series] = input;
+        shapes.Add(shape);
+      }
+
+      var domain = new DimensionModel
+      {
+        IndexDomain = [0, shapes.Count]
+      };
+
+      View.Update(domain, shapes);
     }
 
     /// <summary>
@@ -123,7 +149,7 @@ namespace Terminal.Components
     {
       Shapes.Clear();
       Indices.Clear();
-      View.Update(new DomainModel { IndexDomain = [0, 0] }, Shapes);
+      View.Update(new DimensionModel { IndexDomain = [0, 0] }, Shapes);
     }
 
     /// <summary>
