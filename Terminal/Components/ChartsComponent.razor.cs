@@ -1,3 +1,4 @@
+using Canvas.Core.Composers;
 using Canvas.Core.Engines;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
@@ -45,6 +46,11 @@ namespace Terminal.Components
     public virtual CanvasGroupView View { get; set; }
 
     /// <summary>
+    /// Labels
+    /// </summary>
+    public virtual IList<IComposer> Composers { get; set; } = [];
+
+    /// <summary>
     /// Define chart model
     /// </summary>
     /// <param name="group"></param>
@@ -58,7 +64,8 @@ namespace Terminal.Components
         .ForEach(view => view.Value.Groups
         .ForEach(series => Maps[series.Key] = view.Key));
 
-      await View.CreateViews<CanvasEngine>();
+      Composers = await View.CreateViews<CanvasEngine>();
+
       await InvokeAsync(StateHasChanged);
     }
 
@@ -121,19 +128,8 @@ namespace Terminal.Components
     /// Update
     /// </summary>
     /// <param name="inputs"></param>
-    /// <param name="count"></param>
-    public virtual void UpdateItems(string area, string series, IList<IShape> inputs, int? count = null)
+    public virtual void UpdateItems(IList<IShape> shapes)
     {
-      var shapes = new List<IShape>();
-
-      foreach (var input in inputs)
-      {
-        var shape = View.Item.Clone() as IShape;
-
-        shape.Groups[area].Groups[series] = input;
-        shapes.Add(shape);
-      }
-
       var domain = new DimensionModel
       {
         IndexDomain = [0, shapes.Count]

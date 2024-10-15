@@ -79,6 +79,17 @@ namespace Terminal.Core.Services
       return vega / 100;
     }
 
+    /// <summary>
+    /// Volatility
+    /// </summary>
+    /// <param name="optionType"></param>
+    /// <param name="S"></param>
+    /// <param name="K"></param>
+    /// <param name="T"></param>
+    /// <param name="r"></param>
+    /// <param name="q"></param>
+    /// <param name="optionMarketPrice"></param>
+    /// <returns></returns>
     public static double IV(OptionSideEnum optionType, double S, double K, double T, double r, double q, double optionMarketPrice)
     {
       Func<double, double> f = sigma => Premium(optionType, S, K, T, sigma, r, q) - optionMarketPrice;
@@ -199,6 +210,41 @@ namespace Terminal.Core.Services
         default:
           throw new NotSupportedException();
       }
+    }
+
+    /// <summary>
+    /// Computes Vanna. The amount of option price change for each 1% change in vol (sigma)
+    /// </summary>
+    /// <param name="S">Underlying price</param>
+    /// <param name="K">Strike price</param>
+    /// <param name="T">Time to expiration in % of year</param>
+    /// <param name="sigma">Volatility</param>
+    /// <param name="r">continuously compounded risk-free interest rate</param>
+    /// <param name="q">continuously compounded dividend yield</param>
+    /// <returns></returns>
+    public static double Vanna(double S, double K, double T, double sigma, double r, double q)
+    {
+      double d1 = D1(S, K, T, sigma, r, q);
+      double vega = Vega(S, K, T, sigma, r, q);
+      return (d1 / sigma) * vega;
+    }
+
+    /// <summary>
+    /// Computes Volga. The amount of option price change for each 1% change in vol (sigma)
+    /// </summary>
+    /// <param name="S">Underlying price</param>
+    /// <param name="K">Strike price</param>
+    /// <param name="T">Time to expiration in % of year</param>
+    /// <param name="sigma">Volatility</param>
+    /// <param name="r">continuously compounded risk-free interest rate</param>
+    /// <param name="q">continuously compounded dividend yield</param>
+    /// <returns></returns>
+    public static double Volga(double S, double K, double T, double sigma, double r, double q)
+    {
+      double d1 = D1(S, K, T, sigma, r, q);
+      double d2 = D2(T, sigma, d1);
+      double vega = Vega(S, K, T, sigma, r, q);
+      return vega * d1 * d2 / sigma;
     }
   }
 }

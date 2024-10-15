@@ -7,10 +7,14 @@ using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Drawing;
 using System.Linq;
+using System.Security.Principal;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
@@ -76,117 +80,12 @@ namespace Terminal.Components
     /// <returns></returns>
     public virtual async Task CreateViews(IList<Shape> groups)
     {
-      // Indicators
-
-      var priceAreas = new Shape();
-      var priceCharts = Enumerable.Range(0, 7).Select(o => new Shape()).ToList();
-
-      priceCharts[0].Groups["PutDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[0].Groups["CallDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[1].Groups["PutGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[1].Groups["CallGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[2].Groups["PutVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[2].Groups["CallVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[3].Groups["PutTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[3].Groups["CallTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[4].Groups["PutBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[4].Groups["PutAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[5].Groups["CallBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[5].Groups["CallAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[6].Groups["PutRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      priceCharts[6].Groups["CallRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      priceCharts[6].Groups["PcRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
-
-      priceCharts = [.. (groups ?? []), .. priceCharts];
-
-      for (var i = 0; i < priceCharts.Count; i++)
-      {
-        priceAreas.Groups[$"{i}"] = priceCharts[i];
-      }
-
-      await View.ChartsView.Create(priceAreas);
-
-      // Position metrics
-
-      var positionAreas = new Shape();
-      var positionCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
-
-      positionCharts[0].Groups["BasisDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      positionCharts[0].Groups["OptionDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[1].Groups["LongDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[1].Groups["ShortDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      positionCharts[2].Groups["LongGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[2].Groups["ShortGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      positionCharts[3].Groups["LongVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[3].Groups["ShortVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      positionCharts[4].Groups["LongIv"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[4].Groups["ShortIv"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-      positionCharts[5].Groups["LongTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
-      positionCharts[5].Groups["ShortTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
-
-      for (var i = 0; i < positionCharts.Count; i++)
-      {
-        positionAreas.Groups[$"{i}"] = positionCharts[i];
-      }
-
-      await PositionsView.Create(positionAreas);
-
-      // Balance
-
-      var balanceAreas = new Shape();
-      var balanceCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
-
-      balanceCharts[0].Groups["Balance"] = new AreaShape { Component = new ComponentModel { Color = SKColors.Black } };
-      balanceCharts[0].Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 } };
-
-      for (var i = 0; i < balanceCharts.Count; i++)
-      {
-        balanceAreas.Groups[$"{i}"] = balanceCharts[i];
-      }
-
-      await View.ReportsView.Create(balanceAreas);
-
-      // Frame
-
-      var spanAreas = new Shape();
-      var spanCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
-
-      spanCharts[0].Groups["Bars"] = new CandleShape();
-
-      for (var i = 0; i < spanCharts.Count; i++)
-      {
-        spanAreas.Groups[$"{i}"] = spanCharts[i];
-      }
-
-      await FramesView.Create(spanAreas);
-
-      // Premium
-
-      var premiumAreas = new Shape();
-      var premiumCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
-
-      premiumCharts[0].Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
-
-      for (var i = 0; i < premiumCharts.Count; i++)
-      {
-        premiumAreas.Groups[$"{i}"] = premiumCharts[i];
-      }
-
-      await PremiumsView.Create(premiumAreas);
-
-      // Strikes
-
-      var strikeAreas = new Shape();
-      var strikeCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
-
-      strikeCharts[0].Groups["Gamma"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
-
-      for (var i = 0; i < strikeCharts.Count; i++)
-      {
-        strikeAreas.Groups[$"{i}"] = strikeCharts[i];
-      }
-
-      await StrikesView.Create(strikeAreas);
+      await CreateMetricsView(groups);
+      await CreatePositionMetricsView(groups);
+      await CreateBalanceView(groups);
+      await CreateFrameView(groups);
+      await CreatePremiumView(groups);
+      await CreateStrikeView(groups);
     }
 
     /// <summary>
@@ -361,10 +260,18 @@ namespace Terminal.Components
       View.OrdersView.UpdateItems(account.Orders.Values);
       View.PositionsView.UpdateItems(account.Positions.Values);
 
-      // Option estimate
+      ShowEstimates(point);
+      ShowStrikes(point, options);
+    }
 
-      //PremiumsView.Clear();
-
+    /// <summary>
+    /// Render estimated position gain
+    /// </summary>
+    /// <param name="point"></param>
+    protected void ShowEstimates(PointModel point)
+    {
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
       var sums = new Dictionary<double, double>();
 
       foreach (var pos in account.Positions.Values)
@@ -386,13 +293,86 @@ namespace Terminal.Components
         {
           var step = inputModel.Price + inputModel.Price * o;
           var sum = GetEstimate(step, point.Time.Value, inputModel);
+          var shape = new Shape();
+
           sums[o] = sums.TryGetValue(o, out var s) ? s + sum : sum;
-          return new LineShape { X = step, Y = sums[o] } as IShape;
+
+          shape.Groups = new Dictionary<string, IShape>();
+          shape.Groups["0"] = new Shape();
+          shape.Groups["0"].Groups = new Dictionary<string, IShape>();
+          shape.Groups["0"].Groups["Estimate"] = new LineShape { Name = "Estimate", X = step, Y = sums[o] };
+
+          return shape as IShape;
 
         }).ToList();
 
-        PremiumsView.UpdateItems("0", "Estimate", chartPoints);
+        PremiumsView.Composers.ForEach(composer => composer.ShowIndex = o => $"{chartPoints.ElementAtOrDefault((int)o)?.X:0.00}");
+        PremiumsView.UpdateItems(chartPoints);
       }
+    }
+
+    /// <summary>
+    /// Render metrics per strike
+    /// </summary>
+    /// <param name="point"></param>
+    /// <param name="options"></param>
+    protected void ShowStrikes(PointModel point, IList<InstrumentModel> options)
+    {
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
+      var chartPoints = new List<IShape>();
+      var groups = options
+        .OrderBy(o => o.Derivative.Strike)
+        .GroupBy(o => o.Derivative.Strike, o => o)
+        .ToList();
+
+      foreach (var group in groups)
+      {
+        var puts = group.Where(o => o.Derivative.Side is OptionSideEnum.Put);
+        var calls = group.Where(o => o.Derivative.Side is OptionSideEnum.Call);
+        var shape = new Shape();
+
+        shape.Groups = new Dictionary<string, IShape>();
+
+        shape.Groups["0"] = new Shape();
+        shape.Groups["0"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["0"].Groups["PutGamma"] = new BarShape { X = group.Key, Y = -puts.Sum(o => o?.Derivative?.Variable.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["0"].Groups["CallGamma"] = new BarShape { X = group.Key, Y = calls.Sum(o => o?.Derivative?.Variable.Gamma ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+
+        shape.Groups["1"] = new Shape();
+        shape.Groups["1"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["1"].Groups["PutTheta"] = new BarShape { X = group.Key, Y = -puts.Sum(o => o?.Derivative?.Variable.Theta ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["1"].Groups["CallTheta"] = new BarShape { X = group.Key, Y = calls.Sum(o => o?.Derivative?.Variable.Theta ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+
+        shape.Groups["2"] = new Shape();
+        shape.Groups["2"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["2"].Groups["PutOpenInterest"] = new BarShape { X = group.Key, Y = -puts.Sum(o => o?.Derivative?.OpenInterest ?? 0), Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["2"].Groups["CallOpenInterest"] = new BarShape { X = group.Key, Y = calls.Sum(o => o?.Derivative?.OpenInterest ?? 0), Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+
+        var putBids = puts.Sum(o => o?.Point?.Bid ?? 0);
+        var putAsks = puts.Sum(o => o?.Point?.Ask ?? 0);
+        var callBids = calls.Sum(o => o?.Point?.Bid ?? 0);
+        var callAsks = calls.Sum(o => o?.Point?.Ask ?? 0);
+
+        shape.Groups["3"] = new Shape();
+        shape.Groups["3"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["3"].Groups["PutBids"] = new BarShape { X = group.Key, Y = -putBids, Component = new ComponentModel { Color = SKColors.OrangeRed } };
+        shape.Groups["3"].Groups["PutAsks"] = new BarShape { X = group.Key, Y = putAsks, Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+
+        shape.Groups["4"] = new Shape();
+        shape.Groups["4"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["4"].Groups["CallBids"] = new BarShape { X = group.Key, Y = callBids, Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+        shape.Groups["4"].Groups["CallAsks"] = new BarShape { X = group.Key, Y = -callAsks, Component = new ComponentModel { Color = SKColors.OrangeRed } };
+
+        shape.Groups["5"] = new Shape();
+        shape.Groups["5"].Groups = new Dictionary<string, IShape>();
+        shape.Groups["5"].Groups["PcRatio"] = new BarShape { X = group.Key, Y = (callBids + putAsks) - (callAsks + putBids), Component = new ComponentModel { Color = SKColors.LimeGreen } };
+
+        chartPoints.Add(shape);
+      }
+
+      StrikesView.Composers.ForEach(composer => composer.ShowIndex = o => $"{groups.ElementAtOrDefault((int)o)?.Key}");
+      StrikesView.UpdateItems(chartPoints);
     }
 
     /// <summary>
@@ -414,6 +394,164 @@ namespace Terminal.Components
       var estimate = OptionService.Premium(inputModel.Side, price, inputModel.Strike, days, 0.25, 0.05, 0);
 
       return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreateMetricsView(IList<Shape> groups)
+    {
+      var priceAreas = new Shape();
+      var priceCharts = Enumerable.Range(0, 7).Select(o => new Shape()).ToList();
+
+      priceCharts[0].Groups["PutDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[0].Groups["CallDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[1].Groups["PutGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[1].Groups["CallGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[2].Groups["PutVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[2].Groups["CallVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[3].Groups["PutTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[3].Groups["CallTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[4].Groups["PutBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[4].Groups["PutAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[5].Groups["CallBids"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[5].Groups["CallAsks"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[6].Groups["PutRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      priceCharts[6].Groups["CallRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      priceCharts[6].Groups["PcRatio"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen } };
+
+      priceCharts = [.. (groups ?? []), .. priceCharts];
+
+      for (var i = 0; i < priceCharts.Count; i++)
+      {
+        priceAreas.Groups[$"{i}"] = priceCharts[i];
+      }
+
+      await View.ChartsView.Create(priceAreas);
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreatePositionMetricsView(IList<Shape> groups)
+    {
+      var positionAreas = new Shape();
+      var positionCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
+
+      positionCharts[0].Groups["BasisDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[0].Groups["OptionDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[1].Groups["LongDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[1].Groups["ShortDelta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[2].Groups["LongGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[2].Groups["ShortGamma"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[3].Groups["LongVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[3].Groups["ShortVega"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[4].Groups["LongIv"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[4].Groups["ShortIv"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+      positionCharts[5].Groups["LongTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.DeepSkyBlue } };
+      positionCharts[5].Groups["ShortTheta"] = new AreaShape { Component = new ComponentModel { Color = SKColors.OrangeRed } };
+
+      for (var i = 0; i < positionCharts.Count; i++)
+      {
+        positionAreas.Groups[$"{i}"] = positionCharts[i];
+      }
+
+      await PositionsView.Create(positionAreas);
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreateBalanceView(IList<Shape> groups)
+    {
+      var balanceAreas = new Shape();
+      var balanceCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
+
+      balanceCharts[0].Groups["Balance"] = new AreaShape { Component = new ComponentModel { Color = SKColors.Black } };
+      balanceCharts[0].Groups["PnL"] = new LineShape { Component = new ComponentModel { Color = SKColors.OrangeRed, Size = 2 } };
+
+      for (var i = 0; i < balanceCharts.Count; i++)
+      {
+        balanceAreas.Groups[$"{i}"] = balanceCharts[i];
+      }
+
+      await View.ReportsView.Create(balanceAreas);
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreateFrameView(IList<Shape> groups)
+    {
+      var spanAreas = new Shape();
+      var spanCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
+
+      spanCharts[0].Groups["Bars"] = new CandleShape();
+
+      for (var i = 0; i < spanCharts.Count; i++)
+      {
+        spanAreas.Groups[$"{i}"] = spanCharts[i];
+      }
+
+      await FramesView.Create(spanAreas);
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreatePremiumView(IList<Shape> groups)
+    {
+      var premiumAreas = new Shape();
+      var premiumCharts = Enumerable.Range(0, 1).Select(o => new Shape()).ToList();
+
+      premiumCharts[0].Groups["Estimate"] = new LineShape { Component = new ComponentModel { Color = SKColors.LimeGreen, Size = 2 } };
+
+      for (var i = 0; i < premiumCharts.Count; i++)
+      {
+        premiumAreas.Groups[$"{i}"] = premiumCharts[i];
+      }
+
+      await PremiumsView.Create(premiumAreas);
+    }
+
+    /// <summary>
+    /// Set up charts
+    /// </summary>
+    /// <param name="groups"></param>
+    /// <returns></returns>
+    protected virtual async Task CreateStrikeView(IList<Shape> groups)
+    {
+      var strikeAreas = new Shape();
+      var strikeCharts = Enumerable.Range(0, 6).Select(o => new Shape()).ToList();
+
+      strikeCharts[0].Groups["PutGamma"] = new BarShape();
+      strikeCharts[0].Groups["CallGamma"] = new BarShape();
+      strikeCharts[1].Groups["PutTheta"] = new BarShape();
+      strikeCharts[1].Groups["CallTheta"] = new BarShape();
+      strikeCharts[2].Groups["PutOpenInterest"] = new BarShape();
+      strikeCharts[2].Groups["CallOpenInterest"] = new BarShape();
+      strikeCharts[3].Groups["PutBids"] = new BarShape();
+      strikeCharts[3].Groups["PutAsks"] = new BarShape();
+      strikeCharts[4].Groups["CallAsks"] = new BarShape();
+      strikeCharts[4].Groups["CallBids"] = new BarShape();
+      strikeCharts[5].Groups["PcRatio"] = new BarShape();
+
+      for (var i = 0; i < strikeCharts.Count; i++)
+      {
+        strikeAreas.Groups[$"{i}"] = strikeCharts[i];
+      }
+
+      await StrikesView.Create(strikeAreas);
     }
 
     /// <summary>
@@ -598,9 +736,9 @@ namespace Terminal.Components
     {
       switch (true)
       {
-        case true when price > 0 && point.Last > Math.Abs(price): 
+        case true when price > 0 && point.Last > Math.Abs(price):
         case true when price < 0 && point.Last < Math.Abs(price): await ClosePositions(InstrumentEnum.Shares); return [];
-        case true when price > 0 && point.Last < Math.Abs(price): 
+        case true when price > 0 && point.Last < Math.Abs(price):
         case true when price < 0 && point.Last > Math.Abs(price): return GetShareHedge(point);
       }
 

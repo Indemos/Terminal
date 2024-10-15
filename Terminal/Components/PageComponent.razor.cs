@@ -11,14 +11,19 @@ namespace Terminal.Components
 {
   public partial class PageComponent
   {
-    [Parameter]
-    public virtual RenderFragment HeaderView { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header1 { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header2 { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header3 { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header4 { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header5 { get; set; } = default;
+    [Parameter] public virtual RenderFragment Header6 { get; set; } = default;
 
-    [Parameter]
-    public virtual RenderFragment ContentView { get; set; } = default;
-
-    [Parameter]
-    public virtual RenderFragment FooterView { get; set; } = default;
+    [Parameter] public virtual RenderFragment View1 { get; set; } = default;
+    [Parameter] public virtual RenderFragment View2 { get; set; } = default;
+    [Parameter] public virtual RenderFragment View3 { get; set; } = default;
+    [Parameter] public virtual RenderFragment View4 { get; set; } = default;
+    [Parameter] public virtual RenderFragment View5 { get; set; } = default;
+    [Parameter] public virtual RenderFragment View6 { get; set; } = default;
 
     public virtual bool IsConnection { get; set; }
     public virtual bool IsSubscription { get; set; }
