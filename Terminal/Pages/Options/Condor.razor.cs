@@ -41,7 +41,7 @@ namespace Terminal.Pages.Options
       var adapter = OptionView.View.Adapters["Sim"];
       var account = adapter.Account;
 
-      await OptionView.OnUpdate(point, async options =>
+      await OptionView.OnUpdate(point, 1, async options =>
       {
         if (account.Orders.Count is 0 && account.Positions.Count is 0)
         {

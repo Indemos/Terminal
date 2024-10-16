@@ -44,7 +44,7 @@ namespace Terminal.Pages.Options
       var adapter = OptionView.View.Adapters["Sim"];
       var account = adapter.Account;
 
-      await OptionView.OnUpdate(point, async options =>
+      await OptionView.OnUpdate(point, 1, async options =>
       {
         var strike = GetStrike(point, options, o => o.Derivative.Variable.Gamma ?? 0);
         var isSameStrike = Equals(Math.Round(point.Last.Value), Math.Round(strike.Key));

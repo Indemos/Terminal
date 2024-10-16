@@ -581,7 +581,6 @@ namespace Simulation
         .Positions
         .Values
         .SelectMany(o => o.Orders.Append(o))
-        .Where(o => o?.Transaction?.Instrument?.Name is not null)
         .GroupBy(o => o.Transaction.Instrument.Name)
         .ToDictionary(o => o.Key, o => o);
 
@@ -592,18 +591,18 @@ namespace Simulation
         .Derivatives[nameof(InstrumentEnum.Options)]
         .Select(o =>
         {
-          if (orders.TryGetValue(o.Name, out var option))
+          if (orders.TryGetValue(o.Name, out var chain))
           {
-            option.ForEach(order => order.Transaction.Instrument = o);
+            chain.ForEach(order => order.Transaction.Instrument = o);
           }
 
           return o;
         })
-        .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener?.Side))
-        .Where(o => screener?.MinDate is null || o.Derivative.Expiration >= screener?.MinDate)
-        .Where(o => screener?.MaxDate is null || o.Derivative.Expiration <= screener?.MaxDate)
-        .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener?.MinPrice)
-        .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener?.MaxPrice)
+        .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener.Side))
+        .Where(o => screener?.MinDate is null || o.Derivative.Expiration >= screener.MinDate)
+        .Where(o => screener?.MaxDate is null || o.Derivative.Expiration <= screener.MaxDate)
+        .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener.MinPrice)
+        .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener.MaxPrice)
         .ToList()
       };
 

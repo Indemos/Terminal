@@ -2,11 +2,12 @@ using System;
 using System.Threading.Tasks;
 using Terminal.Components;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortStraddleDirection
+  public partial class CoveredDirection
   {
     public virtual OptionPageComponent OptionView { get; set; }
 
@@ -41,22 +42,12 @@ namespace Terminal.Pages.Options
       var adapter = OptionView.View.Adapters["Sim"];
       var account = adapter.Account;
 
-      await OptionView.OnUpdate(point, 1, async options =>
+      await OptionView.OnUpdate(point, 30, async options =>
       {
         if (account.Orders.Count is 0 && account.Positions.Count is 0)
         {
-          var orders = OptionView.GetShortStraddle(point, options);
+          var orders = OptionView.GetPmCover(OptionSideEnum.Call, point, options);
           var orderResponse = await adapter.CreateOrders([.. orders]);
-        }
-
-        if (account.Positions.Count > 0)
-        {
-          var orders = OptionView.GetShareDirection(point);
-
-          if (orders.Count > 0)
-          {
-            var orderResponse = await adapter.CreateOrders([.. orders]);
-          }
         }
       });
     }

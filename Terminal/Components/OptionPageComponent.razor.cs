@@ -178,12 +178,14 @@ namespace Terminal.Components
     /// Process tick data
     /// </summary>
     /// <param name="point"></param>
+    /// <param name="days"></param>
+    /// <param name="action"></param>
     /// <returns></returns>
-    public virtual async Task OnUpdate(PointModel point, Action<IList<InstrumentModel>> action)
+    public virtual async Task OnUpdate(PointModel point, int days, Action<IList<InstrumentModel>> action)
     {
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var options = await GetOptions(point);
+      var options = await GetOptions(point, days);
 
       action([.. options]);
 
@@ -238,8 +240,6 @@ namespace Terminal.Components
         .Where(o => o.Side is OrderSideEnum.Sell)
         .Concat(posPuts.Where(o => o.Side is OrderSideEnum.Buy))
         .Concat(posCalls.Where(o => o.Side is OrderSideEnum.Sell));
-
-      var x = optionPositions.Sum(GetDelta);
 
       PositionsView.UpdateItems([
         KeyValuePair.Create("OptionDelta", new PointModel { Time = point.Time, Last = optionPositions.Sum(GetDelta) }),
@@ -558,31 +558,29 @@ namespace Terminal.Components
     /// Get option chain
     /// </summary>
     /// <param name="point"></param>
+    /// <param name="days"></param>
     /// <returns></returns>
-    public virtual async Task<IList<InstrumentModel>> GetOptions(PointModel point)
+    public virtual async Task<IList<InstrumentModel>> GetOptions(PointModel point, int days = 1)
     {
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var optionArgs = new OptionScreenerModel
+      var screener = new OptionScreenerModel
       {
         Name = Instrument.Name,
         MinDate = point.Time,
-        MaxDate = point.Time.Value.AddDays(1),
+        MaxDate = point.Time.Value.AddDays(days),
         Point = point
       };
 
-      var options = await adapter.GetOptions(optionArgs, []);
-      var nextDayOptions = options
+      var options = await adapter.GetOptions(screener, []);
+      var nextOptions = options
         .Data
         .OrderBy(o => o.Derivative.Expiration)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
-        .GroupBy(o => o.Derivative.Expiration)
-        .ToDictionary(o => o.Key, o => o.ToList())
-        .FirstOrDefault()
-        .Value;
+        .ToList();
 
-      return nextDayOptions;
+      return nextOptions;
     }
 
     /// <summary>
@@ -626,14 +624,15 @@ namespace Terminal.Components
     /// <returns></returns>
     public virtual IList<OrderModel> GetCondor(PointModel point, IList<InstrumentModel> options)
     {
+      var range = point.Last * 0.01;
       var shortPut = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        .Where(o => o.Derivative.Strike >= point.Last)
-        .FirstOrDefault();
+        .Where(o => o.Derivative.Strike <= point.Last)
+        .LastOrDefault();
 
       var longPut = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        .Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - 3)
+        .Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - range)
         .LastOrDefault();
 
       var shortCall = options
@@ -643,7 +642,7 @@ namespace Terminal.Components
 
       var longCall = options
         .Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        .Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + 3)
+        .Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + range)
         .FirstOrDefault();
 
       var order = new OrderModel
@@ -729,25 +728,6 @@ namespace Terminal.Components
     /// <summary>
     /// Hedge each delta change with shares
     /// </summary>
-    /// <param name="price"></param>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    public virtual async Task<IList<OrderModel>> GetDirectionHedge(double price, PointModel point)
-    {
-      switch (true)
-      {
-        case true when price > 0 && point.Last > Math.Abs(price):
-        case true when price < 0 && point.Last < Math.Abs(price): await ClosePositions(InstrumentEnum.Shares); return [];
-        case true when price > 0 && point.Last < Math.Abs(price):
-        case true when price < 0 && point.Last > Math.Abs(price): return GetShareHedge(point);
-      }
-
-      return [];
-    }
-
-    /// <summary>
-    /// Hedge each delta change with shares
-    /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
     public virtual IList<OrderModel> GetShareHedge(PointModel point)
@@ -783,7 +763,7 @@ namespace Terminal.Components
     }
 
     /// <summary>
-    /// Inverse share position to match option delta
+    /// Open share position in the direction of option delta
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
@@ -827,11 +807,10 @@ namespace Terminal.Components
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    public virtual IList<OrderModel> GetCreditSpread(Core.Enums.OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
+    public virtual IList<OrderModel> GetCreditSpread(OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var position = account.Positions.FirstOrDefault().Value;
       var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
       var order = new OrderModel
       {
@@ -855,26 +834,26 @@ namespace Terminal.Components
 
       switch (side)
       {
-        case Core.Enums.OptionSideEnum.Put:
+        case OptionSideEnum.Put:
 
           var put = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.001))
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.001)
             .LastOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.005))
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.005)
             .LastOrDefault();
 
           break;
 
-        case Core.Enums.OptionSideEnum.Call:
+        case OptionSideEnum.Call:
 
           var call = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.001))
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.001)
             .FirstOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.005))
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.005)
             .FirstOrDefault();
 
           break;
@@ -890,11 +869,10 @@ namespace Terminal.Components
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    public virtual IList<OrderModel> GetDebigSpread(Core.Enums.OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
+    public virtual IList<OrderModel> GetDebigSpread(OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Sim"];
       var account = adapter.Account;
-      var position = account.Positions.FirstOrDefault().Value;
       var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
       var order = new OrderModel
       {
@@ -918,26 +896,26 @@ namespace Terminal.Components
 
       switch (side)
       {
-        case Core.Enums.OptionSideEnum.Put:
+        case OptionSideEnum.Put:
 
           var put = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.001))
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.001)
             .FirstOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.005))
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.005)
             .LastOrDefault();
 
           break;
 
-        case Core.Enums.OptionSideEnum.Call:
+        case OptionSideEnum.Call:
 
           var call = order.Orders[0].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike <= GetPriceChange(point.Last, -0.001))
+            .Where(o => o.Derivative.Strike <= point.Last - point.Last * 0.001)
             .LastOrDefault();
 
           order.Orders[1].Transaction.Instrument = sideOptions
-            .Where(o => o.Derivative.Strike >= GetPriceChange(point.Last, 0.005))
+            .Where(o => o.Derivative.Strike >= point.Last + point.Last * 0.005)
             .FirstOrDefault();
 
           break;
@@ -946,9 +924,70 @@ namespace Terminal.Components
       return [order];
     }
 
-    public double GetPriceChange(double? currentPrice, double? percentChange)
+    /// <summary>
+    /// Create PMCC strategy
+    /// </summary>
+    /// <param name="side"></param>
+    /// <param name="point"></param>
+    /// <param name="options"></param>
+    /// <returns></returns>
+    public virtual IList<OrderModel> GetPmCover(OptionSideEnum side, PointModel point, IList<InstrumentModel> options)
     {
-      return (currentPrice + currentPrice * percentChange).Value;
+      var adapter = View.Adapters["Sim"];
+      var account = adapter.Account;
+      var sideOptions = options.Where(o => Equals(o.Derivative.Side, side));
+      var minDate = options.First().Derivative.Expiration;
+      var maxDate = options.Last().Derivative.Expiration;
+      var longOptions = sideOptions.Where(o => o.Derivative.Expiration >= maxDate);
+      var shortOptions = sideOptions.Where(o => o.Derivative.Expiration <= minDate);
+      var order = new OrderModel
+      {
+        Type = OrderTypeEnum.Market,
+        Orders =
+        [
+          new OrderModel
+          {
+            Side = OrderSideEnum.Buy,
+            Instruction = InstructionEnum.Side,
+            Transaction = new TransactionModel { Volume = 2 }
+          },
+          new OrderModel
+          {
+            Side = OrderSideEnum.Sell,
+            Instruction = InstructionEnum.Side,
+            Transaction = new TransactionModel { Volume = 1 }
+          }
+        ]
+      };
+
+      switch (side)
+      {
+        case OptionSideEnum.Put:
+
+          var put = order.Orders[0].Transaction.Instrument = longOptions
+            .Where(o => o.Derivative.Strike > point.Last)
+            .FirstOrDefault();
+
+          order.Orders[1].Transaction.Instrument = shortOptions
+            .Where(o => o.Derivative.Strike < point.Last)
+            .LastOrDefault();
+
+          break;
+
+        case OptionSideEnum.Call:
+
+          var call = order.Orders[0].Transaction.Instrument = longOptions
+            .Where(o => o.Derivative.Strike < point.Last)
+            .LastOrDefault();
+
+          order.Orders[1].Transaction.Instrument = shortOptions
+            .Where(o => o.Derivative.Strike > point.Last)
+            .FirstOrDefault();
+
+          break;
+      }
+
+      return [order];
     }
   }
 }

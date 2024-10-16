@@ -56,7 +56,7 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected async Task OnData(PointModel point)
     {
-      await OptionView.OnUpdate(point, async options =>
+      await OptionView.OnUpdate(point, 1, async options =>
       {
         var adapter = OptionView.View.Adapters["Sim"];
         var account = adapter.Account;
@@ -97,13 +97,6 @@ namespace Terminal.Pages.Options
             }
           }
         }
-
-        //var shareOrders = await OptionView.GetDirectionHedge(Price, point);
-
-        //if (shareOrders.Count > 0)
-        //{
-        //  var orderResponse = await adapter.CreateOrders([.. shareOrders]);
-        //}
 
         chartPoints.Add(KeyValuePair.Create("Rsi", new PointModel { Time = point.Time, Last = rsi.Point.Last }));
 
