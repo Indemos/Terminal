@@ -5,6 +5,7 @@ using Canvas.Views.Web.Views;
 using Derivative.Models;
 using Derivative.Pages.Popups;
 using MathNet.Numerics;
+using MathNet.Numerics.LinearAlgebra;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using MudBlazor;
@@ -18,11 +19,12 @@ using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 using static alglib;
 
 namespace Derivative.Pages
 {
-  public partial class Portfolio
+  public partial class Cointegration
   {
     [Inject] ISnackbar Snackbar { get; set; }
     [Inject] IDialogService ModalService { get; set; }
@@ -146,157 +148,63 @@ namespace Derivative.Pages
       var modelPoints = new List<double>();
       var comPoints = GetComparablePoints(items);
       var count = Math.Min(inputModel.Count, comPoints.Min(o => o.Value.Count));
+      var matrix = Matrix<double>.Build.DenseOfColumns(items.Values.Select(o => o.Select(v => v.Last.Value)));
 
-      switch (true)
+      Console.WriteLine("SPY, IVV, VOO : " + CointegrationService.Johansen(matrix));
+
+
+      static Matrix<double> GenerateCointegratedData(int observations)
       {
-        case true when inputModel.Slope is 0: modelPoints = GetSpread(count, 5, 1, 1, 0); break;
-        case true when inputModel.Slope is not 0: modelPoints = GetSlope(count, inputModel.Slope); break;
+        Random random = new Random();
+        Vector<double> Y1 = Vector<double>.Build.Dense(observations, i => random.NextDouble());
+        Vector<double> Y2 = Y1 + Vector<double>.Build.Dense(observations, i => random.NextDouble() * 0.1); // Linear relation + small noise
+        Vector<double> Y3 = 2 * Y1 + Vector<double>.Build.Dense(observations, i => random.NextDouble() * 0.1); // Another linear relation + small noise
+
+        Matrix<double> cointegratedMatrix = Matrix<double>.Build.Dense(observations, 3);
+        cointegratedMatrix.SetColumn(0, Y1);
+        cointegratedMatrix.SetColumn(1, Y2);
+        cointegratedMatrix.SetColumn(2, Y3);
+
+        return cointegratedMatrix;
       }
 
-      var numbers = GetNonLinearWeights(comPoints, [.. modelPoints]);
-      var chartPoints = modelPoints.Select((o, i) =>
+      // Non-Cointegrated Data Generator
+      static Matrix<double> GenerateNonCointegratedRandomWalkData(int observations)
       {
-        var sum = 0.0;
+        Random random = new Random();
+        Vector<double> Y1 = Vector<double>.Build.Dense(observations, 0);
+        Vector<double> Y2 = Vector<double>.Build.Dense(observations, 0);
+        Vector<double> Y3 = Vector<double>.Build.Dense(observations, 0);
 
-        for (var ii = 0; ii < numbers.Count; ii++)
+        for (int i = 1; i < observations; i++)
         {
-          sum += numbers[ii] * comPoints.Values.ElementAt(ii).ElementAt(i).Last.Value;
+          Y1[i] = Y1[i - 1] + random.NextDouble() - 0.5;  // Random walk
+          Y2[i] = Y2[i - 1] + random.NextDouble() - 0.5;  // Random walk
+          Y3[i] = Y3[i - 1] + random.NextDouble() - 0.5;  // Random walk
         }
 
-        return new BarShape { X = i, Y = sum } as IShape;
+        // Combine Y1, Y2, Y3 into a matrix
+        Matrix<double> nonCointegratedMatrix = Matrix<double>.Build.Dense(observations, 3);
+        nonCointegratedMatrix.SetColumn(0, Y1);
+        nonCointegratedMatrix.SetColumn(1, Y2);
+        nonCointegratedMatrix.SetColumn(2, Y3);
 
-      }).ToList();
+        return nonCointegratedMatrix;
+      }
+
+      Console.WriteLine("######## Cointegrated " + CointegrationService.Johansen(GenerateCointegratedData(100)));
+      Console.WriteLine("######## Noncointegrated " + CointegrationService.Johansen(GenerateNonCointegratedRandomWalkData(100)));
+
 
       var composer = new Composer
       {
         Name = "Demo",
-        Items = chartPoints,
+        Items = [],
         View = view
       };
 
       await view.Create<CanvasEngine>(() => composer);
       await view.Update();
-    }
-
-    /// <summary>
-    /// Linear weights
-    /// </summary>
-    /// <param name="points"></param>
-    /// <param name="modelPoints"></param>
-    /// <returns></returns>
-    protected IList<double> GetLinearWeightsNums(IDictionary<string, IList<PointModel>> points, IList<double> modelPoints)
-    {
-      var matrix = points
-        .Values
-        .SelectMany(items => items.Select((item, index) => new { item, index }).ToArray())
-        .GroupBy(o => o.index, o => o.item.Last.Value)
-        .Select(o => o.ToArray())
-        .ToArray();
-
-      var numbers = Fit.MultiDim(matrix, [.. modelPoints]);
-
-      return numbers;
-    }
-
-    /// <summary>
-    /// Linear weights
-    /// </summary>
-    /// <param name="points"></param>
-    /// <param name="modelPoints"></param>
-    /// <returns></returns>
-    protected IList<double> GetLinearWeights(IDictionary<string, IList<PointModel>> points, IList<double> modelPoints)
-    {
-      var matrix = new double[modelPoints.Count, 2];
-
-      for (var i = 0; i < points.Keys.Count; i++)
-      {
-        for (var ii = 0; ii < modelPoints.Count; ii++)
-        {
-          matrix[ii, i] = points.Values.ElementAt(i).ElementAt(ii).Last.Value;
-        }
-      }
-
-      lsfitlinear([.. modelPoints], matrix, out int info, out double[] weights, out lsfitreport rep);
-
-      return weights;
-    }
-
-    /// <summary>
-    /// Non-linear weights
-    /// </summary>
-    /// <param name="points"></param>
-    /// <param name="modelPoints"></param>
-    /// <returns></returns>
-    protected IList<double> GetNonLinearWeights(IDictionary<string, IList<PointModel>> points, IList<double> modelPoints)
-    {
-      var count = modelPoints.Count;
-      var matrix = new double[count, points.Keys.Count];
-
-      for (var i = 0; i < points.Keys.Count; i++)
-      {
-        for (var ii = 0; ii < count; ii++)
-        {
-          matrix[ii, i] = points.Values.ElementAt(i).ElementAt(ii).Last.Value;
-        }
-      }
-
-      static void modelFunction(double[] c, double[] x, ref double func, object obj)
-      {
-        func = c.Select((o, i) => c.ElementAtOrDefault(i) * x.ElementAtOrDefault(i)).Sum() + c.LastOrDefault();
-      }
-
-      double epsx = 0.000001;
-      int maxits = 0;
-
-      lsfitcreatef(matrix, [.. modelPoints], points.Select(o => 1.0).ToArray(), epsx, out lsfitstate state);
-      lsfitsetcond(state, epsx, maxits);
-      lsfitfit(state, modelFunction, null, null);
-      lsfitresults(state, out int info, out var weights, out lsfitreport rep);
-
-      return weights;
-    }
-
-    /// <summary>
-    /// Genrate trend
-    /// </summary>
-    /// <param name="count"></param>
-    /// <param name="slope"></param>
-    /// <returns></returns>
-    protected List<double> GetSlope(double count, double slope)
-    {
-      List<double> response = [];
-
-      for (var i = 0; i < count; i++)
-      {
-        response.Add(response.ElementAtOrDefault(i - 1) + slope);
-      }
-
-      return response;
-    }
-
-    /// <summary>
-    /// Generate sin wave
-    /// </summary>
-    /// <param name="count"></param>
-    /// <param name="waves"></param>
-    /// <param name="amplitude"></param>
-    /// <param name="frequency"></param>
-    /// <param name="phase"></param>
-    /// <returns></returns>
-    protected List<double> GetSpread(double count, double waves, double amplitude, double frequency, double phase)
-    {
-      List<double> response = [];
-
-      var xMin = 0.0;
-      var xMax = 2 * Math.PI * waves;
-      var step = (xMax - xMin) / count;
-
-      for (var i = xMin; i <= xMax; i += step)
-      {
-        response.Add(amplitude * Math.Sin(frequency * i + phase));
-      }
-
-      return response.Take((int)count).ToList();
     }
 
     /// <summary>
