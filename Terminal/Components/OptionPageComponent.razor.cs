@@ -1,5 +1,6 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
+using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using MudBlazor;
@@ -390,8 +391,9 @@ namespace Terminal.Components
         return (price - inputModel.Price) * inputModel.Amount * direction;
       }
 
+      var optionSide = Enum.GetName(inputModel.Side.GetType(), inputModel.Side);
       var days = Math.Max((inputModel.Date - date).Value.TotalDays / 250.0, double.Epsilon);
-      var estimate = OptionService.Premium(inputModel.Side, price, inputModel.Strike, days, 0.25, 0.05, 0);
+      var estimate = OptionService.Premium(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
 
       return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
     }

@@ -5,6 +5,7 @@ using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
 using Derivative.Models;
 using Derivative.Pages.Popups;
+using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using MudBlazor;
 using SkiaSharp;
@@ -13,7 +14,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
-using Terminal.Core.Services;
 
 namespace Derivative.Pages
 {
@@ -142,13 +142,14 @@ namespace Derivative.Pages
     {
       var direction = inputModel.Position is OrderSideEnum.Buy ? 1.0 : -1.0;
 
-      if (inputModel.Side is OptionSideEnum.Share)
+      if (inputModel.Side is Terminal.Core.Enums.OptionSideEnum.Share)
       {
         return (price - inputModel.Price) * inputModel.Amount * direction;
       }
 
+      var optionSide = Enum.GetName(inputModel.Side.GetType(), inputModel.Side);
       var days = Math.Max((DateTime.Now - inputModel.Date).Value.TotalDays / 250.0, double.Epsilon);
-      var estimate = OptionService.Premium(inputModel.Side, price, inputModel.Strike, days, 0.25, 0.05, 0);
+      var estimate = OptionService.Premium(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
 
       return (estimate - inputModel.Premium) * inputModel.Amount * direction * 100;
     }

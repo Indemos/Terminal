@@ -4,7 +4,7 @@ using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
 using Derivative.Models;
 using Derivative.Pages.Popups;
-using MathNet.Numerics;
+using Estimator.Services;
 using MathNet.Numerics.LinearAlgebra;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
@@ -19,8 +19,6 @@ using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
-using static alglib;
 
 namespace Derivative.Pages
 {
