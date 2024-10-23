@@ -1,114 +1,147 @@
+using MathNet.Numerics;
 using MathNet.Numerics.LinearAlgebra;
+using MathNet.Numerics.LinearAlgebra.Factorization;
 using System;
 using System.Linq;
 
 namespace Terminal.Core.Services
 {
+  /// <summary>
+  /// References
+  /// Numerically Stable Cointegration Analysis - Jurgen Doornik
+  /// Alternative asymptotics for cointegration tests in large VARs - Alexei Onatski and Chen Wang
+  /// Testing for Cointegration Using the Johansen Methodology when Variables are Near-Integrated - Erik Hjalmarsson
+  /// Time Series Analysis - Hamilton, J.D.
+  /// https://github.com/iisayoo/johansen/blob/master/johansen/johansen.py
+  /// </summary>
   public class CointegrationService
   {
     /// <summary>
-    /// First difference for the time series
-    /// </summary>
-    /// <param name="matrix"></param>
-    /// <returns></returns>
-    static Matrix<double> Integrate(Matrix<double> matrix)
-    {
-      var rows = matrix.RowCount;
-      var cols = matrix.ColumnCount;
-      var response = Matrix<double>.Build.Dense(rows - 1, cols);
-
-      for (var i = 1; i < rows; i++)
-      {
-        response.SetRow(i - 1, matrix.Row(i) - matrix.Row(i - 1));
-      }
-
-      return response;
-    }
-
-    /// <summary>
-    /// Get lag matrix
-    /// </summary>
-    /// <param name="matrix"></param>
-    /// <param name="lags"></param>
-    /// <returns></returns>
-    static Matrix<double> Lag(Matrix<double> matrix, int lags)
-    {
-      var rows = matrix.RowCount - lags;
-      var cols = matrix.ColumnCount * lags;
-      var response = Matrix<double>.Build.Dense(rows, cols);
-
-      for (var i = 1; i <= lags; i++)
-      {
-        var section = matrix.SubMatrix(i, rows, 0, matrix.ColumnCount);
-        response.SetSubMatrix(0, rows, (i - 1) * matrix.ColumnCount, matrix.ColumnCount, section);
-      }
-
-      return response;
-    }
-
-    /// <summary>
     /// Cointegration
     /// </summary>
-    /// <param name="Y"></param>
+    /// <param name="inputMatrix"></param>
     /// <param name="lags"></param>
     /// <returns></returns>
-    public static double Johansen(Matrix<double> Y, int lags = 1)
+    public static (double, Vector<double>) Johansen(Matrix<double> inputMatrix, int lags = 1)
     {
-      // Step 1: First difference of Y
-      var dY = Integrate(Y);
+      var matrix = Center(inputMatrix);
+      var variables = matrix.ColumnCount;
+      var observations = matrix.RowCount - Math.Max(1, lags);
 
-      // Step 2: Create lagged Y (Y_{t-1}, ..., Y_{t-lags})
-      var lagY = Lag(Y, lags);
+      // Step 1: First difference
+      var xSub =
+        matrix.SubMatrix(1, matrix.RowCount - 1, 0, variables) -
+        matrix.SubMatrix(0, matrix.RowCount - 1, 0, variables);
 
-      // Step 3: Compute residuals from OLS of dY on laggedY
-      var beta = OLS(lagY, dY);  // β = (X'X)^(-1) X'Y
-      var dYhat = lagY * beta;
-      var residuals = dY - dYhat;
+      // Step 2: Create lagged matrices
+      var xLag = Lag(matrix, lags);
+      var xSubLag = Lag(xSub, lags);
 
-      // Step 4: Compute covariance matrices for residuals
-      var S11 = residuals.TransposeThisAndMultiply(residuals) / residuals.RowCount;
-      var S00 = lagY.TransposeThisAndMultiply(lagY) / lagY.RowCount;
+      // Step 3: Resize matrices
+      xSub = xSub.Resize(observations, xSub.ColumnCount);
+      xLag = xLag.Resize(observations, xLag.ColumnCount);
+      xSubLag = xSubLag.Resize(observations, xSubLag.ColumnCount);
+
+      // Step 4: Compute residuals of xSub and xLag on xSubLag
+      var xSubLagInv = xSubLag.PseudoInverse();
+      var u = xSub - xSubLag * xSubLagInv * xSub;
+      var v = xLag - xSubLag * xSubLagInv * xLag;
 
       // Step 5: Compute eigenvalues and eigenvectors
-      var S00Inv = S00.Inverse();
-      var S00InvS11 = S00Inv * S11;
-      var evd = S00InvS11.Evd();
+      var Suu = u.TransposeThisAndMultiply(u) / observations;
+      var Svv = v.TransposeThisAndMultiply(v) / observations;
+      var Suv = u.TransposeThisAndMultiply(v) / observations;
+      var evd = (Svv.PseudoInverse() * Suv.TransposeThisAndMultiply(Suu.PseudoInverse() * Suv)).Evd();
       var eigenValues = evd.EigenValues.Real();
+      var maxIndex = eigenValues.MaximumIndex();
+      var eigenVectors = evd.EigenVectors.Column(maxIndex);
 
-      // Step 6: Compute Trace and Max-Eigenvalue statistics
-      var traceTests = eigenValues.Select(o => -Math.Log(1 - o)).ToList();
-      var traceStat = traceTests.Sum();
+      // Step 6: Compare trace statistics with critical values to determine cointegration rank
+      var rank = GetRank(eigenValues, observations);
 
-      // Step 7: Compare trace statistics with critical values to determine cointegration rank
-      // github.com/iisayoo/johansen/blob/master/johansen/critical_values.py
-      // Critical values for Johansen's Trace test at a 95% confidence level
-      var criticalValues = new double[] { 2.98, 4.13, 6.94, 10.47, 12.32, 16.36, 21.78, 24.28, 29.51 };
-      var cointegrationRank = 0;
+      return (rank, eigenVectors);
+    }
 
-      for (var i = 0; i < traceTests.Count; i++)
+    /// <summary>
+    /// Subtract mean
+    /// </summary>
+    /// <param name="matrix"></param>
+    /// <returns></returns>
+    private static Matrix<double> Center(Matrix<double> matrix)
+    {
+      var columnMeans = matrix.ColumnSums() / matrix.RowCount;
+      var mean = Matrix<double>.Build.Dense(matrix.RowCount, matrix.ColumnCount, (i, ii) => columnMeans[ii]);
+      return matrix - mean;
+    }
+
+    /// <summary>
+    /// Get approximated critical value for specified rank
+    /// </summary>
+    /// <param name="vars"></param>
+    /// <param name="rank"></param>
+    /// <returns></returns>
+    private static double GetCriticalValue(int rank, int numVariables)
+    {
+      // Higher base critical value for better scaling
+      double baseCriticalValue = 3.76;
+
+      // Stronger scaling factors to match real-world growth in critical values
+      double variableFactor = Math.Pow(2.5, numVariables - 2);  // More aggressive scaling for variables
+      double rankFactor = Math.Pow(2.5, rank);  // Steep scaling for rank
+
+      // Final critical value is the base value multiplied by both factors
+      double criticalValue = baseCriticalValue * variableFactor * rankFactor;
+
+      return criticalValue;
+    }
+
+    /// <summary>
+    /// Lag matrix
+    /// </summary>
+    /// <param name="matrix"></param>
+    /// <param name="lags"></param>
+    /// <param name="sub"></param>
+    /// <returns></returns>
+    private static Matrix<double> Lag(Matrix<double> matrix, int lags = 1)
+    {
+      var response = Matrix<double>.Build.Dense(matrix.RowCount, matrix.ColumnCount * lags);
+
+      for (var i = 0; i < lags; i++)
       {
-        Console.WriteLine(traceTests[i] + " > " + criticalValues[i]);
+        var subMatrix = matrix.SubMatrix(0, matrix.RowCount - i, 0, matrix.ColumnCount);
+        response.SetSubMatrix(i + 1, subMatrix.RowCount - 1, matrix.ColumnCount * i, subMatrix.ColumnCount, subMatrix);
+      }
 
-        if (traceTests[i] > criticalValues[i])
+      return response;
+    }
+
+    /// <summary>
+    /// Get
+    /// </summary>
+    /// <param name="eigenValues"></param>
+    /// <param name="observations"></param>
+    /// <returns></returns>
+    private static int GetRank(Vector<double> eigenValues, int observations)
+    {
+      var variables = eigenValues.Count;
+
+      // Loop through from rank r to m (the number of variables)
+      for (var i = 0; i < variables; i++)
+      {
+        // Calculate the test statistic: -t * sum(log(1 - eigenvalues[i:]))
+        var statistic = -observations * eigenValues.SubVector(i + 1, variables - i - 1).Sum(o => Math.Log(1 - o));
+        // Get the corresponding critical value for this rank
+        var critValue = GetCriticalValue(i, variables);
+
+        // If the statistic is less than the critical value, return the rank i
+        if (statistic < critValue)
         {
-          cointegrationRank++;
+          return i;
         }
       }
 
-      return cointegrationRank;
-    }
-
-    /// <summary>
-    /// OLS Regression (Ordinary Least Squares): β = (X'X)^(-1) X'Y
-    /// </summary>
-    /// <param name="X"></param>
-    /// <param name="Y"></param>
-    /// <returns></returns>
-    static Matrix<double> OLS(Matrix<double> X, Matrix<double> Y)
-    {
-      var Xt = X.Transpose();
-      var XtXInv = (Xt * X).Inverse();
-      return XtXInv * Xt * Y;
+      // If no rank satisfies the condition, return m
+      return variables;
     }
   }
 }

@@ -145,61 +145,24 @@ namespace Derivative.Pages
     /// <returns></returns>
     protected async Task Show(CanvasView view, PortfolioInputModel inputModel, IDictionary<string, IList<PointModel>> items)
     {
-      var modelPoints = new List<double>();
       var comPoints = GetComparablePoints(items);
       var count = Math.Min(inputModel.Count, comPoints.Min(o => o.Value.Count));
       var matrix = Matrix<double>.Build.DenseOfColumns(items.Values.Select(o => o.Select(v => v.Last.Value)));
-
-      Console.WriteLine("SPY, IVV, VOO : " + CointegrationService.Johansen(matrix));
-
-
-      static Matrix<double> GenerateCointegratedData(int observations)
+      var (rank, eigenVectors) = CointegrationService.Johansen(matrix);
+      var points = comPoints.Values.First().Select((item, index) =>
       {
-        Random random = new Random();
-        Vector<double> Y1 = Vector<double>.Build.Dense(observations, i => random.NextDouble());
-        Vector<double> Y2 = Y1 + Vector<double>.Build.Dense(observations, i => random.NextDouble() * 0.1); // Linear relation + small noise
-        Vector<double> Y3 = 2 * Y1 + Vector<double>.Build.Dense(observations, i => random.NextDouble() * 0.1); // Another linear relation + small noise
+        var sum = comPoints
+          .Select((o, i) => o.Value.ElementAtOrDefault(index)?.Last * eigenVectors.ElementAtOrDefault(i))
+          .Sum();
 
-        Matrix<double> cointegratedMatrix = Matrix<double>.Build.Dense(observations, 3);
-        cointegratedMatrix.SetColumn(0, Y1);
-        cointegratedMatrix.SetColumn(1, Y2);
-        cointegratedMatrix.SetColumn(2, Y3);
+        return new BarShape { X = index, Y = sum } as IShape;
 
-        return cointegratedMatrix;
-      }
-
-      // Non-Cointegrated Data Generator
-      static Matrix<double> GenerateNonCointegratedRandomWalkData(int observations)
-      {
-        Random random = new Random();
-        Vector<double> Y1 = Vector<double>.Build.Dense(observations, 0);
-        Vector<double> Y2 = Vector<double>.Build.Dense(observations, 0);
-        Vector<double> Y3 = Vector<double>.Build.Dense(observations, 0);
-
-        for (int i = 1; i < observations; i++)
-        {
-          Y1[i] = Y1[i - 1] + random.NextDouble() - 0.5;  // Random walk
-          Y2[i] = Y2[i - 1] + random.NextDouble() - 0.5;  // Random walk
-          Y3[i] = Y3[i - 1] + random.NextDouble() - 0.5;  // Random walk
-        }
-
-        // Combine Y1, Y2, Y3 into a matrix
-        Matrix<double> nonCointegratedMatrix = Matrix<double>.Build.Dense(observations, 3);
-        nonCointegratedMatrix.SetColumn(0, Y1);
-        nonCointegratedMatrix.SetColumn(1, Y2);
-        nonCointegratedMatrix.SetColumn(2, Y3);
-
-        return nonCointegratedMatrix;
-      }
-
-      Console.WriteLine("######## Cointegrated " + CointegrationService.Johansen(GenerateCointegratedData(100)));
-      Console.WriteLine("######## Noncointegrated " + CointegrationService.Johansen(GenerateNonCointegratedRandomWalkData(100)));
-
+      }).ToList();
 
       var composer = new Composer
       {
         Name = "Demo",
-        Items = [],
+        Items = points,
         View = view
       };
 
