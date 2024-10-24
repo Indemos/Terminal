@@ -36,7 +36,7 @@ namespace Terminal.Components
     /// <summary>
     /// Clear records
     /// </summary>
-    public virtual void Clear() => Items.Clear();
+    public virtual void Clear() => UpdateItems([]);
 
     /// <summary>
     /// Map

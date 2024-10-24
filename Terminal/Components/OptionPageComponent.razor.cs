@@ -8,19 +8,13 @@ using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Drawing;
 using System.Linq;
-using System.Security.Principal;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
 using Terminal.Models;
-using static MudBlazor.Colors;
 using Ib = InteractiveBrokers;
 using Sc = Schwab;
 using Scm = Schwab.Messages;
@@ -72,6 +66,14 @@ namespace Terminal.Components
             .NewItems
             .OfType<PointModel>()
             .ForEach(async o => await action(o)));
+      };
+
+      View.OnDisconnect = () =>
+      {
+        FramesView.Clear();
+        PremiumsView.Clear();
+        PositionsView.Clear();
+        StrikesView.Clear();
       };
     }
 
@@ -298,10 +300,11 @@ namespace Terminal.Components
 
           sums[o] = sums.TryGetValue(o, out var s) ? s + sum : sum;
 
+          shape.X = step;
           shape.Groups = new Dictionary<string, IShape>();
           shape.Groups["0"] = new Shape();
           shape.Groups["0"].Groups = new Dictionary<string, IShape>();
-          shape.Groups["0"].Groups["Estimate"] = new LineShape { Name = "Estimate", X = step, Y = sums[o] };
+          shape.Groups["0"].Groups["Estimate"] = new LineShape { Name = "Estimate", Y = sums[o] };
 
           return shape as IShape;
 

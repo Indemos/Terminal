@@ -1,3 +1,4 @@
+using Distribution.Models;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -35,6 +36,7 @@ namespace Terminal.Components
     public virtual StatementsComponent StatementsView { get; set; }
     public virtual Action OnPreConnect { get; set; } = () => { };
     public virtual Action OnPostConnect { get; set; } = () => { };
+    public virtual Action OnDisconnect { get; set; } = () => { };
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
 
     public virtual async Task Connect()
@@ -62,16 +64,25 @@ namespace Terminal.Components
     {
       try
       {
+        var options = new OptionModel { IsRemovable = false };
+
         await Task.WhenAll(Adapters.Values.Select(o => o.Disconnect()));
 
-        ChartsView.Clear();
-        ReportsView.Clear();
-        DealsView.Clear();
-        OrdersView.Clear();
-        PositionsView.Clear();
+        InstanceService<ScheduleService>.Instance.Send(() =>
+        {
+          ChartsView.Clear();
+          ReportsView.Clear();
+          DealsView.Clear();
+          OrdersView.Clear();
+          PositionsView.Clear();
+
+          OnDisconnect();
+
+        }, options);
 
         IsConnection = false;
         IsSubscription = false;
+
       }
       catch (Exception e)
       {
