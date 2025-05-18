@@ -1,0 +1,51 @@
+<MudExpansionPanels MultiExpansion="false">
+  <MudExpansionPanel>
+    <TitleContent>
+      <div class="d-flex">
+        <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+        <MudText>@Name</MudText>
+      </div>
+    </TitleContent>
+    <ChildContent>
+      <MudDataGrid
+        Items="@Items"
+        Hover="true"
+        MultiSelection="true"
+        Filterable="true"
+        FilterMode="DataGridFilterMode.ColumnFilterMenu"
+        Hideable="true"
+        SortMode="SortMode.Multiple"
+        Groupable="true"
+        GroupExpanded="true">
+        <Columns>
+          <PropertyColumn Property="o => o.Time" Title="Time">
+            <CellTemplate>
+              @($"{context.Item.Time:yyyy-MM-dd HH:mm:ss}")
+            </CellTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.Name" Title="Instrument" />
+          <PropertyColumn Property="o => o.Size" Title="Size" />
+          <PropertyColumn Property="o => o.Side" Title="Side" />
+          <PropertyColumn Property="o => o.OpenPrice" Title="Open Price">
+            <CellTemplate>
+              @($"{context.Item.OpenPrice:0.00}")
+            </CellTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.ClosePrice" Title="Close Price">
+            <CellTemplate>
+              @($"{context.Item.ClosePrice:0.00}")
+            </CellTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.Gain" Title="Gain">
+            <CellTemplate>
+              @($"{context.Item.Gain:0.00}")
+            </CellTemplate>
+          </PropertyColumn>
+        </Columns>
+        <PagerContent>
+          <MudDataGridPager T="PositionRecord" />
+        </PagerContent>
+      </MudDataGrid>
+    </ChildContent>
+  </MudExpansionPanel>
+</MudExpansionPanels>

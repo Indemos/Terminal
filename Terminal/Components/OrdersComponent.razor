@@ -1,0 +1,47 @@
+<MudExpansionPanels MultiExpansion="false">
+  <MudExpansionPanel>
+    <TitleContent>
+      <div class="d-flex">
+        <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+        <MudText>@Name</MudText>
+      </div>
+    </TitleContent>
+    <ChildContent>
+      <MudDataGrid
+        Items="@Items"
+        Hover="true"
+        MultiSelection="true"
+        Filterable="true"
+        FilterMode="DataGridFilterMode.ColumnFilterMenu"
+        Hideable="true"
+        SortMode="SortMode.Multiple"
+        Groupable="true"
+        GroupExpanded="true">
+        <Columns>
+          <PropertyColumn Property="o => o.Time" Title="Time">
+            <CellTemplate>
+              @($"{context.Item.Time:yyyy-MM-dd HH:mm:ss}")
+            </CellTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.Name" Title="Instrument" Grouping GroupBy="new Func<OrderRecord, string>(o => o.Group)">
+            <GroupTemplate>
+              <span>Group: @context.Grouping.Key</span>
+            </GroupTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.Size" Title="Size" />
+          <PropertyColumn Property="o => o.Side" Title="Side" />
+          <PropertyColumn Property="o => o.Price" Title="Open Price">
+            <CellTemplate>
+              @($"{context.Item.Price:0.00}")
+            </CellTemplate>
+          </PropertyColumn>
+          <PropertyColumn Property="o => o.Type" Title="Type" />
+        </Columns>
+        <PagerContent>
+          <MudDataGridPager T="OrderRecord" />
+        </PagerContent>
+      </MudDataGrid>
+    </ChildContent>
+  </MudExpansionPanel>
+</MudExpansionPanels>
+

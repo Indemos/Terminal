@@ -1,0 +1,57 @@
+@using Distribution.Services
+@using Microsoft.Extensions.Configuration
+@using Terminal.Core.Services
+
+@inject ISnackbar Messenger
+@inject IConfiguration Configuration
+
+@inherits LayoutComponentBase
+
+<PageTitle>Terminal</PageTitle>
+
+<MudThemeProvider Theme="theme" IsDarkMode="true" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge">
+  @Body
+</MudContainer>
+
+@code {
+
+  protected DashboardTheme theme = new();
+
+  protected override void OnAfterRender(bool setup)
+  {
+    if (setup)
+    {
+      StateHasChanged();
+
+      InstanceService<MessageService>.Instance.OnMessage += o =>
+      {
+        try
+        {
+          var code = o?.Code;
+          var message = o?.Message;
+          var exception = o?.Error?.Message;
+
+          InstanceService<RecordService>
+            .Instance
+            .Recorder
+            .Information("{@Message}", o);
+
+          Messenger.Add
+          (
+            @<ul>
+              <li class="@(code is null ? "d-none" : string.Empty)">Code: @(code)</li>
+              <li class="@(message is null ? "d-none" : string.Empty)">Message: @(message)</li>
+              <li class="@(exception is null ? "d-none" : string.Empty)">Exception: @(exception)</li>
+            </ul>
+          );
+        }
+        catch (Exception) {}
+      };
+    }
+  }
+}
