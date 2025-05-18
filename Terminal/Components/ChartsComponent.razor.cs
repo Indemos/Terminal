@@ -32,6 +32,11 @@ namespace Terminal.Components
     protected virtual ComponentModel DownSide { get; set; }
 
     /// <summary>
+    /// Subscription state
+    /// </summary>
+    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
+
+    /// <summary>
     /// Indices
     /// </summary>
     protected virtual IDictionary<long, IShape> Indices { get; set; } = new Dictionary<long, IShape>();
@@ -61,7 +66,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        Subscription.OnUpdate += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -128,6 +133,11 @@ namespace Terminal.Components
     /// <param name="count"></param>
     public virtual void UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
+      if (Subscription.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       foreach (var input in inputs)
       {
         if (Indices.TryGetValue(index, out IShape currentPoint) is false)
@@ -157,6 +167,11 @@ namespace Terminal.Components
     /// <param name="inputs"></param>
     public virtual void UpdateOrdinals(IList<IShape> shapes)
     {
+      if (Subscription.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       var domain = new DimensionModel
       {
         IndexDomain = [0, shapes.Count]

@@ -18,6 +18,11 @@ namespace Terminal.Components
     [Parameter] public virtual IDictionary<string, IGateway> Adapters { get; set; }
 
     /// <summary>
+    /// Subscription state
+    /// </summary>
+    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
+
+    /// <summary>
     /// Common performance statistics
     /// </summary>
     protected IDictionary<string, IList<ScoreData>> Stats = new Dictionary<string, IList<ScoreData>>();
@@ -32,7 +37,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        Subscription.OnUpdate += state =>
         {
           switch (true)
           {

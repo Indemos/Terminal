@@ -48,16 +48,7 @@ namespace Terminal.Pages.Options
         {
           switch (true)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress:
-
-              CreateAccounts();
-              break;
-
-            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Pause:
-
-              StatementsView.UpdateItems(View.Adapters.Values.Select(o => o.Account));
-              break;
-
+            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
               var account = View.Adapters["Prime"].Account;
@@ -65,17 +56,6 @@ namespace Terminal.Pages.Options
               DealsView.UpdateItems(account.Deals);
               OrdersView.UpdateItems(account.Orders.Values);
               PositionsView.UpdateItems(account.Positions.Values);
-
-              break;
-
-            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None:
-
-              ChartsView?.Clear();
-              PerformanceView?.Clear();
-              DealsView?.Clear();
-              OrdersView?.Clear();
-              PositionsView?.Clear();
-              StatementsView?.Clear();
 
               break;
           }

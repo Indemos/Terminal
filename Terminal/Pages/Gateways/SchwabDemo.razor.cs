@@ -56,16 +56,6 @@ namespace Terminal.Pages.Gateways
               PositionsView.UpdateItems(account.Positions.Values);
 
               break;
-
-            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None:
-
-              ChartsView?.Clear();
-              PerformanceView?.Clear();
-              DealsView?.Clear();
-              OrdersView?.Clear();
-              PositionsView?.Clear();
-
-              break;
           }
         };
       }

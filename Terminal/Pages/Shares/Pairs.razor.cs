@@ -48,11 +48,7 @@ namespace Terminal.Pages.Shares
         {
           switch (true)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress:
-
-              CreateAccounts();
-              break;
-
+            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
               var account = View.Adapters["Prime"].Account;

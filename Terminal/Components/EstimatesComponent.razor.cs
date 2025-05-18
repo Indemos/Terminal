@@ -29,7 +29,15 @@ namespace Terminal.Components
       public OrderSideEnum Position { get; set; }
     }
 
+    /// <summary>
+    /// Chart control
+    /// </summary>
     protected virtual ChartsComponent ChartsView { get; set; }
+
+    /// <summary>
+    /// Subscription state
+    /// </summary>
+    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
 
     /// <summary>
     /// Views
@@ -51,7 +59,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        Subscription.OnUpdate += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -69,6 +77,11 @@ namespace Terminal.Components
     /// <param name="positions"></param>
     public virtual void UpdateItems(IGateway adapter, PointModel point, IEnumerable<OrderModel> positions)
     {
+      if (Subscription.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       var account = adapter.Account;
       var sums = new Dictionary<double, double>();
 

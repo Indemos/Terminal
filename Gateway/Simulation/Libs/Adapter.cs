@@ -140,7 +140,7 @@ namespace Simulation
         }
 
         var counter = 1;
-        var (nextName, nextState) = states
+        var next = states
           .Where(o => o.Value.Status is StatusEnum.Active or StatusEnum.Inactive)
           .Aggregate((min, o) =>
           {
@@ -148,15 +148,15 @@ namespace Simulation
             return o.Value.Time <= min.Value.Time ? o : min;
           });
 
-        if (Equals(counter, streams.Count) && Equals(nextName, instrument.Name))
+        if (Equals(counter, streams.Count) && Equals(next.Key, instrument.Name))
         {
           var summary = Account.Summary[instrument.Name];
 
-          summary.Time = nextState.Time;
+          summary.Time = next.Value.Time;
           summary.Instrument = instrument;
-          summary.Instrument.Point = summary.Point = nextState.Point;
-          summary.Dom = nextState.Dom;
-          summary.Options = nextState.Options;
+          summary.Instrument.Point = summary.Point = next.Value.Point;
+          summary.Dom = next.Value.Dom;
+          summary.Options = next.Value.Options;
           summary.Point.Instrument = instrument;
           summary.Points.Add(summary.Point);
           summary.PointGroups.Add(summary.Point, instrument.TimeFrame);
@@ -200,10 +200,9 @@ namespace Simulation
 
       DataStream -= OnPoint;
 
-      if (subscriptions.TryGetValue(instrument.Name, out var subscription))
+      if (subscriptions.TryRemove(instrument.Name, out var subscription))
       {
         subscription.Dispose();
-        subscriptions.TryRemove(instrument.Name, out _);
       }
 
       return Task.FromResult(response);

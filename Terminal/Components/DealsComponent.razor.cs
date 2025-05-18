@@ -26,7 +26,15 @@ namespace Terminal.Components
       public OrderSideEnum? Side { get; set; }
     }
 
+    /// <summary>
+    /// Sync
+    /// </summary>
     protected Task Update { get; set; } = Task.CompletedTask;
+
+    /// <summary>
+    /// Subscription state
+    /// </summary>
+    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
 
     /// <summary>
     /// Table records
@@ -43,7 +51,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        Subscription.OnUpdate += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -59,6 +67,11 @@ namespace Terminal.Components
     /// <param name="items"></param>
     public virtual void UpdateItems(IEnumerable<OrderModel> items)
     {
+      if (Subscription.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       if (Update.IsCompleted)
       {
         Items = [.. items.Select(o => new PositionRecord
@@ -80,6 +93,10 @@ namespace Terminal.Components
     /// <summary>
     /// Clear records
     /// </summary>
-    public virtual void Clear() => UpdateItems([]);
+    public virtual void Clear()
+    {
+      Items = [];
+      InvokeAsync(StateHasChanged);
+    }
   }
 }
