@@ -35,7 +35,8 @@ namespace Terminal.Tests
       {
         Bid = price,
         Ask = price,
-        Last = price
+        Last = price,
+        Time = DateTime.Now,
       };
 
       var order = new OrderModel
@@ -85,7 +86,8 @@ namespace Terminal.Tests
       {
         Bid = bid,
         Ask = ask,
-        Last = bid ?? ask
+        Last = bid ?? ask,
+        Time = DateTime.Now,
       };
 
       var instrument = new InstrumentModel()
@@ -137,7 +139,8 @@ namespace Terminal.Tests
       {
         Bid = price,
         Ask = price,
-        Last = price
+        Last = price,
+        Time = DateTime.Now,
       };
 
       var instrument = new InstrumentModel()
@@ -200,7 +203,8 @@ namespace Terminal.Tests
       {
         Bid = point.Bid - 15,
         Ask = point.Ask - 10,
-        Last = point.Last - 15
+        Last = point.Last - 15,
+        Time = DateTime.Now,
       };
 
       instrument.Point = newPoint;
@@ -221,20 +225,20 @@ namespace Terminal.Tests
       var basis = new InstrumentModel
       {
         Name = "SPY",
-        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 , Time = DateTime.Now }
       };
 
       var optionLong = new InstrumentModel
       {
         Name = "SPY 240814C00493000",
-        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 },
+        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 , Time = DateTime.Now },
         Basis = basis
       };
 
       var optionShort = new InstrumentModel
       {
         Name = "SPY 240814P00493000",
-        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 },
+        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 , Time = DateTime.Now },
         Basis = basis
       };
 
@@ -316,20 +320,20 @@ namespace Terminal.Tests
       var basis = new InstrumentModel
       {
         Name = "SPY",
-        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
       };
 
       var optionLong = new InstrumentModel
       {
         Name = "SPY 240814C00493000",
-        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 },
+        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55, Time = DateTime.Now, },
         Basis = basis
       };
 
       var optionShort = new InstrumentModel
       {
         Name = "SPY 240814P00493000",
-        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 },
+        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25, Time = DateTime.Now, },
         Basis = basis
       };
 
@@ -476,7 +480,7 @@ namespace Terminal.Tests
       var instrument = new InstrumentModel
       {
         Name = "MSFT",
-        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
       };
 
       var order = new OrderModel
@@ -529,7 +533,7 @@ namespace Terminal.Tests
           Instrument = new InstrumentModel
           {
             Name = "SPY",
-            Point = new PointModel { Bid = 545, Ask = 550, Last = 550 }
+            Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
           }
         },
       };
@@ -544,7 +548,7 @@ namespace Terminal.Tests
           Instrument = new InstrumentModel
           {
             Name = "MSFT",
-            Point = new PointModel { Bid = 145, Ask = 150, Last = 150 }
+            Point = new PointModel { Bid = 145, Ask = 150, Last = 150 , Time = DateTime.Now }
           }
         },
       };
