@@ -42,11 +42,6 @@ namespace Terminal.Core.Models
     public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
-    /// Constructor
-    /// </summary>
-    public TransactionModel() => Time = DateTime.Now;
-
-    /// <summary>
     /// Clone
     /// </summary>
     public virtual object Clone() => MemberwiseClone() as TransactionModel;
