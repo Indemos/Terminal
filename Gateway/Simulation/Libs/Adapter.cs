@@ -1,5 +1,7 @@
 using Distribution.Services;
 using Distribution.Stream;
+using MessagePack.Resolvers;
+using MessagePack;
 using System;
 using System.Collections;
 using System.Collections.Concurrent;
@@ -46,6 +48,11 @@ namespace Simulation
     protected ConcurrentDictionary<string, IEnumerator<string>> streams;
 
     /// <summary>
+    /// Message pack options
+    /// </summary>
+    protected MessagePackSerializerOptions messageOptions;
+
+    /// <summary>
     /// Simulation speed in milliseconds
     /// </summary>
     public virtual int Speed { get; set; }
@@ -67,6 +74,7 @@ namespace Simulation
       subscriptions = new();
       connections = [];
       sender = new Service();
+      messageOptions = MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance);
     }
 
     /// <summary>
@@ -460,6 +468,13 @@ namespace Simulation
     {
       var document = new FileInfo(source);
 
+      if (string.Equals(document.Extension, ".bin", StringComparison.InvariantCultureIgnoreCase))
+      {
+        var content = File.ReadAllBytes(source);
+
+        return MessagePackSerializer.Deserialize<StateModel>(content, messageOptions);
+      }
+
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
       {
         using (var stream = File.OpenRead(source))
@@ -471,9 +486,8 @@ namespace Simulation
       }
 
       var inputMessage = File.ReadAllText(source);
-      var response = JsonSerializer.Deserialize<StateModel>(inputMessage, sender.Options);
 
-      return response;
+      return JsonSerializer.Deserialize<StateModel>(inputMessage, sender.Options);
     }
 
     /// <summary>
