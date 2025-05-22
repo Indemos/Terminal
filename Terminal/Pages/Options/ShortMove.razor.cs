@@ -1,4 +1,3 @@
-using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
@@ -142,48 +141,12 @@ namespace Terminal.Pages.Options
 
       if (account.Positions.Count > 0)
       {
-        var posPut = account
-          .Positions
-          .Values
-          .Where(o => o.Side is OrderSideEnum.Short)
-          .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put)
-          .First();
+        var orders = GetUpdates(point, options);
 
-        var posCall = account
-          .Positions
-          .Values
-          .Where(o => o.Side is OrderSideEnum.Short)
-          .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call)
-          .First();
-
-        var order = new OrderModel
+        if (orders.Count > 0)
         {
-          Volume = posCall.Volume,
-          Side = OrderSideEnum.Short,
-          Type = OrderTypeEnum.Market,
-          Transaction = new()
-        };
-
-        if (point.Last > posCall.Transaction.Instrument.Derivative.Strike)
-        {
-          order.Transaction.Instrument = options
-            ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-            ?.Where(o => o.Derivative.Strike > point.Last)
-            ?.FirstOrDefault();
-
-          await ClosePositions(o => Equals(o.Transaction.Instrument.Derivative.Strike, posCall.Transaction.Instrument.Derivative.Strike));
-          await adapter.CreateOrders(order);
-        }
-
-        if (point.Last < posPut.Transaction.Instrument.Derivative.Strike)
-        {
-          order.Transaction.Instrument = options
-            ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-            ?.Where(o => o.Derivative.Strike < point.Last)
-            ?.LastOrDefault();
-
-          await ClosePositions(o => Equals(o.Transaction.Instrument.Derivative.Strike, posPut.Transaction.Instrument.Derivative.Strike));
-          await adapter.CreateOrders(order);
+          await ClosePositions(o => Equals(o.Transaction.Instrument.Derivative.Strike, orders[0].Transaction.Instrument.Derivative.Strike));
+          await adapter.CreateOrders(orders[1]);
         }
       }
 
@@ -228,7 +191,7 @@ namespace Terminal.Pages.Options
       var range = point.Last * 0.01;
       var shortPut = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        ?.Where(o => o.Derivative.Strike < point.Last)
+        ?.Where(o => o.Derivative.Strike < point.Last - 1)
         ?.LastOrDefault();
 
       var longPut = options
@@ -238,7 +201,7 @@ namespace Terminal.Pages.Options
 
       var shortCall = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike > point.Last)
+        ?.Where(o => o.Derivative.Strike > point.Last + 1)
         ?.FirstOrDefault();
 
       var longCall = options
@@ -289,6 +252,67 @@ namespace Terminal.Pages.Options
       };
 
       return [order];
+    }
+
+    /// <summary>
+    /// Update positions
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected IList<OrderModel> GetUpdates(PointModel point, IList<InstrumentModel> options)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var openStrikes = account
+        .Positions
+        .Values
+        .ToDictionary(o => o.Transaction.Instrument.Derivative.Strike);
+
+      var posPut = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put)
+        .First();
+
+      var posCall = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call)
+        .First();
+
+      var order = new OrderModel
+      {
+        Volume = posCall.Volume,
+        Side = OrderSideEnum.Short,
+        Type = OrderTypeEnum.Market,
+        Transaction = new()
+      };
+
+      if (point.Last + 1 > posCall.Transaction.Instrument.Derivative.Strike)
+      {
+        order.Transaction.Instrument = options
+          .Where(o => o.Derivative.Side is OptionSideEnum.Call)
+          .Where(o => o.Derivative.Strike > point.Last + 1)
+          .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
+          .FirstOrDefault();
+
+        return [posCall, order];
+      }
+
+      if (point.Last - 1 < posPut.Transaction.Instrument.Derivative.Strike)
+      {
+        order.Transaction.Instrument = options
+          .Where(o => o.Derivative.Side is OptionSideEnum.Put)
+          .Where(o => o.Derivative.Strike < point.Last - 1)
+          .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
+          .LastOrDefault();
+
+        return [posPut, order];
+      }
+
+      return [];
     }
 
     /// <summary>
