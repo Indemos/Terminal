@@ -7,6 +7,7 @@ using SkiaSharp;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
@@ -140,38 +141,8 @@ namespace Terminal.Pages.Options
 
       if (account.Positions.Count > 0)
       {
-        var sharesPosition = account
-          .Positions
-          .Values
-          .Where(o => o.Transaction.Instrument.Derivative is null)
-          .ToList();
-
-        var strike = account
-          .Positions
-          .Values
-          .First(o => o.Side is OrderSideEnum.Long)
-          .Transaction
-          .Instrument
-          .Derivative
-          .Strike;
-
-        if (sharesPosition.Count is not 0 && point.Last.Value < strike)
-        {
-          await ClosePositions(InstrumentEnum.Shares);
-        }
-
-        if (sharesPosition.Count is 0 && point.Last.Value > strike)
-        {
-          var order = new OrderModel
-          {
-            Volume = 50,
-            Type = OrderTypeEnum.Market,
-            Side = OrderSideEnum.Long,
-            Transaction = new() { Instrument = point.Instrument }
-          };
-
-          await adapter.CreateOrders([order]);
-        }
+        await UpdateOptions(point, longOptions, shortOptions);
+        await UpdateShares(point);
       }
 
       DealsView.UpdateItems(account.Deals);
@@ -217,25 +188,15 @@ namespace Terminal.Pages.Options
       var range = point.Last * 0.005;
       var longPut = longOptions
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        ?.Where(o => o.Derivative.Strike > point.Last)
+        ?.Where(o => o.Derivative.Strike > point.Last + 1)
         ?.FirstOrDefault();
-
-      var longCall = longOptions
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike < point.Last)
-        ?.LastOrDefault();
 
       var shortPut = shortOptions
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
         ?.Where(o => o.Derivative.Strike < longPut.Derivative.Strike - range)
         ?.LastOrDefault();
 
-      var shortCall = shortOptions
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike > longCall.Derivative.Strike + range)
-        ?.FirstOrDefault();
-
-      if (shortPut is null || shortCall is null || longPut is null || longCall is null)
+      if (shortPut is null || longPut is null)
       {
         return [];
       }
@@ -253,13 +214,6 @@ namespace Terminal.Pages.Options
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longPut }
           },
-          //new OrderModel
-          //{
-          //  Volume = 1,
-          //  Side = OrderSideEnum.Long,
-          //  Instruction = InstructionEnum.Side,
-          //  Transaction = new() { Instrument = longCall }
-          //},
           new OrderModel
           {
             Volume = 1,
@@ -267,13 +221,6 @@ namespace Terminal.Pages.Options
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortPut }
           },
-          //new OrderModel
-          //{
-          //  Volume = 1,
-          //  Side = OrderSideEnum.Short,
-          //  Instruction = InstructionEnum.Side,
-          //  Transaction = new() { Instrument = shortCall }
-          //}
         ]
       };
 
@@ -281,22 +228,112 @@ namespace Terminal.Pages.Options
     }
 
     /// <summary>
+    /// Reopen short position for more premium
+    /// </summary>
+    /// <param name="point"></param>
+    /// <param name="longOptions"></param>
+    /// <param name="shortOptions"></param>
+    /// <returns></returns>
+    protected async Task UpdateOptions(PointModel point, IList<InstrumentModel> longOptions, IList<InstrumentModel> shortOptions)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var shortPosition = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .FirstOrDefault();
+
+      var isExpired = shortPosition is not null && shortPosition.GetCloseEstimate() <= 0.05;
+      var isPenetrated = shortPosition is not null && point.Last + 1 > shortPosition.Transaction.Instrument.Derivative.Strike;
+
+      if (isExpired || isPenetrated)
+      {
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is not null && o.Side is OrderSideEnum.Short);
+      }
+
+      var shortUpdate = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .ToList();
+
+      if (shortUpdate.Count is 0)
+      {
+        var orders = GetOrders(point, longOptions, shortOptions);
+        var shortOrder = orders?.FirstOrDefault()?.Orders?.LastOrDefault();
+
+        if (shortOrder is null || shortOrder.Transaction.Instrument.Point.Last <= 0.10)
+        {
+          return;
+        }
+
+        shortOrder.Type = OrderTypeEnum.Market;
+        await adapter.CreateOrders([shortOrder]);
+      }
+    }
+
+
+    /// <summary>
+    /// Hedge drawdowns with shares
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected async Task UpdateShares(PointModel point)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var sharesPosition = account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .ToList();
+
+      var strike = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Long)
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .First()
+        .Transaction
+        .Instrument
+        .Derivative
+        .Strike;
+
+      if (sharesPosition.Count is not 0 && point.Last.Value + 1 < strike)
+      {
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+      }
+
+      if (sharesPosition.Count is 0 && point.Last.Value + 1 > strike)
+      {
+        var order = new OrderModel
+        {
+          Volume = 100,
+          Type = OrderTypeEnum.Market,
+          Side = OrderSideEnum.Long,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await adapter.CreateOrders([order]);
+      }
+    }
+
+    /// <summary>
     /// Close positions
     /// </summary>
-    /// <param name="instrumentType"></param>
+    /// <param name="condition"></param>
     /// <returns></returns>
-    public virtual async Task ClosePositions(InstrumentEnum? instrumentType = null)
+    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
 
       foreach (var position in adapter.Account.Positions.Values.ToList())
       {
-        var insEmpty = instrumentType is null;
-        var insShares = instrumentType is InstrumentEnum.Shares && position.Transaction.Instrument.Derivative is null;
-        var insOptions = instrumentType is InstrumentEnum.Options && position.Transaction.Instrument.Derivative is not null;
-
-        if (insEmpty || insShares || insOptions)
+        if (condition is null || condition(position))
         {
           var order = new OrderModel
           {

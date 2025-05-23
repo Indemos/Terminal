@@ -143,7 +143,7 @@ namespace Terminal.Pages.Options
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
-        var orders = Hedge(point, basisDelta, optionDelta);
+        var orders = GetUpdates(point, basisDelta, optionDelta);
         await adapter.CreateOrders([.. orders]);
       }
 
@@ -191,7 +191,7 @@ namespace Terminal.Pages.Options
     /// <param name="basisDelta"></param>
     /// <param name="optionDelta"></param>
     /// <returns></returns>
-    public IList<OrderModel> Hedge(PointModel point, double basisDelta, double optionDelta)
+    public IList<OrderModel> GetUpdates(PointModel point, double basisDelta, double optionDelta)
     {
       var delta = optionDelta + basisDelta;
 

@@ -1,3 +1,4 @@
+using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
@@ -18,24 +19,27 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class LongCalendar
+  public partial class LongDelta
   {
     [Inject] IConfiguration Configuration { get; set; }
 
+    protected virtual double? Strike { get; set; }
     protected virtual ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
-    protected virtual EstimatesComponent EstimatesView { get; set; }
+    protected virtual ChartsComponent IndicatorsView { get; set; }
     protected virtual ChartsComponent PerformanceView { get; set; }
     protected virtual DealsComponent DealsView { get; set; }
     protected virtual OrdersComponent OrdersView { get; set; }
     protected virtual PositionsComponent PositionsView { get; set; }
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual InstrumentModel Instrument { get; set; } = new() { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) };
 
     /// <summary>
     /// Setup views and adapters
     /// </summary>
     /// <param name="setup"></param>
+    /// <returns></returns>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       await CreateViews();
@@ -69,10 +73,11 @@ namespace Terminal.Pages.Options
     protected virtual async Task CreateViews()
     {
       await ChartsView.Create("Prices");
+      await IndicatorsView.Create("Indicators");
       await PerformanceView.Create("Performance");
-      await EstimatesView.Create("Estimates");
 
       ChartsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
+      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
       PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
     }
 
@@ -100,7 +105,7 @@ namespace Terminal.Pages.Options
         Balance = 25000,
         Summary = new ConcurrentDictionary<string, StateModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
+          ["SPY"] = new StateModel { Instrument = Instrument },
         },
       };
 
@@ -108,7 +113,7 @@ namespace Terminal.Pages.Options
       {
         Speed = 1,
         Account = account,
-        Source = Configuration["Simulation:Source"]
+        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -129,19 +134,19 @@ namespace Terminal.Pages.Options
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var performance = Performance.Calculate([account]);
-      var longOptions = await GetOptions(point, point.Time.Value.AddDays(14));
-      var shortOptions = await GetOptions(point, point.Time.Value);
+      var options = await GetOptions(point, point.Time.Value.AddDays(5));
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, longOptions, shortOptions);
+        var orders = GetOrders(point, options);
         await adapter.CreateOrders([.. orders]);
       }
 
       if (account.Positions.Count > 0)
       {
-        await UpdateOptions(point, longOptions, shortOptions);
-        await UpdateShares(point);
+        var (basisDelta, optionDelta) = UpdateIndicators(point);
+        var orders = GetUpdates(point, basisDelta, optionDelta);
+        await adapter.CreateOrders([.. orders]);
       }
 
       DealsView.UpdateItems(account.Deals);
@@ -150,7 +155,64 @@ namespace Terminal.Pages.Options
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
-      EstimatesView.UpdateItems(adapter, point, account.Positions.Values);
+    }
+
+    /// <summary>
+    /// Render indicators
+    /// </summary>
+    protected virtual (double, double) UpdateIndicators(PointModel point)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var positions = account.Positions.Values;
+      var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+      var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+
+      var basisDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .Sum(GetDelta), MidpointRounding.ToZero);
+
+      var optionDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Sum(GetDelta), MidpointRounding.ToZero);
+
+      IndicatorsView.UpdateItems(point.Time.Value.Ticks, "Indicators", "Stock Delta", new AreaShape { Y = basisDelta, Component = comUp });
+      IndicatorsView.UpdateItems(point.Time.Value.Ticks, "Indicators", "Option Delta", new AreaShape { Y = optionDelta, Component = comDown });
+
+      return (basisDelta, optionDelta);
+    }
+
+    /// <summary>
+    /// Hedge each delta change with shares
+    /// </summary>
+    /// <param name="point"></param>
+    /// <param name="basisDelta"></param>
+    /// <param name="optionDelta"></param>
+    /// <returns></returns>
+    public IList<OrderModel> GetUpdates(PointModel point, double basisDelta, double optionDelta)
+    {
+      var delta = optionDelta + basisDelta;
+
+      if (Math.Abs((point.Last - Strike).Value) >= 0.50)
+      {
+        var order = new OrderModel
+        {
+          Volume = Math.Abs(delta),
+          Type = OrderTypeEnum.Market,
+          Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
+
+        return [order];
+      }
+
+      return [];
     }
 
     /// <summary>
@@ -177,25 +239,23 @@ namespace Terminal.Pages.Options
     /// Create short condor strategy
     /// </summary>
     /// <param name="point"></param>
-    /// <param name="longOptions"></param>
-    /// <param name="shortOptions"></param>
+    /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> longOptions, IList<InstrumentModel> shortOptions)
+    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var range = point.Last * 0.005;
-      var longCall = longOptions
-        ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike < point.Last - 1)
+      var longPut = options
+        ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
+        ?.Where(o => o.Derivative.Strike <= point.Last)
         ?.LastOrDefault();
 
-      var shortCall = shortOptions
+      var longCall = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike > longCall.Derivative.Strike + range)
+        ?.Where(o => o.Derivative.Strike >= point.Last)
         ?.FirstOrDefault();
 
-      if (shortCall is null || longCall is null)
+      if (longPut is null || longCall is null)
       {
         return [];
       }
@@ -211,142 +271,21 @@ namespace Terminal.Pages.Options
             Volume = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longCall }
+            Transaction = new() { Instrument = longPut }
           },
           new OrderModel
           {
             Volume = 1,
-            Side = OrderSideEnum.Short,
+            Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortCall }
-          }
+            Transaction = new() { Instrument = longCall }
+          },
         ]
       };
 
+      Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
+
       return [order];
-    }
-
-    /// <summary>
-    /// Reopen short position for more premium
-    /// </summary>
-    /// <param name="point"></param>
-    /// <param name="longOptions"></param>
-    /// <param name="shortOptions"></param>
-    /// <returns></returns>
-    protected async Task UpdateOptions(PointModel point, IList<InstrumentModel> longOptions, IList<InstrumentModel> shortOptions)
-    {
-      var adapter = View.Adapters["Prime"];
-      var account = adapter.Account;
-      var shortPosition = account
-        .Positions
-        .Values
-        .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .FirstOrDefault();
-
-      var isExpired = shortPosition is not null && shortPosition.GetCloseEstimate() <= 0.05;
-      var isPenetrated = shortPosition is not null && point.Last + 1 > shortPosition.Transaction.Instrument.Derivative.Strike;
-
-      if (isExpired || isPenetrated)
-      {
-        await ClosePositions(o => o.Transaction.Instrument.Derivative is not null && o.Side is OrderSideEnum.Short);
-      }
-
-      var shortUpdate = account
-        .Positions
-        .Values
-        .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .ToList();
-
-      if (shortUpdate.Count is 0)
-      {
-        var orders = GetOrders(point, longOptions, shortOptions);
-        var shortOrder = orders?.FirstOrDefault()?.Orders?.LastOrDefault();
-
-        if (shortOrder is null || shortOrder.Transaction.Instrument.Point.Last <= 0.10)
-        {
-          return;
-        }
-
-        shortOrder.Type = OrderTypeEnum.Market;
-        await adapter.CreateOrders([shortOrder]);
-      }
-    }
-
-    /// <summary>
-    /// Hedge drawdowns with shares
-    /// </summary>
-    /// <param name="point"></param>
-    /// <returns></returns>
-    protected async Task UpdateShares(PointModel point)
-    {
-      var adapter = View.Adapters["Prime"];
-      var account = adapter.Account;
-      var sharesPosition = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
-        .ToList();
-
-      var strike = account
-        .Positions
-        .Values
-        .Where(o => o.Side is OrderSideEnum.Long)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .First()
-        .Transaction
-        .Instrument
-        .Derivative
-        .Strike;
-
-      if (sharesPosition.Count is not 0 && point.Last.Value - 1 > strike)
-      {
-        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
-      }
-
-      if (sharesPosition.Count is 0 && point.Last.Value - 1 < strike)
-      {
-        var order = new OrderModel
-        {
-          Volume = 100,
-          Type = OrderTypeEnum.Market,
-          Side = OrderSideEnum.Short,
-          Transaction = new() { Instrument = point.Instrument }
-        };
-
-        await adapter.CreateOrders([order]);
-      }
-    }
-
-    /// <summary>
-    /// Close positions
-    /// </summary>
-    /// <param name="condition"></param>
-    /// <returns></returns>
-    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
-    {
-      var adapter = View.Adapters["Prime"];
-      var account = adapter.Account;
-
-      foreach (var position in adapter.Account.Positions.Values.ToList())
-      {
-        if (condition is null || condition(position))
-        {
-          var order = new OrderModel
-          {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
-          };
-
-          await adapter.CreateOrders(order);
-        }
-      }
     }
 
     /// <summary>
