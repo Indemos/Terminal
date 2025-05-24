@@ -1,6 +1,7 @@
 namespace Schwab.Messages
 {
   using System.Collections.Generic;
+  using System.Text.Json.Nodes;
   using System.Text.Json.Serialization;
 
   public partial class StreamDataMessage
@@ -19,6 +20,6 @@ namespace Schwab.Messages
 
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     [JsonPropertyName("content")]
-    public List<Dictionary<string, object>> Content { get; set; }
+    public List<Dictionary<string, JsonNode>> Content { get; set; }
   }
 }

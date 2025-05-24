@@ -86,7 +86,7 @@ namespace Alpaca
 
         await Task.WhenAll(streamingClients.Values.Select(o => o.ConnectAndAuthenticateAsync()));
         await GetAccount([]);
-        await Task.WhenAll(Account.Summary.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
         response.Data = StatusEnum.Active;
       }
@@ -228,7 +228,7 @@ namespace Alpaca
 
         positions
           .Data
-          .ForEach(o => Account.Summary[o.Name].Instrument = o.Transaction.Instrument);
+          .ForEach(o => Account.State[o.Name].Instrument = o.Transaction.Instrument);
 
         response.Data = Account;
       }
@@ -520,7 +520,7 @@ namespace Alpaca
 
       scheduler.Send(() =>
       {
-        var summary = Account.Summary.Get(streamPoint.Symbol);
+        var summary = Account.State.Get(streamPoint.Symbol);
         var instrument = summary.Instrument ?? new InstrumentModel();
         var point = InternalMap.GetPrice(streamPoint, instrument);
 

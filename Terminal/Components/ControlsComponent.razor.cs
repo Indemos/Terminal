@@ -104,7 +104,7 @@ namespace Terminal.Components
           .Values
           .SelectMany(adapter => adapter
             .Account
-            .Summary
+            .State
             .Values
             .Select(o => adapter.Subscribe(o.Instrument))));
 
@@ -134,7 +134,7 @@ namespace Terminal.Components
           .Values
           .SelectMany(adapter => adapter
             .Account
-            .Summary
+            .State
             .Values
             .Select(o => adapter.Unsubscribe(o.Instrument))));
 

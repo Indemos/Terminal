@@ -89,7 +89,7 @@ namespace Simulation
       SetupAccounts(Account);
 
       streams = Account
-        .Summary
+        .State
         .ToDictionary(
           o => o.Key,
           o => Directory
@@ -99,7 +99,7 @@ namespace Simulation
 
       streams.ForEach(o => connections.Add(o.Value));
 
-      await Task.WhenAll(Account.Summary.Values.Select(o => Subscribe(o.Instrument)));
+      await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
       response.Data = StatusEnum.Active;
 
@@ -158,7 +158,7 @@ namespace Simulation
 
         if (Equals(counter, streams.Count) && Equals(next.Key, instrument.Name))
         {
-          var summary = Account.Summary[instrument.Name];
+          var summary = Account.State[instrument.Name];
 
           summary.Time = next.Value.Time;
           summary.Instrument = instrument;
@@ -189,7 +189,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      await Task.WhenAll(Account.Summary.Values.Select(o => Unsubscribe(o.Instrument)));
+      await Task.WhenAll(Account.State.Values.Select(o => Unsubscribe(o.Instrument)));
 
       connections?.ForEach(o => o?.Dispose());
       connections?.Clear();
@@ -498,7 +498,7 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
     {
-      var point = Account.Summary[screener.Instrument.Name].Instrument.Point;
+      var point = Account.State[screener.Instrument.Name].Instrument.Point;
       var response = new ResponseModel<DomModel>
       {
         Data = new DomModel
@@ -521,7 +521,7 @@ namespace Simulation
     {
       var response = new ResponseModel<IList<PointModel>>
       {
-        Data = [.. Account.Summary[screener.Instrument.Name].Points]
+        Data = [.. Account.State[screener.Instrument.Name].Points]
       };
 
       return Task.FromResult(response);
@@ -542,7 +542,7 @@ namespace Simulation
         .GroupBy(o => o.Transaction.Instrument.Name)
         .ToDictionary(o => o.Key, o => o);
 
-      var options = Account.Summary[screener.Instrument.Name]
+      var options = Account.State[screener.Instrument.Name]
         .Options
         .Select(option =>
         {

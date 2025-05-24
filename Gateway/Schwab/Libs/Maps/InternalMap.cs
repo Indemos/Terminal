@@ -1,3 +1,4 @@
+using Schwab.Enums;
 using Schwab.Messages;
 using System;
 using System.Collections.Generic;
@@ -33,17 +34,34 @@ namespace Schwab.Mappers
     /// <summary>
     /// External instrument type to local
     /// </summary>
-    /// <param name="assetType"></param>
+    /// <param name="streamType"></param>
     /// <returns></returns>
-    public static InstrumentEnum? GetSubscriptionType(string assetType)
+    public static InstrumentEnum? GetStreamPointType(string streamType)
     {
-      switch (assetType?.ToUpper())
+      switch (streamType?.ToUpper())
       {
         case "LEVELONE_EQUITIES": return InstrumentEnum.Shares;
         case "LEVELONE_FUTURES": return InstrumentEnum.Futures;
         case "LEVELONE_FOREX": return InstrumentEnum.Currencies;
         case "LEVELONE_OPTIONS": return InstrumentEnum.Options;
         case "LEVELONE_FUTURES_OPTIONS": return InstrumentEnum.FutureOptions;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// External instrument type to local
+    /// </summary>
+    /// <param name="streamType"></param>
+    /// <returns></returns>
+    public static DomEnum? GetStreamDomType(string streamType)
+    {
+      switch (streamType?.ToUpper())
+      {
+        case "NYSE_BOOK": return DomEnum.Nyse;
+        case "NASDAQ_BOOK": return DomEnum.Ndx;
+        case "OPTIONS_BOOK": return DomEnum.Options;
       }
 
       return null;
@@ -547,12 +565,5 @@ namespace Schwab.Mappers
 
       return null;
     }
-
-    /// <summary>
-    /// Get field name by code
-    /// </summary>
-    /// <param name="code"></param>
-    /// <returns></returns>
-    public static T? GetEnum<T>(string code) where T : struct, Enum => Enum.TryParse(code, true, out T o) ? o : null;
   }
 }

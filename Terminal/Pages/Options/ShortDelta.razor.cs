@@ -101,7 +101,7 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
           ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
         },

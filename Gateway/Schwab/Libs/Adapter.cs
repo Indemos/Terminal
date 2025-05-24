@@ -132,7 +132,7 @@ namespace Schwab
         subscriptions.Add(interval);
         subscriptions.Add(scheduler);
 
-        await Task.WhenAll(Account.Summary.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
         response.Data = StatusEnum.Active;
       }
@@ -322,6 +322,14 @@ namespace Schwab
 
       try
       {
+        var dom = Account.State[screener.Instrument.Name].Dom;
+
+        if (dom.Bids.Count is not 0 && dom.Asks.Count is not 0)
+        {
+          response.Data = dom;
+          return response;
+        }
+
         var props = new Hashtable
         {
           ["indicative"] = false,
@@ -457,7 +465,7 @@ namespace Schwab
 
         positions
           .Data
-          .ForEach(o => Account.Summary[o.Name].Instrument = o.Transaction.Instrument);
+          .ForEach(o => Account.State[o.Name].Instrument = o.Transaction.Instrument);
 
         response.Data = Account;
       }
@@ -626,9 +634,6 @@ namespace Schwab
 
       var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(streamer);
       var adminCode = adminResponse.Response.FirstOrDefault().Content.Code;
-      var pointMap = Account
-        .Summary
-        .ToDictionary(o => o.Value.Instrument.Name, o => new PointModel());
 
       scheduler.Send(async () =>
       {
@@ -640,14 +645,30 @@ namespace Schwab
             var streamResponse = await streamer.ReceiveAsync(data, cancellation.Token);
             var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
             var message = JsonNode.Parse(content);
-
+            Console.WriteLine(content);
             if (message["data"] is not null)
             {
-              var streamPoints = message["data"]
+              var streamItems = message["data"]
                 .AsArray()
                 .Select(o => o.Deserialize<StreamDataMessage>());
 
-              OnPoint(pointMap, streamPoints.Where(o => InternalMap.GetSubscriptionType(o.Service) is not null));
+              var points = streamItems
+                .Where(o => InternalMap.GetStreamPointType(o.Service) is not null)
+                .ToList();
+
+              var doms = streamItems
+                .Where(o => InternalMap.GetStreamDomType(o.Service) is not null)
+                .ToList();
+
+              if (points.Count is not 0)
+              {
+                OnPoint(points);
+              }
+
+              if (doms.Count is not 0)
+              {
+                OnDom(doms);
+              }
             }
           }
           catch (Exception e)
@@ -663,22 +684,21 @@ namespace Schwab
     /// <summary>
     /// Process quote from the stream
     /// </summary>
-    /// <param name="pointMap"></param>
-    /// <param name="streamPoints"></param>
-    protected virtual void OnPoint(IDictionary<string, PointModel> pointMap, IEnumerable<StreamDataMessage> streamPoints)
+    /// <param name="items"></param>
+    protected virtual void OnPoint(IEnumerable<StreamDataMessage> items)
     {
       static double? parse(string o, double? origin) => double.TryParse(o, out var num) ? num : origin;
 
-      foreach (var streamPoint in streamPoints)
+      foreach (var item in items)
       {
-        var map = InternalMap.GetStreamMap(streamPoint.Service);
+        var map = InternalMap.GetStreamMap(item.Service);
 
-        foreach (var data in streamPoint.Content)
+        foreach (var data in item.Content)
         {
           var instrumentName = $"{data.Get("key")}";
-          var summary = Account.Summary[instrumentName];
+          var summary = Account.State[instrumentName];
           var instrument = summary.Instrument;
-          var point = pointMap.Get(instrumentName);
+          var point = Account.State.Get(instrumentName).Point ?? new();
 
           point.Time = DateTime.Now;
           point.Instrument = instrument;
@@ -697,12 +717,59 @@ namespace Schwab
             return;
           }
 
-          instrument.Name = instrumentName;
           summary.Points.Add(point);
           summary.PointGroups.Add(point, instrument.TimeFrame);
           summary.Point = instrument.Point = summary.PointGroups.Last();
 
           DataStream(new MessageModel<PointModel> { Next = instrument.Point });
+        }
+      }
+    }
+
+    /// <summary>
+    /// Process quote from the stream
+    /// </summary>
+    /// <param name="items"></param>
+    protected virtual void OnDom(IEnumerable<StreamDataMessage> items)
+    {
+      foreach (var item in items)
+      {
+        var map = StreamDomMap.Map;
+
+        foreach (var data in item.Content)
+        {
+          var instrumentName = $"{data.Get("key")}";
+          var summary = Account.State[instrumentName];
+          var instrument = summary.Instrument;
+          var dom = Account.State.Get(instrumentName).Dom = new();
+          var bids = data.Get(map.Get("Bid Side Levels"));
+          var asks = data.Get(map.Get("Ask Side Levels"));
+
+          dom.Bids = [.. bids.AsArray().Select(node =>
+          {
+            var o = node.AsObject();
+            var point = new PointModel
+            {
+              Last = o.TryGetPropertyValue("0", out var price) ? double.Parse($"{price}") : 0,
+              Volume = o.TryGetPropertyValue("1", out var volume) ? double.Parse($"{volume}") : 0
+            };
+
+            return point;
+
+          }).OrderBy(o => o.Last)];
+
+          dom.Asks = [.. asks.AsArray().Select(node =>
+          {
+            var o = node.AsObject();
+            var point = new PointModel
+            {
+              Last = o.TryGetPropertyValue("0", out var price) ? double.Parse($"{price}") : 0,
+              Volume = o.TryGetPropertyValue("1", out var volume) ? double.Parse($"{volume}") : 0
+            };
+
+            return point;
+
+          }).OrderBy(o => o.Last)];
         }
       }
     }
@@ -734,7 +801,7 @@ namespace Schwab
 
       var response = await sender.Send<T>(message, sender.Options);
 
-      if (response.Message.IsSuccessStatusCode is false)
+      if (response?.Message?.IsSuccessStatusCode is false)
       {
         throw new HttpRequestException(await response.Message.Content.ReadAsStringAsync(), null, response.Message.StatusCode);
       }

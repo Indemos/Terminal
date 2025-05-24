@@ -180,7 +180,7 @@ namespace Tradier
     protected OrderModel GetPosition(PositionMessage message)
     {
       var volume = Math.Abs(message.Quantity ?? 0);
-      var instrument = Account.Summary.Get(message.Symbol).Instrument ?? new InstrumentModel();
+      var instrument = Account.State.Get(message.Symbol).Instrument ?? new InstrumentModel();
 
       instrument.Name = message.Symbol;
       instrument.Derivative = GetDerivative(message.Symbol);

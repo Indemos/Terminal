@@ -42,7 +42,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Snapshots
     /// </summary>
-    ConcurrentDictionary<string, StateModel> Summary { get; set; }
+    ConcurrentDictionary<string, StateModel> State { get; set; }
   }
 
   /// <summary>
@@ -83,7 +83,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Market snapshot
     /// </summary>
-    public virtual ConcurrentDictionary<string, StateModel> Summary { get; set; }
+    public virtual ConcurrentDictionary<string, StateModel> State { get; set; }
 
     /// <summary>
     /// Constructor
@@ -96,7 +96,7 @@ namespace Terminal.Core.Domains
       Deals = [];
       Orders = new ConcurrentDictionary<string, OrderModel>();
       Positions = new ConcurrentDictionary<string, OrderModel>();
-      Summary = new ConcurrentDictionary<string, StateModel>();
+      State = new ConcurrentDictionary<string, StateModel>();
     }
   }
 }

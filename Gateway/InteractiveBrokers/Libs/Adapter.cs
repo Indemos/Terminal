@@ -95,7 +95,7 @@ namespace InteractiveBrokers
 
         await GetAccount([]);
 
-        foreach (var summary in Account.Summary.Values)
+        foreach (var summary in Account.State.Values)
         {
           await Subscribe(summary.Instrument);
         }
@@ -462,7 +462,7 @@ namespace InteractiveBrokers
       Account
         .Positions
         .Values
-        .ForEach(o => Account.Summary[o.Name].Instrument = o.Transaction.Instrument);
+        .ForEach(o => Account.State[o.Name].Instrument = o.Transaction.Instrument);
 
       response.Data = Account;
 
@@ -575,7 +575,7 @@ namespace InteractiveBrokers
       var max = short.MaxValue;
       var point = new PointModel();
       var contract = ExternalMap.GetContract(instrument);
-      var summary = Account.Summary[instrument.Name];
+      var summary = Account.State[instrument.Name];
 
       double? value(double data, double min, double max, double? original)
       {

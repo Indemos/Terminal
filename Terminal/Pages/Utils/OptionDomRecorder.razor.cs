@@ -3,11 +3,11 @@ using Distribution.Stream;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
+using Schwab.Enums;
 using System;
 using System.Collections.Concurrent;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Utils
 {
-  public partial class OptionChainRecorder
+  public partial class OptionDomRecorder
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -38,7 +38,13 @@ namespace Terminal.Pages.Utils
           switch (true)
           {
             case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
-            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream: await OnData(); break;
+            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
+
+              var adapter = View.Adapters["Prime"] as Schwab.Adapter;
+              var account = adapter.Account;
+              await adapter.SubscribeToDom(Instrument, DomEnum.Nyse);
+              await OnData();
+              break;
           }
         };
       }
@@ -51,7 +57,7 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
           [Instrument.Name] = new StateModel { Instrument = Instrument },
         },
@@ -78,7 +84,7 @@ namespace Terminal.Pages.Utils
       try
       {
         var adapter = View.Adapters["Prime"];
-        var summary = adapter.Account.Summary[Instrument.Name];
+        var summary = adapter.Account.State[Instrument.Name];
         var optionArgs = new InstrumentScreenerModel
         {
           Count = 50,
@@ -92,9 +98,7 @@ namespace Terminal.Pages.Utils
           Instrument = Instrument
         };
 
-        var dom = await adapter.GetDom(domArgs, []);
         var options = await adapter.GetOptions(optionArgs, []);
-        var message = dom.Data.Bids.First();
         var storage = $"D:/Code/NET/Terminal/Data/{Instrument.Name}/{DateTime.Now:yyyy-MM-dd}";
 
         summary.Points.Clear();
@@ -103,7 +107,7 @@ namespace Terminal.Pages.Utils
 
         Directory.CreateDirectory(storage);
 
-        var content = JsonSerializer.Serialize(message, Srv.Options);
+        var content = JsonSerializer.Serialize(summary, Srv.Options);
         var source = $"{storage}/{DateTime.UtcNow.Ticks}.zip";
 
         using var archive = ZipFile.Open(source, ZipArchiveMode.Create);

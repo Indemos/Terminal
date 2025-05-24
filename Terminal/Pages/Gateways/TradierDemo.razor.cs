@@ -73,7 +73,7 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Tradier:PaperAccount"],
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
           [Instrument.Name] = new StateModel { Instrument = Instrument }
         }
@@ -104,7 +104,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.Summary[Instrument.Name].Instrument;
+      var instrument = account.State[Instrument.Name].Instrument;
       var performance = Performance.Calculate([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));

@@ -122,7 +122,7 @@ namespace Tradier
 
               var quoteMessage = message.Deserialize<QuoteMessage>(this.sender.Options);
               var point = GetPrice(quoteMessage);
-              var summary = Account.Summary[quoteMessage.Symbol];
+              var summary = Account.State[quoteMessage.Symbol];
               var instrument = summary.Instrument;
 
               point.Instrument = instrument;
@@ -155,7 +155,7 @@ namespace Tradier
         subscriptions.Add(dataStreamer);
         subscriptions.Add(accountStreamer);
 
-        await Task.WhenAll(Account.Summary.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
         response.Data = StatusEnum.Active;
       }
@@ -283,7 +283,7 @@ namespace Tradier
 
         positions
           .Data
-          .ForEach(o => Account.Summary[o.Name].Instrument = o.Transaction.Instrument);
+          .ForEach(o => Account.State[o.Name].Instrument = o.Transaction.Instrument);
 
         response.Data = Account;
       }

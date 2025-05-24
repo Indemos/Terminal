@@ -3,7 +3,6 @@ using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
-using Schwab.Enums;
 using System;
 using System.Collections.Concurrent;
 using System.Linq;
@@ -49,7 +48,8 @@ namespace Terminal.Pages.Gateways
             case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
-              var account = View.Adapters["Prime"].Account;
+              var adapter = View.Adapters["Prime"] as Schwab.Adapter;
+              var account = adapter.Account;
 
               DealsView.UpdateItems(account.Deals);
               OrdersView.UpdateItems(account.Orders.Values);
@@ -74,31 +74,35 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
-          ["ES"] = new StateModel
+          ["SPY"] = new StateModel
+          {
+            Instrument = Instrument
+          },
+          ["/ESM25"] = new StateModel
           {
             Instrument = new InstrumentModel
             {
-              Name = "/ESH25",
+              Name = "/ESM25",
               Type = InstrumentEnum.Futures,
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/NQ"] = new StateModel
+          ["/NQM25"] = new StateModel
           {
             Instrument = new InstrumentModel
             {
-              Name = "/NQH25",
+              Name = "/NQM25",
               Type = InstrumentEnum.Futures,
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["YM"] = new StateModel
+          ["/YMM25"] = new StateModel
           {
             Instrument = new InstrumentModel
             {
-              Name = "/YMH25",
+              Name = "/YMM25",
               Type = InstrumentEnum.Futures,
               TimeFrame = TimeSpan.FromMinutes(1)
             }
@@ -122,7 +126,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.DataStream += async message =>
         {
-          if (Equals(message.Next.Instrument.Name, Instrument.Name))
+          if (Equals(message.Next.Instrument.Name, "/ESM25"))
           {
             await OnData(message.Next);
           }
@@ -133,7 +137,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.Summary[name].Instrument;
+      var instrument = account.State[name].Instrument;
       var performance = Performance.Calculate([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));

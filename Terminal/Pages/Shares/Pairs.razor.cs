@@ -70,7 +70,7 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
           [assetX] = new StateModel { Instrument = new InstrumentModel { Name = assetX } },
           [assetY] = new StateModel { Instrument = new InstrumentModel { Name = assetY } }
@@ -96,8 +96,8 @@ namespace Terminal.Pages.Shares
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summaryX = account.Summary[assetX];
-      var summaryY = account.Summary[assetY];
+      var summaryX = account.State[assetX];
+      var summaryY = account.State[assetY];
       var instrumentX = summaryX.Instrument;
       var instrumentY = summaryY.Instrument;
       var seriesX = summaryX.Points;

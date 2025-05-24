@@ -67,7 +67,7 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
-        Summary = new ConcurrentDictionary<string, StateModel>
+        State = new ConcurrentDictionary<string, StateModel>
         {
           [Instrument.Name] = new StateModel { Instrument = Instrument }
         }        
