@@ -1,0 +1,12 @@
+@page "/short-protection"
+
+<ControlsComponent @ref="View">
+  <ChartsComponent Name="Prices" @ref="ChartsView" />
+  <ChartsComponent Name="Delta" @ref="DeltaView" />
+  <ChartsComponent Name="Exposure" @ref="ExposureView" />
+  <ChartsComponent Name="Performance" @ref="PerformanceView" />
+  <OrdersComponent Name="Orders" @ref="OrdersView" />
+  <PositionsComponent Name="Positions" @ref="PositionsView" />
+  <DealsComponent Name="Deals" @ref="DealsView" />
+  <StatementsComponent Name="Statements" Adapters="View.Adapters" @ref="StatementsView" />
+</ControlsComponent>

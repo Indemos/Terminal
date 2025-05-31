@@ -1,0 +1,32 @@
+@using Terminal.Core.Enums
+
+<div class="flex-grow-1 py-6">
+
+  <div class="mud-paper mud-elevation-1 w-100 d-flex mb-4 py-4 controls">
+
+    @switch (true)
+    {
+      @case true when SubscriptionState.Next is SubscriptionEnum.None:
+        <MudIconButton Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PlayCircle" @onclick="Connect"></MudIconButton>
+        break;
+      @case true when SubscriptionState.Next is SubscriptionEnum.Progress:
+        <MudIconButton Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.AccessTime"></MudIconButton>
+        <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
+        break;
+      @case true when SubscriptionState.Next is SubscriptionEnum.Stream:
+        <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" @onclick="Disconnect"></MudIconButton>
+        <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PauseCircle" @onclick="Unsubscribe"></MudIconButton>
+        break;
+      @case true when SubscriptionState.Next is SubscriptionEnum.Pause:
+        <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" @onclick="Disconnect"></MudIconButton>
+        <MudIconButton Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Loop" @onclick="Subscribe"></MudIconButton>
+        break;
+    }
+
+  </div>
+
+  <div class="components">
+    @ChildContent
+  </div>
+
+</div>

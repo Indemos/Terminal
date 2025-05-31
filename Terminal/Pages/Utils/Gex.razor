@@ -1,0 +1,29 @@
+@page "/gex"
+
+<MudPaper Class="flex-grow-1 d-flex flex-column overflow-auto">
+  <MudDrawerContainer Class="mud-height-full d-flex">
+    <div class="content-container flex-grow-1">
+      @foreach (var chain in Groups)
+      {
+        <MudExpansionPanels MultiExpansion="true" Class="flex-grow-1 ma-3">
+          @foreach (var group in chain.Value)
+          {
+            <MudExpansionPanel>
+              <TitleContent>
+                <div class="d-flex">
+                  <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+                  <MudText>@group.Key</MudText>
+                </div>
+              </TitleContent>
+              <ChildContent>
+                <div class="panel">
+                  <CanvasView @ref="chain.Value[group.Key].View"></CanvasView>
+                </div>
+              </ChildContent>
+            </MudExpansionPanel>
+          }
+        </MudExpansionPanels>
+      }
+    </div>
+  </MudDrawerContainer>
+</MudPaper>
