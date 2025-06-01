@@ -25,9 +25,6 @@ namespace Terminal.Pages.Shares
     double step = 5;
     double stepBase = 5;
     double stepSide = -1;
-    double volume = 1;
-    double volumeBase = 1;
-    double volumeSide = 1;
     string asset = "GOOG";
 
     protected virtual double? Price { get; set; }
@@ -108,33 +105,36 @@ namespace Terminal.Pages.Shares
       if (account.Positions.Count > 0)
       {
         var closures = new List<OrderModel>();
+        var pos = account.Positions.Values.First();
         var isIncrease = point.Last - Price > step;
         var isDecrease = Price - point.Last > step;
+        var canIncrease = step > 0 && pos.Side is not OrderSideEnum.Long;
+        var canDecrease = step > 0 && pos.Side is not OrderSideEnum.Short;
 
-        if (isIncrease)
+        if (isIncrease && canIncrease)
         {
           closures = await ClosePositions(o => o.Side is OrderSideEnum.Short);
-          await OpenPositions(point, volume, OrderSideEnum.Long);
+          await OpenPositions(point, 1, OrderSideEnum.Long);
         }
 
-        if (isDecrease)
+        if (isDecrease && canDecrease)
         {
           closures = await ClosePositions(o => o.Side is OrderSideEnum.Long);
-          await OpenPositions(point, volume, OrderSideEnum.Short);
+          await OpenPositions(point, 1, OrderSideEnum.Short);
         }
 
         // Progressive increase
 
         if (isIncrease || isDecrease)
         {
-          step = closures.Count is 0 ? stepBase : Math.Max(1, step * stepSide + 1);
-          volume = closures.Count is 0 ? volumeBase : Math.Max(1, volume * volumeSide + 1);
+          step = closures.Count is not 0 ? stepBase : Math.Max(Math.Abs(stepSide), step + stepSide);
+          Price = point.Last;
         }
       }
 
       if (account.Positions.Count is 0)
       {
-        await OpenPositions(point, volume, OrderSideEnum.Short);
+        await OpenPositions(point, 1, OrderSideEnum.Long);
       }
 
       DealsView.UpdateItems(account.Deals);
@@ -166,8 +166,6 @@ namespace Terminal.Pages.Shares
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = instrument }
       };
-
-      Price = point.Last;
 
       await adapter.CreateOrders(order);
     }

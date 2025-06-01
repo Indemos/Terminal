@@ -72,7 +72,7 @@ namespace Terminal.Pages.Options
     {
       await DeltaView.Create("Delta");
       await ChartsView.Create("Prices");
-      await ExposureView.Create("Variance");
+      await ExposureView.Create("Exposure");
       await PerformanceView.Create("Performance");
 
       DeltaView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
@@ -145,8 +145,8 @@ namespace Terminal.Pages.Options
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
-        var isSell = basisDelta > 0 && optionDelta > 0;
-        var isBuy = basisDelta < 0 && optionDelta < 0;
+        var isSell = basisDelta < 0 && optionDelta > 0;
+        var isBuy = basisDelta > 0 && optionDelta < 0;
 
         if (optionDelta is 0)
         {
@@ -158,7 +158,7 @@ namespace Terminal.Pages.Options
           {
             Volume = 50,
             Type = OrderTypeEnum.Market,
-            Side = optionDelta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
+            Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
             Transaction = new() { Instrument = point.Instrument }
           };
 
@@ -205,8 +205,8 @@ namespace Terminal.Pages.Options
         .Where(o => o.Transaction.Instrument.Derivative is not null)
         .Sum(o => o.Transaction.Instrument.Derivative.Sigma ?? 0);
 
-      ExposureView.UpdateItems(point.Time.Value.Ticks, "Variance", "Sigma", new BarShape { Y = positionSigma, Component = com });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Stock Delta", new BarShape { Y = basisDelta, Component = comUp });
+      ExposureView.UpdateItems(point.Time.Value.Ticks, "Exposure", "Sigma", new AreaShape { Y = positionSigma, Component = com });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = comUp });
       DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Option Delta", new LineShape { Y = optionDelta, Component = comDown });
 
       return (basisDelta, optionDelta);
