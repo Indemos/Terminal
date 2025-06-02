@@ -1,15 +1,10 @@
 using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
-using Terminal.Core.Models;
 
 namespace Terminal.Core.Indicators
 {
-  /// <summary>
-  /// Implementation
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  public class PerformanceIndicator : Indicator<PointModel, PerformanceIndicator>
+  public class PerformanceIndicator : Indicator<PerformanceIndicator>
   {
     /// <summary>
     /// Calculate indicator value

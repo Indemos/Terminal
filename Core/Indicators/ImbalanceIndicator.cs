@@ -1,16 +1,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
-using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Terminal.Core.Indicators
 {
-  /// <summary>
-  /// Implementation
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  public class ImbalanceIndicator : Indicator<PointModel, ImbalanceIndicator>
+  public class ImbalanceIndicator : Indicator<ImbalanceIndicator>
   {
     /// <summary>
     /// Calculate indicator value
@@ -28,9 +23,6 @@ namespace Terminal.Core.Indicators
       }
 
       var value = 0.0;
-      var seriesItem = currentPoint.Series[Name] =
-        currentPoint.Series.Get(Name) ??
-        new ImbalanceIndicator().Point;
 
       switch (side)
       {
@@ -39,7 +31,7 @@ namespace Terminal.Core.Indicators
         case -1: value = currentPoint.BidSize.Value; break;
       }
 
-      Point.Last = seriesItem.Last = value;
+      Point.Last = value;
 
       return this;
     }

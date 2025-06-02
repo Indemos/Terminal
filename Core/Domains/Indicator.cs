@@ -6,7 +6,7 @@ namespace Terminal.Core.Domains
   /// <summary>
   /// Definition
   /// </summary>
-  public interface IIndicator<TInput, TOutput> where TInput : PointModel
+  public interface IIndicator<T>
   {
     /// <summary>
     /// Name
@@ -22,14 +22,13 @@ namespace Terminal.Core.Domains
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    /// <returns></returns>
-    TOutput Calculate(IList<TInput> collection);
+    T Update(IList<PointModel> collection);
   }
 
   /// <summary>
   /// Implementation
   /// </summary>
-  public class Indicator<TInput, TOutput> : IIndicator<TInput, TOutput> where TInput : PointModel
+  public class Indicator<T> : IIndicator<T>
   {
     /// <summary>
     /// Name
@@ -50,6 +49,6 @@ namespace Terminal.Core.Domains
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    public virtual TOutput Calculate(IList<TInput> collection) => default;
+    public virtual T Update(IList<PointModel> collection) => default;
   }
 }

@@ -9,11 +9,7 @@ using Terminal.Core.Services;
 
 namespace Terminal.Core.Indicators
 {
-  /// <summary>
-  /// Implementation
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  public class ScaleIndicator : Indicator<PointModel, ScaleIndicator>
+  public class ScaleIndicator : Indicator<ScaleIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -31,11 +27,6 @@ namespace Terminal.Core.Indicators
     public double Max { get; set; }
 
     /// <summary>
-    /// Preserve last calculated value
-    /// </summary>
-    public IList<double> Values { get; protected set; } = [];
-
-    /// <summary>
     /// Preserve last calculated min value
     /// </summary>
     protected double? min = null;
@@ -49,8 +40,7 @@ namespace Terminal.Core.Indicators
     /// Calculate indicator value
     /// </summary>
     /// <param name="collection"></param>
-    /// <returns></returns>
-    public override ScaleIndicator Calculate(IList<PointModel> collection)
+    public override ScaleIndicator Update(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -70,13 +60,7 @@ namespace Terminal.Core.Indicators
         value = Min + (value - min.Value) * (Max - Min) / (max.Value - min.Value);
       }
 
-      Values.Add(value);
-
-      var series = currentPoint.Series[Name] =
-        currentPoint.Series.Get(Name) ??
-        new ScaleIndicator().Point;
-
-      Point.Last = series.Last = series.Bar.Close = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
+      Point.Last = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, Interval);
 
       return this;
     }

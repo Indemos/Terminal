@@ -54,16 +54,16 @@ namespace Terminal.Core.Models
     public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
-    /// Values from related series synced with the current data point, e.g. moving average or another indicator
+    /// Indicator values calculated for the current data point
     /// </summary>
-    public virtual IDictionary<string, PointModel> Series { get; set; }
+    public virtual IDictionary<string, PointModel> Map { get; set; }
 
     /// <summary>
     /// Constructor
     /// </summary>
     public PointModel()
     {
-      Series = new Dictionary<string, PointModel>();
+      Map = new Dictionary<string, PointModel>();
     }
 
     /// <summary>

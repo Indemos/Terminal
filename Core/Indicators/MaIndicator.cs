@@ -18,11 +18,7 @@ namespace Terminal.Core.Indicators
     Close = 3
   }
 
-  /// <summary>
-  /// Implementation
-  /// </summary>
-  /// <typeparam name="T"></typeparam>
-  public class MaIndicator : Indicator<PointModel, MaIndicator>
+  public class MaIndicator : Indicator<MaIndicator>
   {
     /// <summary>
     /// Number of bars to average
@@ -35,16 +31,11 @@ namespace Terminal.Core.Indicators
     public AveragePriceEnum Mode { get; set; }
 
     /// <summary>
-    /// Preserve last calculated value
-    /// </summary>
-    public IList<double> Values { get; protected set; } = [];
-
-    /// <summary>
     /// Calculate single value
     /// </summary>
     /// <param name="collection"></param>
     /// <returns></returns>
-    public override MaIndicator Calculate(IList<PointModel> collection)
+    public override MaIndicator Update(IList<PointModel> collection)
     {
       var currentPoint = collection.LastOrDefault();
 
@@ -62,12 +53,9 @@ namespace Terminal.Core.Indicators
         case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
       }
 
-      Values.Add(value);
+      var average = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, Interval);
 
-      var series = currentPoint.Series[Name] = currentPoint.Series.Get(Name) ?? new MaIndicator().Point;
-      var average = comService.LinearWeightAverage(Values, Values.Count - 1, Interval);
-
-      Point.Last = series.Last = average.Is(0) ? value : average;
+      Point.Last = average.Is(0) ? value : average;
 
       return this;
     }
