@@ -1,3 +1,4 @@
+using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
@@ -18,16 +19,12 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Shares
 {
-  public partial class Convex
+  public partial class Vwap
   {
     [Inject] IConfiguration Configuration { get; set; }
 
-    double step = 5;
-    double stepBase = 5;
-    double stepSide = -1;
-    string asset = "GOOG";
+    string asset = "SPY";
 
-    protected virtual double? Price { get; set; }
     protected virtual ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
     protected virtual ChartsComponent PerformanceView { get; set; }
@@ -36,6 +33,7 @@ namespace Terminal.Pages.Shares
     protected virtual PositionsComponent PositionsView { get; set; }
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual VwapIndicator Range { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -72,7 +70,7 @@ namespace Terminal.Pages.Shares
         Balance = 25000,
         State = new ConcurrentDictionary<string, StateModel>
         {
-          [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset, TimeFrame = TimeSpan.FromMinutes(1) } },
+          [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset } },
         },
       };
 
@@ -80,9 +78,10 @@ namespace Terminal.Pages.Shares
       {
         Speed = 1,
         Account = account,
-        Source = Configuration["Simulation:Source"]
+        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
       };
 
+      Range = new VwapIndicator { Name = "Vwap" };
       Performance = new PerformanceIndicator { Name = "Balance" };
 
       View
@@ -93,56 +92,47 @@ namespace Terminal.Pages.Shares
 
     protected async void OnData(PointModel point)
     {
-      Price ??= point.Last;
-
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var summary = account.State[asset];
       var instrument = summary.Instrument;
       var series = summary.Points;
       var performance = Performance.Update([account]);
-
-      if (account.Positions.Count > 0)
-      {
-        var closures = new List<OrderModel>();
-        var pos = account.Positions.Values.First();
-        var isIncrease = point.Last - Price > step;
-        var isDecrease = Price - point.Last > step;
-        var canIncrease = step > 0 && pos.Side is not OrderSideEnum.Long;
-        var canDecrease = step > 0 && pos.Side is not OrderSideEnum.Short;
-
-        if (isIncrease && canIncrease)
-        {
-          closures = await ClosePositions(o => o.Side is OrderSideEnum.Short);
-          await OpenPositions(point, 1, OrderSideEnum.Long);
-        }
-
-        if (isDecrease && canDecrease)
-        {
-          closures = await ClosePositions(o => o.Side is OrderSideEnum.Long);
-          await OpenPositions(point, 1, OrderSideEnum.Short);
-        }
-
-        // Progressive increase
-
-        if (isIncrease || isDecrease)
-        {
-          step = closures.Count is not 0 ? stepBase : Math.Max(Math.Abs(stepSide), step + stepSide);
-          Price = point.Last;
-        }
-      }
-
-      if (account.Positions.Count is 0)
-      {
-        await OpenPositions(point, 1, OrderSideEnum.Long);
-      }
+      var vwap = Range.Update(summary.PointGroups);
+      var comPrice = new ComponentModel { Size = 3, Color = SKColors.OrangeRed };
+      var comRange = new ComponentModel { Size = 1, Color = SKColors.DimGray };
 
       DealsView.UpdateItems(account.Deals);
       OrdersView.UpdateItems(account.Orders.Values);
       PositionsView.UpdateItems(account.Positions.Values);
-      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Price", new LineShape { Y = point.Last, Component = comPrice });
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Vwap", new LineShape { Y = vwap.Point.Last, Component = comRange });
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Vwap Low", new LineShape { Y = vwap.Point.Bar.Low, Component = comRange });
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Vwap High", new LineShape { Y = vwap.Point.Bar.High, Component = comRange });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
+
+      var crossTopDown = point.Last < vwap.Point.Bar.High && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Bar.High);
+      var crossBottomUp = point.Last > vwap.Point.Bar.Low && summary.PointGroups.TakeLast(5).Any(o => o.Last < o.Map["Vwap"].Bar.Low);
+      var crossDown = point.Last < vwap.Point.Last && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Last);
+      var crossUp = point.Last < vwap.Point.Last && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Last);
+      var pos = account.Positions.Values.FirstOrDefault();
+
+      if (crossTopDown && pos?.Side is not OrderSideEnum.Short)
+      {
+        await adapter.DeleteOrders([.. account.Orders.Values]);
+        await ClosePositions(o => o.Side is OrderSideEnum.Long);
+        await OpenPositions(point, 1, OrderSideEnum.Short);
+        return;
+      }
+
+      if (crossBottomUp && pos?.Side is not OrderSideEnum.Long)
+      {
+        await adapter.DeleteOrders([.. account.Orders.Values]);
+        await ClosePositions(o => o.Side is OrderSideEnum.Short);
+        await OpenPositions(point, 1, OrderSideEnum.Long);
+        return;
+      }
     }
 
     /// <summary>
@@ -164,7 +154,17 @@ namespace Terminal.Pages.Shares
         Side = side,
         Volume = volume,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument }
+        Transaction = new() { Instrument = instrument },
+        Orders = [
+          new OrderModel
+          {
+            Side = side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Price = side is OrderSideEnum.Long ? point.Last - 0.5 : point.Last + 0.5,
+            Volume = volume,
+            Type = OrderTypeEnum.Stop,
+            Transaction = new() { Instrument = instrument }
+          }
+        ]
       };
 
       await adapter.CreateOrders(order);

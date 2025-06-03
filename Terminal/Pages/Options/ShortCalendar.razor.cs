@@ -129,7 +129,7 @@ namespace Terminal.Pages.Options
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var performance = Performance.Calculate([account]);
+      var performance = Performance.Update([account]);
       var longOptions = await GetOptions(point, point.Time.Value.AddDays(14));
       var shortOptions = await GetOptions(point, point.Time.Value);
 

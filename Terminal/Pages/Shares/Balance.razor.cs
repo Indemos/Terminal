@@ -113,7 +113,7 @@ namespace Terminal.Pages.Shares
         return;
       }
 
-      var performance = Performance.Calculate([account]);
+      var performance = Performance.Update([account]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
 

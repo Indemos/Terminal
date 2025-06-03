@@ -130,7 +130,7 @@ namespace Terminal.Pages.Options
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var performance = Performance.Calculate([account]);
+      var performance = Performance.Update([account]);
       var options = await GetOptions(point, point.Time.Value);
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)

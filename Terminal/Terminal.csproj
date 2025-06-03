@@ -24,6 +24,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <Content Update="Pages\Shares\Vwap.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
     <Content Update="Pages\Utils\Cointegration.razor">
       <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>

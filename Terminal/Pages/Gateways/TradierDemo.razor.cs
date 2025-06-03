@@ -100,7 +100,7 @@ namespace Terminal.Pages.Gateways
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
       var instrument = account.State[Instrument.Name].Instrument;
-      var performance = Performance.Calculate([account]);
+      var performance = Performance.Update([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
 
