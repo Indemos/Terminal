@@ -93,12 +93,6 @@ namespace Tradier
     }
 
     /// <summary>
-    /// Check active connections
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsConnected() => connections.Any();
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <returns></returns>
@@ -130,18 +124,16 @@ namespace Tradier
           {
             case "quote":
 
-              var quoteMessage = message.Deserialize<QuoteMessage>(this.sender.Options);
+              var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
               var point = GetPrice(quoteMessage);
               var summary = Account.State[quoteMessage.Symbol];
-              var instrument = summary.Instrument;
 
-              point.Instrument = instrument;
-
+              point.Instrument = summary.Instrument;
               summary.Points.Add(point);
-              summary.PointGroups.Add(point, instrument.TimeFrame);
-              instrument.Point = summary.PointGroups.Last();
+              summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+              summary.Instrument.Point = summary.PointGroups.Last();
 
-              DataStream(new MessageModel<PointModel> { Next = instrument.Point });
+              DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
 
               break;
 
@@ -215,19 +207,13 @@ namespace Tradier
       {
         await Unsubscribe(instrument);
 
-        var orders = Account
-          .Orders
-          .Values
-          .SelectMany(o => o.Orders.Select(o => o.Name).Append(o.Name));
+        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
+        Account.State[instrument.Name].Instrument ??= instrument;
 
-        var positions = Account
-          .Positions
+        var names = Account
+          .State
           .Values
-          .Select(o => o.Name);
-
-        var names = orders
-          .Concat(positions)
-          .Append(instrument.Name)
+          .Select(o => o.Instrument.Name)
           .Distinct();
 
         var dataMessage = new DataMessage
@@ -433,7 +419,7 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -441,7 +427,7 @@ namespace Tradier
       {
         try
         {
-          response.Data.Add(await CreateOrder(order));
+          response.Data.Add(await SendOrder(order));
         }
         catch (Exception e)
         {
@@ -459,7 +445,7 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -467,7 +453,7 @@ namespace Tradier
       {
         try
         {
-          if (Equals((await DeleteOrder(order.Transaction.Id)).Status, "ok"))
+          if (Equals((await ClearOrder(order.Transaction.Id))?.Status?.ToUpper(), "OK"))
           {
             response.Data.Add(order);
           }
@@ -526,11 +512,17 @@ namespace Tradier
     /// <param name="order"></param>
     /// <param name="preview"></param>
     /// <returns></returns>
-    protected virtual async Task<OrderModel> CreateOrder(OrderModel order, bool preview = false)
+    protected virtual async Task<OrderModel> SendOrder(OrderModel order, bool preview = false)
     {
+      var response = null as OrderResponseMessage;
+
       Account.Orders[order.Id] = order;
 
-      var response = null as OrderResponseMessage;
+      await Task.WhenAll(order
+        .Orders
+        .Append(order)
+        .Where(o => o.Transaction?.Instrument is not null)
+        .Select(o => Subscribe(o.Transaction.Instrument)));
 
       if (order.Orders.IsEmpty())
       {
@@ -554,7 +546,7 @@ namespace Tradier
       }
 
       order.Transaction.Id = $"{response?.Id}";
-      order.Transaction.Status = Equals(response.Status, "ok") ? OrderStatusEnum.Filled : order.Transaction.Status;
+      order.Transaction.Status = Equals(response?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Transaction.Status;
 
       return order;
     }

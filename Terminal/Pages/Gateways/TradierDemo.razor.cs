@@ -51,9 +51,9 @@ namespace Terminal.Pages.Gateways
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -63,6 +63,9 @@ namespace Terminal.Pages.Gateways
       await base.OnAfterRenderAsync(setup);
     }
 
+    /// <summary>
+    /// Account setup
+    /// </summary>
     protected virtual void CreateAccounts()
     {
       var account = new Account
@@ -126,9 +129,9 @@ namespace Terminal.Pages.Gateways
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
     }
 
     protected double? GetPrice(double direction) => direction > 0 ?
@@ -171,7 +174,7 @@ namespace Terminal.Pages.Gateways
         Orders = [SL, TP]
       };
 
-      await adapter.CreateOrders(order);
+      await adapter.SendOrders(order);
     }
 
     protected async Task ClosePositions(string name)
@@ -192,7 +195,7 @@ namespace Terminal.Pages.Gateways
           }
         };
 
-        await adapter.CreateOrders(order);
+        await adapter.SendOrders(order);
       }
     }
 

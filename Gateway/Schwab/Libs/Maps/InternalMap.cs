@@ -203,8 +203,8 @@ namespace Schwab.Mappers
         ExpirationType = Enum.TryParse(optionMessage.ExpirationType, true, out ExpirationTypeEnum o) ? o : null,
         OpenInterest = optionMessage.OpenInterest ?? 0,
         IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
-        Sigma = optionMessage.Volatility ?? 0,
-        Exposure = variance
+        Volatility = optionMessage.Volatility ?? 0,
+        Variance = variance
       };
 
       if (optionMessage.LastTradingDay is not null)

@@ -53,9 +53,9 @@ namespace Terminal.Pages.Shares
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -137,9 +137,9 @@ namespace Terminal.Pages.Shares
         await OpenPositions(point, 1, OrderSideEnum.Long);
       }
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
@@ -167,7 +167,7 @@ namespace Terminal.Pages.Shares
         Transaction = new() { Instrument = instrument }
       };
 
-      await adapter.CreateOrders(order);
+      await adapter.SendOrders(order);
     }
 
     /// <summary>
@@ -196,7 +196,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.CreateOrders(order);
+          await adapter.SendOrders(order);
 
           response.Add(order);
         }

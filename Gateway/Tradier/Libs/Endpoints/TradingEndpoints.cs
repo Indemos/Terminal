@@ -262,7 +262,7 @@ namespace Tradier
     /// <summary>
     /// Cancel an order using the default account number
     /// </summary>
-    public virtual async Task<OrderResponseMessage> DeleteOrder(string orderId)
+    public virtual async Task<OrderResponseMessage> ClearOrder(string orderId)
     {
       var source = $"{DataUri}/accounts/{Account.Descriptor}/orders/{orderId}";
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Delete);

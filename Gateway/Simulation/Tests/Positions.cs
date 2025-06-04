@@ -56,7 +56,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       Assert.Empty(Account.Deals);
       Assert.Single(Account.Orders);
@@ -109,7 +109,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       var position = Account.Positions[order.Name];
       var openPrice = position.Side is OrderSideEnum.Long ? point.Ask : point.Bid;
@@ -188,7 +188,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       Assert.Empty(Account.Deals);
       Assert.Equal(2, Account.Orders.Count);
@@ -273,7 +273,7 @@ namespace Terminal.Tests
         ]
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -368,7 +368,7 @@ namespace Terminal.Tests
         ]
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       // Increase
 
@@ -380,7 +380,7 @@ namespace Terminal.Tests
         Transaction = new() { Instrument = basis },
       };
 
-      base.CreateOrders(increase);
+      base.SendOrders(increase);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -408,7 +408,7 @@ namespace Terminal.Tests
         Transaction = new() { Instrument = optionShort },
       };
 
-      base.CreateOrders(decrease);
+      base.SendOrders(decrease);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -436,7 +436,7 @@ namespace Terminal.Tests
         Transaction = new() { Instrument = basis },
       };
 
-      base.CreateOrders(close);
+      base.SendOrders(close);
 
       Assert.Equal(2, Account.Deals.Count);
       Assert.Empty(Account.Orders);
@@ -467,7 +467,7 @@ namespace Terminal.Tests
         ]
       };
 
-      base.CreateOrders(closePosition);
+      base.SendOrders(closePosition);
 
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.Orders);
@@ -491,7 +491,7 @@ namespace Terminal.Tests
         Transaction = new() { Instrument = instrument },
       };
 
-      base.CreateOrders(order);
+      base.SendOrders(order);
 
       var reverse = new OrderModel
       {
@@ -501,7 +501,7 @@ namespace Terminal.Tests
         Transaction = new() { Instrument = instrument },
       };
 
-      base.CreateOrders(reverse);
+      base.SendOrders(reverse);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -553,8 +553,8 @@ namespace Terminal.Tests
         },
       };
 
-      base.CreateOrders(orderX);
-      base.CreateOrders(orderY);
+      base.SendOrders(orderX);
+      base.SendOrders(orderY);
 
       Assert.Empty(Account.Orders);
       Assert.Equal(2, Account.Positions.Count);

@@ -52,9 +52,9 @@ namespace Terminal.Pages.Options
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -136,7 +136,7 @@ namespace Terminal.Pages.Options
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var orders = GetOrders(point, longOptions, shortOptions);
-        await adapter.CreateOrders([.. orders]);
+        await adapter.SendOrders([.. orders]);
       }
 
       if (account.Positions.Count > 0)
@@ -145,9 +145,9 @@ namespace Terminal.Pages.Options
         await UpdateShares(point);
       }
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
@@ -271,7 +271,7 @@ namespace Terminal.Pages.Options
         }
 
         shortOrder.Type = OrderTypeEnum.Market;
-        await adapter.CreateOrders([shortOrder]);
+        await adapter.SendOrders([shortOrder]);
       }
     }
 
@@ -317,7 +317,7 @@ namespace Terminal.Pages.Options
           Transaction = new() { Instrument = point.Instrument }
         };
 
-        await adapter.CreateOrders([order]);
+        await adapter.SendOrders([order]);
       }
     }
 
@@ -346,7 +346,7 @@ namespace Terminal.Pages.Options
             }
           };
 
-          await adapter.CreateOrders(order);
+          await adapter.SendOrders(order);
         }
       }
     }
@@ -360,7 +360,7 @@ namespace Terminal.Pages.Options
     {
       var volume = order.Volume;
       var units = order.Transaction?.Instrument?.Leverage;
-      var delta = order.Transaction?.Instrument?.Derivative?.Exposure?.Delta;
+      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;

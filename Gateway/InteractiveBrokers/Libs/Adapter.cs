@@ -77,12 +77,6 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Check active connections
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsConnected() => client?.ClientSocket?.IsConnected() ?? false;
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
@@ -128,6 +122,9 @@ namespace InteractiveBrokers
       try
       {
         await Unsubscribe(instrument);
+
+        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
+        Account.State[instrument.Name].Instrument ??= instrument;
 
         var id = subscriptions[instrument.Name] = counter++;
         var contracts = await GetContracts(instrument);
@@ -311,7 +308,7 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -323,7 +320,7 @@ namespace InteractiveBrokers
 
           foreach (var inOrder in inOrders)
           {
-            response.Data.Add((await CreateOrder(inOrder)).Data);
+            response.Data.Add((await SendOrder(inOrder)).Data);
           }
         }
         catch (Exception e)
@@ -342,13 +339,13 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Data.Add((await DeleteOrder(order)).Data);
+        response.Data.Add((await ClearOrder(order)).Data);
       }
 
       await GetAccount([]);
@@ -605,9 +602,9 @@ namespace InteractiveBrokers
         if (Equals(id, message.RequestId))
         {
           instrument.Derivative ??= new DerivativeModel();
-          instrument.Derivative.Sigma = value(message.ImpliedVolatility, 0, max, instrument.Derivative.Sigma);
+          instrument.Derivative.Volatility = value(message.ImpliedVolatility, 0, max, instrument.Derivative.Volatility);
 
-          var variance = instrument.Derivative.Exposure ??= new VarianceModel();
+          var variance = instrument.Derivative.Variance ??= new VarianceModel();
 
           variance.Delta = value(message.Delta, -1, 1, variance.Delta);
           variance.Gamma = value(message.Gamma, 0, max, variance.Gamma);
@@ -643,7 +640,8 @@ namespace InteractiveBrokers
 
           summary.Points.Add(point);
           summary.PointGroups.Add(point, instrument.TimeFrame);
-          instrument.Point = summary.PointGroups.Last();
+          summary.Instrument = instrument;
+          summary.Instrument.Point = summary.PointGroups.Last();
 
           DataStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
@@ -752,7 +750,7 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
       Account.Orders[order.Id] = order;
 
@@ -803,7 +801,7 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> ClearOrder(OrderModel order)
     {
       var response = new ResponseModel<OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);

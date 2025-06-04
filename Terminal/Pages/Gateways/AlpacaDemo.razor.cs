@@ -36,6 +36,11 @@ namespace Terminal.Pages.Gateways
       TimeFrame = TimeSpan.FromMinutes(1)
     };
 
+    /// <summary>
+    /// Setup
+    /// </summary>
+    /// <param name="setup"></param>
+    /// <returns></returns>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
@@ -52,9 +57,9 @@ namespace Terminal.Pages.Gateways
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -64,6 +69,9 @@ namespace Terminal.Pages.Gateways
       await base.OnAfterRenderAsync(setup);
     }
 
+    /// <summary>
+    /// Account setup
+    /// </summary>
     protected virtual void CreateAccounts()
     {
       var account = new Account
@@ -97,6 +105,11 @@ namespace Terminal.Pages.Gateways
         });
     }
 
+    /// <summary>
+    /// Tick data
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
     protected async Task OnData(PointModel point)
     {
       var name = Instrument.Name;
@@ -128,15 +141,26 @@ namespace Terminal.Pages.Gateways
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", new LineShape { Y = performance.Point.Last });
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
     }
 
+    /// <summary>
+    /// Bid or Ask for order
+    /// </summary>
+    /// <param name="direction"></param>
+    /// <returns></returns>
     protected double? GetPrice(double direction) => direction > 0 ?
       Instrument.Point.Ask :
       Instrument.Point.Bid;
 
+    /// <summary>
+    /// Open positions
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <param name="direction"></param>
+    /// <returns></returns>
     protected async Task OpenPositions(InstrumentModel instrument, double direction)
     {
       var adapter = View.Adapters["Prime"];
@@ -173,9 +197,14 @@ namespace Terminal.Pages.Gateways
         //Orders = [SL, TP]
       };
 
-      await adapter.CreateOrders(order);
+      await adapter.SendOrders(order);
     }
 
+    /// <summary>
+    /// Close positions
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
     protected async Task ClosePositions(string name)
     {
       var adapter = View.Adapters["Prime"];
@@ -194,7 +223,7 @@ namespace Terminal.Pages.Gateways
           }
         };
 
-        await adapter.CreateOrders(order);
+        await adapter.SendOrders(order);
       }
     }
 

@@ -261,14 +261,14 @@ namespace Tradier
         TradeDate = message.ExpirationDate,
         ExpirationDate = message.ExpirationDate,
         OpenInterest = message.OpenInterest ?? 0,
-        Sigma = message?.Greeks?.SmvIV ?? 0,
+        Volatility = message?.Greeks?.SmvIV ?? 0,
       };
 
       var greeks = message?.Greeks;
 
       if (greeks is not null)
       {
-        derivative.Exposure = new VarianceModel
+        derivative.Variance = new VarianceModel
         {
           Rho = greeks.Rho ?? 0,
           Vega = greeks.Vega ?? 0,

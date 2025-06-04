@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Models;
 using Terminal.Services;
 
 namespace Terminal.Components
@@ -14,11 +14,11 @@ namespace Terminal.Components
   {
     [Parameter] public virtual string Name { get; set; }
 
-    public struct OrderRecord
+    public struct Row
     {
       public string Name { get; set; }
       public string Group { get; set; }
-      public string Type { get; set; }
+      public OrderTypeEnum? Type { get; set; }
       public double Size { get; set; }
       public double Price { get; set; }
       public DateTime? Time { get; set; }
@@ -38,7 +38,7 @@ namespace Terminal.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected virtual IList<OrderRecord> Items { get; set; } = [];
+    protected virtual IList<Row> Items { get; set; } = [];
 
     /// <summary>
     /// Setup views
@@ -63,26 +63,32 @@ namespace Terminal.Components
     /// <summary>
     /// Update table records 
     /// </summary>
-    /// <param name="items"></param>
-    public virtual void UpdateItems(IEnumerable<OrderModel> items)
+    /// <param name="adapters"></param>
+    public virtual void UpdateItems(params IGateway[] adapters)
     {
-      if (Subscription.State.Next is SubscriptionEnum.None)
+      if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
       {
-        return;
-      }
+        Items = adapters.SelectMany(adapter =>
+        {
+          var orders = adapter.Account.Orders.Values;
+          var positions = adapter.Account.Positions.Values;
+          var subOrders = orders.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
+          var subPositions = positions.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
 
-      if (Update.IsCompleted)
-      {
-        Items = [.. items.Select(o => new OrderRecord
+          return subOrders.Concat(subPositions.SelectMany(o => o.Orders));
+
+        })
+        .Select(o => new Row
         {
           Name = o.Name,
-          Type = $"{o.Type}",
+          Type = o.Type,
           Time = o.Transaction.Time,
           Group = o.BasisName ?? o.Name,
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.Transaction.Volume ?? 0,
           Price = o.Price ?? 0,
-        })];
+
+        }).ToList();
 
         Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
       }

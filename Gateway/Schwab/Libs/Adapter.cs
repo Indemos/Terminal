@@ -99,12 +99,6 @@ namespace Schwab
     }
 
     /// <summary>
-    /// Check active connections
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsConnected() => connections.Any();
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
@@ -167,6 +161,10 @@ namespace Schwab
         var streamData = userData.Streamer.FirstOrDefault();
 
         await Unsubscribe(instrument);
+
+        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
+        Account.State[instrument.Name].Instrument ??= instrument;
+
         await SendStream(streamer, new StreamInputMessage
         {
           Requestid = ++counter,
@@ -291,7 +289,7 @@ namespace Schwab
           ["symbol"] = screener?.Instrument?.Name,
           ["toDate"] = $"{screener?.MaxDate:yyyy-MM-dd}",
           ["fromDate"] = $"{screener?.MinDate:yyyy-MM-dd}",
-          ["strikeCount"] = screener?.Count ?? int.MaxValue
+          ["strikeCount"] = screener?.Count ?? byte.MaxValue
 
         }.Merge(criteria);
 
@@ -402,7 +400,7 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -410,7 +408,7 @@ namespace Schwab
       {
         try
         {
-          response.Data.Add((await CreateOrder(order)).Data);
+          response.Data.Add((await SendOrder(order)).Data);
         }
         catch (Exception e)
         {
@@ -428,7 +426,7 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -436,7 +434,7 @@ namespace Schwab
       {
         try
         {
-          response.Data.Add((await DeleteOrder(order)).Data);
+          response.Data.Add((await ClearOrder(order)).Data);
         }
         catch (Exception e)
         {
@@ -708,11 +706,10 @@ namespace Schwab
         {
           var instrumentName = $"{data.Get("key")}";
           var summary = Account.State[instrumentName];
-          var instrument = summary.Instrument;
           var point = new PointModel();
 
           point.Time = DateTime.Now;
-          point.Instrument = instrument;
+          point.Instrument = summary.Instrument;
           point.Bid = parse($"{data.Get(map.Get("Bid Price"))}", point.Bid);
           point.Ask = parse($"{data.Get(map.Get("Ask Price"))}", point.Ask);
           point.BidSize = parse($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
@@ -729,10 +726,10 @@ namespace Schwab
           }
 
           summary.Points.Add(point);
-          summary.PointGroups.Add(point, instrument.TimeFrame);
-          instrument.Point = summary.PointGroups.Last();
+          summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+          summary.Instrument.Point = summary.PointGroups.Last();
 
-          DataStream(new MessageModel<PointModel> { Next = instrument.Point });
+          DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
         }
       }
     }
@@ -879,7 +876,7 @@ namespace Schwab
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
       Account.Orders[order.Id] = order;
 
@@ -911,7 +908,7 @@ namespace Schwab
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> DeleteOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> ClearOrder(OrderModel order)
     {
       var response = new ResponseModel<OrderModel>();
       var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);

@@ -51,9 +51,9 @@ namespace Terminal.Pages.Shares
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -78,7 +78,7 @@ namespace Terminal.Pages.Shares
       {
         Speed = 1,
         Account = account,
-        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
+        Source = Configuration["Simulation:Source"]
       };
 
       Range = new VwapIndicator { Name = "Vwap" };
@@ -102,9 +102,9 @@ namespace Terminal.Pages.Shares
       var comPrice = new ComponentModel { Size = 3, Color = SKColors.OrangeRed };
       var comRange = new ComponentModel { Size = 1, Color = SKColors.DimGray };
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Price", new LineShape { Y = point.Last, Component = comPrice });
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Vwap", new LineShape { Y = vwap.Point.Last, Component = comRange });
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Vwap Low", new LineShape { Y = vwap.Point.Bar.Low, Component = comRange });
@@ -114,13 +114,11 @@ namespace Terminal.Pages.Shares
 
       var crossTopDown = point.Last < vwap.Point.Bar.High && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Bar.High);
       var crossBottomUp = point.Last > vwap.Point.Bar.Low && summary.PointGroups.TakeLast(5).Any(o => o.Last < o.Map["Vwap"].Bar.Low);
-      var crossDown = point.Last < vwap.Point.Last && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Last);
-      var crossUp = point.Last < vwap.Point.Last && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Last);
       var pos = account.Positions.Values.FirstOrDefault();
 
       if (crossTopDown && pos?.Side is not OrderSideEnum.Short)
       {
-        await adapter.DeleteOrders([.. account.Orders.Values]);
+        await adapter.ClearOrders([.. account.Orders.Values]);
         await ClosePositions(o => o.Side is OrderSideEnum.Long);
         await OpenPositions(point, 1, OrderSideEnum.Short);
         return;
@@ -128,7 +126,7 @@ namespace Terminal.Pages.Shares
 
       if (crossBottomUp && pos?.Side is not OrderSideEnum.Long)
       {
-        await adapter.DeleteOrders([.. account.Orders.Values]);
+        await adapter.ClearOrders([.. account.Orders.Values]);
         await ClosePositions(o => o.Side is OrderSideEnum.Short);
         await OpenPositions(point, 1, OrderSideEnum.Long);
         return;
@@ -167,7 +165,7 @@ namespace Terminal.Pages.Shares
         ]
       };
 
-      await adapter.CreateOrders(order);
+      await adapter.SendOrders(order);
     }
 
     /// <summary>
@@ -196,7 +194,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.CreateOrders(order);
+          await adapter.SendOrders(order);
 
           response.Add(order);
         }

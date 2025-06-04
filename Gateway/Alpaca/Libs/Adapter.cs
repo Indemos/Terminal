@@ -64,12 +64,6 @@ namespace Alpaca
     }
 
     /// <summary>
-    /// Check active connections
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsConnected() => dataClients.Any();
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
@@ -116,6 +110,9 @@ namespace Alpaca
       async Task subscribe<T>() where T : class, IStreamingDataClient
       {
         await Unsubscribe(instrument);
+
+        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
+        Account.State[instrument.Name].Instrument ??= instrument;
 
         var client = streamingClients[instrument.Type.Value] as T;
         var onPointSub = client.GetQuoteSubscription(instrument.Name);
@@ -216,7 +213,6 @@ namespace Alpaca
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    /// <param name="criteria"></param>
     /// <returns></returns>
     public override async Task<ResponseModel<Dom.IAccount>> GetAccount(Hashtable criteria)
     {
@@ -455,7 +451,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
 
@@ -463,11 +459,9 @@ namespace Alpaca
       {
         try
         {
-          var subOrders = ComposeOrders(order);
-
-          foreach (var subOrder in subOrders)
+          foreach (var subOrder in ComposeOrders(order))
           {
-            response.Data.Add((await CreateOrder(subOrder)).Data);
+            response.Data.Add((await SendOrder(subOrder)).Data);
           }
         }
         catch (Exception e)
@@ -486,7 +480,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -505,7 +499,7 @@ namespace Alpaca
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> CreateOrder(OrderModel order)
+    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
       Account.Orders[order.Id] = order;
 
@@ -532,15 +526,13 @@ namespace Alpaca
       scheduler.Send(() =>
       {
         var summary = Account.State.Get(streamPoint.Symbol);
-        var instrument = summary.Instrument ?? new InstrumentModel();
-        var point = InternalMap.GetPrice(streamPoint, instrument);
+        var point = InternalMap.GetPrice(streamPoint, summary.Instrument);
 
         summary.Points.Add(point);
-        summary.PointGroups.Add(point, instrument.TimeFrame);
-        instrument.Name = streamPoint.Symbol;
-        instrument.Point = summary.PointGroups.Last();
+        summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+        summary.Instrument.Point = summary.PointGroups.Last();
 
-        DataStream(new MessageModel<PointModel> { Next = instrument.Point });
+        DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
       });
     }
 

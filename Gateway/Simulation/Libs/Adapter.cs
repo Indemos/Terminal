@@ -78,12 +78,6 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Check active connections
-    /// </summary>
-    /// <returns></returns>
-    public override bool IsConnected() => connections.Any();
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
@@ -122,6 +116,9 @@ namespace Simulation
       var response = new ResponseModel<StatusEnum>();
 
       await Unsubscribe(instrument);
+
+      Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
+      Account.State[instrument.Name].Instrument ??= instrument;
 
       DataStream += OnPoint;
 
@@ -226,7 +223,7 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>> { Data = [] };
       var validator = InstanceService<OrderPriceValidator>.Instance;
@@ -267,7 +264,7 @@ namespace Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
       var response = new ResponseModel<IList<OrderModel>>
       {

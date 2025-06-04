@@ -28,6 +28,7 @@ namespace Terminal.Pages.Utils
     [Inject] ISnackbar Snackbar { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
 
+    protected bool IsConnected { get; set; }
     protected List<IDisposable> Subscriptions { get; set; } = [];
     protected Dictionary<string, Dictionary<string, CanvasView>> Groups { get; set; } = [];
 
@@ -395,7 +396,7 @@ namespace Terminal.Pages.Utils
       {
         var x = option.Point;
         var o = option.Derivative;
-        var v = o.Exposure;
+        var v = o.Variance;
 
         vars[$"{side}{nameof(v.Vega)}"] = vars.Get($"{side}{nameof(v.Vega)}") + v.Vega.Value;
         vars[$"{side}{nameof(v.Gamma)}"] = vars.Get($"{side}{nameof(v.Gamma)}") + v.Gamma.Value;
@@ -404,7 +405,7 @@ namespace Terminal.Pages.Utils
         vars[$"{side}{nameof(x.BidSize)}"] = vars.Get($"{side}{nameof(x.BidSize)}") + x.BidSize.Value;
         vars[$"{side}{nameof(x.AskSize)}"] = vars.Get($"{side}{nameof(x.AskSize)}") + x.AskSize.Value;
         vars[$"{side}{nameof(x.Volume)}"] = vars.Get($"{side}{nameof(x.Volume)}") + x.Volume.Value;
-        vars[$"{side}{nameof(o.Sigma)}"] = vars.Get($"{side}{nameof(o.Sigma)}") + o.Sigma.Value;
+        vars[$"{side}{nameof(o.Volatility)}"] = vars.Get($"{side}{nameof(o.Volatility)}") + o.Volatility.Value;
         vars[$"{side}{nameof(o.OpenInterest)}"] = vars.Get($"{side}{nameof(o.OpenInterest)}") + o.OpenInterest.Value;
         vars[$"{side}{nameof(o.IntrinsicValue)}"] = vars.Get($"{side}{nameof(o.IntrinsicValue)}") + o.IntrinsicValue.Value;
       }
@@ -456,9 +457,10 @@ namespace Terminal.Pages.Utils
       var interval = new Timer(TimeSpan.FromMinutes(1));
       var scheduler = InstanceService<ScheduleService>.Instance;
 
-      if (adapter.IsConnected() is false)
+      if (IsConnected is false)
       {
         await adapter.Connect();
+        IsConnected = true;
       }
 
       var options = await adapter.GetOptions(null, new Hashtable

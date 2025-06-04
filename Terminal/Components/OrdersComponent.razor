@@ -23,7 +23,7 @@
               @($"{context.Item.Time:yyyy-MM-dd HH:mm:ss}")
             </CellTemplate>
           </PropertyColumn>
-          <PropertyColumn Property="o => o.Name" Title="Instrument" Grouping GroupBy="new Func<OrderRecord, string>(o => o.Group)">
+          <PropertyColumn Property="o => o.Name" Title="Instrument" Grouping GroupBy="new Func<Row, string>(o => o.Group)">
             <GroupTemplate>
               <span>Group: @context.Grouping.Key</span>
             </GroupTemplate>
@@ -38,7 +38,7 @@
           <PropertyColumn Property="o => o.Type" Title="Type" />
         </Columns>
         <PagerContent>
-          <MudDataGridPager T="OrderRecord" />
+          <MudDataGridPager T="Row" />
         </PagerContent>
       </MudDataGrid>
     </ChildContent>

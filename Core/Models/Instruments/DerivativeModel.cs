@@ -24,7 +24,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Implied volatility
     /// </summary>
-    public virtual double? Sigma { get; set; }
+    public virtual double? Volatility { get; set; }
 
     /// <summary>
     /// CALL or PUT
@@ -49,7 +49,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Option metrics
     /// </summary>
-    public virtual VarianceModel Exposure { get; set; }
+    public virtual VarianceModel Variance { get; set; }
 
     /// <summary>
     /// Clone

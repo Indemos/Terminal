@@ -16,11 +16,6 @@ namespace Terminal.Core.Domains
     IAccount Account { get; set; }
 
     /// <summary>
-    /// Connection
-    /// </summary>
-    bool IsConnected();
-
-    /// <summary>
     /// Point stream
     /// </summary>
     Action<MessageModel<PointModel>> DataStream { get; set; }
@@ -105,13 +100,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders);
+    Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders);
+    Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders);
   }
 
   /// <summary>
@@ -142,11 +137,6 @@ namespace Terminal.Core.Domains
       DataStream = o => { };
       OrderStream = o => { };
     }
-
-    /// <summary>
-    /// Connection
-    /// </summary>
-    public abstract bool IsConnected();
 
     /// <summary>
     /// Connect
@@ -224,13 +214,13 @@ namespace Terminal.Core.Domains
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseModel<IList<OrderModel>>> CreateOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseModel<IList<OrderModel>>> DeleteOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Dispose
@@ -238,25 +228,11 @@ namespace Terminal.Core.Domains
     public virtual void Dispose() => Disconnect();
 
     /// <summary>
-    /// Update points
-    /// </summary>
-    /// <param name="point"></param>
-    protected virtual IList<IAccount> SetupAccounts(params IAccount[] accounts)
-    {
-      foreach (var account in accounts)
-      {
-        account.InitialBalance = account.Balance;
-      }
-
-      return accounts;
-    }
-
-    /// <summary>
     /// Create separate orders when combo-orders are not supported
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual IList<OrderModel> ComposeOrders(OrderModel order)
+    public virtual IList<OrderModel> ComposeOrders(OrderModel order)
     {
       OrderModel merge(OrderModel subOrder, OrderModel group)
       {
@@ -291,6 +267,20 @@ namespace Terminal.Core.Domains
       }
 
       return nextOrders;
+    }
+
+    /// <summary>
+    /// Setup accounts
+    /// </summary>
+    /// <param name="point"></param>
+    protected virtual IList<IAccount> SetupAccounts(params IAccount[] accounts)
+    {
+      foreach (var account in accounts)
+      {
+        account.InitialBalance = account.Balance;
+      }
+
+      return accounts;
     }
   }
 }

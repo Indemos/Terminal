@@ -209,32 +209,32 @@ namespace Terminal.Pages.Utils
       try
       {
         ce.Variables["Volume"] = option.Point.Volume;
-        ce.Variables["Sigma"] = o.Sigma;
+        ce.Variables["Sigma"] = o.Volatility;
         ce.Variables["OpenInterest"] = o.OpenInterest;
         ce.Variables["IntrinsicValue"] = o.IntrinsicValue;
         ce.Variables["Bid"] = option.Point.Bid;
         ce.Variables["Ask"] = option.Point.Ask;
         ce.Variables["BidSize"] = option.Point.BidSize;
         ce.Variables["AskSize"] = option.Point.AskSize;
-        ce.Variables["Vega"] = o.Exposure.Vega;
-        ce.Variables["Gamma"] = o.Exposure.Gamma;
-        ce.Variables["Theta"] = o.Exposure.Theta;
-        ce.Variables["Delta"] = o.Exposure.Delta;
+        ce.Variables["Vega"] = o.Variance.Vega;
+        ce.Variables["Gamma"] = o.Variance.Gamma;
+        ce.Variables["Theta"] = o.Variance.Theta;
+        ce.Variables["Delta"] = o.Variance.Delta;
 
         if (o.Side is OptionSideEnum.Put)
         {
           ce.Variables["PVolume"] = option.Point.Volume;
-          ce.Variables["PSigma"] = o.Sigma;
+          ce.Variables["PSigma"] = o.Volatility;
           ce.Variables["POpenInterest"] = o.OpenInterest;
           ce.Variables["PIntrinsicValue"] = o.IntrinsicValue;
           ce.Variables["PBid"] = option.Point.Bid;
           ce.Variables["PAsk"] = option.Point.Ask;
           ce.Variables["PBidSize"] = option.Point.BidSize;
           ce.Variables["PAskSize"] = option.Point.AskSize;
-          ce.Variables["PVega"] = o.Exposure.Vega;
-          ce.Variables["PGamma"] = o.Exposure.Gamma;
-          ce.Variables["PTheta"] = o.Exposure.Theta;
-          ce.Variables["PDelta"] = o.Exposure.Delta;
+          ce.Variables["PVega"] = o.Variance.Vega;
+          ce.Variables["PGamma"] = o.Variance.Gamma;
+          ce.Variables["PTheta"] = o.Variance.Theta;
+          ce.Variables["PDelta"] = o.Variance.Delta;
 
           ce.Variables["CVolume"] = 0.0;
           ce.Variables["CSigma"] = 0.0;
@@ -266,17 +266,17 @@ namespace Terminal.Pages.Utils
           ce.Variables["PDelta"] = 0.0;
 
           ce.Variables["CVolume"] = option.Point.Volume;
-          ce.Variables["CVolatility"] = o.Sigma;
+          ce.Variables["CVolatility"] = o.Volatility;
           ce.Variables["COpenInterest"] = o.OpenInterest;
           ce.Variables["CIntrinsicValue"] = o.IntrinsicValue;
           ce.Variables["CBidSize"] = option.Point.BidSize;
           ce.Variables["CAskSize"] = option.Point.AskSize;
           ce.Variables["CBid"] = option.Point.Bid;
           ce.Variables["CAsk"] = option.Point.Ask;
-          ce.Variables["CVega"] = o.Exposure.Vega;
-          ce.Variables["CGamma"] = o.Exposure.Gamma;
-          ce.Variables["CTheta"] = o.Exposure.Theta;
-          ce.Variables["CDelta"] = o.Exposure.Delta;
+          ce.Variables["CVega"] = o.Variance.Vega;
+          ce.Variables["CGamma"] = o.Variance.Gamma;
+          ce.Variables["CTheta"] = o.Variance.Theta;
+          ce.Variables["CDelta"] = o.Variance.Delta;
         }
 
         return Convert.ToDouble(ce.Evaluate(expression));

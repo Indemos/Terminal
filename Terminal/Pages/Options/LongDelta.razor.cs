@@ -55,9 +55,9 @@ namespace Terminal.Pages.Options
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -113,7 +113,7 @@ namespace Terminal.Pages.Options
       {
         Speed = 1,
         Account = account,
-        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
+        Source = Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -139,19 +139,19 @@ namespace Terminal.Pages.Options
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var orders = GetOrders(point, options);
-        await adapter.CreateOrders([.. orders]);
+        await adapter.SendOrders([.. orders]);
       }
 
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
         var orders = GetUpdates(point, basisDelta, optionDelta);
-        await adapter.CreateOrders([.. orders]);
+        await adapter.SendOrders([.. orders]);
       }
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
@@ -297,7 +297,7 @@ namespace Terminal.Pages.Options
     {
       var volume = order.Volume;
       var units = order.Transaction?.Instrument?.Leverage;
-      var delta = order.Transaction?.Instrument?.Derivative?.Exposure?.Delta;
+      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;

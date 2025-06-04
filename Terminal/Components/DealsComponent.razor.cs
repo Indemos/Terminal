@@ -4,8 +4,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Models;
 using Terminal.Services;
 
 namespace Terminal.Components
@@ -14,7 +14,7 @@ namespace Terminal.Components
   {
     [Parameter] public virtual string Name { get; set; }
 
-    public struct PositionRecord
+    public struct Row
     {
       public string Name { get; set; }
       public string Group { get; set; }
@@ -39,7 +39,7 @@ namespace Terminal.Components
     /// <summary>
     /// Table records
     /// </summary>
-    protected virtual IList<PositionRecord> Items { get; set; } = [];
+    protected virtual IList<Row> Items { get; set; } = [];
 
     /// <summary>
     /// Setup views
@@ -64,17 +64,20 @@ namespace Terminal.Components
     /// <summary>
     /// Update table records 
     /// </summary>
-    /// <param name="items"></param>
-    public virtual void UpdateItems(IEnumerable<OrderModel> items)
+    /// <param name="account"></param>
+    public virtual void UpdateItems(params IGateway[] adapters)
     {
-      if (Subscription.State.Next is SubscriptionEnum.None)
+      if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
       {
-        return;
-      }
+        Items = adapters.SelectMany(adapter =>
+        {
+          var orders = adapter.Account.Deals;
+          var subOrders = orders.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
 
-      if (Update.IsCompleted)
-      {
-        Items = [.. items.Select(o => new PositionRecord
+          return subOrders;
+
+        })
+        .Select(o => new Row
         {
           Name = o.Name,
           Group = o.BasisName ?? o.Name,
@@ -84,7 +87,8 @@ namespace Terminal.Components
           OpenPrice = o.Price ?? 0,
           ClosePrice = o.Transaction.Price ?? 0,
           Gain = o.GetGainEstimate(o.Transaction.Price) ?? o.Gain ?? 0
-        })];
+
+        }).ToList();
 
         Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
       }

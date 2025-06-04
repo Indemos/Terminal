@@ -53,9 +53,9 @@ namespace Terminal.Pages.Shares
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -142,9 +142,9 @@ namespace Terminal.Pages.Shares
 
       var rangeCom = new ComponentModel { Color = range > 0 ? SKColors.DeepSkyBlue : SKColors.OrangeRed };
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Range", new AreaShape { Y = range, Component = rangeCom });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
@@ -174,7 +174,7 @@ namespace Terminal.Pages.Shares
         Transaction = new() { Instrument = assetBuy }
       };
 
-      adapter.CreateOrders(orderBuy, orderSell);
+      adapter.SendOrders(orderBuy, orderSell);
     }
 
     /// <summary>
@@ -202,7 +202,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.CreateOrders(order);
+          await adapter.SendOrders(order);
         }
       }
     }

@@ -58,9 +58,9 @@ namespace Terminal.Pages.Shares
 
               var account = View.Adapters["Prime"].Account;
 
-              DealsView.UpdateItems(account.Deals);
-              OrdersView.UpdateItems(account.Orders.Values);
-              PositionsView.UpdateItems(account.Positions.Values);
+              DealsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -156,9 +156,9 @@ namespace Terminal.Pages.Shares
       var upCom = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var downCom = new ComponentModel { Color = SKColors.OrangeRed };
 
-      DealsView.UpdateItems(account.Deals);
-      OrdersView.UpdateItems(account.Orders.Values);
-      PositionsView.UpdateItems(account.Positions.Values);
+      DealsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
       PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Longs", new AreaShape { Y = ups?.GetPointsEstimate() ?? 0, Component = upCom });
       PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Shorts", new AreaShape { Y = downs?.GetPointsEstimate() ?? 0, Component = downCom });
       DollarsView.UpdateItems(point.Time.Value.Ticks, "Dollars", "Longs", new AreaShape { Y = ups?.GetGainEstimate() ?? 0, Component = upCom });
@@ -182,7 +182,7 @@ namespace Terminal.Pages.Shares
         Transaction = new() { Instrument = instrument }
       };
 
-      await adapter.CreateOrders(order);
+      await adapter.SendOrders(order);
     }
 
     /// <summary>
@@ -210,7 +210,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.CreateOrders(order);
+          await adapter.SendOrders(order);
         }
       }
     }
