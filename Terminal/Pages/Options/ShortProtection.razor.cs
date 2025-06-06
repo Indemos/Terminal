@@ -113,7 +113,7 @@ namespace Terminal.Pages.Options
       {
         Speed = 1,
         Account = account,
-        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
+        Source = Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
