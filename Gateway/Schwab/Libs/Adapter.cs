@@ -121,7 +121,7 @@ namespace Schwab
 
         accountCode = (await GetAccountCode()).Data;
 
-        await GetAccount([]);
+        await GetAccount();
         await GetConnection(streamer, scheduler);
 
         interval.Enabled = true;
@@ -275,10 +275,9 @@ namespace Schwab
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
 
@@ -286,10 +285,10 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["symbol"] = screener?.Instrument?.Name,
-          ["toDate"] = $"{screener?.MaxDate:yyyy-MM-dd}",
-          ["fromDate"] = $"{screener?.MinDate:yyyy-MM-dd}",
-          ["strikeCount"] = screener?.Count ?? byte.MaxValue
+          ["symbol"] = criteria?.Instrument?.Name,
+          ["toDate"] = $"{criteria?.MaxDate:yyyy-MM-dd}",
+          ["fromDate"] = $"{criteria?.MinDate:yyyy-MM-dd}",
+          ["strikeCount"] = byte.MaxValue
 
         }.Merge(criteria);
 
@@ -317,16 +316,16 @@ namespace Schwab
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
       var response = new ResponseModel<DomModel>();
 
       try
       {
-        var dom = Account.State[screener.Instrument.Name].Dom;
+        var instrument = criteria.Instrument;
+        var dom = Account.State[instrument.Name].Dom;
 
         if (dom.Bids.Count is not 0 && dom.Asks.Count is not 0)
         {
@@ -337,13 +336,13 @@ namespace Schwab
         var props = new Hashtable
         {
           ["indicative"] = false,
-          ["symbols"] = screener.Instrument.Name,
+          ["symbols"] = instrument.Name,
           ["fields"] = "quote,fundamental,extended,reference,regular"
 
         }.Merge(criteria);
 
         var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
-        var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]], screener.Instrument);
+        var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]], instrument);
 
         response.Data = new DomModel
         {
@@ -362,10 +361,9 @@ namespace Schwab
     /// <summary>
     /// Get historical ticks
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
@@ -416,7 +414,7 @@ namespace Schwab
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -442,7 +440,7 @@ namespace Schwab
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -450,9 +448,7 @@ namespace Schwab
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
+    public override async Task<ResponseModel<IAccount>> GetAccount()
     {
       var response = new ResponseModel<IAccount>();
 
@@ -460,8 +456,8 @@ namespace Schwab
       {
         var accountProps = new Hashtable { ["fields"] = "positions" };
         var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{accountProps.Query()}");
-        var orders = await GetOrders(null, criteria);
-        var positions = await GetPositions(null, criteria);
+        var orders = await GetOrders();
+        var positions = await GetPositions();
 
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
@@ -489,10 +485,9 @@ namespace Schwab
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -526,10 +521,9 @@ namespace Schwab
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 

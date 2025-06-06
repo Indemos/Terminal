@@ -163,14 +163,14 @@ namespace Terminal.Pages.Options
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var screener = new InstrumentScreenerModel
+      var screener = new ConditionModel
       {
         MinDate = date,
         MaxDate = date,
         Instrument = point.Instrument
       };
 
-      return (await adapter.GetOptions(screener, [])).Data;
+      return (await adapter.GetOptions(screener)).Data;
     }
 
     /// <summary>

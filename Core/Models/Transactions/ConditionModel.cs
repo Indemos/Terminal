@@ -1,23 +1,23 @@
 using System;
+using System.Collections;
 using Terminal.Core.Domains;
-using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-  public class InstrumentScreenerModel
+  public class ConditionModel : Hashtable
   {
     /// <summary>
-    /// Strike count
+    /// Count
     /// </summary>
-    public virtual int? Count { get; set; }
+    public virtual int? Span { get; set; }
 
     /// <summary>
-    /// Min strike
+    /// Start date
     /// </summary>
     public virtual double? MinPrice { get; set; }
 
     /// <summary>
-    /// Max strike
+    /// End date
     /// </summary>
     public virtual double? MaxPrice { get; set; }
 
@@ -32,12 +32,7 @@ namespace Terminal.Core.Models
     public virtual DateTime? MaxDate { get; set; }
 
     /// <summary>
-    /// Side
-    /// </summary>
-    public virtual OptionSideEnum? Side { get; set; }
-
-    /// <summary>
-    /// Instrument
+    /// Asset
     /// </summary>
     public virtual InstrumentModel Instrument { get; set; }
   }

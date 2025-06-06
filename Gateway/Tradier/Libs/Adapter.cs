@@ -115,7 +115,7 @@ namespace Tradier
         this.dataSession = (await GetMarketSession())?.Stream?.Session;
         this.accountSession = (await GetAccountSession()).Stream?.Session;
 
-        await GetAccount([]);
+        await GetAccount();
         await GetConnection("/markets/events", dataStreamer, scheduler, message =>
         {
           var messageType = $"{message["type"]}";
@@ -261,7 +261,7 @@ namespace Tradier
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
+    public override async Task<ResponseModel<IAccount>> GetAccount()
     {
       var response = new ResponseModel<IAccount>();
 
@@ -269,8 +269,8 @@ namespace Tradier
       {
         var num = Account.Descriptor;
         var account = await GetBalances(num);
-        var orders = await GetOrders(null, criteria);
-        var positions = await GetPositions(null, criteria);
+        var orders = await GetOrders();
+        var positions = await GetPositions();
         var openOrders = orders.Data.Where(o => o.Transaction.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
 
         Account.Balance = account.TotalEquity;
@@ -299,16 +299,15 @@ namespace Tradier
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
       var response = new ResponseModel<DomModel>();
 
       try
       {
-        var name = screener.Instrument.Name;
+        var name = criteria.Instrument.Name;
         var pointResponse = await GetQuotes([name], true);
         var point = GetPrice(pointResponse?.Items?.FirstOrDefault());
 
@@ -329,10 +328,9 @@ namespace Tradier
     /// <summary>
     /// Get historical ticks
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       throw new NotImplementedException();
     }
@@ -340,16 +338,15 @@ namespace Tradier
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
 
       try
       {
-        var optionResponse = await GetOptionChain(screener.Instrument.Name, screener.MaxDate ?? screener.MinDate);
+        var optionResponse = await GetOptionChain(criteria.Instrument.Name, criteria.MaxDate ?? criteria.MinDate);
 
         response.Data = optionResponse
           .Options
@@ -370,10 +367,9 @@ namespace Tradier
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -395,10 +391,9 @@ namespace Tradier
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -435,7 +430,7 @@ namespace Tradier
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -464,7 +459,7 @@ namespace Tradier
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }

@@ -93,7 +93,7 @@ namespace InteractiveBrokers
         SubscribeToOrders();
         SubscribeToStreams();
 
-        await GetAccount([]);
+        await GetAccount();
 
         foreach (var summary in Account.State.Values)
         {
@@ -193,17 +193,16 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
 
       try
       {
         var id = counter++;
-        var instrument = screener.Instrument;
+        var instrument = criteria.Instrument;
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var contracts = await GetContracts(instrument);
 
@@ -225,20 +224,18 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
       var response = new ResponseModel<DomModel>();
 
       try
       {
-        screener.Count ??= 1;
-        screener.MaxDate ??= DateTime.Now;
+        criteria.MaxDate ??= DateTime.Now;
 
         var id = counter++;
-        var point = (await GetPoints(screener, null)).Data.Last();
+        var point = (await GetPoints(criteria)).Data.Last();
 
         response.Data = new DomModel
         {
@@ -257,20 +254,19 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
       try
       {
         var id = counter++;
-        var count = screener.Count ?? 1;
-        var instrument = screener.Instrument;
-        var minDate = screener.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
-        var maxDate = (screener.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
+        var count = criteria.Span ?? 1;
+        var instrument = criteria.Instrument;
+        var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
+        var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
         var contract = ExternalMap.GetContract(instrument);
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -329,7 +325,7 @@ namespace InteractiveBrokers
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -348,7 +344,7 @@ namespace InteractiveBrokers
         response.Data.Add((await ClearOrder(order)).Data);
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -448,16 +444,14 @@ namespace InteractiveBrokers
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    public override async Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
+    public override async Task<ResponseModel<IAccount>> GetAccount()
     {
       var response = new ResponseModel<IAccount>();
 
-      await GetAccountSummary(criteria);
+      await GetAccountSummary();
 
-      var orders = await GetOrders(null, criteria);
-      var positions = await GetPositions(null, criteria);
+      var orders = await GetOrders();
+      var positions = await GetPositions();
 
       Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
       Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
@@ -479,10 +473,9 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
       var orders = new ConcurrentDictionary<string, OrderModel>();
@@ -524,10 +517,9 @@ namespace InteractiveBrokers
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
       var id = counter++;
       var positions = new ConcurrentDictionary<string, OrderModel>();
@@ -657,9 +649,7 @@ namespace InteractiveBrokers
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    protected virtual async Task<ResponseModel<IAccount>> GetAccountSummary(Hashtable criteria)
+    protected virtual async Task<ResponseModel<IAccount>> GetAccountSummary()
     {
       var id = counter++;
       var response = new ResponseModel<IAccount>();

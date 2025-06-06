@@ -52,49 +52,41 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Get account state
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria);
+    Task<ResponseModel<IAccount>> GetAccount();
 
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
-    /// <returns></returns>
-    Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get positions
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria);
+    Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null);
 
     /// <summary>
     /// Send new orders
@@ -166,49 +158,42 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Get account state
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    public abstract Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria);
+    public abstract Task<ResponseModel<IAccount>> GetAccount();
 
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<DomModel>> GetDom(PointScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null);
 
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get positions
     /// </summary>
-    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="args"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel args, Hashtable criteria);
+    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null);
 
     /// <summary>
     /// Send new orders

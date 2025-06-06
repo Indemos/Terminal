@@ -55,7 +55,7 @@ namespace Terminal.Pages.Utils
 
         foreach (var name in names)
         {
-          var assetPoints = await adapter.GetPoints(new PointScreenerModel(), new Hashtable
+          var assetPoints = await adapter.GetPoints(new ConditionModel
           {
             ["period"] = 1,
             ["frequency"] = 1,

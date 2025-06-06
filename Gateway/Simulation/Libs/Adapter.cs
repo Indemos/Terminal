@@ -496,12 +496,11 @@ namespace Simulation
     /// <summary>
     /// Get depth of market when available or just a top of the book
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var point = Account.State[screener.Instrument.Name].Instrument.Point;
+      var point = Account.State[criteria.Instrument.Name].Instrument.Point;
       var response = new ResponseModel<DomModel>
       {
         Data = new DomModel
@@ -520,11 +519,11 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<PointModel>>
       {
-        Data = [.. Account.State[screener.Instrument.Name].Points]
+        Data = [.. Account.State[criteria.Instrument.Name].Points]
       };
 
       return Task.FromResult(response);
@@ -533,11 +532,15 @@ namespace Simulation
     /// <summary>
     /// Option chain
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
+      var side = criteria
+        ?.Instrument
+        ?.Derivative
+        ?.Side;
+
       var orderMap = Account
         .Positions
         .Values
@@ -545,7 +548,9 @@ namespace Simulation
         .GroupBy(o => o.Transaction.Instrument.Name)
         .ToDictionary(o => o.Key, o => o);
 
-      var options = Account.State[screener.Instrument.Name]
+      var options = Account
+        .State
+        .Get(criteria.Instrument.Name)
         .Options
         .Select(option =>
         {
@@ -556,11 +561,11 @@ namespace Simulation
 
           return option;
         })
-        .Where(o => screener?.Side is null || Equals(o.Derivative.Side, screener.Side))
-        .Where(o => screener?.MinDate is null || o.Derivative.ExpirationDate?.Date >= screener.MinDate?.Date)
-        .Where(o => screener?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= screener.MaxDate?.Date)
-        .Where(o => screener?.MinPrice is null || o.Derivative.Strike >= screener.MinPrice)
-        .Where(o => screener?.MaxPrice is null || o.Derivative.Strike <= screener.MaxPrice)
+        .Where(o => side is null || Equals(o.Derivative.Side, side))
+        .Where(o => criteria?.MinDate is null || o.Derivative.ExpirationDate?.Date >= criteria.MinDate?.Date)
+        .Where(o => criteria?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= criteria.MaxDate?.Date)
+        .Where(o => criteria?.MinPrice is null || o.Derivative.Strike >= criteria.MinPrice)
+        .Where(o => criteria?.MaxPrice is null || o.Derivative.Strike <= criteria.MaxPrice)
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
@@ -577,9 +582,7 @@ namespace Simulation
     /// <summary>
     /// Load account data
     /// </summary>
-    /// <param name="criteria"></param>
-    /// <returns></returns>
-    public override Task<ResponseModel<IAccount>> GetAccount(Hashtable criteria)
+    public override Task<ResponseModel<IAccount>> GetAccount()
     {
       var response = new ResponseModel<IAccount>
       {
@@ -592,10 +595,9 @@ namespace Simulation
     /// <summary>
     /// Get all account positions
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>
       {
@@ -608,10 +610,9 @@ namespace Simulation
     /// <summary>
     /// Get all account orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
+    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>
       {

@@ -14,12 +14,7 @@ namespace Terminal.Core.Extensions
     /// <returns></returns>
     public static NameValueCollection Merge(this Hashtable source, params Hashtable[] maps)
     {
-      var response = HttpUtility.ParseQueryString(string.Empty);
-
-      foreach (DictionaryEntry o in source ?? [])
-      {
-        response[$"{o.Key}"] = $"{o.Value}";
-      }
+      var response = source.Compact();
 
       foreach (Hashtable map in maps ?? [])
       {

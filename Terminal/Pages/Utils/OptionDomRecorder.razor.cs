@@ -85,20 +85,20 @@ namespace Terminal.Pages.Utils
       {
         var adapter = View.Adapters["Prime"];
         var summary = adapter.Account.State[Instrument.Name];
-        var optionArgs = new InstrumentScreenerModel
+        var optionArgs = new ConditionModel
         {
-          Count = 50,
+          Span = 50,
           MinDate = DateTime.Now,
           MaxDate = DateTime.Now.AddMonths(1),
           Instrument = Instrument
         };
 
-        var domArgs = new PointScreenerModel
+        var domArgs = new ConditionModel
         {
           Instrument = Instrument
         };
 
-        var options = await adapter.GetOptions(optionArgs, []);
+        var options = await adapter.GetOptions(optionArgs);
         var storage = $"D:/Code/NET/Terminal/Data/{Instrument.Name}/{DateTime.Now:yyyy-MM-dd}";
 
         summary.Points.Clear();

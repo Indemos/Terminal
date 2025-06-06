@@ -20,6 +20,7 @@ using System.Timers;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
+using Terminal.Core.Models;
 
 namespace Terminal.Pages.Utils
 {
@@ -463,7 +464,7 @@ namespace Terminal.Pages.Utils
         IsConnected = true;
       }
 
-      var options = await adapter.GetOptions(null, new Hashtable
+      var options = await adapter.GetOptions(new ConditionModel
       {
         ["symbol"] = name,
         ["strikeCount"] = 50,

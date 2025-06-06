@@ -42,9 +42,9 @@ namespace Terminal.Pages.Utils
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
               var stopDate = DateTime.UtcNow.AddDays(-3);
-              var args = new PointScreenerModel
+              var args = new ConditionModel
               {
-                Count = 1000,
+                Span = 1000,
                 MaxDate = DateTime.UtcNow,
                 Instrument = Instrument
               };
@@ -80,13 +80,13 @@ namespace Terminal.Pages.Utils
       };
     }
 
-    protected async Task<DateTime?> OnData(PointScreenerModel screener)
+    protected async Task<DateTime?> OnData(ConditionModel criteria)
     {
       try
       {
         var counter = 0;
         var adapter = View.Adapters["Prime"];
-        var points = await adapter.GetPoints(screener, []);
+        var points = await adapter.GetPoints(criteria);
         var storage = $"D:/Code/NET/Terminal/Data/{Instrument.Name}";
 
         Directory.CreateDirectory(storage);

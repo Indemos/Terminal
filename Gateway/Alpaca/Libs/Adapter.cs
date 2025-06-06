@@ -2,7 +2,6 @@ using Alpaca.Mappers;
 using Alpaca.Markets;
 using Distribution.Services;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -85,7 +84,7 @@ namespace Alpaca
         streamingClients[InstrumentEnum.None] = Source.GetAlpacaStreamingClient(creds);
 
         await Task.WhenAll(streamingClients.Values.Select(o => o.ConnectAndAuthenticateAsync()));
-        await GetAccount([]);
+        await GetAccount();
         await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
         response.Data = StatusEnum.Active;
@@ -213,15 +212,14 @@ namespace Alpaca
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    /// <returns></returns>
-    public override async Task<ResponseModel<Dom.IAccount>> GetAccount(Hashtable criteria)
+    public override async Task<ResponseModel<Dom.IAccount>> GetAccount()
     {
       var response = new ResponseModel<Dom.IAccount>();
 
       try
       {
-        var orders = await GetOrders(null, criteria);
-        var positions = await GetPositions(null, criteria);
+        var orders = await GetOrders();
+        var positions = await GetPositions();
         var account = await tradingClient.GetAccountAsync();
 
         Account.Balance = (double)account.Equity;
@@ -250,10 +248,9 @@ namespace Alpaca
     /// <summary>
     /// Get orders
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(OrderScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -275,10 +272,9 @@ namespace Alpaca
     /// <summary>
     /// Get positions 
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(PositionScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<OrderModel>>();
 
@@ -299,24 +295,24 @@ namespace Alpaca
     /// <summary>
     /// Get options
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(InstrumentScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<InstrumentModel>>();
 
       try
       {
         var pages = 50;
+        var instrument = criteria.Instrument;
         var items = new List<InstrumentModel>().AsEnumerable();
-        var inputs = new OptionChainRequest(screener.Instrument.Name)
+        var inputs = new OptionChainRequest(instrument.Name)
         {
           OptionsFeed = OptionsFeed.Indicative,
-          ExpirationDateGreaterThanOrEqualTo = screener.MinDate.AsDate(),
-          ExpirationDateLessThanOrEqualTo = screener.MaxDate.AsDate(),
-          StrikePriceGreaterThanOrEqualTo = (decimal?)screener.MinPrice,
-          StrikePriceLessThanOrEqualTo = (decimal?)screener.MaxPrice
+          ExpirationDateGreaterThanOrEqualTo = criteria.MinDate.AsDate(),
+          ExpirationDateLessThanOrEqualTo = criteria.MaxDate.AsDate(),
+          StrikePriceGreaterThanOrEqualTo = (decimal?)criteria.MinPrice,
+          StrikePriceLessThanOrEqualTo = (decimal?)criteria.MaxPrice
         };
 
         inputs.Pagination.Size = 1000;
@@ -348,27 +344,27 @@ namespace Alpaca
     /// <summary>
     /// Get latest quote
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<DomModel>> GetDom(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
       var response = new ResponseModel<DomModel>();
 
       try
       {
-        var name = screener.Instrument.Name;
-        var point = screener.Instrument.Point;
-        var currency = screener.Instrument.Currency.Name;
-        var client = dataClients[screener.Instrument.Type.Value];
+        var instrument = criteria.Instrument;
+        var name = instrument.Name;
+        var point = instrument.Point;
+        var currency = instrument.Currency.Name;
+        var client = dataClients[instrument.Type.Value];
 
-        switch (screener.Instrument.Type)
+        switch (instrument.Type)
         {
           case InstrumentEnum.Coins:
             {
               var inputs = new LatestDataListRequest([name]);
               var points = await (client as IAlpacaCryptoDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], screener.Instrument);
+              point = InternalMap.GetPrice(points[name], instrument);
             }
             break;
 
@@ -376,7 +372,7 @@ namespace Alpaca
             {
               var inputs = new LatestMarketDataListRequest([name]) { Feed = MarketDataFeed.Iex, Currency = currency };
               var points = await (client as IAlpacaDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], screener.Instrument);
+              point = InternalMap.GetPrice(points[name], instrument);
             }
             break;
 
@@ -384,7 +380,7 @@ namespace Alpaca
             {
               var inputs = new LatestOptionsDataRequest([name]) { OptionsFeed = OptionsFeed.Indicative };
               var points = await (client as IAlpacaOptionsDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], screener.Instrument);
+              point = InternalMap.GetPrice(points[name], instrument);
             }
             break;
         }
@@ -406,34 +402,34 @@ namespace Alpaca
     /// <summary>
     /// Get historical bars
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(PointScreenerModel screener, Hashtable criteria)
+    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       var response = new ResponseModel<IList<PointModel>>();
 
       try
       {
-        var name = screener.Instrument.Name;
-        var currency = screener.Instrument.Currency.Name;
-        var client = dataClients[screener.Instrument.Type.Value];
+        var instrument = criteria.Instrument;
+        var name = instrument.Name;
+        var currency = instrument.Currency.Name;
+        var client = dataClients[instrument.Type.Value];
 
-        switch (screener.Instrument.Type)
+        switch (instrument.Type)
         {
           case InstrumentEnum.Coins:
             {
-              var inputs = new HistoricalCryptoQuotesRequest(name, screener.MinDate.Value, screener.MaxDate.Value);
+              var inputs = new HistoricalCryptoQuotesRequest(name, criteria.MinDate.Value, criteria.MaxDate.Value);
               var points = await (client as IAlpacaCryptoDataClient).ListHistoricalQuotesAsync(inputs);
-              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, screener.Instrument))];
+              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, instrument))];
             }
             break;
 
           case InstrumentEnum.Shares:
             {
-              var inputs = new HistoricalQuotesRequest(name, screener.MinDate.Value, screener.MaxDate.Value) { Feed = MarketDataFeed.Iex, Currency = currency };
+              var inputs = new HistoricalQuotesRequest(name, criteria.MinDate.Value, criteria.MaxDate.Value) { Feed = MarketDataFeed.Iex, Currency = currency };
               var points = await (client as IAlpacaDataClient).ListHistoricalQuotesAsync(inputs);
-              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, screener.Instrument))];
+              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, instrument))];
             }
             break;
         }
@@ -470,7 +466,7 @@ namespace Alpaca
         }
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
@@ -489,7 +485,7 @@ namespace Alpaca
         await tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id));
       }
 
-      await GetAccount([]);
+      await GetAccount();
 
       return response;
     }
