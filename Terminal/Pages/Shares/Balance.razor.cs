@@ -49,7 +49,7 @@ namespace Terminal.Pages.Shares
         await DollarsView.Create("Dollars");
         await PerformanceView.Create("Performance");
 
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        InstanceService<SubscriptionService>.Instance.Update += state =>
         {
           switch (true)
           {

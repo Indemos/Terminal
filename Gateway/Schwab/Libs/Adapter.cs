@@ -19,7 +19,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
 using Dis = Distribution.Stream.Models;
 
 namespace Schwab
@@ -103,9 +102,7 @@ namespace Schwab
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return await Response(async () =>
       {
         await Disconnect();
 
@@ -134,14 +131,8 @@ namespace Schwab
 
         await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -151,12 +142,7 @@ namespace Schwab
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>
-      {
-        Data = StatusEnum.Active
-      };
-
-      try
+      return await Response(async () =>
       {
         var streamData = userData.Streamer.FirstOrDefault();
 
@@ -168,7 +154,7 @@ namespace Schwab
         await SendStream(streamer, new StreamInputMessage
         {
           Requestid = ++counter,
-          Service = ExternalMap.GetStreamingService(instrument),
+          Service = Upstream.GetStreamingService(instrument),
           Command = "ADD",
           CustomerId = streamData.CustomerId,
           CorrelationId = $"{Guid.NewGuid()}",
@@ -178,13 +164,9 @@ namespace Schwab
             Fields = string.Join(",", Enumerable.Range(0, 10))
           }
         });
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
 
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -195,21 +177,16 @@ namespace Schwab
     /// <returns></returns>
     public virtual async Task<ResponseModel<StatusEnum>> SubscribeToDom(InstrumentModel instrument, DomEnum domType)
     {
-      var response = new ResponseModel<StatusEnum>
+      return await Response(async () =>
       {
-        Data = StatusEnum.Active
-      };
+        var domName = "OPTIONS_BOOK";
 
-      var domName = "OPTIONS_BOOK";
+        switch (domType)
+        {
+          case DomEnum.Ndx: domName = "NASDAQ_BOOK"; break;
+          case DomEnum.Nyse: domName = "NYSE_BOOK"; break;
+        }
 
-      switch (domType)
-      {
-        case DomEnum.Ndx: domName = "NASDAQ_BOOK"; break;
-        case DomEnum.Nyse: domName = "NYSE_BOOK"; break;
-      }
-
-      try
-      {
         var streamData = userData.Streamer.FirstOrDefault();
 
         await Unsubscribe(instrument);
@@ -226,13 +203,9 @@ namespace Schwab
             Fields = string.Join(",", Enumerable.Range(0, 3))
           }
         });
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
 
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -240,21 +213,13 @@ namespace Schwab
     /// </summary>
     public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return Response(() =>
       {
         connections?.ForEach(o => o?.Dispose());
         connections?.Clear();
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return Task.FromResult(response);
+        return Task.FromResult(StatusEnum.Active);
+      });
     }
 
     /// <summary>
@@ -262,26 +227,19 @@ namespace Schwab
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument) => Response(() =>
     {
-      var response = new ResponseModel<StatusEnum>
-      {
-        Data = StatusEnum.Active
-      };
-
-      return Task.FromResult(response);
-    }
+      return Task.FromResult(StatusEnum.Active);
+    });
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<InstrumentModel>>();
-
-      try
+      return await Response(async () =>
       {
         var props = new Hashtable
         {
@@ -294,23 +252,17 @@ namespace Schwab
 
         var optionResponse = await Send<OptionChainMessage>($"{DataUri}/marketdata/v1/chains?{props}");
 
-        response.Data = optionResponse
+        return optionResponse
           ?.Data
           ?.PutExpDateMap
           ?.Concat(optionResponse?.Data?.CallExpDateMap)
           ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
-          ?.Select(option => InternalMap.GetOption(option, optionResponse.Data))
+          ?.Select(option => Downstream.GetOption(option, optionResponse.Data))
           ?.OrderBy(o => o.Derivative.ExpirationDate)
           ?.ThenBy(o => o.Derivative.Strike)
           ?.ThenBy(o => o.Derivative.Side)
           ?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -320,17 +272,14 @@ namespace Schwab
     /// <returns></returns>
     public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<DomModel>();
-
-      try
+      return await Response(async () =>
       {
         var instrument = criteria.Instrument;
         var dom = Account.State[instrument.Name].Dom;
 
         if (dom.Bids.Count is not 0 && dom.Asks.Count is not 0)
         {
-          response.Data = dom;
-          return response;
+          return dom;
         }
 
         var props = new Hashtable
@@ -342,20 +291,14 @@ namespace Schwab
         }.Merge(criteria);
 
         var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
-        var point = InternalMap.GetPrice(pointResponse.Data[props["symbols"]], instrument);
+        var point = Downstream.GetPrice(pointResponse.Data[props["symbols"]], instrument);
 
-        response.Data = new DomModel
+        return new DomModel
         {
           Asks = [point],
           Bids = [point]
         };
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -363,11 +306,9 @@ namespace Schwab
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<PointModel>>();
-
-      try
+      return await Response(async () =>
       {
         var props = new Hashtable
         {
@@ -378,19 +319,13 @@ namespace Schwab
 
         }.Merge(criteria);
 
-        var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory?{props}"); 
+        var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory?{props}");
 
-        response.Data = pointResponse
+        return pointResponse
           .Data
           .Bars
-          ?.Select(InternalMap.GetPrice)?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+          .Select(Downstream.GetPrice)?.ToList() ?? [];
+      });
     }
 
     /// <summary>
@@ -398,23 +333,19 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
-        try
-        {
-          response.Data.Add((await SendOrder(order)).Data);
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        var o = await Response(async () => await SendOrder(order));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -424,23 +355,19 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
-        try
-        {
-          response.Data.Add((await ClearOrder(order)).Data);
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        var o = await Response(async () => await ClearOrder(order));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -450,9 +377,7 @@ namespace Schwab
     /// </summary>
     public override async Task<ResponseModel<IAccount>> GetAccount()
     {
-      var response = new ResponseModel<IAccount>();
-
-      try
+      return await Response(async () =>
       {
         var accountProps = new Hashtable { ["fields"] = "positions" };
         var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{accountProps.Query()}");
@@ -462,24 +387,10 @@ namespace Schwab
         Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
 
-        Account
-          .Positions
-          .Values
-          .ForEach(o =>
-          {
-            Account.State[o.Name] = Account.State.Get(o.Name) ?? new StateModel();
-            Account.State[o.Name].Instrument = o.Transaction.Instrument;
-          });
-
-        response.Data = Account;
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return Account;
+      });
     }
 
     /// <summary>
@@ -487,11 +398,9 @@ namespace Schwab
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
         var dateFormat = "yyyy-MM-ddTHH:mm:ss.fffZ";
         var props = new Hashtable
@@ -504,18 +413,12 @@ namespace Schwab
 
         var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{accountCode}/orders?{props}");
 
-        response.Data = orders
+        return orders
           .Data
-          ?.Where(o => o.CloseTime is null)
-          ?.Select(InternalMap.GetOrder)
-          ?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+          .Where(o => o.CloseTime is null)
+          .Select(Downstream.GetOrder)
+          .ToList() ?? [];
+      });
     }
 
     /// <summary>
@@ -523,28 +426,20 @@ namespace Schwab
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
         var props = new Hashtable { ["fields"] = "positions" }.Merge(criteria);
         var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{props}");
 
-        response.Data = account
-          .Data
+        return account
+          ?.Data
           ?.SecuritiesAccount
           ?.Positions
-          ?.Select(InternalMap.GetPosition)
+          ?.Select(Downstream.GetPosition)
           ?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -554,20 +449,14 @@ namespace Schwab
     /// <returns></returns>
     protected virtual async Task<ResponseModel<string>> GetAccountCode()
     {
-      var response = new ResponseModel<string>();
-
-      try
+      return await Response(async () =>
       {
         var accountNumbers = await Send<AccountNumberMessage[]>($"{DataUri}/trader/v1/accounts/accountNumbers");
 
-        response.Data = accountNumbers.Data.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return accountNumbers
+          .Data
+          .First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
+      });
     }
 
     /// <summary>
@@ -637,16 +526,16 @@ namespace Schwab
 
       var adminResponse = await ReceiveStream<StreamLoginResponseMessage>(streamer);
       var adminCode = adminResponse.Response.FirstOrDefault().Content.Code;
+      var data = new byte[short.MaxValue];
 
       scheduler.Send(async () =>
       {
         while (streamer.State is WebSocketState.Open)
         {
-          try
+          await Observe(async () =>
           {
-            var data = new byte[short.MaxValue];
-            var streamResponse = await streamer.ReceiveAsync(data, cancellation.Token);
-            var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
+            var streamResponse = await streamer.ReceiveAsync(new ArraySegment<byte>(data), cancellation.Token);
+            var content = Encoding.UTF8.GetString(data, 0, streamResponse.Count);
             var message = JsonNode.Parse(content);
 
             if (message["data"] is not null)
@@ -656,11 +545,11 @@ namespace Schwab
                 .Select(o => o.Deserialize<StreamDataMessage>());
 
               var points = streamItems
-                .Where(o => InternalMap.GetStreamPointType(o.Service) is not null)
+                .Where(o => Downstream.GetStreamPointType(o.Service) is not null)
                 .ToList();
 
               var doms = streamItems
-                .Where(o => InternalMap.GetStreamDomType(o.Service) is not null)
+                .Where(o => Downstream.GetStreamDomType(o.Service) is not null)
                 .ToList();
 
               if (points.Count is not 0)
@@ -673,11 +562,7 @@ namespace Schwab
                 OnDom(doms);
               }
             }
-          }
-          catch (Exception e)
-          {
-            InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
-          }
+          });
         }
       });
 
@@ -694,7 +579,7 @@ namespace Schwab
 
       foreach (var item in items)
       {
-        var map = InternalMap.GetStreamMap(item.Service);
+        var map = Downstream.GetStreamMap(item.Service);
 
         foreach (var data in item.Content)
         {
@@ -876,7 +761,7 @@ namespace Schwab
 
       await Subscribe(order.Transaction.Instrument);
 
-      var exOrder = ExternalMap.GetOrder(Account, order);
+      var exOrder = Upstream.GetOrder(Account, order);
       var response = new ResponseModel<OrderModel>();
       var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders", HttpMethod.Post, exOrder);
 

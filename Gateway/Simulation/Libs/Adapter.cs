@@ -223,9 +223,9 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
       var validator = InstanceService<OrderPriceValidator>.Instance;
 
       response.Errors = [.. orders.SelectMany(o => validator
@@ -264,9 +264,9 @@ namespace Simulation
     /// Recursively cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public override Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
+    public override Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>
+      var response = new ResponseModel<List<OrderModel>>
       {
         Data = [.. orders.Select(order =>
         {
@@ -519,9 +519,9 @@ namespace Simulation
     /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
+    public override Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<PointModel>>
+      var response = new ResponseModel<List<PointModel>>
       {
         Data = [.. Account.State[criteria.Instrument.Name].Points]
       };
@@ -534,7 +534,7 @@ namespace Simulation
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
+    public override Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
       var side = criteria
         ?.Instrument
@@ -571,7 +571,7 @@ namespace Simulation
         .ThenBy(o => o.Derivative.Side)
         .ToList();
 
-      var response = new ResponseModel<IList<InstrumentModel>>
+      var response = new ResponseModel<List<InstrumentModel>>
       {
         Data = options
       };
@@ -597,9 +597,9 @@ namespace Simulation
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
+    public override Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>
+      var response = new ResponseModel<List<OrderModel>>
       {
         Data = [.. Account.Positions.Values]
       };
@@ -612,9 +612,9 @@ namespace Simulation
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
+    public override Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>
+      var response = new ResponseModel<List<OrderModel>>
       {
         Data = [.. Account.Orders.Values]
       };

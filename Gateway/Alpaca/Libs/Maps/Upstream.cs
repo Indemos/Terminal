@@ -5,7 +5,7 @@ using Terminal.Core.Models;
 
 namespace Alpaca.Mappers
 {
-  public class ExternalMap
+  public class Upstream
   {
     /// <summary>
     /// Compose sub order

@@ -7,7 +7,7 @@ using Terminal.Core.Models;
 
 namespace Alpaca.Mappers
 {
-  public class InternalMap
+  public class Downstream
   {
     /// <summary>
     /// Get order book

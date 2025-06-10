@@ -66,7 +66,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        Subscription.OnUpdate += state =>
+        Subscription.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {

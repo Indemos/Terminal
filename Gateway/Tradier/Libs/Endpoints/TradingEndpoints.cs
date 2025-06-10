@@ -22,10 +22,10 @@ namespace Tradier
         { "class", "option" },
         { "symbol", order.BasisName ?? order.Name },
         { "option_symbol", GetOptionName(order) },
-        { "side", ExternalMap.GetSide(order, Account) },
+        { "side", Upstream.GetSide(order, Account) },
         { "quantity", order.Volume },
-        { "type", ExternalMap.GetOrderType(order.Type) },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "type", Upstream.GetOrderType(order.Type) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.Price },
         { "stop", order.ActivationPrice ?? order.Price },
         { "tag", order.Descriptor },
@@ -48,8 +48,8 @@ namespace Tradier
       {
         { "class", "multileg" },
         { "symbol", order.BasisName ?? order.Name },
-        { "type", ExternalMap.GetOrderType(order.Type) },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "type", Upstream.GetOrderType(order.Type) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.Price },
         { "tag", order.Descriptor }
       };
@@ -57,7 +57,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
         data[$"quantity[{index}]"] = item.Volume;
 
         index++;
@@ -79,10 +79,10 @@ namespace Tradier
         { "account_id", Account.Descriptor },
         { "class", "equity" },
         { "symbol", order.BasisName ?? order.Name },
-        { "side", ExternalMap.GetSide(order, Account) },
+        { "side", Upstream.GetSide(order, Account) },
         { "quantity", order.Volume},
-        { "type", ExternalMap.GetOrderType(order.Type) },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "type", Upstream.GetOrderType(order.Type) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.Price },
         { "stop", order.ActivationPrice ?? order.Price },
         { "preview", preview },
@@ -105,8 +105,8 @@ namespace Tradier
       {
         { "class", "combo" },
         { "symbol", order.BasisName ?? order.Name },
-        { "type", ExternalMap.GetOrderType(order.Type) },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "type", Upstream.GetOrderType(order.Type) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.Price },
         { "tag", order.Descriptor }
       };
@@ -114,7 +114,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
         data[$"quantity[{index}]"] = item.Volume;
 
         index++;
@@ -135,7 +135,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "oto" },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "preview", preview },
         { "tag", order.Descriptor }
       };
@@ -149,9 +149,9 @@ namespace Tradier
       {
         data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
         data[$"quantity[{index}]"] = item.Volume;
-        data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
+        data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(order, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(order, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 
@@ -173,7 +173,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "oco" },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "preview", preview },
         { "tag", order.Descriptor }
       };
@@ -187,9 +187,9 @@ namespace Tradier
       {
         data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
         data[$"quantity[{index}]"] = item.Volume;
-        data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
+        data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(order, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(order, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 
@@ -211,7 +211,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "otoco" },
-        { "duration", ExternalMap.GetTimeSpan(order.TimeSpan) },
+        { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "preview", preview },
         { "tag", order.Descriptor }
       };
@@ -225,9 +225,9 @@ namespace Tradier
       {
         data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
         data[$"quantity[{index}]"] = item.Volume;
-        data[$"type[{index}]"] = ExternalMap.GetOrderType(item.Type);
+        data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = ExternalMap.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
         data[$"price[{index}]"] = item.Price;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.Price;
 

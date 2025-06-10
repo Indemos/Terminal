@@ -8,7 +8,7 @@ using Terminal.Core.Models;
 
 namespace InteractiveBrokers.Mappers
 {
-  public class InternalMap
+  public class Downstream
   {
     /// <summary>
     /// Get order book

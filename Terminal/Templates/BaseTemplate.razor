@@ -28,7 +28,7 @@
     {
       StateHasChanged();
 
-      InstanceService<MessageService>.Instance.OnMessage += o =>
+      InstanceService<MessageService>.Instance.Update += o =>
       {
         try
         {

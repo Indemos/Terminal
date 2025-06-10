@@ -48,7 +48,7 @@ namespace Terminal.Pages.Gateways
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        InstanceService<SubscriptionService>.Instance.Update += state =>
         {
           switch (true)
           {

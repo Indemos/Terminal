@@ -43,7 +43,7 @@ namespace Terminal.Pages.Options
 
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += state =>
+        InstanceService<SubscriptionService>.Instance.Update += state =>
         {
           switch (true)
           {

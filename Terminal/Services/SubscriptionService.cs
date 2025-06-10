@@ -11,7 +11,7 @@ namespace Terminal.Services
     /// <summary>
     /// Push notification
     /// </summary>
-    public virtual Action<MessageModel<SubscriptionEnum>> OnUpdate { get; set; } = delegate { };
+    public virtual Action<MessageModel<SubscriptionEnum>> Update { get; set; } = delegate { };
 
     /// <summary>
     /// Subscription instance
@@ -19,7 +19,7 @@ namespace Terminal.Services
     public virtual MessageModel<SubscriptionEnum> State
     {
       get => state;
-      set => OnUpdate(state = value);
+      set => Update(state = value);
     }
   }
 }

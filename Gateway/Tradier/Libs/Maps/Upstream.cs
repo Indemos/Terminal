@@ -5,7 +5,7 @@ using Terminal.Core.Models;
 
 namespace Tradier.Mappers
 {
-  public class ExternalMap
+  public class Upstream
   {
     /// <summary>
     /// Get external instrument type

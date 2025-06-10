@@ -5,6 +5,6 @@ namespace Terminal.Core.Services
 {
   public class MessageService
   {
-    public virtual Action<MessageModel<string>> OnMessage { get; set; } = o => { };
+    public virtual Action<MessageModel<string>> Update { get; set; } = o => { };
   }
 }

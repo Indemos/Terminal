@@ -106,8 +106,6 @@ namespace Terminal.Pages.Utils
 
       await view.Create<CanvasEngine>(() => composer);
       await view.Update();
-
-      Console.WriteLine(string.Join(Environment.NewLine, comPoints.Select((o, i) => $"{o.Key}: {eigenVectors[i]}")));
     }
 
     /// <summary>

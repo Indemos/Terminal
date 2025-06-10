@@ -123,8 +123,6 @@ namespace Terminal.Pages.Utils
 
       await view.Create<CanvasEngine>(() => composer);
       await view.Update();
-
-      Console.WriteLine(string.Join(Environment.NewLine, items.Keys.Select((o, i) => $"{o}: {weights[i]}")));
     }
 
     /// <summary>

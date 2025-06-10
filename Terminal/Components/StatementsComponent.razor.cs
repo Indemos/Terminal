@@ -37,7 +37,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        Subscription.OnUpdate += state =>
+        Subscription.Update += state =>
         {
           switch (true)
           {

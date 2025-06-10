@@ -62,7 +62,7 @@ namespace Terminal.Components
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
       }
     }
 
@@ -86,7 +86,7 @@ namespace Terminal.Components
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
       }
     }
 
@@ -116,7 +116,7 @@ namespace Terminal.Components
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
       }
     }
 
@@ -146,7 +146,7 @@ namespace Terminal.Components
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
       }
     }
   }

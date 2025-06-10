@@ -1,7 +1,6 @@
 using Distribution.Services;
 using Distribution.Stream;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -15,7 +14,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
 using Tradier.Messages.Account;
 using Tradier.Messages.Stream;
 using Tradier.Messages.Trading;
@@ -98,9 +96,7 @@ namespace Tradier
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return await Response(async () =>
       {
         var sender = new Service() { Timeout = TimeSpan.FromDays(1) };
         var scheduler = new ScheduleService();
@@ -159,14 +155,8 @@ namespace Tradier
 
         await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -174,21 +164,13 @@ namespace Tradier
     /// </summary>
     public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return Response(() =>
       {
         connections?.ForEach(o => o?.Dispose());
         connections?.Clear();
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return Task.FromResult(response);
+        return Task.FromResult(StatusEnum.Active);
+      });
     }
 
     /// <summary>
@@ -198,12 +180,7 @@ namespace Tradier
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>
-      {
-        Data = StatusEnum.Active
-      };
-
-      try
+      return await Response(async () =>
       {
         await Unsubscribe(instrument);
 
@@ -232,13 +209,8 @@ namespace Tradier
         await SendStream(dataStreamer, dataMessage);
         await SendStream(accountStreamer, accountMessage);
 
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -246,15 +218,10 @@ namespace Tradier
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument) => Response(() =>
     {
-      var response = new ResponseModel<StatusEnum>
-      {
-        Data = StatusEnum.Active
-      };
-
-      return Task.FromResult(response);
-    }
+      return Task.FromResult(StatusEnum.Active);
+    });
 
     /// <summary>
     /// Sync open balance, order, and positions 
@@ -263,9 +230,7 @@ namespace Tradier
     /// <returns></returns>
     public override async Task<ResponseModel<IAccount>> GetAccount()
     {
-      var response = new ResponseModel<IAccount>();
-
-      try
+      return await Response(async () =>
       {
         var num = Account.Descriptor;
         var account = await GetBalances(num);
@@ -276,24 +241,10 @@ namespace Tradier
         Account.Balance = account.TotalEquity;
         Account.Orders = openOrders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
 
-        Account
-          .Positions
-          .Values
-          .ForEach(o =>
-          {
-            Account.State[o.Name] = Account.State.Get(o.Name) ?? new StateModel();
-            Account.State[o.Name].Instrument = o.Transaction.Instrument;
-          });
-
-        response.Data = Account;
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return Account;
+      });
     }
 
     /// <summary>
@@ -303,26 +254,18 @@ namespace Tradier
     /// <returns></returns>
     public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<DomModel>();
-
-      try
+      return await Response(async () =>
       {
         var name = criteria.Instrument.Name;
         var pointResponse = await GetQuotes([name], true);
         var point = GetPrice(pointResponse?.Items?.FirstOrDefault());
 
-        response.Data = new DomModel
+        return new DomModel
         {
           Asks = [point],
-          Bids = [point]
+          Bids = [point],
         };
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -330,7 +273,7 @@ namespace Tradier
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
+    public override Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
       throw new NotImplementedException();
     }
@@ -340,28 +283,20 @@ namespace Tradier
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<InstrumentModel>>();
-
-      try
+      return await Response(async () =>
       {
         var optionResponse = await GetOptionChain(criteria.Instrument.Name, criteria.MaxDate ?? criteria.MinDate);
 
-        response.Data = optionResponse
-          .Options
+        return optionResponse
+          ?.Options
           ?.Select(GetOption)
           ?.OrderBy(o => o.Derivative.ExpirationDate)
           ?.ThenBy(o => o.Derivative.Strike)
           ?.ThenBy(o => o.Derivative.Side)
           ?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -369,23 +304,15 @@ namespace Tradier
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
         var exPositions = await GetPositions(Account.Descriptor);
         var positions = exPositions?.Select(GetPosition)?.ToList();
 
-        response.Data = positions ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return positions ?? [];
+      });
     }
 
     /// <summary>
@@ -393,20 +320,12 @@ namespace Tradier
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
-        response.Data = (await GetOrders(Account.Descriptor))?.SelectMany(GetOrders)?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return (await GetOrders(Account.Descriptor))?.SelectMany(GetOrders)?.ToList() ?? [];
+      });
     }
 
     /// <summary>
@@ -414,23 +333,19 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
-        try
-        {
-          response.Data.Add(await SendOrder(order));
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        var o = await Response(async () => await SendOrder(order));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -440,26 +355,19 @@ namespace Tradier
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
       foreach (var order in orders)
       {
-        try
-        {
-          if (Equals((await ClearOrder(order.Transaction.Id))?.Status?.ToUpper(), "OK"))
-          {
-            response.Data.Add(order);
-          }
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        var o = await Response(async () => await ClearOrder(order.Transaction.Id));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -575,6 +483,7 @@ namespace Tradier
     /// <returns></returns>
     protected virtual async Task GetConnection(string uri, ClientWebSocket streamer, ScheduleService scheduler, Action<JsonNode> action)
     {
+      var data = new byte[short.MaxValue];
       var source = new UriBuilder($"{StreamUri}{uri}");
       var cancellation = new CancellationTokenSource();
 
@@ -584,18 +493,12 @@ namespace Tradier
       {
         while (streamer.State is WebSocketState.Open)
         {
-          try
+          await Observe(async () =>
           {
-            var data = new byte[short.MaxValue];
-            var streamResponse = await streamer.ReceiveAsync(data, cancellation.Token);
-            var content = $"{Encoding.Default.GetString(data).Trim(['\0', '[', ']'])}";
-
+            var streamResponse = await streamer.ReceiveAsync(new ArraySegment<byte>(data), cancellation.Token);
+            var content = Encoding.UTF8.GetString(data, 0, streamResponse.Count);
             action(JsonNode.Parse(content));
-          }
-          catch (Exception e)
-          {
-            InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
-          }
+          });
         }
       });
     }

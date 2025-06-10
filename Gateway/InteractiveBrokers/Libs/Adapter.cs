@@ -4,9 +4,9 @@ using InteractiveBrokers.Enums;
 using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Messages;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -81,9 +81,7 @@ namespace InteractiveBrokers
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return await Response(async () =>
       {
         await Disconnect();
         await CreateReader();
@@ -100,14 +98,8 @@ namespace InteractiveBrokers
           await Subscribe(summary.Instrument);
         }
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -117,9 +109,7 @@ namespace InteractiveBrokers
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return await Response(async () =>
       {
         await Unsubscribe(instrument);
 
@@ -130,16 +120,10 @@ namespace InteractiveBrokers
         var contracts = await GetContracts(instrument);
         var contract = contracts.Data.First();
 
-        await SubscribeToPoints(id, InternalMap.GetInstrument(contract, instrument));
+        await SubscribeToPoints(id, Downstream.GetInstrument(contract, instrument));
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -147,21 +131,13 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return Response(() =>
       {
         client?.ClientSocket?.eDisconnect();
         client?.Dispose();
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return Task.FromResult(response);
+        return Task.FromResult(StatusEnum.Active);
+      });
     }
 
     /// <summary>
@@ -171,23 +147,15 @@ namespace InteractiveBrokers
     /// <returns></returns>
     public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return Response(() =>
       {
         if (subscriptions.TryRemove(instrument.Name, out var id))
         {
           client.ClientSocket.cancelMktData(id);
         }
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return Task.FromResult(response);
+        return Task.FromResult(StatusEnum.Active);
+      });
     }
 
     /// <summary>
@@ -195,30 +163,23 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<InstrumentModel>>();
-
-      try
+      return await Response(async () =>
       {
         var id = counter++;
         var instrument = criteria.Instrument;
         var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var contracts = await GetContracts(instrument);
 
-        response.Data = [.. contracts
+        return contracts
           .Data
-          .Select(o => InternalMap.GetInstrument(o))
+          .Select(o => Downstream.GetInstrument(o))
           .OrderBy(o => o.Derivative.ExpirationDate)
           .ThenBy(o => o.Derivative.Strike)
-          .ThenBy(o => o.Derivative.Side)];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+          .ThenBy(o => o.Derivative.Side)
+          .ToList();
+      });
     }
 
     /// <summary>
@@ -228,27 +189,19 @@ namespace InteractiveBrokers
     /// <returns></returns>
     public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<DomModel>();
-
-      try
+      return await Response(async () =>
       {
         criteria.MaxDate ??= DateTime.Now;
 
         var id = counter++;
         var point = (await GetPoints(criteria)).Data.Last();
 
-        response.Data = new DomModel
+        return new DomModel
         {
           Asks = [point],
-          Bids = [point]
+          Bids = [point],
         };
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -256,47 +209,42 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<PointModel>>();
+      var id = counter++;
+      var points = new List<PointModel>();
+      var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-      try
+      void subscribe(HistoricalTicksMessage message) => Observe(() =>
       {
-        var id = counter++;
+        if (Equals(id, message.ReqId))
+        {
+          points = [.. message.Items.Select(o => Downstream.GetPrice(o, criteria.Instrument))];
+          unsubscribe();
+        }
+      });
+
+      void unsubscribe() => Observe(() =>
+      {
+        client.historicalTicksList -= subscribe;
+        source.TrySetResult();
+      });
+
+      return await Response(async () =>
+      {
         var count = criteria.Span ?? 1;
-        var instrument = criteria.Instrument;
         var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
         var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
-        var contract = ExternalMap.GetContract(instrument);
-        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void subscribe(HistoricalTicksMessage message)
-        {
-          if (Equals(id, message.ReqId))
-          {
-            response.Data = [.. message.Items.Select(o => InternalMap.GetPrice(o, instrument))];
-            unsubscribe();
-          }
-        }
-
-        void unsubscribe()
-        {
-          client.historicalTicksList -= subscribe;
-          source.TrySetResult();
-        }
+        var contract = Upstream.GetContract(criteria.Instrument);
 
         client.historicalTicksList += subscribe;
         client.ClientSocket.reqHistoricalTicks(id, contract, minDate, maxDate, count, "BID_ASK", 1, false, null);
 
         await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
         await Task.Delay(Interval);
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
 
-      return response;
+        return points;
+      });
     }
 
     /// <summary>
@@ -304,28 +252,19 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
-      foreach (var order in orders)
+      foreach (var order in ComposeOrders(orders))
       {
-        try
-        {
-          var inOrders = ComposeOrders(order);
+        var o = await Response(async () => await SendOrder(order));
 
-          foreach (var inOrder in inOrders)
-          {
-            response.Data.Add((await SendOrder(inOrder)).Data);
-          }
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -335,16 +274,19 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
+      var response = new ResponseModel<List<OrderModel>>();
 
       foreach (var order in orders)
       {
-        response.Data.Add((await ClearOrder(order)).Data);
+        var o = await Response(async () => await ClearOrder(order));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -354,37 +296,41 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="instrument"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<IList<Contract>>> GetContracts(InstrumentModel instrument)
+    protected virtual async Task<ResponseModel<List<Contract>>> GetContracts(InstrumentModel instrument)
     {
       var id = counter++;
-      var response = new ResponseModel<IList<Contract>> { Data = [] };
+      var response = new List<Contract>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var contract = ExternalMap.GetContract(instrument);
 
-      void subscribe(ContractDetailsMessage message)
+      void subscribe(ContractDetailsMessage message) => Observe(() =>
       {
         if (Equals(id, message.RequestId))
         {
-          response.Data.Add(message.ContractDetails.Contract);
+          response.Add(message.ContractDetails.Contract);
         }
-      }
+      });
 
-      void unsubscribe(int reqId)
+      void unsubscribe(int reqId) => Observe(() =>
       {
         client.ContractDetails -= subscribe;
         client.ContractDetailsEnd -= unsubscribe;
 
         source.TrySetResult();
-      }
+      });
 
-      client.ContractDetails += subscribe;
-      client.ContractDetailsEnd += unsubscribe;
-      client.ClientSocket.reqContractDetails(id, contract);
+      return await Response(async () =>
+      {
+        var contract = Upstream.GetContract(instrument);
 
-      await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
-      await Task.Delay(Interval);
+        client.ContractDetails += subscribe;
+        client.ContractDetailsEnd += unsubscribe;
+        client.ClientSocket.reqContractDetails(id, contract);
 
-      return response;
+        await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
+        await Task.Delay(Interval);
+
+        return response;
+      });
     }
 
     /// <summary>
@@ -392,7 +338,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToStreams()
     {
-      client.ConnectionClosed += () =>
+      client.ConnectionClosed += () => Observe(() =>
       {
         var message = new MessageModel<string>
         {
@@ -400,8 +346,8 @@ namespace InteractiveBrokers
           Action = ActionEnum.Disconnect
         };
 
-        InstanceService<MessageService>.Instance.OnMessage(message);
-      };
+        Message(message);
+      });
     }
 
     /// <summary>
@@ -409,7 +355,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToErrors()
     {
-      client.Error += async (id, code, message, error, e) =>
+      client.Error += async (id, code, message, error, e) => await Observe(async () =>
       {
         switch (true)
         {
@@ -424,8 +370,8 @@ namespace InteractiveBrokers
           Error = e
         };
 
-        InstanceService<MessageService>.Instance.OnMessage(content);
-      };
+        Message(content);
+      });
     }
 
     /// <summary>
@@ -433,10 +379,10 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToOrders()
     {
-      client.OpenOrder += o =>
+      client.OpenOrder += o => Observe(() =>
       {
-        OrderStream(new MessageModel<OrderModel> { Next = InternalMap.GetOrder(o) });
-      };
+        OrderStream(new MessageModel<OrderModel> { Next = Downstream.GetOrder(o) });
+      });
 
       client.ClientSocket.reqAutoOpenOrders(true);
     }
@@ -446,28 +392,19 @@ namespace InteractiveBrokers
     /// </summary>
     public override async Task<ResponseModel<IAccount>> GetAccount()
     {
-      var response = new ResponseModel<IAccount>();
+      return await Response(async () =>
+      {
+        await GetAccountSummary();
 
-      await GetAccountSummary();
+        var orders = await GetOrders();
+        var positions = await GetPositions();
 
-      var orders = await GetOrders();
-      var positions = await GetPositions();
+        Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
 
-      Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-      Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-
-      Account
-        .Positions
-        .Values
-        .ForEach(o =>
-        {
-          Account.State[o.Name] = Account.State.Get(o.Name) ?? new StateModel();
-          Account.State[o.Name].Instrument = o.Transaction.Instrument;
-        });
-
-      response.Data = Account;
-
-      return response;
+        return Account;
+      });
     }
 
     /// <summary>
@@ -475,9 +412,8 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
       var orders = new ConcurrentDictionary<string, OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -485,7 +421,7 @@ namespace InteractiveBrokers
       {
         if (Equals(message.Order.Account, Account.Descriptor))
         {
-          orders[$"{message.Order.PermId}"] = InternalMap.GetOrder(message);
+          orders[$"{message.Order.PermId}"] = Downstream.GetOrder(message);
         }
       }
 
@@ -494,24 +430,19 @@ namespace InteractiveBrokers
         client.OpenOrder -= subscribe;
         client.OpenOrderEnd -= unsubscribe;
 
-        response.Data = orders?.Values?.ToList() ?? [];
         source.TrySetResult();
       }
 
-      try
+      return await Response(async () =>
       {
         client.OpenOrder += subscribe;
         client.OpenOrderEnd += unsubscribe;
         client.ClientSocket.reqAllOpenOrders();
 
         await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
 
-      return response;
+        return orders.Values.ToList();
+      });
     }
 
     /// <summary>
@@ -519,18 +450,18 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null) => await Response(async () =>
     {
       var id = counter++;
       var positions = new ConcurrentDictionary<string, OrderModel>();
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
       void subscribe(PositionMultiMessage message)
       {
         if (Equals(id, message.ReqId) && Equals(message.Account, Account.Descriptor))
         {
-          positions[$"{message.Contract.LocalSymbol}"] = InternalMap.GetPosition(message);
+          positions[$"{message.Contract.LocalSymbol}"] = Downstream.GetPosition(message);
         }
       }
 
@@ -547,21 +478,14 @@ namespace InteractiveBrokers
         }
       }
 
-      try
-      {
-        client.PositionMulti += subscribe;
-        client.PositionMultiEnd += unsubscribe;
-        client.ClientSocket.reqPositionsMulti(id, Account.Descriptor, string.Empty);
+      client.PositionMulti += subscribe;
+      client.PositionMultiEnd += unsubscribe;
+      client.ClientSocket.reqPositionsMulti(id, Account.Descriptor, string.Empty);
 
-        await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
+      await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe(id)));
 
-      return response;
-    }
+      return positions.Values.ToList();
+    });
 
     /// <summary>
     /// Get latest quote
@@ -573,7 +497,7 @@ namespace InteractiveBrokers
     {
       var max = short.MaxValue;
       var point = new PointModel();
-      var contract = ExternalMap.GetContract(instrument);
+      var contract = Upstream.GetContract(instrument);
       var summary = Account.State[instrument.Name];
 
       double? value(double data, double min, double max, double? original)
@@ -589,7 +513,7 @@ namespace InteractiveBrokers
         return Math.Round(data, 2);
       }
 
-      void subscribeToComs(TickOptionMessage message)
+      void subscribeToComs(TickOptionMessage message) => Observe(() =>
       {
         if (Equals(id, message.RequestId))
         {
@@ -603,13 +527,13 @@ namespace InteractiveBrokers
           variance.Theta = value(message.Theta, 0, max, variance.Theta);
           variance.Vega = value(message.Vega, 0, max, variance.Vega);
         }
-      }
+      });
 
-      void subscribeToPrices(TickPriceMessage message)
+      void subscribeToPrices(TickPriceMessage message) => Observe(() =>
       {
         if (Equals(id, message.RequestId))
         {
-          switch (ExternalMap.GetEnum<PropertyEnum>(message.Field))
+          switch (Upstream.GetEnum<PropertyEnum>(message.Field))
           {
             case PropertyEnum.BidSize: point.BidSize = message.Data ?? point.BidSize; break;
             case PropertyEnum.AskSize: point.AskSize = message.Data ?? point.AskSize; break;
@@ -637,7 +561,7 @@ namespace InteractiveBrokers
 
           DataStream(new MessageModel<PointModel> { Next = instrument.Point });
         }
-      }
+      });
 
       client.TickPrice += subscribeToPrices;
       client.TickOptionCommunication += subscribeToComs;
@@ -748,7 +672,7 @@ namespace InteractiveBrokers
 
       var orderId = this.order++;
       var response = new ResponseModel<OrderModel>();
-      var exOrders = ExternalMap.GetOrders(orderId, order, Account);
+      var exOrders = Upstream.GetOrders(orderId, order, Account);
       var exResponses = new Dictionary<int, OpenOrderMessage>();
 
       foreach (var exOrder in exOrders)
@@ -781,7 +705,7 @@ namespace InteractiveBrokers
 
       response.Data = order;
       response.Data.Transaction.Id = $"{orderId}";
-      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
+      response.Data.Transaction.Status = Downstream.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
 
       return response;
     }
@@ -820,7 +744,7 @@ namespace InteractiveBrokers
 
       response.Data = order;
       response.Data.Transaction.Id = $"{orderId}";
-      response.Data.Transaction.Status = InternalMap.GetOrderStatus(exResponse.Status);
+      response.Data.Transaction.Status = Downstream.GetOrderStatus(exResponse.Status);
 
       return response;
     }

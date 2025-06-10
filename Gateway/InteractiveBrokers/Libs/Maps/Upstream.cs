@@ -9,7 +9,7 @@ using Terminal.Core.Models;
 
 namespace InteractiveBrokers.Mappers
 {
-  public class ExternalMap
+  public class Upstream
   {
     /// <summary>
     /// Convert remote order from brokerage to local record

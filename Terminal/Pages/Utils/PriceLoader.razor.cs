@@ -30,7 +30,7 @@ namespace Terminal.Pages.Utils
     {
       if (setup)
       {
-        InstanceService<SubscriptionService>.Instance.OnUpdate += async state =>
+        InstanceService<SubscriptionService>.Instance.Update += async state =>
         {
           switch (true)
           {
@@ -103,7 +103,7 @@ namespace Terminal.Pages.Utils
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.OnMessage(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
       }
 
       return null;

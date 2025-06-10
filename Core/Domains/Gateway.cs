@@ -1,10 +1,11 @@
+using Distribution.Services;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Terminal.Core.Domains
 {
@@ -65,40 +66,40 @@ namespace Terminal.Core.Domains
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null);
+    Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
+    Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null);
+    Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null);
+    Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders);
+    Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders);
+    Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders);
   }
 
   /// <summary>
@@ -172,40 +173,40 @@ namespace Terminal.Core.Domains
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null);
+    public abstract Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
+    public abstract Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null);
+    public abstract Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public abstract Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null);
+    public abstract Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
-    public abstract Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders);
+    public abstract Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders);
 
     /// <summary>
     /// Dispose
@@ -215,9 +216,8 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Create separate orders when combo-orders are not supported
     /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    public virtual IList<OrderModel> ComposeOrders(OrderModel order)
+    /// <param name="orders"></param>
+    public virtual List<OrderModel> ComposeOrders(params OrderModel[] orders)
     {
       OrderModel merge(OrderModel subOrder, OrderModel group)
       {
@@ -228,30 +228,35 @@ namespace Terminal.Core.Domains
           ?.Where(o => Equals(o.Name, nextOrder.Name))
           ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
+        nextOrder.Descriptor = group.Descriptor;
         nextOrder.Price ??= nextOrder.GetOpenEstimate();
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
-        nextOrder.Transaction.Price ??= nextOrder.Price;
-        nextOrder.Transaction.Time ??= nextOrder.Transaction.Instrument.Point.Time;
+        nextOrder.Transaction.Price = nextOrder.Price;
+        nextOrder.Transaction.Time = nextOrder.Transaction.Instrument.Point.Time;
         nextOrder.Transaction.Volume = nextOrder.Volume;
         nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;
       }
 
-      var nextOrders = order
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side or null)
-        .Select(o => merge(o, order))
-        .ToList();
-
-      if (order.Volume is not null)
+      return orders.SelectMany(order =>
       {
-        nextOrders.Add(merge(order, order));
-      }
+        var nextOrders = order
+          .Orders
+          .Where(o => o.Instruction is InstructionEnum.Side or null)
+          .Select(o => merge(o, order))
+          .ToList();
 
-      return nextOrders;
+        if (order.Volume is not null)
+        {
+          nextOrders.Add(merge(order, order));
+        }
+
+        return nextOrders;
+
+      }).ToList();
     }
 
     /// <summary>
@@ -266,6 +271,79 @@ namespace Terminal.Core.Domains
       }
 
       return accounts;
+    }
+
+    /// <summary>
+    /// Action wrapper
+    /// </summary>
+    /// <param name="action"></param>
+    protected virtual async Task<ResponseModel<T>> Response<T>(Func<Task<T>> action)
+    {
+      var response = new ResponseModel<T>();
+
+      try
+      {
+        response.Data = await action();
+      }
+      catch (Exception e)
+      {
+        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Action wrapper
+    /// </summary>
+    /// <param name="action"></param>
+    protected virtual void Observe(Action action)
+    {
+      try
+      {
+        action();
+      }
+      catch (Exception e)
+      {
+        var message = new MessageModel<string>
+        {
+          Error = e,
+          Message = e.Message
+        };
+
+        Message(message);
+      }
+    }
+
+    /// <summary>
+    /// Action wrapper
+    /// </summary>
+    /// <param name="action"></param>
+    protected virtual async Task Observe(Func<Task> action)
+    {
+      try
+      {
+        await action();
+      }
+      catch (Exception e)
+      {
+        var message = new MessageModel<string>
+        {
+          Error = e,
+          Message = e.Message
+        };
+
+        Message(message);
+      }
+    }
+
+    /// <summary>
+    /// Action wrapper
+    /// </summary>
+    /// <param name="message"></param>
+    protected virtual void Message(MessageModel<string> message)
+    {
+      InstanceService<MessageService>.Instance.Update(message);
     }
   }
 }

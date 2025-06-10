@@ -10,7 +10,7 @@ using Terminal.Core.Models;
 
 namespace Schwab.Mappers
 {
-  public class InternalMap
+  public class Downstream
   {
     /// <summary>
     /// Map fields in the stream

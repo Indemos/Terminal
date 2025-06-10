@@ -9,7 +9,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Dom = Terminal.Core.Domains;
 
 namespace Alpaca
 {
@@ -33,7 +32,7 @@ namespace Alpaca
     /// <summary>
     /// Streams
     /// </summary>
-    protected IDictionary<string, IList<IAlpacaDataSubscription>> subscriptions;
+    protected IDictionary<string, List<IAlpacaDataSubscription>> subscriptions;
 
     /// <summary>
     /// Client ID
@@ -59,7 +58,7 @@ namespace Alpaca
 
       dataClients = new Dictionary<InstrumentEnum, IDisposable>();
       streamingClients = new Dictionary<InstrumentEnum, IStreamingClient>();
-      subscriptions = new Dictionary<string, IList<IAlpacaDataSubscription>>();
+      subscriptions = new Dictionary<string, List<IAlpacaDataSubscription>>();
     }
 
     /// <summary>
@@ -67,9 +66,7 @@ namespace Alpaca
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return await Response(async () =>
       {
         await Disconnect();
 
@@ -87,14 +84,8 @@ namespace Alpaca
         await GetAccount();
         await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -104,8 +95,6 @@ namespace Alpaca
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
       async Task subscribe<T>() where T : class, IStreamingDataClient
       {
         await Unsubscribe(instrument);
@@ -126,7 +115,7 @@ namespace Alpaca
         await client.SubscribeAsync(onTradeSub);
       }
 
-      try
+      return await Response(async () =>
       {
         switch (instrument.Type)
         {
@@ -134,14 +123,8 @@ namespace Alpaca
           case InstrumentEnum.Shares: await subscribe<IAlpacaDataStreamingClient>(); break;
         }
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
@@ -149,9 +132,7 @@ namespace Alpaca
     /// </summary>
     public override Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
-      try
+      return Response(() =>
       {
         tradingClient?.Dispose();
 
@@ -161,14 +142,8 @@ namespace Alpaca
         dataClients?.Clear();
         streamingClients?.Clear();
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return Task.FromResult(response);
+        return Task.FromResult(StatusEnum.Active);
+      });
     }
 
     /// <summary>
@@ -178,20 +153,15 @@ namespace Alpaca
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
       async Task unsubscribe<T>() where T : class, ISubscriptionHandler
       {
-        if (subscriptions.TryGetValue(instrument.Name, out var subs))
+        foreach (var sub in subscriptions.Get(instrument.Name) ?? [])
         {
-          foreach (var sub in subs)
-          {
-            await (streamingClients[instrument.Type.Value] as T).UnsubscribeAsync(sub);
-          }
+          await (streamingClients[instrument.Type.Value] as T).UnsubscribeAsync(sub);
         }
       }
 
-      try
+      return await Response(async () =>
       {
         switch (instrument.Type)
         {
@@ -199,24 +169,16 @@ namespace Alpaca
           case InstrumentEnum.Shares: await unsubscribe<IAlpacaDataStreamingClient>(); break;
         }
 
-        response.Data = StatusEnum.Active;
-      }
-      catch (Exception e)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-      }
-
-      return response;
+        return StatusEnum.Active;
+      });
     }
 
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    public override async Task<ResponseModel<Dom.IAccount>> GetAccount()
+    public override async Task<ResponseModel<Terminal.Core.Domains.IAccount>> GetAccount()
     {
-      var response = new ResponseModel<Dom.IAccount>();
-
-      try
+      return await Response(async () =>
       {
         var orders = await GetOrders();
         var positions = await GetPositions();
@@ -225,24 +187,10 @@ namespace Alpaca
         Account.Balance = (double)account.Equity;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
 
-        Account
-          .Positions
-          .Values
-          .ForEach(o =>
-          {
-            Account.State[o.Name] = Account.State.Get(o.Name) ?? new StateModel();
-            Account.State[o.Name].Instrument = o.Transaction.Instrument;
-          });
-
-        response.Data = Account;
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return Account;
+      });
     }
 
     /// <summary>
@@ -250,23 +198,16 @@ namespace Alpaca
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetOrders(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
-        var props = new ListOrdersRequest { OrderStatusFilter = OrderStatusFilter.Open };
-        var items = await tradingClient.ListOrdersAsync(props);
+        var query = new ListOrdersRequest { OrderStatusFilter = OrderStatusFilter.Open };
+        var orders = await tradingClient.ListOrdersAsync(query);
+        var response = orders.Select(Downstream.GetOrder).ToList();
 
-        response.Data = items.Select(InternalMap.GetOrder)?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return response ?? [];
+      });
     }
 
     /// <summary>
@@ -274,22 +215,15 @@ namespace Alpaca
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> GetPositions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<OrderModel>>> GetPositions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
-
-      try
+      return await Response(async () =>
       {
-        var items = await tradingClient.ListPositionsAsync();
+        var orders = await tradingClient.ListPositionsAsync();
+        var response = orders.Select(Downstream.GetPosition).ToList();
 
-        response.Data = items.Select(InternalMap.GetPosition)?.ToList() ?? [];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+        return response ?? [];
+      });
     }
 
     /// <summary>
@@ -297,11 +231,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<InstrumentModel>>> GetOptions(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<InstrumentModel>>();
-
-      try
+      return await Response(async () =>
       {
         var pages = 50;
         var instrument = criteria.Instrument;
@@ -326,19 +258,12 @@ namespace Alpaca
           step = string.IsNullOrEmpty(inputs.Pagination.Token) ? pages : step;
         }
 
-        items = items
+        return items
           .OrderBy(o => o.Derivative.ExpirationDate)
           .ThenBy(o => o.Derivative.Strike)
-          .ThenBy(o => o.Derivative.Side);
-
-        response.Data = [.. items];
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+          .ThenBy(o => o.Derivative.Side)
+          .ToList();
+      });
     }
 
     /// <summary>
@@ -348,9 +273,7 @@ namespace Alpaca
     /// <returns></returns>
     public override async Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<DomModel>();
-
-      try
+      return await Response(async () =>
       {
         var instrument = criteria.Instrument;
         var name = instrument.Name;
@@ -364,39 +287,33 @@ namespace Alpaca
             {
               var inputs = new LatestDataListRequest([name]);
               var points = await (client as IAlpacaCryptoDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], instrument);
+              point = Downstream.GetPrice(points[name], instrument);
+              break;
             }
-            break;
 
           case InstrumentEnum.Shares:
             {
               var inputs = new LatestMarketDataListRequest([name]) { Feed = MarketDataFeed.Iex, Currency = currency };
               var points = await (client as IAlpacaDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], instrument);
+              point = Downstream.GetPrice(points[name], instrument);
+              break;
             }
-            break;
 
           case InstrumentEnum.Options:
             {
               var inputs = new LatestOptionsDataRequest([name]) { OptionsFeed = OptionsFeed.Indicative };
               var points = await (client as IAlpacaOptionsDataClient).ListLatestQuotesAsync(inputs);
-              point = InternalMap.GetPrice(points[name], instrument);
+              point = Downstream.GetPrice(points[name], instrument);
+              break;
             }
-            break;
         }
 
-        response.Data = new DomModel
+        return new DomModel
         {
           Asks = [point],
           Bids = [point],
         };
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
-
-      return response;
+      });
     }
 
     /// <summary>
@@ -404,11 +321,9 @@ namespace Alpaca
     /// </summary>
     /// <param name="criteria"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<PointModel>>> GetPoints(ConditionModel criteria = null)
+    public override async Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
     {
-      var response = new ResponseModel<IList<PointModel>>();
-
-      try
+      return await Response(async () =>
       {
         var instrument = criteria.Instrument;
         var name = instrument.Name;
@@ -421,25 +336,19 @@ namespace Alpaca
             {
               var inputs = new HistoricalCryptoQuotesRequest(name, criteria.MinDate.Value, criteria.MaxDate.Value);
               var points = await (client as IAlpacaCryptoDataClient).ListHistoricalQuotesAsync(inputs);
-              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, instrument))];
+              return points.Items.Select(o => Downstream.GetPrice(o, instrument)).ToList();
             }
-            break;
 
           case InstrumentEnum.Shares:
             {
               var inputs = new HistoricalQuotesRequest(name, criteria.MinDate.Value, criteria.MaxDate.Value) { Feed = MarketDataFeed.Iex, Currency = currency };
               var points = await (client as IAlpacaDataClient).ListHistoricalQuotesAsync(inputs);
-              response.Data = [.. points.Items.Select(o => InternalMap.GetPrice(o, instrument))];
+              return points.Items.Select(o => Downstream.GetPrice(o, instrument)).ToList();
             }
-            break;
         }
-      }
-      catch (Exception e)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
-      }
 
-      return response;
+        return [];
+      });
     }
 
     /// <summary>
@@ -447,26 +356,19 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>> { Data = [] };
+      var response = new ResponseModel<List<OrderModel>> { Data = [] };
 
-      foreach (var order in orders)
+      foreach (var order in ComposeOrders(orders))
       {
-        try
-        {
-          foreach (var subOrder in ComposeOrders(order))
-          {
-            response.Data.Add((await SendOrder(subOrder)).Data);
-          }
-        }
-        catch (Exception e)
-        {
-          response.Errors.Add(new ErrorModel { ErrorMessage = $"{e}" });
-        }
+        var o = await Response(async () => (await SendOrder(order))?.Data);
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -476,16 +378,19 @@ namespace Alpaca
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<IList<OrderModel>>> ClearOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<List<OrderModel>>> ClearOrders(params OrderModel[] orders)
     {
-      var response = new ResponseModel<IList<OrderModel>>();
+      var response = new ResponseModel<List<OrderModel>>();
 
       foreach (var order in orders)
       {
-        await tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id));
+        var o = await Response(async () => await tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id)));
+
+        response.Errors = [.. response.Errors.Concat(o.Errors)];
+        response.Data = [.. response.Data.Append(order)];
       }
 
-      await GetAccount();
+      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -501,12 +406,12 @@ namespace Alpaca
 
       await Subscribe(order.Transaction.Instrument);
 
-      var exOrder = ExternalMap.GetOrder(order);
+      var exOrder = Upstream.GetOrder(order);
       var response = new ResponseModel<OrderModel>();
       var exResponse = await tradingClient.PostOrderAsync(exOrder);
 
       order.Transaction.Id = $"{exResponse.OrderId}";
-      order.Transaction.Status = InternalMap.GetStatus(exResponse.OrderStatus);
+      order.Transaction.Status = Downstream.GetStatus(exResponse.OrderStatus);
 
       return response;
     }
@@ -515,28 +420,23 @@ namespace Alpaca
     /// Process quote from the stream
     /// </summary>
     /// <param name="streamPoint"></param>
-    protected virtual void OnPoint(IQuote streamPoint)
+    protected virtual void OnPoint(IQuote streamPoint) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
     {
-      var scheduler = InstanceService<ScheduleService>.Instance;
+      var summary = Account.State.Get(streamPoint.Symbol);
+      var point = Downstream.GetPrice(streamPoint, summary.Instrument);
 
-      scheduler.Send(() =>
-      {
-        var summary = Account.State.Get(streamPoint.Symbol);
-        var point = InternalMap.GetPrice(streamPoint, summary.Instrument);
+      summary.Points.Add(point);
+      summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+      summary.Instrument.Point = summary.PointGroups.Last();
 
-        summary.Points.Add(point);
-        summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
-        summary.Instrument.Point = summary.PointGroups.Last();
-
-        DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
-      });
-    }
+      DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+    }));
 
     /// <summary>
     /// Process quote from the stream
     /// </summary>
     /// <param name="streamOrder"></param>
-    protected virtual void OnTrade(ITrade streamOrder)
+    protected virtual void OnTrade(ITrade streamOrder) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
     {
       var action = new TransactionModel
       {
@@ -549,7 +449,7 @@ namespace Alpaca
 
       var order = new OrderModel
       {
-        Side = InternalMap.GetTakerSide(streamOrder.TakerSide)
+        Side = Downstream.GetTakerSide(streamOrder.TakerSide)
       };
 
       var message = new MessageModel<OrderModel>
@@ -558,23 +458,23 @@ namespace Alpaca
       };
 
       OrderStream(message);
-    }
+    }));
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="screener"></param>
     /// <returns></returns>
-    protected virtual async Task<ResponseModel<IList<InstrumentModel>>> GetPageOptions(OptionChainRequest screener)
+    protected virtual async Task<ResponseModel<List<InstrumentModel>>> GetPageOptions(OptionChainRequest screener)
     {
-      var response = new ResponseModel<IList<InstrumentModel>>();
+      var response = new ResponseModel<List<InstrumentModel>>();
       var client = dataClients[InstrumentEnum.Options] as IAlpacaOptionsDataClient;
       var optionResponse = await client.GetOptionChainAsync(screener);
 
       response.Cursor = optionResponse.NextPageToken;
       response.Data = optionResponse
         .Items
-        .Select(option => InternalMap.GetOption(screener, option.Value, option.Key))
+        .Select(option => Downstream.GetOption(screener, option.Value, option.Key))
         .ToList();
 
       return response;
