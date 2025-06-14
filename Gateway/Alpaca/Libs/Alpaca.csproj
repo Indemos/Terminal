@@ -8,7 +8,7 @@
 
   <ItemGroup>
     <PackageReference Include="Alpaca.Markets" Version="8.0.0-beta3" />
-    <PackageReference Include="Distribution.Stream" Version="1.2.7" />
+    <PackageReference Include="Distribution.Stream" Version="1.2.8" />
   </ItemGroup>
 
   <ItemGroup>

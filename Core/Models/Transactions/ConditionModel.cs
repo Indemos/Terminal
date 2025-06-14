@@ -1,10 +1,10 @@
 using System;
-using System.Collections;
+using System.Collections.Generic;
 using Terminal.Core.Domains;
 
 namespace Terminal.Core.Models
 {
-  public class ConditionModel : Hashtable
+  public class ConditionModel : Dictionary<string, object>
   {
     /// <summary>
     /// Count

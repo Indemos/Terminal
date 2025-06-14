@@ -8,6 +8,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
@@ -69,7 +70,7 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new ConcurrentDictionary<string, StateModel>
+        State = new Map<string, StateModel>
         {
           ["SPY"] = new StateModel
           {

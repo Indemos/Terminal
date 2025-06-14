@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
@@ -103,7 +104,7 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new ConcurrentDictionary<string, StateModel>
+        State = new Map<string, StateModel>
         {
           ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
         },
@@ -150,7 +151,7 @@ namespace Terminal.Pages.Options
 
         if (optionDelta is 0)
         {
-          await ClosePositions(InstrumentEnum.Shares);
+          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
         }
         else if (basisDelta is 0 || isBuy || isSell)
         {
@@ -162,7 +163,7 @@ namespace Terminal.Pages.Options
             Transaction = new() { Instrument = point.Instrument }
           };
 
-          await ClosePositions(InstrumentEnum.Shares);
+          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
           await adapter.SendOrders([order]);
         }
       }
@@ -311,20 +312,16 @@ namespace Terminal.Pages.Options
     /// <summary>
     /// Close positions
     /// </summary>
-    /// <param name="instrumentType"></param>
+    /// <param name="condition"></param>
     /// <returns></returns>
-    public virtual async Task ClosePositions(InstrumentEnum? instrumentType = null)
+    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
 
       foreach (var position in adapter.Account.Positions.Values.ToList())
       {
-        var insEmpty = instrumentType is null;
-        var insShares = instrumentType is InstrumentEnum.Shares && position.Transaction.Instrument.Derivative is null;
-        var insOptions = instrumentType is InstrumentEnum.Options && position.Transaction.Instrument.Derivative is not null;
-
-        if (insEmpty || insShares || insOptions)
+        if (condition is null || condition(position))
         {
           var order = new OrderModel
           {

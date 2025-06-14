@@ -1,9 +1,8 @@
 using Distribution.Services;
 using Distribution.Stream;
-using MessagePack.Resolvers;
 using MessagePack;
+using MessagePack.Resolvers;
 using System;
-using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -117,8 +116,7 @@ namespace Simulation
 
       await Unsubscribe(instrument);
 
-      Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
-      Account.State[instrument.Name].Instrument ??= instrument;
+      Account.State.Get(instrument.Name).Instrument ??= instrument;
 
       DataStream += OnPoint;
 
@@ -161,7 +159,7 @@ namespace Simulation
 
         if (Equals(counter, streams.Count) && Equals(next.Key, instrument.Name))
         {
-          var summary = Account.State[instrument.Name];
+          var summary = Account.State.Get(instrument.Name);
 
           summary.Instrument = instrument;
           summary.Instrument.Point = next.Value.Instrument.Point;
@@ -500,7 +498,7 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var point = Account.State[criteria.Instrument.Name].Instrument.Point;
+      var point = Account.State.Get(criteria.Instrument.Name).Instrument.Point;
       var response = new ResponseModel<DomModel>
       {
         Data = new DomModel
@@ -523,7 +521,7 @@ namespace Simulation
     {
       var response = new ResponseModel<List<PointModel>>
       {
-        Data = [.. Account.State[criteria.Instrument.Name].Points]
+        Data = [.. Account.State.Get(criteria.Instrument.Name).Points]
       };
 
       return Task.FromResult(response);

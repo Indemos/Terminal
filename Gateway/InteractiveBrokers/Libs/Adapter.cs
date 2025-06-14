@@ -113,8 +113,7 @@ namespace InteractiveBrokers
       {
         await Unsubscribe(instrument);
 
-        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
-        Account.State[instrument.Name].Instrument ??= instrument;
+        Account.State.Get(instrument.Name).Instrument ??= instrument;
 
         var id = subscriptions[instrument.Name] = counter++;
         var contracts = await GetContracts(instrument);
@@ -342,7 +341,7 @@ namespace InteractiveBrokers
       {
         var message = new MessageModel<string>
         {
-          Message = $"{ClientErrorEnum.NoConnection}",
+          Content = $"{ClientErrorEnum.NoConnection}",
           Action = ActionEnum.Disconnect
         };
 
@@ -366,7 +365,7 @@ namespace InteractiveBrokers
         var content = new MessageModel<string>
         {
           Code = code,
-          Message = message,
+          Content = message,
           Error = e
         };
 
@@ -498,7 +497,7 @@ namespace InteractiveBrokers
       var max = short.MaxValue;
       var point = new PointModel();
       var contract = Upstream.GetContract(instrument);
-      var summary = Account.State[instrument.Name];
+      var summary = Account.State.Get(instrument.Name);
 
       double? value(double data, double min, double max, double? original)
       {

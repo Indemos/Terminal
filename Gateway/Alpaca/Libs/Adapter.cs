@@ -99,8 +99,7 @@ namespace Alpaca
       {
         await Unsubscribe(instrument);
 
-        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
-        Account.State[instrument.Name].Instrument ??= instrument;
+        Account.State.Get(instrument.Name).Instrument ??= instrument;
 
         var client = streamingClients[instrument.Type.Value] as T;
         var onPointSub = client.GetQuoteSubscription(instrument.Name);

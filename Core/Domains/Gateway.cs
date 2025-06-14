@@ -233,8 +233,8 @@ namespace Terminal.Core.Domains
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
-        nextOrder.Transaction.Price = nextOrder.Price;
-        nextOrder.Transaction.Time = nextOrder.Transaction.Instrument.Point.Time;
+        nextOrder.Transaction.Price ??= nextOrder.Price;
+        nextOrder.Transaction.Time ??= nextOrder.Transaction.Instrument.Point.Time;
         nextOrder.Transaction.Volume = nextOrder.Volume;
         nextOrder.Orders = [.. groupOrders];
 
@@ -287,7 +287,15 @@ namespace Terminal.Core.Domains
       }
       catch (Exception e)
       {
-        response.Errors = [new ErrorModel { ErrorMessage = $"{e}" }];
+        var message = new MessageModel<string>
+        {
+          Error = e,
+          Content = e.Message,
+        };
+
+        response.Errors = [new ErrorModel { ErrorMessage = message.Content }];
+
+        Message(message);
       }
 
       return response;
@@ -308,7 +316,7 @@ namespace Terminal.Core.Domains
         var message = new MessageModel<string>
         {
           Error = e,
-          Message = e.Message
+          Content = e.Message
         };
 
         Message(message);
@@ -330,7 +338,7 @@ namespace Terminal.Core.Domains
         var message = new MessageModel<string>
         {
           Error = e,
-          Message = e.Message
+          Content = e.Message
         };
 
         Message(message);

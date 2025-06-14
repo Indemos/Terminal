@@ -1,3 +1,4 @@
+using Flurl;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -19,7 +20,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/user/profile";
       var response = await Send<ProfileCoreMessage>(source);
-      return response.Data?.Profile;
+      return response.Profile;
     }
 
     /// <summary>
@@ -29,7 +30,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/accounts/{accountNumber}/balances";
       var response = await Send<BalanceCoreMessage>(source);
-      return response.Data?.Balance;
+      return response.Balance;
     }
 
     /// <summary>
@@ -39,7 +40,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/accounts/{accountNumber}/positions";
       var response = await Send<PositionsCoreMessage>(source);
-      return response.Data?.Positions?.Items;
+      return response.Positions?.Items;
     }
 
     /// <summary>
@@ -53,10 +54,10 @@ namespace Tradier
         { "limit", itemsPerPage },
       };
 
-      var source = $"{DataUri}/accounts/{accountNumber}/history?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{accountNumber}/history".SetQueryParams(data);
       var response = await Send<HistoryCoreMessage>(source);
 
-      return response.Data?.History;
+      return response.History;
     }
 
     /// <summary>
@@ -70,10 +71,10 @@ namespace Tradier
         { "limit", itemsPerPage },
       };
 
-      var source = $"{DataUri}/accounts/{accountNumber}/gainloss?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{accountNumber}/gainloss".SetQueryParams(data);
       var response = await Send<GainLossCoreMessage>(source);
 
-      return response.Data?.GainLoss;
+      return response.GainLoss;
     }
 
     /// <summary>
@@ -83,7 +84,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/accounts/{accountNumber}/orders";
       var response = await Send<OrdersCoreMessage>(source);
-      return response.Data?.Orders?.Items;
+      return response.Orders?.Items;
     }
 
     /// <summary>
@@ -93,7 +94,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/accounts/{accountNumber}/orders/{orderId}";
       var response = await Send<OrdersCoreMessage>(source);
-      return response.Data?.Orders?.Items?.FirstOrDefault();
+      return response.Orders?.Items?.FirstOrDefault();
     }
   }
 }

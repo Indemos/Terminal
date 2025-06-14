@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
@@ -68,7 +69,7 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new ConcurrentDictionary<string, StateModel>
+        State = new Map<string, StateModel>
         {
           [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset } },
         },

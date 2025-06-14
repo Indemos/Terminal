@@ -7,6 +7,7 @@ using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Indicators;
@@ -71,7 +72,7 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Tradier:PaperAccount"],
-        State = new ConcurrentDictionary<string, StateModel>
+        State = new Map<string, StateModel>
         {
           [Instrument.Name] = new StateModel { Instrument = Instrument }
         }

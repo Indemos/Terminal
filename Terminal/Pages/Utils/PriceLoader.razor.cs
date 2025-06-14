@@ -10,6 +10,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Terminal.Components;
+using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -67,7 +68,7 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
-        State = new ConcurrentDictionary<string, StateModel>
+        State = new Map<string, StateModel>
         {
           [Instrument.Name] = new StateModel { Instrument = Instrument }
         }        

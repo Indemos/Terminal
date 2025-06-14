@@ -20,7 +20,6 @@ namespace Terminal.Services
       Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
         .Enrich.FromLogContext()
-        .WriteTo.Console()
         .WriteTo.File($"{setup["Logs:Source"]}")
         .CreateLogger();
     }

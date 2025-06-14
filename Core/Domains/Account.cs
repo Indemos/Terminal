@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using Terminal.Core.Collections;
 using Terminal.Core.Models;
 
 namespace Terminal.Core.Domains
@@ -42,7 +43,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Snapshots
     /// </summary>
-    ConcurrentDictionary<string, StateModel> State { get; set; }
+    Map<string, StateModel> State { get; set; }
   }
 
   /// <summary>
@@ -83,7 +84,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Market snapshot
     /// </summary>
-    public virtual ConcurrentDictionary<string, StateModel> State { get; set; }
+    public virtual Map<string, StateModel> State { get; set; }
 
     /// <summary>
     /// Constructor
@@ -94,9 +95,9 @@ namespace Terminal.Core.Domains
       InitialBalance = 0.0;
 
       Deals = [];
-      Orders = new ConcurrentDictionary<string, OrderModel>();
-      Positions = new ConcurrentDictionary<string, OrderModel>();
-      State = new ConcurrentDictionary<string, StateModel>();
+      Orders = new();
+      Positions = new();
+      State = new();
     }
   }
 }

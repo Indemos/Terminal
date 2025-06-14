@@ -12,7 +12,6 @@ using MudBlazor;
 using Schwab;
 using SkiaSharp;
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -42,7 +41,7 @@ namespace Terminal.Pages.Utils
     {
       if (setup)
       {
-        var name = "SPY";
+        var name = "GME";
 
         await OnChart(name, DateTime.Now, DateTime.Now.AddDays(5), async (options) =>
         {

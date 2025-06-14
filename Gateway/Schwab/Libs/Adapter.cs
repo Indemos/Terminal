@@ -1,6 +1,7 @@
 using Distribution.Services;
 using Distribution.Stream;
-using Distribution.Stream.Extensions;
+using Flurl;
+using Flurl.Http;
 using Schwab.Enums;
 using Schwab.Mappers;
 using Schwab.Messages;
@@ -19,7 +20,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Dis = Distribution.Stream.Models;
 
 namespace Schwab
 {
@@ -34,11 +34,6 @@ namespace Schwab
     /// Encrypted account number
     /// </summary>
     protected string accountCode;
-
-    /// <summary>
-    /// HTTP client
-    /// </summary>
-    protected Service sender;
 
     /// <summary>
     /// Socket connection
@@ -106,26 +101,23 @@ namespace Schwab
       {
         await Disconnect();
 
-        var sender = new Service();
         var streamer = new ClientWebSocket();
         var scheduler = new ScheduleService();
         var interval = new System.Timers.Timer(TimeSpan.FromMinutes(1));
 
-        this.sender = sender;
         this.streamer = streamer;
 
         await UpdateToken($"{DataUri}/v1/oauth/token");
 
         accountCode = (await GetAccountCode()).Data;
 
-        await GetAccount();
         await GetConnection(streamer, scheduler);
+        await GetAccount();
 
         interval.Enabled = true;
         interval.Elapsed += async (sender, e) => await UpdateToken($"{DataUri}/v1/oauth/token");
 
         connections.Add(streamer);
-        connections.Add(sender);
         connections.Add(interval);
         connections.Add(scheduler);
 
@@ -148,8 +140,7 @@ namespace Schwab
 
         await Unsubscribe(instrument);
 
-        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
-        Account.State[instrument.Name].Instrument ??= instrument;
+        Account.State.Get(instrument.Name).Instrument ??= instrument;
 
         await SendStream(streamer, new StreamInputMessage
         {
@@ -243,21 +234,19 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["symbol"] = criteria?.Instrument?.Name,
-          ["toDate"] = $"{criteria?.MaxDate:yyyy-MM-dd}",
-          ["fromDate"] = $"{criteria?.MinDate:yyyy-MM-dd}",
-          ["strikeCount"] = byte.MaxValue
+          ["symbol"] = criteria?.Instrument?.Name ?? criteria.Get("symbol"),
+          ["toDate"] = $"{criteria?.MaxDate ?? criteria.Get("toDate"):yyyy-MM-dd}",
+          ["fromDate"] = $"{criteria?.MinDate ?? criteria.Get("fromDate"):yyyy-MM-dd}",
+          ["strikeCount"] = criteria.Get("strikeCount") ?? byte.MaxValue
+        };
 
-        }.Merge(criteria);
-
-        var optionResponse = await Send<OptionChainMessage>($"{DataUri}/marketdata/v1/chains?{props}");
+        var optionResponse = await Send<OptionChainMessage>($"{DataUri}/marketdata/v1/chains".SetQueryParams(props));
 
         return optionResponse
-          ?.Data
           ?.PutExpDateMap
-          ?.Concat(optionResponse?.Data?.CallExpDateMap)
+          ?.Concat(optionResponse?.CallExpDateMap)
           ?.SelectMany(dateMap => dateMap.Value.SelectMany(o => o.Value))
-          ?.Select(option => Downstream.GetOption(option, optionResponse.Data))
+          ?.Select(option => Downstream.GetOption(option, optionResponse))
           ?.OrderBy(o => o.Derivative.ExpirationDate)
           ?.ThenBy(o => o.Derivative.Strike)
           ?.ThenBy(o => o.Derivative.Side)
@@ -275,7 +264,7 @@ namespace Schwab
       return await Response(async () =>
       {
         var instrument = criteria.Instrument;
-        var dom = Account.State[instrument.Name].Dom;
+        var dom = Account.State.Get(instrument.Name).Dom;
 
         if (dom.Bids.Count is not 0 && dom.Asks.Count is not 0)
         {
@@ -287,16 +276,15 @@ namespace Schwab
           ["indicative"] = false,
           ["symbols"] = instrument.Name,
           ["fields"] = "quote,fundamental,extended,reference,regular"
-
-        }.Merge(criteria);
+        };
 
         var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
-        var point = Downstream.GetPrice(pointResponse.Data[props["symbols"]], instrument);
+        var point = Downstream.GetPrice(pointResponse[instrument.Name], instrument);
 
         return new DomModel
         {
           Asks = [point],
-          Bids = [point]
+          Bids = [point],
         };
       });
     }
@@ -317,12 +305,11 @@ namespace Schwab
           ["frequencyType"] = "minute",
           ["frequency"] = 1
 
-        }.Merge(criteria);
+        };
 
         var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory?{props}");
 
         return pointResponse
-          .Data
           .Bars
           .Select(Downstream.GetPrice)?.ToList() ?? [];
       });
@@ -380,11 +367,11 @@ namespace Schwab
       return await Response(async () =>
       {
         var accountProps = new Hashtable { ["fields"] = "positions" };
-        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{accountProps.Query()}");
+        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}".SetQueryParams(accountProps));
         var orders = await GetOrders();
         var positions = await GetPositions();
 
-        Account.Balance = account.Data.AggregatedBalance.CurrentLiquidationValue;
+        Account.Balance = account.AggregatedBalance.CurrentLiquidationValue;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
@@ -409,12 +396,11 @@ namespace Schwab
           ["toEnteredTime"] = DateTime.Now.AddDays(5).ToString(dateFormat),
           ["fromEnteredTime"] = DateTime.Now.AddDays(-100).ToString(dateFormat)
 
-        }.Merge(criteria);
+        };
 
         var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{accountCode}/orders?{props}");
 
         return orders
-          .Data
           .Where(o => o.CloseTime is null)
           .Select(Downstream.GetOrder)
           .ToList() ?? [];
@@ -430,11 +416,10 @@ namespace Schwab
     {
       return await Response(async () =>
       {
-        var props = new Hashtable { ["fields"] = "positions" }.Merge(criteria);
+        var props = new Hashtable { ["fields"] = "positions" };
         var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{props}");
 
         return account
-          ?.Data
           ?.SecuritiesAccount
           ?.Positions
           ?.Select(Downstream.GetPosition)
@@ -453,9 +438,7 @@ namespace Schwab
       {
         var accountNumbers = await Send<AccountNumberMessage[]>($"{DataUri}/trader/v1/accounts/accountNumbers");
 
-        return accountNumbers
-          .Data
-          .First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
+        return accountNumbers.First(o => Equals(o.AccountNumber, Account.Descriptor)).HashValue;
       });
     }
 
@@ -468,6 +451,7 @@ namespace Schwab
     /// <returns></returns>
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
+      var sender = InstanceService<Service>.Instance;
       var content = JsonSerializer.Serialize(data, sender.Options);
       var message = Encoding.UTF8.GetBytes(content);
 
@@ -491,6 +475,7 @@ namespace Schwab
       var data = new byte[short.MaxValue];
       var response = await streamer.ReceiveAsync(data, cancellation);
       var message = Encoding.UTF8.GetString(data, 0, response.Count);
+      var sender = InstanceService<Service>.Instance;
 
       return JsonSerializer.Deserialize<T>(message, sender.Options);
     }
@@ -584,7 +569,7 @@ namespace Schwab
         foreach (var data in item.Content)
         {
           var instrumentName = $"{data.Get("key")}";
-          var summary = Account.State[instrumentName];
+          var summary = Account.State.Get(instrumentName);
           var point = new PointModel();
 
           point.Time = DateTime.Now;
@@ -626,7 +611,7 @@ namespace Schwab
         foreach (var data in item.Content)
         {
           var instrumentName = $"{data.Get("key")}";
-          var summary = Account.State[instrumentName];
+          var summary = Account.State.Get(instrumentName);
           var instrument = summary.Instrument;
           var dom = Account.State.Get(instrumentName).Dom = new();
           var bids = data.Get(map.Get("Bid Side Levels"));
@@ -668,32 +653,38 @@ namespace Schwab
     /// <param name="source"></param>
     /// <param name="verb"></param>
     /// <param name="content"></param>
+    /// <param name="responseHeaders"></param>
     /// <returns></returns>
-    protected virtual async Task<Dis.ResponseModel<T>> Send<T>(string source, HttpMethod verb = null, object content = null)
+    protected virtual async Task<T> Send<T>(string source, HttpMethod verb = null, object content = null, Dictionary<string, IEnumerable<string>> responseHeaders = null)
     {
-      var uri = new UriBuilder(source);
-      var message = new HttpRequestMessage { Method = verb ?? HttpMethod.Get };
+      var message = $"{new UriBuilder(source)}"
+        .WithHeader("Accept", "application/json")
+        .WithHeader("Authorization", $"Bearer {AccessToken}");
 
-      switch (true)
+      var data = null as StringContent;
+      var sender = InstanceService<Service>.Instance;
+
+      if (content is not null)
       {
-        case true when Equals(message.Method, HttpMethod.Put):
-        case true when Equals(message.Method, HttpMethod.Post):
-        case true when Equals(message.Method, HttpMethod.Patch):
-          message.Content = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
-          break;
+        data = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
       }
 
-      message.RequestUri = uri.Uri;
-      message.Headers.Add("Authorization", $"Bearer {AccessToken}");
+      var response = await message
+        .SendAsync(verb ?? HttpMethod.Get, data)
+        .ConfigureAwait(false);
 
-      var response = await sender.Send<T>(message, sender.Options);
-
-      if (response?.Message?.IsSuccessStatusCode is false)
+      foreach (var o in responseHeaders ?? [])
       {
-        throw new HttpRequestException(response.Message.ReasonPhrase, null, response.Message.StatusCode);
+        responseHeaders[o.Key] = response.ResponseMessage.Headers.TryGetValues(o.Key, out var v) ? v : null;
       }
 
-      return response;
+      var responseContent = await response
+        .ResponseMessage
+        .Content
+        .ReadAsStringAsync()
+        .ConfigureAwait(false);
+
+      return JsonSerializer.Deserialize<T>(responseContent, sender.Options);
     }
 
     /// <summary>
@@ -704,28 +695,38 @@ namespace Schwab
     /// <returns></returns>
     protected virtual async Task UpdateToken(string source)
     {
-      var props = new Dictionary<string, string>
+      var message = $"{new UriBuilder(source)}"
+        .WithHeader("Accept", "application/json")
+        .WithHeader("Authorization", $"Basic {Convert.ToBase64String(Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}"))}");
+
+      var content = new Hashtable
       {
         ["grant_type"] = "refresh_token",
         ["refresh_token"] = RefreshToken
       };
 
-      var uri = new UriBuilder(source);
-      var content = new FormUrlEncodedContent(props);
-      var message = new HttpRequestMessage();
-      var basicToken = Encoding.UTF8.GetBytes($"{ClientId}:{ClientSecret}");
+      var response = await message
+        .PostUrlEncodedAsync(content)
+        .ConfigureAwait(false);
 
-      message.Content = content;
-      message.RequestUri = uri.Uri;
-      message.Method = HttpMethod.Post;
-      message.Headers.Add("Authorization", $"Basic {Convert.ToBase64String(basicToken)}");
-
-      var response = await sender.Send<ScopeMessage>(message, sender.Options);
-
-      if (response.Data is not null)
+      if (response.ResponseMessage.IsSuccessStatusCode is false)
       {
-        AccessToken = response.Data.AccessToken;
-        RefreshToken = response.Data.RefreshToken;
+        throw new HttpRequestException(response.ResponseMessage.ReasonPhrase, null, response.ResponseMessage.StatusCode);
+      }
+
+      var sender = InstanceService<Service>.Instance;
+      var responseContent = await response
+        .ResponseMessage
+        .Content
+        .ReadAsStringAsync()
+        .ConfigureAwait(false);
+
+      var scope = JsonSerializer.Deserialize<ScopeMessage>(responseContent, sender.Options);
+
+      if (scope is not null)
+      {
+        AccessToken = scope.AccessToken;
+        RefreshToken = scope.RefreshToken;
       }
     }
 
@@ -740,12 +741,7 @@ namespace Schwab
       var response = new ResponseModel<UserDataMessage>();
       var userResponse = await Send<UserDataMessage>($"{DataUri}/trader/v1/userPreference");
 
-      if (string.IsNullOrEmpty(userResponse.Error) is false)
-      {
-        response.Errors = [new ErrorModel { ErrorMessage = userResponse.Error }];
-      }
-
-      userData = response.Data = userResponse.Data;
+      userData = response.Data = userResponse;
 
       return response;
     }
@@ -761,22 +757,18 @@ namespace Schwab
 
       await Subscribe(order.Transaction.Instrument);
 
-      var exOrder = Upstream.GetOrder(Account, order);
       var response = new ResponseModel<OrderModel>();
-      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders", HttpMethod.Post, exOrder);
+      var exOrder = Upstream.GetOrder(Account, order);
+      var map = new Dictionary<string, IEnumerable<string>> { ["Location"] = null };
+      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders", HttpMethod.Post, exOrder, map);
 
-      if (exResponse.Message.Headers.TryGetValues("Location", out var orderData))
+      if (map["Location"] is not null)
       {
-        var orderItem = orderData.First();
+        var orderItem = map["Location"].First();
 
         response.Data = order;
         response.Data.Transaction.Status = OrderStatusEnum.Filled;
         response.Data.Transaction.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
-      }
-
-      if (string.IsNullOrEmpty(response?.Data?.Transaction?.Id))
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
       }
 
       return response;
@@ -791,12 +783,6 @@ namespace Schwab
     {
       var response = new ResponseModel<OrderModel>();
       var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
-
-      if ((int)exResponse.Message.StatusCode >= 400)
-      {
-        response.Errors.Add(new ErrorModel { ErrorMessage = $"{exResponse.Message.StatusCode}" });
-        return response;
-      }
 
       response.Data = order;
       response.Data.Transaction.Status = OrderStatusEnum.Canceled;

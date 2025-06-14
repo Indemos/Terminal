@@ -1,3 +1,4 @@
+using Flurl;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.VisualBasic;
 using System;
@@ -24,10 +25,10 @@ namespace Tradier
         { "greeks", greeks }
       };
 
-      var source = $"{DataUri}/markets/options/chains?{data.Compact()}";
+      var source = $"{DataUri}/markets/options/chains".SetQueryParams(data);
       var response = await Send<OptionChainCoreMessage>(source);
 
-      return response.Data?.Options;
+      return response.Options;
     }
 
     /// <summary>
@@ -42,10 +43,10 @@ namespace Tradier
         { "strikes", strikes }
       };
 
-      var source = $"{DataUri}/markets/options/expirations?{data.Compact()}";
+      var source = $"{DataUri}/markets/options/expirations".SetQueryParams(data);
       var response = await Send<OptionExpirationsCoreMessage>(source);
 
-      return response.Data?.Expirations;
+      return response.Expirations;
     }
 
     /// <summary>
@@ -59,10 +60,10 @@ namespace Tradier
         { "greeks", greeks }
       };
 
-      var source = $"{DataUri}/markets/quotes?{data.Compact()}";
+      var source = $"{DataUri}/markets/quotes".SetQueryParams(data);
       var response = await Send<QuotesCoreMessage>(source);
 
-      return response.Data?.Quotes;
+      return response.Quotes;
     }
 
     /// <summary>
@@ -78,10 +79,10 @@ namespace Tradier
         { "end", $"{end:yyyy-MM-dd}" }
       };
 
-      var source = $"{DataUri}/markets/history?{data.Compact()}";
+      var source = $"{DataUri}/markets/history".SetQueryParams(data);
       var response = await Send<HistoricalQuotesCoreMessage>(source);
 
-      return response.Data?.History;
+      return response.History;
     }
 
     /// <summary>
@@ -95,10 +96,10 @@ namespace Tradier
         { "expiration", $"{expiration:yyyy-MM-dd}" }
       };
 
-      var source = $"{DataUri}/markets/options/strikes?{data.Compact()}";
+      var source = $"{DataUri}/markets/options/strikes".SetQueryParams(data);
       var response = await Send<OptionStrikesCoreMessage>(source);
 
-      return response.Data?.Strikes;
+      return response.Strikes;
     }
 
     /// <summary>
@@ -116,10 +117,10 @@ namespace Tradier
         { "end", $"{end:yyyy-MM-dd HH:mm}" }
       };
 
-      var source = $"{DataUri}/markets/timesales?{data.Compact()}";
+      var source = $"{DataUri}/markets/timesales".SetQueryParams(data);
       var response = await Send<TimeSalesCoreMessage>(source);
 
-      return response.Data?.Series;
+      return response.Series;
     }
 
     /// <summary>
@@ -129,7 +130,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/markets/etb";
       var response = await Send<SecuritiesCoreMessage>(source);
-      return response.Data?.Securities;
+      return response.Securities;
     }
 
     /// <summary>
@@ -139,7 +140,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/markets/clock";
       var response = await Send<ClockCoreMessage>(source);
-      return response.Data?.Clock;
+      return response.Clock;
     }
 
     /// <summary>
@@ -153,10 +154,10 @@ namespace Tradier
         { "year", year }
       };
 
-      var source = $"{DataUri}/markets/calendar?{data.Compact()}";
+      var source = $"{DataUri}/markets/calendar".SetQueryParams(data);
       var response = await Send<CalendarCoreMessage>(source);
 
-      return response.Data?.Calendar;
+      return response.Calendar;
     }
 
     /// <summary>
@@ -170,10 +171,10 @@ namespace Tradier
         { "indexes", indexes }
       };
 
-      var source = $"{DataUri}/markets/search?{data.Compact()}";
+      var source = $"{DataUri}/markets/search".SetQueryParams(data);
       var response = await Send<SecuritiesCoreMessage>(source);
 
-      return response.Data?.Securities;
+      return response.Securities;
     }
 
     /// <summary>
@@ -187,7 +188,7 @@ namespace Tradier
       source += string.IsNullOrEmpty(types) ? string.Empty : $"&types={types}";
 
       var response = await Send<SecuritiesCoreMessage>(source);
-      return response.Data?.Securities;
+      return response.Securities;
     }
 
     /// <summary>
@@ -200,10 +201,10 @@ namespace Tradier
         { "underlying", symbol }
       };
 
-      var source = $"{DataUri}/markets/options/lookup?{data.Compact()}";
+      var source = $"{DataUri}/markets/options/lookup".SetQueryParams(data);
       var response = await Send<OptionSymbolsCoreMessage>(source);
 
-      return response.Data?.Symbols;
+      return response.Symbols;
     }
 
     /// <summary>
@@ -218,10 +219,10 @@ namespace Tradier
         { "symbols", symbols }
       };
 
-      var source = $"{DataUri}/beta/markets/fundamentals/company?{data.Compact()}";
+      var source = $"{DataUri}/beta/markets/fundamentals/company".SetQueryParams(data);
       var response = await Send<CompanyDataCoreMessage>(source);
 
-      return response.Data?.Results;
+      return response.Results;
     }
 
     /// <summary>
@@ -236,10 +237,10 @@ namespace Tradier
         { "symbols", symbols }
       };
 
-      var source = $"{DataUri}/beta/markets/fundamentals/calendars?{data.Compact()}";
+      var source = $"{DataUri}/beta/markets/fundamentals/calendars".SetQueryParams(data);
       var response = await Send<CorporateCalendarCoreMessage>(source);
 
-      return response.Data?.Results;
+      return response.Results;
     }
   }
 }

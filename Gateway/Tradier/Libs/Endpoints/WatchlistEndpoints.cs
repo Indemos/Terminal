@@ -18,7 +18,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/watchlists";
       var response = await Send<WatchlistsCoreMessage>(source);
-      return response.Data?.Watchlists;
+      return response.Watchlists;
     }
 
     /// <summary>
@@ -28,7 +28,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/watchlists/{watchlistId}";
       var response = await Send<WatchlistCoreMessage>(source);
-      return response.Data?.Watchlist;
+      return response.Watchlist;
     }
 
     /// <summary>
@@ -44,7 +44,7 @@ namespace Tradier
 
       var source = $"{DataUri}/watchlists";
       var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Post, data);
-      return response.Data?.Watchlist;
+      return response.Watchlist;
     }
 
     /// <summary>
@@ -61,7 +61,7 @@ namespace Tradier
       var source = $"{DataUri}/watchlists/{watchlistId}";
       var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Put, data);
 
-      return response.Data?.Watchlist;
+      return response.Watchlist;
     }
 
     /// <summary>
@@ -72,7 +72,7 @@ namespace Tradier
       var source = $"watchlists/{watchlistId}";
       var response = await Send<WatchlistsCoreMessage>(source, HttpMethod.Delete);
 
-      return response.Data?.Watchlists;
+      return response.Watchlists;
     }
 
     /// <summary>
@@ -88,7 +88,7 @@ namespace Tradier
       var source = $"{DataUri}/watchlists/{watchlistId}/symbols";
       var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Post, data);
 
-      return response.Data?.Watchlist;
+      return response.Watchlist;
     }
 
     /// <summary>
@@ -98,7 +98,7 @@ namespace Tradier
     {
       var source = $"{DataUri}/watchlists/{watchlistId}/symbols/{symbol}";
       var response = await Send<WatchlistCoreMessage>(source, HttpMethod.Delete);
-      return response.Data?.Watchlist;
+      return response.Watchlist;
     }
   }
 }

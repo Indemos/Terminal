@@ -1,5 +1,6 @@
 using Distribution.Services;
 using Distribution.Stream;
+using Flurl.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -17,17 +18,11 @@ using Terminal.Core.Models;
 using Tradier.Messages.Account;
 using Tradier.Messages.Stream;
 using Tradier.Messages.Trading;
-using Dis = Distribution.Stream.Models;
 
 namespace Tradier
 {
   public partial class Adapter : Gateway
   {
-    /// <summary>
-    /// HTTP client
-    /// </summary>
-    protected Service sender;
-
     /// <summary>
     /// Event session
     /// </summary>
@@ -98,14 +93,13 @@ namespace Tradier
     {
       return await Response(async () =>
       {
-        var sender = new Service() { Timeout = TimeSpan.FromDays(1) };
         var scheduler = new ScheduleService();
         var dataStreamer = new ClientWebSocket();
         var accountStreamer = new ClientWebSocket();
+        var sender = InstanceService<Service>.Instance;
 
         await Disconnect();
 
-        this.sender = sender;
         this.dataStreamer = dataStreamer;
         this.accountStreamer = accountStreamer;
         this.dataSession = (await GetMarketSession())?.Stream?.Session;
@@ -122,9 +116,10 @@ namespace Tradier
 
               var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
               var point = GetPrice(quoteMessage);
-              var summary = Account.State[quoteMessage.Symbol];
+              var summary = Account.State.Get(quoteMessage.Symbol);
 
               point.Instrument = summary.Instrument;
+
               summary.Points.Add(point);
               summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
@@ -142,14 +137,12 @@ namespace Tradier
 
         await GetConnection("/accounts/events", accountStreamer, scheduler, message =>
         {
-          var order = GetStreamOrder(message.Deserialize<OrderMessage>(this.sender.Options));
+          var order = GetStreamOrder(message.Deserialize<OrderMessage>(sender.Options));
           var container = new MessageModel<OrderModel> { Next = order };
 
           OrderStream(container);
         });
 
-        connections.Add(sender);
-        connections.Add(scheduler);
         connections.Add(dataStreamer);
         connections.Add(accountStreamer);
 
@@ -184,8 +177,7 @@ namespace Tradier
       {
         await Unsubscribe(instrument);
 
-        Account.State[instrument.Name] = Account.State.Get(instrument.Name) ?? new StateModel();
-        Account.State[instrument.Name].Instrument ??= instrument;
+        Account.State.Get(instrument.Name).Instrument ??= instrument;
 
         var names = Account
           .State
@@ -287,9 +279,9 @@ namespace Tradier
     {
       return await Response(async () =>
       {
-        var optionResponse = await GetOptionChain(criteria.Instrument.Name, criteria.MaxDate ?? criteria.MinDate);
+        var response = await GetOptionChain(criteria.Instrument.Name, criteria.MaxDate ?? criteria.MinDate);
 
-        return optionResponse
+        return response
           ?.Options
           ?.Select(GetOption)
           ?.OrderBy(o => o.Derivative.ExpirationDate)
@@ -308,8 +300,8 @@ namespace Tradier
     {
       return await Response(async () =>
       {
-        var exPositions = await GetPositions(Account.Descriptor);
-        var positions = exPositions?.Select(GetPosition)?.ToList();
+        var messages = await GetPositions(Account.Descriptor);
+        var positions = messages?.Select(GetPosition)?.ToList();
 
         return positions ?? [];
       });
@@ -322,9 +314,12 @@ namespace Tradier
     /// <returns></returns>
     public override async Task<ResponseModel<List<OrderModel>>> GetOrders(ConditionModel criteria = null)
     {
-      return await Response(async () =>
+      return await base.Response(async () =>
       {
-        return (await GetOrders(Account.Descriptor))?.SelectMany(GetOrders)?.ToList() ?? [];
+        var messages = await GetOrders(Account.Descriptor);
+        var orders = messages?.SelectMany(GetOrders)?.ToList();
+
+        return orders ?? [];
       });
     }
 
@@ -380,33 +375,31 @@ namespace Tradier
     /// <param name="verb"></param>
     /// <param name="content"></param>
     /// <param name="token"></param>
-    /// <returns></returns>
-    public virtual async Task<Dis.ResponseModel<T>> Send<T>(string source, HttpMethod verb = null, object content = null, string token = null)
+    public virtual async Task<T> Send<T>(string source, HttpMethod verb = null, object content = null, string token = null)
     {
-      var uri = new UriBuilder(source);
-      var message = new HttpRequestMessage { Method = verb ?? HttpMethod.Get };
+      var message = $"{new UriBuilder(source)}"
+        .WithHeader("Accept", "application/json")
+        .WithHeader("Authorization", $"Bearer {token ?? Token}");
 
-      switch (true)
+      var data = null as StringContent;
+      var sender = InstanceService<Service>.Instance;
+
+      if (content is not null)
       {
-        case true when Equals(message.Method, HttpMethod.Put):
-        case true when Equals(message.Method, HttpMethod.Post):
-        case true when Equals(message.Method, HttpMethod.Patch):
-          message.Content = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
-          break;
+        data = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
       }
 
-      message.RequestUri = uri.Uri;
-      message.Headers.Add("Accept", "application/json");
-      message.Headers.Add("Authorization", $"Bearer {token ?? Token}");
+      var response = await message
+        .SendAsync(verb ?? HttpMethod.Get, data)
+        .ConfigureAwait(false);
 
-      var response = await sender.Send<T>(message, sender.Options);
+      var responseContent = await response
+        .ResponseMessage
+        .Content
+        .ReadAsStringAsync()
+        .ConfigureAwait(false);
 
-      if (response.Message.IsSuccessStatusCode is false)
-      {
-        throw new HttpRequestException(await response.Message.Content.ReadAsStringAsync(), null, response.Message.StatusCode);
-      }
-
-      return response;
+      return JsonSerializer.Deserialize<T>(responseContent, sender.Options);
     }
 
     /// <summary>
@@ -438,7 +431,11 @@ namespace Tradier
       else
       {
         var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
-        var isCombo = order.Orders.Append(order).Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
+        var isCombo = order
+          .Orders
+          .Append(order)
+          .Where(o => o?.Transaction?.Volume is not null)
+          .Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
 
         switch (true)
         {
@@ -463,6 +460,7 @@ namespace Tradier
     /// <returns></returns>
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
+      var sender = InstanceService<Service>.Instance;
       var content = JsonSerializer.Serialize(data, sender.Options);
       var message = Encoding.UTF8.GetBytes(content);
 

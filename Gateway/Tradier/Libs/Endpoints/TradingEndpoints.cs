@@ -1,4 +1,6 @@
+using Flurl;
 using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -32,10 +34,10 @@ namespace Tradier
         { "preview", preview }
       };
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -63,10 +65,10 @@ namespace Tradier
         index++;
       }
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -89,10 +91,10 @@ namespace Tradier
         { "tag", order.Descriptor }
       };
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -120,10 +122,10 @@ namespace Tradier
         index++;
       }
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data) ;
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -158,10 +160,10 @@ namespace Tradier
         index++;
       }
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -196,10 +198,10 @@ namespace Tradier
         index++;
       }
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -234,10 +236,10 @@ namespace Tradier
         index++;
       }
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Post);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -253,10 +255,10 @@ namespace Tradier
         { "stop", stop }
       };
 
-      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders/{orderId}?{data.Compact()}";
+      var source = $"{DataUri}/accounts/{Account.Descriptor}/orders/{orderId}".SetQueryParams(data);
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Put);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
@@ -267,7 +269,7 @@ namespace Tradier
       var source = $"{DataUri}/accounts/{Account.Descriptor}/orders/{orderId}";
       var response = await Send<OrderResponseCoreMessage>(source, HttpMethod.Delete);
 
-      return response.Data?.OrderReponse;
+      return response.OrderReponse;
     }
 
     /// <summary>
