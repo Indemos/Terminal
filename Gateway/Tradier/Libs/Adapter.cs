@@ -115,7 +115,7 @@ namespace Tradier
             case "quote":
 
               var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
-              var point = GetPrice(quoteMessage);
+              var point = Downstream.GetPrice(quoteMessage);
               var summary = Account.State.Get(quoteMessage.Symbol);
 
               point.Instrument = summary.Instrument;
@@ -137,7 +137,7 @@ namespace Tradier
 
         await GetConnection("/accounts/events", accountStreamer, scheduler, message =>
         {
-          var order = GetStreamOrder(message.Deserialize<OrderMessage>(sender.Options));
+          var order = Downstream.GetStreamOrder(message.Deserialize<OrderMessage>(sender.Options));
           var container = new MessageModel<OrderModel> { Next = order };
 
           OrderStream(container);
@@ -250,7 +250,7 @@ namespace Tradier
       {
         var name = criteria.Instrument.Name;
         var pointResponse = await GetQuotes([name], true);
-        var point = GetPrice(pointResponse?.Items?.FirstOrDefault());
+        var point = Downstream.GetPrice(pointResponse?.Items?.FirstOrDefault());
 
         return new DomModel
         {
@@ -283,7 +283,7 @@ namespace Tradier
 
         return response
           ?.Options
-          ?.Select(GetOption)
+          ?.Select(Downstream.GetOption)
           ?.OrderBy(o => o.Derivative.ExpirationDate)
           ?.ThenBy(o => o.Derivative.Strike)
           ?.ThenBy(o => o.Derivative.Side)
@@ -301,7 +301,7 @@ namespace Tradier
       return await Response(async () =>
       {
         var messages = await GetPositions(Account.Descriptor);
-        var positions = messages?.Select(GetPosition)?.ToList();
+        var positions = messages?.Select(Downstream.GetPosition)?.ToList();
 
         return positions ?? [];
       });
@@ -317,7 +317,7 @@ namespace Tradier
       return await base.Response(async () =>
       {
         var messages = await GetOrders(Account.Descriptor);
-        var orders = messages?.SelectMany(GetOrders)?.ToList();
+        var orders = messages?.SelectMany(Downstream.GetOrder)?.ToList();
 
         return orders ?? [];
       });

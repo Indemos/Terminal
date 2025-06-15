@@ -108,7 +108,7 @@ namespace Alpaca.Mappers
     /// <param name="order"></param>
     /// <param name="direction"></param>
     /// <returns></returns>
-    protected static double? GetBracePrice(OrderModel order, double direction)
+    public static double? GetBracePrice(OrderModel order, double direction)
     {
       var nextOrder = order
         .Orders

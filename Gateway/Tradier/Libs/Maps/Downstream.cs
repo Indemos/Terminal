@@ -11,14 +11,14 @@ using Tradier.Messages.MarketData;
 
 namespace Tradier
 {
-  public partial class Adapter
+  public class Downstream
   {
     /// <summary>
     /// Get point
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected PointModel GetPrice(Messages.Stream.QuoteMessage message)
+    public static PointModel GetPrice(Messages.Stream.QuoteMessage message)
     {
       var point = new PointModel
       {
@@ -38,7 +38,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected PointModel GetPrice(QuoteMessage message)
+    public static PointModel GetPrice(QuoteMessage message)
     {
       var point = new PointModel
       {
@@ -65,7 +65,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected OrderModel GetStreamOrder(OrderMessage message)
+    public static OrderModel GetStreamOrder(OrderMessage message)
     {
       var action = new TransactionModel
       {
@@ -104,7 +104,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected OrderModel GetSubOrder(OrderMessage message)
+    public static OrderModel GetSubOrder(OrderMessage message)
     {
       var basis = new InstrumentModel
       {
@@ -153,7 +153,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(OrderMessage message)
+    public static List<OrderModel> GetOrder(OrderMessage message)
     {
       var orders = (message.Orders ?? []).Select(GetSubOrder).ToList();
 
@@ -175,12 +175,12 @@ namespace Tradier
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="account"></param>
+    /// <param name="instrument"></param>
     /// <returns></returns>
-    protected OrderModel GetPosition(PositionMessage message)
+    public static OrderModel GetPosition(PositionMessage message)
     {
       var volume = Math.Abs(message.Quantity ?? 0);
-      var instrument = Account.State.Get(message.Symbol).Instrument ?? new InstrumentModel();
+      var instrument = new InstrumentModel();
 
       instrument.Name = message.Symbol;
       instrument.Derivative = GetDerivative(message.Symbol);
@@ -216,7 +216,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected InstrumentModel GetOption(OptionMessage message)
+    public static InstrumentModel GetOption(OptionMessage message)
     {
       var instrument = new InstrumentModel
       {
@@ -295,7 +295,7 @@ namespace Tradier
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    protected OrderStatusEnum? GetStatus(string status)
+    public static OrderStatusEnum? GetStatus(string status)
     {
       switch (status?.ToUpper())
       {
@@ -320,7 +320,7 @@ namespace Tradier
     /// </summary>
     /// <param name="status"></param>
     /// <returns></returns>
-    protected OrderSideEnum? GetSubOrderSide(string status)
+    public static OrderSideEnum? GetSubOrderSide(string status)
     {
       switch (status?.ToUpper())
       {
@@ -347,7 +347,7 @@ namespace Tradier
     /// </summary>
     /// <param name="name"></param>
     /// <returns></returns>
-    protected DerivativeModel GetDerivative(string name)
+    public static DerivativeModel GetDerivative(string name)
     {
       var data = Regex.Match(name, @"^(\w{1,5})(\d{6})([CP])(\d{8})$");
 
@@ -379,7 +379,7 @@ namespace Tradier
     /// </summary>
     /// <param name="message"></param>
     /// <returns></returns>
-    protected OrderSideEnum? GetOrderSide(OrderMessage message)
+    public static OrderSideEnum? GetOrderSide(OrderMessage message)
     {
       double? getValue(OrderMessage o)
       {
@@ -421,7 +421,7 @@ namespace Tradier
     /// </summary>
     /// <param name="assetType"></param>
     /// <returns></returns>
-    protected InstrumentEnum? GetInstrumentType(string assetType)
+    public static InstrumentEnum? GetInstrumentType(string assetType)
     {
       switch (assetType?.ToUpper())
       {
