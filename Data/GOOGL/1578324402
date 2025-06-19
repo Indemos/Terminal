@@ -1,1 +1,1 @@
-{"Instrument":{"Commission":"0","ContractSize":"1","Leverage":"1","StepSize":"0.01","StepValue":"0.01","Point":{"Bid":"1395.59","Ask":"1395.99","BidSize":"235","AskSize":"0","Last":"1395.59","Time":"1/6/2020 10:26:42 AM","Series":{}}}}
+{"Instrument":{"Point":{"Bid":"1395.59","Ask":"1395.99","BidSize":"235","AskSize":"0","Last":"1395.59","Time":"1/6/2020 10:26:42 AM"}}}

@@ -234,7 +234,7 @@ namespace Terminal.Core.Domains
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
         nextOrder.Transaction.Price ??= nextOrder.Price;
-        nextOrder.Transaction.Time ??= nextOrder.Transaction.Instrument.Point.Time;
+        //nextOrder.Transaction.Time ??= nextOrder.Transaction.Instrument.Point.Time;
         nextOrder.Transaction.Volume = nextOrder.Volume;
         nextOrder.Orders = [.. groupOrders];
 

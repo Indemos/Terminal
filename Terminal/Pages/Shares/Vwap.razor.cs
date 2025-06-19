@@ -113,8 +113,8 @@ namespace Terminal.Pages.Shares
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
 
-      var crossTopDown = point.Last < vwap.Point.Bar.High && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Map["Vwap"].Bar.High);
-      var crossBottomUp = point.Last > vwap.Point.Bar.Low && summary.PointGroups.TakeLast(5).Any(o => o.Last < o.Map["Vwap"].Bar.Low);
+      var crossTopDown = point.Last < vwap.Point.Bar.High && summary.PointGroups.TakeLast(5).Any(o => o.Last > o.Series["Vwap"].Bar.High);
+      var crossBottomUp = point.Last > vwap.Point.Bar.Low && summary.PointGroups.TakeLast(5).Any(o => o.Last < o.Series["Vwap"].Bar.Low);
       var pos = account.Positions.Values.FirstOrDefault();
 
       if (crossTopDown && pos?.Side is not OrderSideEnum.Short)

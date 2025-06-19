@@ -34,12 +34,12 @@ namespace Terminal.Core.Indicators
 
       if (collection.Count > Interval)
       {
-        value = (currentPoint.Map[Name].Last.Value * Math.Max(Interval - 1, 0) + value) / Interval;
+        value = (currentPoint.Series[Name].Last.Value * Math.Max(Interval - 1, 0) + value) / Interval;
       }
 
       Point.Last = value;
 
-      currentPoint.Map[Name] = Point;
+      currentPoint.Series[Name] = Point;
 
       return this;
     }

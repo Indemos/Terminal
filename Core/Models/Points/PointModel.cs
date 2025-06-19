@@ -56,14 +56,14 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Indicator values calculated for the current data point
     /// </summary>
-    public virtual IDictionary<string, PointModel> Map { get; set; }
+    public virtual IDictionary<string, PointModel> Series { get; set; }
 
     /// <summary>
     /// Constructor
     /// </summary>
     public PointModel()
     {
-      Map = new Dictionary<string, PointModel>();
+      Series = new Dictionary<string, PointModel>();
     }
 
     /// <summary>

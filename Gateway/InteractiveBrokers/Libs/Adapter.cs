@@ -1,4 +1,3 @@
-using Distribution.Services;
 using IBApi;
 using InteractiveBrokers.Enums;
 using InteractiveBrokers.Mappers;
@@ -6,7 +5,6 @@ using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,7 +12,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
 using static InteractiveBrokers.IBClient;
 
 namespace InteractiveBrokers
@@ -542,10 +539,8 @@ namespace InteractiveBrokers
           }
 
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
-          point.Bid ??= point.Last;
-          point.Ask ??= point.Last;
 
-          if (point.Bid is null || point.Ask is null || point.Last is null)
+          if (point.Bid is null || point.Ask is null)
           {
             return;
           }

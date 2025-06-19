@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Terminal.Core.Collections
 {
@@ -32,7 +33,7 @@ namespace Terminal.Core.Collections
       {
         var index = item.GetIndex();
 
-        if (groups.TryGetValue(index, out var position))
+        if (groups.TryGetValue(index, out var position) && this.ElementAtOrDefault(position) is not null)
         {
           this[position] = (item.Clone() as T).Update(this[position]);
           return;

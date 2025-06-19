@@ -23,4 +23,10 @@
     <ProjectReference Include="..\Gateway\Tradier\Libs\Tradier.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Content Update="Pages\Utils\Ticks.razor">
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+    </Content>
+  </ItemGroup>
+
 </Project>

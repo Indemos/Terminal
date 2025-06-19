@@ -49,7 +49,7 @@ namespace Terminal.Core.Indicators
         Point.Bar.Low = average - 2.0 * deviation;
       }
 
-      current.Map[Name] = Point.Clone() as PointModel;
+      current.Series[Name] = Point.Clone() as PointModel;
 
       return this;
     }

@@ -52,7 +52,7 @@ namespace Terminal.Core.Indicators
 
       Point.Last = 100.0 - 100.0 / (1.0 + average);
 
-      currentPoint.Map[Name] = Point;
+      currentPoint.Series[Name] = Point;
 
       return this;
     }

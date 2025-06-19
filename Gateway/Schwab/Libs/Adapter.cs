@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
+using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -278,7 +279,7 @@ namespace Schwab
           ["fields"] = "quote,fundamental,extended,reference,regular"
         };
 
-        var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes?{props}");
+        var pointResponse = await Send<Dictionary<string, AssetMessage>>($"{DataUri}/marketdata/v1/quotes".SetQueryParams(props));
         var point = Downstream.GetPrice(pointResponse[instrument.Name], instrument);
 
         return new DomModel
@@ -307,7 +308,7 @@ namespace Schwab
 
         };
 
-        var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory?{props}");
+        var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory".SetQueryParams(props));
 
         return pointResponse
           .Bars
@@ -395,10 +396,9 @@ namespace Schwab
           ["maxResults"] = 50,
           ["toEnteredTime"] = DateTime.Now.AddDays(5).ToString(dateFormat),
           ["fromEnteredTime"] = DateTime.Now.AddDays(-100).ToString(dateFormat)
-
         };
 
-        var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{accountCode}/orders?{props}");
+        var orders = await Send<OrderMessage[]>($"{DataUri}/trader/v1/accounts/{accountCode}/orders".SetQueryParams(props));
 
         return orders
           .Where(o => o.CloseTime is null)
@@ -417,7 +417,7 @@ namespace Schwab
       return await Response(async () =>
       {
         var props = new Hashtable { ["fields"] = "positions" };
-        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}?{props}");
+        var account = await Send<AccountsMessage>($"{DataUri}/trader/v1/accounts/{accountCode}".SetQueryParams(props));
 
         return account
           ?.SecuritiesAccount
@@ -539,7 +539,7 @@ namespace Schwab
 
               if (points.Count is not 0)
               {
-                OnPoint(points);
+                OnPoint(points, content);
               }
 
               if (doms.Count is not 0)
@@ -558,7 +558,7 @@ namespace Schwab
     /// Process quote from the stream
     /// </summary>
     /// <param name="items"></param>
-    protected virtual void OnPoint(IEnumerable<StreamDataMessage> items)
+    protected virtual void OnPoint(IEnumerable<StreamDataMessage> items, string content)
     {
       static double? parse(string o, double? origin) => double.TryParse(o, out var num) ? num : origin;
 
@@ -579,14 +579,11 @@ namespace Schwab
           point.BidSize = parse($"{data.Get(map.Get("Bid Size"))}", point.BidSize);
           point.AskSize = parse($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
           point.Last = parse($"{data.Get(map.Get("Last Price"))}", point.Last);
-
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
-          point.Bid ??= point.Last;
-          point.Ask ??= point.Last;
 
-          if (point.Bid is null || point.Ask is null || point.Last is null)
+          if (point.Bid is null || point.Ask is null)
           {
-            return;
+            continue;
           }
 
           summary.Points.Add(point);
