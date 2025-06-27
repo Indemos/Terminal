@@ -81,12 +81,12 @@ namespace Terminal.Components
         {
           Name = o.Name,
           Group = o.BasisName ?? o.Name,
-          Time = o.Transaction.Time,
+          Time = o.Time,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Volume ?? 0,
-          OpenPrice = o.Price ?? 0,
-          ClosePrice = o.Transaction.Price ?? 0,
-          Gain = o.GetGainEstimate(o.Transaction.Price) ?? o.Gain ?? 0
+          Size = o.OpenAmount ?? 0,
+          OpenPrice = o.OpenPrice ?? 0,
+          ClosePrice = o.Price ?? 0,
+          Gain = o.GetValueEstimate(o.Price) ?? o.Gain ?? 0
 
         }).ToList();
 

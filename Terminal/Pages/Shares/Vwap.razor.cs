@@ -69,9 +69,9 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset } },
+          [asset] = new SummaryModel { Instrument = new InstrumentModel { Name = asset } },
         },
       };
 
@@ -88,7 +88,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
@@ -151,17 +151,17 @@ namespace Terminal.Pages.Shares
       var order = new OrderModel
       {
         Side = side,
-        Volume = volume,
+        Amount = volume,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
+        Instrument = instrument,
         Orders = [
           new OrderModel
           {
             Side = side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Price = side is OrderSideEnum.Long ? point.Last - 0.5 : point.Last + 0.5,
-            Volume = volume,
+            OpenPrice = side is OrderSideEnum.Long ? point.Last - 0.5 : point.Last + 0.5,
+            Amount = volume,
             Type = OrderTypeEnum.Stop,
-            Transaction = new() { Instrument = instrument }
+            Instrument = instrument
           }
         ]
       };
@@ -186,13 +186,10 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);

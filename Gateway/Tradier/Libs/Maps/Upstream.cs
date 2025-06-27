@@ -15,7 +15,7 @@ namespace Tradier.Mappers
     public static string GetSide(OrderModel order, IAccount account)
     {
       var position = account.Positions.Get(order.Name);
-      var option = order.Transaction.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
+      var option = order.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
 
       if (option)
       {

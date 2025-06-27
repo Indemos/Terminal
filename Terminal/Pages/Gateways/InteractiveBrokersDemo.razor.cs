@@ -71,9 +71,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument }
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument }
         }
       };
 
@@ -88,7 +88,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
@@ -145,31 +145,31 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(direction) + 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(direction) + 15 * direction,
+        Instrument = instrument
       };
 
       var SL = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(-direction) - 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(-direction) - 15 * direction,
+        Instrument = instrument
       };
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = side,
-        Price = GetPrice(direction),
+        OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
+        Instrument = instrument,
         Orders = [SL, TP]
       };
 
@@ -186,12 +186,9 @@ namespace Terminal.Pages.Gateways
         var order = new OrderModel
         {
           Side = side,
+          Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Volume = position.Volume,
-          Transaction = new()
-          {
-            Instrument = position.Transaction.Instrument
-          }
+          Instrument = position.Instrument
         };
 
         await adapter.SendOrders(order);

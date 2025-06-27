@@ -14,12 +14,11 @@ namespace Alpaca.Mappers
     /// <returns></returns>
     public static NewOrderRequest GetOrder(OrderModel order)
     {
-      var action = order.Transaction;
-      var name = action.Instrument.Name;
+      var name = order.Instrument.Name;
       var side = order.Side is OrderSideEnum.Long ? OrderSide.Buy : OrderSide.Sell;
       var orderType = GetOrderType(order.Type);
       var duration = GetTimeSpan(order.TimeSpan);
-      var volume = OrderQuantity.Fractional((decimal)order.Volume);
+      var volume = OrderQuantity.Fractional((decimal)order.Amount);
       var exOrder = new NewOrderRequest(name, volume, side, orderType, duration);
       var braces = order
         .Orders
@@ -30,10 +29,10 @@ namespace Alpaca.Mappers
 
       switch (order.Type)
       {
-        case OrderTypeEnum.Stop: exOrder.StopPrice = (decimal)order.Price; break;
-        case OrderTypeEnum.Limit: exOrder.LimitPrice = (decimal)order.Price; break;
+        case OrderTypeEnum.Stop: exOrder.StopPrice = (decimal)order.OpenPrice; break;
+        case OrderTypeEnum.Limit: exOrder.LimitPrice = (decimal)order.OpenPrice; break;
         case OrderTypeEnum.StopLimit:
-          exOrder.LimitPrice = (decimal)order.Price;
+          exOrder.LimitPrice = (decimal)order.OpenPrice;
           exOrder.StopPrice = (decimal)order.ActivationPrice;
           break;
       }
@@ -113,9 +112,9 @@ namespace Alpaca.Mappers
       var nextOrder = order
         .Orders
         .Where(o => Equals(o.Name, order.Name))
-        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
+        .FirstOrDefault(o => (o.OpenPrice - order.OpenPrice) * direction > 0);
 
-      return nextOrder?.Price;
+      return nextOrder?.OpenPrice;
     }
   }
 }

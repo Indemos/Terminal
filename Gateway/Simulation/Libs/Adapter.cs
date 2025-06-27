@@ -34,7 +34,7 @@ namespace Simulation
     /// <summary>
     /// Subscription states
     /// </summary>
-    protected ConcurrentDictionary<string, StateModel> states;
+    protected ConcurrentDictionary<string, SummaryModel> states;
 
     /// <summary>
     /// Disposable subscriptions
@@ -118,7 +118,7 @@ namespace Simulation
 
       Account.State.Get(instrument.Name).Instrument ??= instrument;
 
-      DataStream += OnPoint;
+      Stream += OnPoint;
 
       var span = TimeSpan.FromMicroseconds(Speed);
       var scheduler = InstanceService<ScheduleService>.Instance;
@@ -170,7 +170,7 @@ namespace Simulation
           summary.Points.Add(summary.Instrument.Point);
           summary.PointGroups.Add(summary.Instrument.Point, instrument.TimeFrame);
 
-          DataStream(new MessageModel<PointModel> { Next = summary.PointGroups.Last() });
+          Stream(new MessageModel<PointModel> { Next = summary.PointGroups.Last() });
 
           states[instrument.Name].Status = StatusEnum.Suspended;
         }
@@ -207,7 +207,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      DataStream -= OnPoint;
+      Stream -= OnPoint;
 
       if (subscriptions.TryRemove(instrument.Name, out var subscription))
       {
@@ -289,8 +289,8 @@ namespace Simulation
     {
       var nextOrder = order.Clone() as OrderModel;
 
-      nextOrder.Transaction.Id = order.Id;
-      nextOrder.Transaction.Status = OrderStatusEnum.Pending;
+      nextOrder.Id = order.Id;
+      nextOrder.Status = OrderStatusEnum.Pending;
 
       Account.Orders[nextOrder.Id] = nextOrder;
 
@@ -304,32 +304,34 @@ namespace Simulation
     /// <returns></returns>
     protected virtual OrderModel SendOrder(OrderModel order)
     {
-      order.Transaction.Id = order.Id;
-      order.Transaction.Status = OrderStatusEnum.Filled;
+      var nextOrder = order.Clone() as OrderModel;
 
-      if (Account.Positions.TryGetValue(order.Name, out var currentOrder))
+      nextOrder.Status = OrderStatusEnum.Filled;
+
+      if (Account.Positions.TryGetValue(nextOrder.Name, out var currentOrder))
       {
-        var (nextOrder, previousOrder) = Equals(currentOrder.Side, order.Side) ?
-          IncreaseSide(currentOrder, order) :
-          DecreaseSide(currentOrder, order);
-
-        Account.Positions.Remove(order.Name, out var item);
-
-        if (previousOrder?.Volume.Is(0) is false)
+        if (Equals(currentOrder.Side, nextOrder.Side))
         {
-          Account.Deals.Add(previousOrder);
-          Account.Balance += previousOrder.GetGainEstimate();
+          return Account.Positions[nextOrder.Name] = IncreaseSide(currentOrder, nextOrder);
         }
 
-        order = nextOrder;
+        currentOrder = CloseSide(currentOrder, nextOrder);
+
+        Account.Deals.Add(currentOrder);
+        Account.Balance += currentOrder.GetValueEstimate();
+
+        if ((currentOrder.OpenAmount - nextOrder.Amount).Is(0))
+        {
+          Account.Positions.Remove(nextOrder.Name, out var o);
+          return currentOrder;
+        }
+
+        nextOrder = currentOrder.OpenAmount > nextOrder.Amount ?
+          ReduceSide(currentOrder, nextOrder) :
+          ReverseSide(currentOrder, nextOrder);
       }
 
-      if (order?.Volume.Is(0) is false)
-      {
-        Account.Positions[order.Name] = order;
-      }
-
-      return order;
+      return Account.Positions[nextOrder.Name] = nextOrder;
     }
 
     /// <summary>
@@ -339,8 +341,8 @@ namespace Simulation
     /// <returns></returns>
     protected virtual double? GetGroupPrice(params OrderModel[] orders)
     {
-      var numerator = orders.Sum(o => o.Transaction.Volume * o.Transaction.Price);
-      var denominator = orders.Sum(o => o.Transaction.Volume);
+      var numerator = orders.Sum(o => o.OpenAmount * o.OpenPrice);
+      var denominator = orders.Sum(o => o.OpenAmount);
 
       return numerator / denominator;
     }
@@ -348,65 +350,55 @@ namespace Simulation
     /// <summary>
     /// Increase size of the order
     /// </summary>
-    /// <param name="order"></param>
-    /// <param name="update"></param>
+    /// <param name="currentOrder"></param>
+    /// <param name="nextOrder"></param>
     /// <returns></returns>
-    protected virtual (OrderModel, OrderModel) IncreaseSide(OrderModel order, OrderModel update)
+    protected virtual OrderModel CloseSide(OrderModel currentOrder, OrderModel nextOrder)
     {
-      var nextOrder = order.Clone() as OrderModel;
-      var volume = nextOrder.Transaction.Volume + update.Volume;
+      currentOrder.Price = nextOrder.OpenPrice;
+      return currentOrder;
+    }
 
-      nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.Volume = volume;
-      nextOrder.Transaction.Time = update.Transaction.Time;
-      nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
-      nextOrder.Transaction.Price = GetGroupPrice(nextOrder, update);
-      nextOrder.Price = nextOrder.Transaction.Price;
-      nextOrder.Volume = volume;
-
-      return (nextOrder, null);
+    /// <summary>
+    /// Increase size of the order
+    /// </summary>
+    /// <param name="currentOrder"></param>
+    /// <param name="nextOrder"></param>
+    /// <returns></returns>
+    protected virtual OrderModel IncreaseSide(OrderModel currentOrder, OrderModel nextOrder)
+    {
+      nextOrder.OpenPrice = GetGroupPrice(currentOrder, nextOrder);
+      nextOrder.OpenAmount = currentOrder.OpenAmount + nextOrder.Amount;
+      nextOrder.Amount = nextOrder.OpenAmount;
+      return nextOrder;
     }
 
     /// <summary>
     /// Decrease size of the order
     /// </summary>
+    /// <param name="currentOrder"></param>
     /// <param name="nextOrder"></param>
-    /// <param name="update"></param>
     /// <returns></returns>
-    protected virtual (OrderModel, OrderModel) DecreaseSide(OrderModel order, OrderModel update)
+    protected virtual OrderModel ReduceSide(OrderModel currentOrder, OrderModel nextOrder)
     {
-      var nextOrder = order.Clone() as OrderModel;
-      var previousOrder = order.Clone() as OrderModel;
-      var updateVolume = update.Volume ?? 0;
-      var previousVolume = nextOrder.Transaction.Volume ?? 0;
-      var nextVolume = Math.Abs(previousVolume - updateVolume);
+      nextOrder.Side = currentOrder.Side;
+      nextOrder.OpenPrice = currentOrder.OpenPrice;
+      nextOrder.OpenAmount = currentOrder.OpenAmount - nextOrder.Amount;
+      nextOrder.Amount = nextOrder.OpenAmount;
+      return nextOrder;
+    }
 
-      nextOrder.Volume = nextVolume;
-      nextOrder.Transaction.Id = update.Id;
-      nextOrder.Transaction.Volume = nextVolume;
-      nextOrder.Transaction.Time = update.Transaction.Time;
-      nextOrder.Transaction.Descriptor ??= update.Transaction.Descriptor;
-
-      previousOrder.Transaction.Price = update.Price;
-
-      switch (true)
-      {
-        case true when nextVolume.Is(0):
-        case true when previousVolume > updateVolume:
-          previousOrder.Volume = updateVolume;
-          previousOrder.Transaction.Volume = updateVolume;
-          break;
-
-        case true when previousVolume < updateVolume:
-          nextOrder.Price = update.Price;
-          nextOrder.Transaction.Price = update.Price;
-          nextOrder.Side = nextOrder.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long;
-          previousOrder.Volume = previousVolume;
-          previousOrder.Transaction.Volume = previousVolume;
-          break;
-      }
-
-      return (nextVolume.Is(0) ? null : nextOrder, previousOrder);
+    /// <summary>
+    /// Open opposite order
+    /// </summary>
+    /// <param name="currentOrder"></param>
+    /// <param name="nextOrder"></param>
+    /// <returns></returns>
+    protected virtual OrderModel ReverseSide(OrderModel currentOrder, OrderModel nextOrder)
+    {
+      nextOrder.OpenAmount = nextOrder.Amount - currentOrder.OpenAmount;
+      nextOrder.Amount = nextOrder.OpenAmount;
+      return nextOrder;
     }
 
     /// <summary>
@@ -417,7 +409,7 @@ namespace Simulation
     {
       var estimates = Account
         .Positions
-        .Select(o => o.Value.GetGainEstimate())
+        .Select(o => o.Value.GetValueEstimate())
         .ToList();
 
       foreach (var order in Account.Orders.Values)
@@ -442,7 +434,7 @@ namespace Simulation
     protected virtual bool IsOrderExecutable(OrderModel order)
     {
       var isExecutable = false;
-      var point = order.Transaction.Instrument.Point;
+      var point = order.Instrument.Point;
       var isBuyStopLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
       var isSellStopLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
 
@@ -453,8 +445,8 @@ namespace Simulation
       var isBuyLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.Limit;
       var isSellLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.Limit;
 
-      isExecutable = isBuyStop || isSellLimit ? point.Ask >= order.Price : isExecutable;
-      isExecutable = isSellStop || isBuyLimit ? point.Bid <= order.Price : isExecutable;
+      isExecutable = isBuyStop || isSellLimit ? point.Ask >= order.OpenPrice : isExecutable;
+      isExecutable = isSellStop || isBuyLimit ? point.Bid <= order.OpenPrice : isExecutable;
 
       return isExecutable;
     }
@@ -465,7 +457,7 @@ namespace Simulation
     /// <param name="name"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    protected virtual async Task<StateModel> GetState(string name, string source)
+    protected virtual async Task<SummaryModel> GetState(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -473,7 +465,7 @@ namespace Simulation
       {
         var content = File.ReadAllBytes(source);
 
-        return MessagePackSerializer.Deserialize<StateModel>(content, messageOptions);
+        return MessagePackSerializer.Deserialize<SummaryModel>(content, messageOptions);
       }
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
@@ -482,13 +474,13 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          return await JsonSerializer.DeserializeAsync<StateModel>(content, sender.Options);
+          return await JsonSerializer.DeserializeAsync<SummaryModel>(content, sender.Options);
         }
       }
 
       var inputMessage = File.ReadAllText(source);
 
-      return JsonSerializer.Deserialize<StateModel>(inputMessage, sender.Options);
+      return JsonSerializer.Deserialize<SummaryModel>(inputMessage, sender.Options);
     }
 
     /// <summary>
@@ -543,7 +535,7 @@ namespace Simulation
         .Positions
         .Values
         .SelectMany(o => o.Orders.Append(o))
-        .GroupBy(o => o.Transaction.Instrument.Name)
+        .GroupBy(o => o.Instrument.Name)
         .ToDictionary(o => o.Key, o => o);
 
       var options = Account
@@ -554,7 +546,7 @@ namespace Simulation
         {
           if (orderMap.TryGetValue(option.Name, out var orders))
           {
-            orders.ForEach(o => o.Transaction.Instrument = option);
+            orders.ForEach(o => o.Instrument = option);
           }
 
           return option;

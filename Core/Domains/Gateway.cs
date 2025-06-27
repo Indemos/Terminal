@@ -19,7 +19,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    Action<MessageModel<PointModel>> DataStream { get; set; }
+    Action<MessageModel<PointModel>> Stream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -115,7 +115,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    public virtual Action<MessageModel<PointModel>> DataStream { get; set; }
+    public virtual Action<MessageModel<PointModel>> Stream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -127,7 +127,7 @@ namespace Terminal.Core.Domains
     /// </summary>
     public Gateway()
     {
-      DataStream = o => { };
+      Stream = o => { };
       OrderStream = o => { };
     }
 
@@ -222,20 +222,19 @@ namespace Terminal.Core.Domains
       OrderModel merge(OrderModel subOrder, OrderModel group)
       {
         var nextOrder = subOrder.Clone() as OrderModel;
-        var groupOrders = group
+        var groupOrders = subOrder
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
           ?.Where(o => Equals(o.Name, nextOrder.Name))
           ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.Price ??= nextOrder.GetOpenEstimate();
+        nextOrder.OpenPrice ??= nextOrder.GetOpenPrice();
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
-        nextOrder.Transaction.Price ??= nextOrder.Price;
-        nextOrder.Transaction.Time ??= nextOrder?.Transaction?.Instrument?.Point?.Time;
-        nextOrder.Transaction.Volume = nextOrder.Volume;
+        nextOrder.Time ??= nextOrder?.Instrument?.Point?.Time;
+        nextOrder.OpenAmount ??= nextOrder.Amount;
         nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;
@@ -249,7 +248,7 @@ namespace Terminal.Core.Domains
           .Select(o => merge(o, order))
           .ToList();
 
-        if (order.Volume is not null)
+        if (order.Amount is not null)
         {
           nextOrders.Add(merge(order, order));
         }

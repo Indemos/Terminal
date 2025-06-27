@@ -1,5 +1,6 @@
 using Simulation;
 using System;
+using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
@@ -41,18 +42,15 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = orderSide,
         Type = orderType,
-        Price = orderPrice,
+        OpenPrice = orderPrice,
         ActivationPrice = activationPrice,
-        Transaction = new()
+        Instrument = new InstrumentModel()
         {
-          Instrument = new InstrumentModel()
-          {
-            Name = "X",
-            Point = point,
-          }
+          Name = "X",
+          Point = point,
         }
       };
 
@@ -64,23 +62,22 @@ namespace Terminal.Tests
 
       var outOrder = Account.Orders[order.Id];
 
+      Assert.NotEmpty(outOrder.Id);
+      Assert.Equal(outOrder.Id, order.Id);
       Assert.Equal(outOrder.Type, orderType);
-      Assert.Equal(outOrder.Price, orderPrice);
+      Assert.Equal(outOrder.OpenPrice, orderPrice);
       Assert.Equal(outOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
-      Assert.NotEmpty(outOrder.Transaction.Id);
-      Assert.Equal(outOrder.Transaction.Id, order.Id);
-      Assert.Equal(outOrder.Transaction.Status, OrderStatusEnum.Pending);
+      Assert.Equal(outOrder.Status, OrderStatusEnum.Pending);
     }
 
     [Theory]
-    [InlineData(OrderSideEnum.Long, OrderTypeEnum.Market, 10.0, 15.0, null)]
-    [InlineData(OrderSideEnum.Short, OrderTypeEnum.Market, 10.0, 15.0, 10.0)]
+    [InlineData(OrderSideEnum.Long, OrderTypeEnum.Market, 10.0, 15.0)]
+    [InlineData(OrderSideEnum.Short, OrderTypeEnum.Market, 10.0, 15.0)]
     public void CreateMarketOrder(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double? bid,
-      double? ask,
-      double? price)
+      double? ask)
     {
       var point = new PointModel()
       {
@@ -98,15 +95,11 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 1,
-        Price = price,
+        Amount = 1,
         Side = orderSide,
         Type = orderType,
-        Transaction = new()
-        {
-          Descriptor = "Demo",
-          Instrument = instrument
-        }
+        Descriptor = "Demo",
+        Instrument = instrument
       };
 
       base.SendOrders(order);
@@ -118,17 +111,16 @@ namespace Terminal.Tests
       Assert.Empty(Account.Orders);
       Assert.Single(Account.Positions);
 
-      Assert.Equal(position.Price, openPrice);
+      Assert.Equal(position.OpenPrice, openPrice);
       Assert.Equal(position.Instruction, InstructionEnum.Side);
-      Assert.Equal(position.Transaction.Price, openPrice);
       Assert.Equal(position.Type, OrderTypeEnum.Market);
       Assert.Equal(position.TimeSpan, OrderTimeSpanEnum.Gtc);
-      Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(position.Transaction.Id, order.Id);
-      Assert.Equal(position.Volume, order.Volume);
-      Assert.Equal(position.Transaction.Volume, order.Volume);
-      Assert.NotEmpty(position.Transaction.Id);
-      Assert.NotNull(position.Volume);
+      Assert.Equal(position.Status, OrderStatusEnum.Filled);
+      Assert.Equal(position.Id, order.Id);
+      Assert.Equal(position.Amount, order.Amount);
+      Assert.Equal(position.OpenAmount, order.Amount);
+      Assert.Equal(1, position.Amount);
+      Assert.NotEmpty(position.Id);
     }
 
     [Fact]
@@ -151,41 +143,31 @@ namespace Terminal.Tests
 
       var TP = new OrderModel
       {
-        Volume = 1,
-        Price = price + 5,
+        Amount = 1,
+        OpenPrice = price + 5,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Transaction = new()
-        {
-          Instrument = instrument
-        }
+        Instrument = instrument
       };
 
       var SL = new OrderModel
       {
-        Volume = 1,
-        Price = price - 5,
+        Amount = 1,
+        OpenPrice = price - 5,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Transaction = new()
-        {
-          Instrument = instrument
-        }
+        Instrument = instrument
       };
 
       var order = new OrderModel
       {
-        Volume = 1,
-        Price = price,
+        Amount = 1,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
-        Transaction = new()
-        {
-          Instrument = instrument
-        }
+        Instrument = instrument
       };
 
       base.SendOrders(order);
@@ -225,50 +207,53 @@ namespace Terminal.Tests
       var basis = new InstrumentModel
       {
         Name = "SPY",
-        Point = new PointModel { Bid = 545, Ask = 550, Last = 550 , Time = DateTime.Now }
-      };
-
-      var optionLong = new InstrumentModel
-      {
-        Name = "SPY 240814C00493000",
-        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55 , Time = DateTime.Now },
-        Basis = basis
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now.AddSeconds(1) }
       };
 
       var optionShort = new InstrumentModel
       {
-        Name = "SPY 240814P00493000",
-        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25 , Time = DateTime.Now },
+        Name = "SPY 240814C00500000",
+        Point = new PointModel { Bid = 1.45, Ask = 1.55, Last = 1.55, Time = DateTime.Now.AddSeconds(2) },
+        Basis = basis
+      };
+
+      var optionLong = new InstrumentModel
+      {
+        Name = "SPY 240814P00495000",
+        Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25, Time = DateTime.Now.AddSeconds(3) },
         Basis = basis
       };
 
       var order = new OrderModel
       {
+        Id = "1",
+        Descriptor = basis.Name,
         Type = OrderTypeEnum.Market,
-        TimeSpan = OrderTimeSpanEnum.Day,
+        TimeSpan = OrderTimeSpanEnum.Gtc,
         Instruction = InstructionEnum.Group,
+        
         Orders =
         [
           new OrderModel
           {
-            Volume = 100,
+            Amount = 100,
+            Instrument = basis,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = basis },
           },
           new OrderModel
           {
-            Volume = 1, 
+            Amount = 5,
+            Instrument = optionLong,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
-            Volume = 2,
-            Side = OrderSideEnum.Long,
+            Amount = 1,
+            Instrument = optionShort,
+            Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionShort }
           }
         ]
       };
@@ -279,39 +264,54 @@ namespace Terminal.Tests
       Assert.Empty(Account.Orders);
       Assert.Equal(3, Account.Positions.Count);
 
-      var openShare = Account.Positions[basis.Name];
+      var openShares = Account.Positions[basis.Name];
       var openLong = Account.Positions[optionLong.Name];
       var openShort = Account.Positions[optionShort.Name];
 
-      Assert.Equal(openShare.Side, OrderSideEnum.Long);
-      Assert.Equal(openShare.Type, OrderTypeEnum.Market);
-      Assert.Equal(openShare.Price, basis.Point.Ask);
-      Assert.Equal(openShare.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(openShare.Transaction.Time);
-      Assert.Equal(openShare.Volume, 100);
-      Assert.Equal(openShare.Transaction.Volume, openShare.Volume);
-      Assert.Equal(openShare.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openShare.Transaction.Price, openShare.Price);
+      Assert.Equal(openShares.Side, OrderSideEnum.Long);
+      Assert.Equal(openShares.Type, OrderTypeEnum.Market);
+      Assert.Equal(openShares.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(openShares.OpenPrice, basis.Point.Ask);
+      Assert.Equal(openShares.Descriptor, basis.Name);
+      Assert.Equal(openShares.Time, basis.Point.Time);
+      Assert.Equal(openShares.Amount, 100);
+      Assert.Equal(openShares.OpenAmount, openShares.Amount);
+      Assert.Equal(openShares.Status, OrderStatusEnum.Filled);
+      Assert.Null(openShares.ActivationPrice);
+      Assert.Null(openShares.Price);
+      Assert.Null(openShares.GainMin);
+      Assert.Null(openShares.GainMax);
+      Assert.Null(openShares.Gain);
 
       Assert.Equal(openLong.Side, OrderSideEnum.Long);
       Assert.Equal(openLong.Type, OrderTypeEnum.Market);
-      Assert.Equal(openLong.Price, optionLong.Point.Ask);
-      Assert.Equal(openLong.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(openLong.Transaction.Time);
-      Assert.Equal(openLong.Volume, 1);
-      Assert.Equal(openLong.Transaction.Volume, openLong.Volume);
-      Assert.Equal(openLong.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openLong.Transaction.Price, openLong.Price);
+      Assert.Equal(openLong.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(openLong.OpenPrice, optionLong.Point.Ask);
+      Assert.Equal(openLong.Descriptor, basis.Name);
+      Assert.Equal(openLong.Time, optionLong.Point.Time);
+      Assert.Equal(openLong.Amount, 5);
+      Assert.Equal(openLong.OpenAmount, openLong.Amount);
+      Assert.Equal(openLong.Status, OrderStatusEnum.Filled);
+      Assert.Null(openLong.ActivationPrice);
+      Assert.Null(openLong.Price);
+      Assert.Null(openLong.GainMin);
+      Assert.Null(openLong.GainMax);
+      Assert.Null(openLong.Gain);
 
-      Assert.Equal(openShort.Side, OrderSideEnum.Long);
+      Assert.Equal(openShort.Side, OrderSideEnum.Short);
       Assert.Equal(openShort.Type, OrderTypeEnum.Market);
-      Assert.Equal(openShort.Price, optionShort.Point.Ask);
-      Assert.Equal(openShort.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(openShort.Transaction.Time);
-      Assert.Equal(openShort.Volume, 2);
-      Assert.Equal(openShort.Transaction.Volume, openShort.Volume);
-      Assert.Equal(openShort.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openShort.Transaction.Price, openShort.Price);
+      Assert.Equal(openShort.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(openShort.OpenPrice, optionShort.Point.Bid);
+      Assert.Equal(openLong.Descriptor, basis.Name);
+      Assert.Equal(openShort.Time, optionShort.Point.Time);
+      Assert.Equal(openShort.Amount, 1);
+      Assert.Equal(openShort.OpenAmount, openShort.Amount);
+      Assert.Equal(openShort.Status, OrderStatusEnum.Filled);
+      Assert.Null(openShort.ActivationPrice);
+      Assert.Null(openShort.Price);
+      Assert.Null(openShort.GainMin);
+      Assert.Null(openShort.GainMax);
+      Assert.Null(openShort.Gain);
     }
 
     [Fact]
@@ -346,24 +346,24 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
-            Volume = 100,
+            Amount  = 100,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = basis },
+            Instrument = basis,
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount  = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionLong }
+            Instrument = optionLong
           },
           new OrderModel
           {
-            Volume = 2,
+            Amount  = 2,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionShort }
+            Instrument = optionShort
           }
         ]
       };
@@ -374,10 +374,10 @@ namespace Terminal.Tests
 
       var increase = new OrderModel
       {
-        Volume = 50,
+        Amount = 50,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = basis },
+        Instrument = basis,
       };
 
       base.SendOrders(increase);
@@ -390,22 +390,22 @@ namespace Terminal.Tests
 
       Assert.Equal(increaseShare.Side, OrderSideEnum.Long);
       Assert.Equal(increaseShare.Type, OrderTypeEnum.Market);
-      Assert.Equal(increaseShare.Price, basis.Point.Ask);
-      Assert.Equal(increaseShare.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(increaseShare.Transaction.Time);
-      Assert.Equal(increaseShare.Volume, 150);
-      Assert.Equal(increaseShare.Transaction.Volume, increaseShare.Volume);
-      Assert.Equal(increaseShare.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(increaseShare.Transaction.Price, increaseShare.Price);
+      Assert.Equal(increaseShare.OpenPrice, basis.Point.Ask);
+      Assert.Equal(increaseShare.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(increaseShare.Time, basis.Point.Time);
+      Assert.Equal(increaseShare.Amount, 150);
+      Assert.Equal(increaseShare.OpenAmount, increaseShare.Amount);
+      Assert.Equal(increaseShare.Status, OrderStatusEnum.Filled);
+      Assert.Null(increaseShare.Price);
 
       // Decrease
 
       var decrease = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = optionShort },
+        Instrument = optionShort,
       };
 
       base.SendOrders(decrease);
@@ -418,13 +418,13 @@ namespace Terminal.Tests
 
       Assert.Equal(decreaseShort.Side, OrderSideEnum.Long);
       Assert.Equal(decreaseShort.Type, OrderTypeEnum.Market);
-      Assert.Equal(decreaseShort.Price, optionShort.Point.Ask);
-      Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(decreaseShort.Transaction.Time);
-      Assert.Equal(decreaseShort.Transaction.Volume, 1);
-      Assert.Equal(decreaseShort.Transaction.Volume, decreaseShort.Volume);
-      Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
+      Assert.Equal(decreaseShort.OpenPrice, optionShort.Point.Ask);
+      Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.Equal(decreaseShort.Time, optionShort.Point.Time);
+      Assert.Equal(decreaseShort.OpenAmount, 1);
+      Assert.Equal(decreaseShort.OpenAmount, decreaseShort.Amount);
+      Assert.Equal(decreaseShort.Status, OrderStatusEnum.Filled);
+      Assert.Null(decreaseShort.Price);
 
       // Close side
 
@@ -432,15 +432,18 @@ namespace Terminal.Tests
       {
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Volume = Account.Positions[basis.Name].Volume,
-        Transaction = new() { Instrument = basis },
+        Amount = Account.Positions[basis.Name].Amount,
+        Instrument = basis,
       };
 
       base.SendOrders(close);
 
-      Assert.Equal(2, Account.Deals.Count);
+      var closeSide = Account.Deals.Last();
+
       Assert.Empty(Account.Orders);
+      Assert.Equal(2, Account.Deals.Count);
       Assert.Equal(2, Account.Positions.Count);
+      Assert.Equal(closeSide.Price, basis.Point.Bid);
 
       // Close position
 
@@ -452,17 +455,17 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionLong }
+            Instrument = optionLong
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = optionShort }
+            Instrument = optionShort
           }
         ]
       };
@@ -485,39 +488,39 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
+        Instrument = instrument,
       };
 
       base.SendOrders(order);
 
-      var reverse = new OrderModel
+      var reverseOrder = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
+        Instrument = instrument,
       };
 
-      base.SendOrders(reverse);
+      base.SendOrders(reverseOrder);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
       Assert.Single(Account.Positions);
 
-      var reverseOrder = Account.Positions[instrument.Name];
+      var reversePosition = Account.Positions[instrument.Name];
 
-      Assert.Equal(reverseOrder.Side, OrderSideEnum.Short);
-      Assert.Equal(reverseOrder.Type, OrderTypeEnum.Market);
-      Assert.Equal(reverseOrder.Price, instrument.Point.Bid);
-      Assert.Equal(reverseOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
-      Assert.NotNull(reverseOrder.Transaction.Time);
-      Assert.Equal(reverseOrder.Transaction.Volume, 5);
-      Assert.Equal(reverseOrder.Transaction.Volume, reverseOrder.Volume);
-      Assert.Equal(reverseOrder.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(reverseOrder.Transaction.Price, reverseOrder.Price);
+      Assert.Equal(reversePosition.Side, OrderSideEnum.Short);
+      Assert.Equal(reversePosition.Type, OrderTypeEnum.Market);
+      Assert.Equal(reversePosition.OpenPrice, instrument.Point.Bid);
+      Assert.Equal(reversePosition.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.NotNull(reversePosition.Time);
+      Assert.Equal(reversePosition.OpenAmount, 5);
+      Assert.Equal(reversePosition.OpenAmount, reversePosition.Amount);
+      Assert.Equal(reversePosition.Status, OrderStatusEnum.Filled);
+      Assert.Equal(reversePosition.Price, reverseOrder.OpenPrice);
     }
 
     [Fact]
@@ -525,32 +528,26 @@ namespace Terminal.Tests
     {
       var orderX = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Transaction = new()
+        Instrument = new InstrumentModel
         {
-          Instrument = new InstrumentModel
-          {
-            Name = "SPY",
-            Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
-          }
-        },
+          Name = "SPY",
+          Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
+        }
       };
 
       var orderY = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Transaction = new()
+        Instrument = new InstrumentModel
         {
-          Instrument = new InstrumentModel
-          {
-            Name = "MSFT",
-            Point = new PointModel { Bid = 145, Ask = 150, Last = 150 , Time = DateTime.Now }
-          }
-        },
+          Name = "MSFT",
+          Point = new PointModel { Bid = 145, Ask = 150, Last = 150, Time = DateTime.Now }
+        }
       };
 
       base.SendOrders(orderX);

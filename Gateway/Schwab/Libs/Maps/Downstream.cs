@@ -270,21 +270,15 @@ namespace Schwab.Mappers
         Type = instrumentType
       };
 
-      var action = new TransactionModel
-      {
-        Instrument = instrument,
-        Price = message.AveragePrice,
-        Descriptor = message.Instrument.Symbol,
-        Volume = volume
-      };
-
       var order = new OrderModel
       {
-        Volume = volume,
-        Transaction = action,
+        Amount = volume,
+        OpenAmount = volume,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message),
-        Price = message.AveragePrice
+        OpenPrice = message.AveragePrice,
+        Descriptor = message.Instrument.Symbol
       };
 
       return order;
@@ -325,41 +319,36 @@ namespace Schwab.Mappers
         Name = string.Join(" / ", subOrders.Select(o => o?.Instrument?.Symbol).Distinct())
       };
 
-      var action = new TransactionModel
+      var order = new OrderModel
       {
         Id = message.OrderId,
         Instrument = instrument,
-        Volume = Math.Max(message.FilledQuantity ?? 0, message.Quantity ?? 0),
         Time = message.EnteredTime,
-        Status = GetStatus(message.Status)
-      };
-
-      var order = new OrderModel
-      {
-        Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message),
         TimeSpan = GetTimeSpan(message),
-        Volume = Math.Max(message.Quantity ?? 0, message.FilledQuantity ?? 0)
+        Status = GetStatus(message.Status),
+        Amount = Math.Max(message.Quantity ?? 0, message.FilledQuantity ?? 0),
+        OpenAmount = Math.Max(message.FilledQuantity ?? 0, message.Quantity ?? 0)
       };
 
       switch (message.OrderType.ToUpper())
       {
         case "STOP":
           order.Type = OrderTypeEnum.Stop;
-          order.Price = message.Price;
+          order.OpenPrice = message.Price;
           break;
 
         case "LIMIT":
         case "NET_DEBIT":
         case "NET_CREDIT":
           order.Type = OrderTypeEnum.Limit;
-          order.Price = message.Price;
+          order.OpenPrice = message.Price;
           break;
 
         case "STOP_LIMIT":
           order.Type = OrderTypeEnum.StopLimit;
-          order.Price = message.Price;
+          order.OpenPrice = message.Price;
           order.ActivationPrice = message.StopPrice;
           break;
       }
@@ -376,16 +365,11 @@ namespace Schwab.Mappers
             Type = GetInstrumentType(subOrder.Instrument.AssetType)
           };
 
-          var subAction = new TransactionModel
-          {
-            Instrument = subInstrument,
-            Volume = subOrder.Quantity
-          };
-
           order.Orders.Add(new OrderModel
           {
-            Transaction = subAction,
-            Volume = subOrder.Quantity,
+            Instrument = subInstrument,
+            Amount = subOrder.Quantity,
+            OpenAmount = subOrder.Quantity,
             Side = GetSubOrderSide(subOrder.Instruction)
           });
         }

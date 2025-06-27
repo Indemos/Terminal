@@ -54,9 +54,9 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          ["/ESU25"] = new StateModel
+          ["/ESU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -65,7 +65,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/NQU25"] = new StateModel
+          ["/NQU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -74,7 +74,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/YMU25"] = new StateModel
+          ["/YMU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -83,7 +83,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/CLN25"] = new StateModel
+          ["/CLN25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -92,7 +92,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6EU25"] = new StateModel
+          ["/6EU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -101,7 +101,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6CU25"] = new StateModel
+          ["/6CU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -110,7 +110,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6SU25"] = new StateModel
+          ["/6SU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -119,7 +119,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6AU25"] = new StateModel
+          ["/6AU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -128,7 +128,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6BU25"] = new StateModel
+          ["/6BU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -137,7 +137,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6JU25"] = new StateModel
+          ["/6JU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -146,7 +146,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/GCQ25"] = new StateModel
+          ["/GCQ25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -155,7 +155,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZBU25"] = new StateModel
+          ["/ZBU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -164,7 +164,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZNU25"] = new StateModel
+          ["/ZNU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -173,7 +173,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZQU25"] = new StateModel
+          ["/ZQU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -182,7 +182,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/BTCU25"] = new StateModel
+          ["/BTCU25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -191,7 +191,7 @@ namespace Terminal.Pages.Utils
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["SPY"] = new StateModel
+          ["SPY"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -215,7 +215,7 @@ namespace Terminal.Pages.Utils
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message =>
+        .ForEach(adapter => adapter.Stream += message =>
         {
           var date = $"{DateTime.Now:yyyy-MM-dd}";
           var asset = message.Next.Instrument.Name;

@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -375,7 +374,7 @@ namespace Schwab
         Account.Balance = account.AggregatedBalance.CurrentLiquidationValue;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
       });
@@ -590,7 +589,7 @@ namespace Schwab
           summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
           summary.Instrument.Point = summary.PointGroups.Last();
 
-          DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+          Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
         }
       }
     }
@@ -752,7 +751,7 @@ namespace Schwab
     {
       Account.Orders[order.Id] = order;
 
-      await Subscribe(order.Transaction.Instrument);
+      await Subscribe(order.Instrument);
 
       var response = new ResponseModel<OrderModel>();
       var exOrder = Upstream.GetOrder(Account, order);
@@ -764,8 +763,8 @@ namespace Schwab
         var orderItem = map["Location"].First();
 
         response.Data = order;
-        response.Data.Transaction.Status = OrderStatusEnum.Filled;
-        response.Data.Transaction.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
+        response.Data.Status = OrderStatusEnum.Filled;
+        response.Data.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
       }
 
       return response;
@@ -779,10 +778,10 @@ namespace Schwab
     protected virtual async Task<ResponseModel<OrderModel>> ClearOrder(OrderModel order)
     {
       var response = new ResponseModel<OrderModel>();
-      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders/{order.Transaction.Id}", HttpMethod.Delete);
+      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders/{order.Id}", HttpMethod.Delete);
 
       response.Data = order;
-      response.Data.Transaction.Status = OrderStatusEnum.Canceled;
+      response.Data.Status = OrderStatusEnum.Canceled;
 
       return response;
     }

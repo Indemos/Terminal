@@ -78,9 +78,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = "Demo",
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument },
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument },
         }
       };
 
@@ -97,7 +97,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
@@ -170,31 +170,31 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(direction) + 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(direction) + 15 * direction,
+        Instrument = instrument
       };
 
       var SL = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(-direction) - 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(-direction) - 15 * direction,
+        Instrument = instrument
       };
 
       var order = new OrderModel
       {
         Side = side,
-        Volume = 10,
-        Price = GetPrice(direction),
+        Amount = 10,
+        OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument }
+        Instrument = instrument,
         //Orders = [SL, TP]
       };
 
@@ -216,12 +216,9 @@ namespace Terminal.Pages.Gateways
         var order = new OrderModel
         {
           Side = side,
-          Volume = position.Volume,
+          Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Transaction = new()
-          {
-            Instrument = position.Transaction.Instrument
-          }
+          Instrument = position.Instrument
         };
 
         await adapter.SendOrders(order);

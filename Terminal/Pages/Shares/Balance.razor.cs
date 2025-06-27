@@ -76,10 +76,10 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [assetX] = new StateModel { Instrument = new InstrumentModel { Name = assetX } },
-          [assetY] = new StateModel { Instrument = new InstrumentModel { Name = assetY } }
+          [assetX] = new SummaryModel { Instrument = new InstrumentModel { Name = assetX } },
+          [assetY] = new SummaryModel { Instrument = new InstrumentModel { Name = assetY } }
         },
       };
 
@@ -95,7 +95,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
@@ -160,10 +160,10 @@ namespace Terminal.Pages.Shares
       DealsView.UpdateItems([.. View.Adapters.Values]);
       OrdersView.UpdateItems([.. View.Adapters.Values]);
       PositionsView.UpdateItems([.. View.Adapters.Values]);
-      PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Longs", new AreaShape { Y = ups?.GetPointsEstimate() ?? 0, Component = upCom });
-      PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Shorts", new AreaShape { Y = downs?.GetPointsEstimate() ?? 0, Component = downCom });
-      DollarsView.UpdateItems(point.Time.Value.Ticks, "Dollars", "Longs", new AreaShape { Y = ups?.GetGainEstimate() ?? 0, Component = upCom });
-      DollarsView.UpdateItems(point.Time.Value.Ticks, "Dollars", "Shorts", new AreaShape { Y = downs?.GetGainEstimate() ?? 0, Component = downCom });
+      PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Longs", new AreaShape { Y = ups?.GetEstimate() ?? 0, Component = upCom });
+      PointsView.UpdateItems(point.Time.Value.Ticks, "Points", "Shorts", new AreaShape { Y = downs?.GetEstimate() ?? 0, Component = downCom });
+      DollarsView.UpdateItems(point.Time.Value.Ticks, "Dollars", "Longs", new AreaShape { Y = ups?.GetValueEstimate() ?? 0, Component = upCom });
+      DollarsView.UpdateItems(point.Time.Value.Ticks, "Dollars", "Shorts", new AreaShape { Y = downs?.GetValueEstimate() ?? 0, Component = downCom });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
     }
@@ -178,9 +178,9 @@ namespace Terminal.Pages.Shares
       var order = new OrderModel
       {
         Side = side,
-        Volume = volume,
+        Amount = volume,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument }
+        Instrument = instrument
       };
 
       await adapter.SendOrders(order);
@@ -202,13 +202,10 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);

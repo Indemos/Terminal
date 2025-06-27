@@ -68,9 +68,9 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument }
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument }
         }        
       };
 

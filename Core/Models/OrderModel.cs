@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json.Serialization;
+using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
@@ -11,12 +12,12 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Name
     /// </summary>
-    public virtual string Name => Transaction?.Instrument?.Name;
+    public virtual string Name => Instrument?.Name;
 
     /// <summary>
     /// Basis name
     /// </summary>
-    public virtual string BasisName => Transaction?.Instrument?.Basis?.Name;
+    public virtual string BasisName => Instrument?.Basis?.Name;
 
     /// <summary>
     /// Client order ID
@@ -31,7 +32,12 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public virtual double? Amount { get; set; }
+
+    /// <summary>
+    /// Size of partially filled contract
+    /// </summary>
+    public virtual double? OpenAmount { get; set; }
 
     /// <summary>
     /// Current PnL
@@ -56,7 +62,17 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Desired price for the order to fill, e.g. stop price for stop order and limit price for limit order
     /// </summary>
+    public virtual double? OpenPrice { get; set; }
+
+    /// <summary>
+    /// Open price for the order
+    /// </summary>
     public virtual double? Price { get; set; }
+
+    /// <summary>
+    /// Time stamp
+    /// </summary>
+    public virtual DateTime? Time { get; set; }
 
     /// <summary>
     /// Type
@@ -69,6 +85,11 @@ namespace Terminal.Core.Models
     public virtual OrderSideEnum? Side { get; set; }
 
     /// <summary>
+    /// Status of the order, e.g. Pending
+    /// </summary>
+    public virtual OrderStatusEnum? Status { get; set; }
+
+    /// <summary>
     /// Time in force
     /// </summary>
     public virtual OrderTimeSpanEnum? TimeSpan { get; set; }
@@ -79,9 +100,9 @@ namespace Terminal.Core.Models
     public virtual InstructionEnum? Instruction { get; set; }
 
     /// <summary>
-    /// Transaction
+    /// Instrument to buy or sell
     /// </summary>
-    public virtual TransactionModel Transaction { get; set; }
+    public virtual InstrumentModel Instrument { get; set; }
 
     /// <summary>
     /// List of related orders in the hierarchy
@@ -126,10 +147,10 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public double? GetVolume()
+    public double? GetAmount()
     {
-      var volume = Transaction?.Volume ?? 0;
-      var sideVolume = Orders.Sum(o => o.Transaction?.Volume ?? 0);
+      var volume = OpenAmount ?? 0;
+      var sideVolume = Orders.Sum(o => o.OpenAmount ?? 0);
 
       return volume + sideVolume;
     }
@@ -139,9 +160,9 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public virtual double? GetOpenEstimate()
+    public virtual double? GetOpenPrice()
     {
-      var point = Transaction.Instrument.Point;
+      var point = Instrument.Point;
 
       if (point is not null)
       {
@@ -160,9 +181,9 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public virtual double? GetCloseEstimate()
+    public virtual double? GetClosePrice()
     {
-      var point = Transaction.Instrument.Point;
+      var point = Instrument.Point;
 
       if (point is not null)
       {
@@ -181,9 +202,9 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="price"></param>
     /// <returns></returns>
-    public double? GetPointsEstimate(double? price = null)
+    public double? GetEstimate(double? price = null)
     {
-      return ((price ?? GetCloseEstimate()) - Price) * GetDirection();
+      return ((price ?? GetClosePrice()) - OpenPrice) * GetDirection();
     }
 
     /// <summary>
@@ -191,12 +212,10 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="price"></param>
     /// <returns></returns>
-    public double? GetGainEstimate(double? price = null)
+    public double? GetValueEstimate(double? price = null)
     {
-      var volume = Transaction.Volume;
-      var instrument = Transaction.Instrument;
-      var step = instrument.StepValue / instrument.StepSize;
-      var estimate = volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;
+      var step = Instrument.StepValue / Instrument.StepSize;
+      var estimate = OpenAmount * GetEstimate(price) * step * Instrument.Leverage - Instrument.Commission;
 
       Gain = estimate ?? Gain ?? 0;
       GainMin = Math.Min(GainMin ?? 0, Gain.Value);
@@ -208,13 +227,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Clone
     /// </summary>
-    public virtual object Clone()
-    {
-      var clone = MemberwiseClone() as OrderModel;
-
-      clone.Transaction = Transaction?.Clone() as TransactionModel;
-
-      return clone;
-    }
+    public virtual object Clone() => MemberwiseClone();
   }
 }

@@ -67,32 +67,26 @@ namespace Tradier
     /// <returns></returns>
     public static OrderModel GetStreamOrder(OrderMessage message)
     {
-      var action = new TransactionModel
-      {
-        Id = $"{message.Id}",
-        Volume = message.ExecQuantity,
-        Time = message.TransactionDate,
-        Status = GetStatus(message.Status)
-      };
-
       var order = new OrderModel
       {
         Id = $"{message.Id}",
-        Transaction = action,
         Type = OrderTypeEnum.Market,
-        Volume = message.ExecQuantity
+        Amount = message.ExecQuantity,
+        OpenAmount = message.ExecQuantity,
+        Time = message.TransactionDate,
+        Status = GetStatus(message.Status)
       };
 
       switch (message?.Type?.ToUpper())
       {
         case "STOP":
           order.Type = OrderTypeEnum.Stop;
-          order.Price = message.Price;
+          order.OpenPrice = message.Price;
           break;
 
         case "LIMIT":
           order.Type = OrderTypeEnum.Limit;
-          order.Price = message.Price;
+          order.OpenPrice = message.Price;
           break;
       }
 
@@ -119,30 +113,25 @@ namespace Tradier
         Name = message.OptionSymbol ?? message.Symbol
       };
 
-      var action = new TransactionModel
-      {
-        Id = $"{message.Id}",
-        Volume = message.Quantity,
-        Time = message.TransactionDate,
-        Status = GetStatus(message.Status),
-        Instrument = instrument
-      };
-
       var order = new OrderModel
       {
-        Transaction = action,
+        Id = $"{message.Id}",
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
-        Volume = message.Quantity,
-        Side = GetOrderSide(message)
+        Amount = message.Quantity,
+        OpenAmount = message.Quantity,
+        Side = GetOrderSide(message),
+        Time = message.TransactionDate,
+        Status = GetStatus(message.Status)
       };
 
       switch (message?.Type?.ToUpper())
       {
         case "DEBIT":
         case "CREDIT":
-        case "LIMIT": order.Type = OrderTypeEnum.Limit; order.Price = message.Price; break;
-        case "STOP": order.Type = OrderTypeEnum.Stop; order.Price = message.StopPrice; break;
-        case "STOP_LIMIT": order.Type = OrderTypeEnum.StopLimit; order.ActivationPrice = message.StopPrice; order.Price = message.Price; break;
+        case "LIMIT": order.Type = OrderTypeEnum.Limit; order.OpenPrice = message.Price; break;
+        case "STOP": order.Type = OrderTypeEnum.Stop; order.OpenPrice = message.StopPrice; break;
+        case "STOP_LIMIT": order.Type = OrderTypeEnum.StopLimit; order.ActivationPrice = message.StopPrice; order.OpenPrice = message.Price; break;
       }
 
       return order;
@@ -165,7 +154,7 @@ namespace Tradier
       var order = GetSubOrder(message);
       var name = string.Join(" / ", orders.Select(o => o.Name).Distinct());
 
-      order.Transaction.Instrument.Name = string.IsNullOrEmpty(name) ? order.Transaction.Instrument.Name : name;
+      order.Instrument.Name = string.IsNullOrEmpty(name) ? order.Instrument.Name : name;
       order.Orders = orders;
 
       return [order];
@@ -191,20 +180,15 @@ namespace Tradier
         instrument.Type = InstrumentEnum.Options;
       }
 
-      var action = new TransactionModel
-      {
-        Instrument = instrument,
-        Volume = volume
-      };
-
       var value = message.CostBasis;
       var amount = volume * Math.Max(1, instrument.Leverage.Value);
       var order = new OrderModel
       {
-        Volume = volume,
-        Transaction = action,
+        Amount = volume,
+        OpenAmount = volume,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
-        Price = Math.Abs((value / amount) ?? 0),
+        OpenPrice = Math.Abs((value / amount) ?? 0),
         Side = message.Quantity > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 

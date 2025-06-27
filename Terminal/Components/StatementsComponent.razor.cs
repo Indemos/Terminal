@@ -63,14 +63,14 @@ namespace Terminal.Components
       var balance = accounts.Sum(o => o.InitialBalance).Value;
       var orders = accounts
         .SelectMany(account => account.Deals.SelectMany(o => o.Orders.Append(o)))
-        .OrderBy(o => o.Transaction.Time)
+        .OrderBy(o => o.Time)
         .ToList();
 
       if (orders.Count > 0)
       {
         values.Add(new InputData
         {
-          Time = orders.First().Transaction.Time.Value,
+          Time = orders.First().Time.Value,
           Value = 0,
           Min = 0,
           Max = 0
@@ -85,10 +85,10 @@ namespace Terminal.Components
         {
           Min = o.GainMin.Value,
           Max = o.GainMax.Value,
-          Time = o.Transaction.Time.Value,
+          Time = o.Time.Value,
           Direction = o.GetDirection().Value,
-          Value = o.GetGainEstimate(o.Transaction.Price).Value,
-          Commission = o.Transaction.Instrument.Commission.Value * 2
+          Value = o.GetValueEstimate(o.Price).Value,
+          Commission = o.Instrument.Commission.Value * 2
         });
       }
 

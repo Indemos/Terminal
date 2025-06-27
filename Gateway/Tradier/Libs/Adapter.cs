@@ -124,7 +124,7 @@ namespace Tradier
               summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
 
-              DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+              Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
 
               break;
 
@@ -228,12 +228,12 @@ namespace Tradier
         var account = await GetBalances(num);
         var orders = await GetOrders();
         var positions = await GetPositions();
-        var openOrders = orders.Data.Where(o => o.Transaction.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
+        var openOrders = orders.Data.Where(o => o.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
 
         Account.Balance = account.TotalEquity;
         Account.Orders = openOrders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
       });
@@ -356,7 +356,7 @@ namespace Tradier
 
       foreach (var order in orders)
       {
-        var o = await Response(async () => await ClearOrder(order.Transaction.Id));
+        var o = await Response(async () => await ClearOrder(order.Id));
 
         response.Errors = [.. response.Errors.Concat(o.Errors)];
         response.Data = [.. response.Data.Append(order)];
@@ -417,12 +417,12 @@ namespace Tradier
       await Task.WhenAll(order
         .Orders
         .Append(order)
-        .Where(o => o.Transaction?.Instrument is not null)
-        .Select(o => Subscribe(o.Transaction.Instrument)));
+        .Where(o => o.Instrument is not null)
+        .Select(o => Subscribe(o.Instrument)));
 
       if (order.Orders.IsEmpty())
       {
-        switch (order.Transaction.Instrument.Type)
+        switch (order.Instrument.Type)
         {
           case InstrumentEnum.Shares: response = await SendEquityOrder(order, preview); break;
           case InstrumentEnum.Options: response = await SendOptionOrder(order, preview); break;
@@ -434,8 +434,8 @@ namespace Tradier
         var isCombo = order
           .Orders
           .Append(order)
-          .Where(o => o?.Transaction?.Volume is not null)
-          .Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
+          .Where(o => o?.OpenAmount is not null)
+          .Any(o => o?.Instrument?.Type is InstrumentEnum.Shares);
 
         switch (true)
         {
@@ -445,8 +445,8 @@ namespace Tradier
         }
       }
 
-      order.Transaction.Id = $"{response?.Id}";
-      order.Transaction.Status = Equals(response?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Transaction.Status;
+      order.Id = $"{response?.Id}";
+      order.Status = Equals(response?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Status;
 
       return order;
     }

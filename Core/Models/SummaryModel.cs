@@ -6,7 +6,7 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-  public class StateModel : ICloneable
+  public class SummaryModel : ICloneable
   {
     /// <summary>
     /// Status
@@ -41,7 +41,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public StateModel()
+    public SummaryModel()
     {
       Points = [];
       PointGroups = [];

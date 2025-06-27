@@ -101,9 +101,9 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
+          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
         },
       };
 
@@ -119,7 +119,7 @@ namespace Terminal.Pages.Options
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ namespace Terminal.Pages.Options
 
         if (orders.Count > 0)
         {
-          await ClosePositions(o => Equals(o.Transaction.Instrument.Derivative.Strike, orders[0].Transaction.Instrument.Derivative.Strike));
+          await ClosePositions(o => Equals(o.Instrument.Derivative.Strike, orders[0].Instrument.Derivative.Strike));
           await adapter.SendOrders(orders[1]);
         }
       }
@@ -223,31 +223,31 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longPut }
+            Instrument = longPut
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longCall }
+            Instrument = longCall
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortPut }
+            Instrument = shortPut
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortCall }
+            Instrument = shortCall
           }
         ]
       };
@@ -267,33 +267,32 @@ namespace Terminal.Pages.Options
       var openStrikes = account
         .Positions
         .Values
-        .ToDictionary(o => o.Transaction.Instrument.Derivative.Strike);
+        .ToDictionary(o => o.Instrument.Derivative.Strike);
 
       var posPut = account
         .Positions
         .Values
         .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put)
+        .Where(o => o.Instrument.Derivative.Side is OptionSideEnum.Put)
         .First();
 
       var posCall = account
         .Positions
         .Values
         .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Call)
+        .Where(o => o.Instrument.Derivative.Side is OptionSideEnum.Call)
         .First();
 
       var order = new OrderModel
       {
-        Volume = posCall.Volume,
+        Amount = posCall.Amount,
         Side = OrderSideEnum.Short,
-        Type = OrderTypeEnum.Market,
-        Transaction = new()
+        Type = OrderTypeEnum.Market
       };
 
-      if (point.Last + 1 > posCall.Transaction.Instrument.Derivative.Strike)
+      if (point.Last + 1 > posCall.Instrument.Derivative.Strike)
       {
-        order.Transaction.Instrument = options
+        order.Instrument = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Call)
           .Where(o => o.Derivative.Strike > point.Last + 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
@@ -302,9 +301,9 @@ namespace Terminal.Pages.Options
         return [posCall, order];
       }
 
-      if (point.Last - 1 < posPut.Transaction.Instrument.Derivative.Strike)
+      if (point.Last - 1 < posPut.Instrument.Derivative.Strike)
       {
-        order.Transaction.Instrument = options
+        order.Instrument = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Put)
           .Where(o => o.Derivative.Strike < point.Last - 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
@@ -332,13 +331,10 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);
@@ -353,9 +349,9 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Volume;
-      var units = order.Transaction?.Instrument?.Leverage;
-      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
+      var volume = order.Amount;
+      var units = order.Instrument?.Leverage;
+      var delta = order.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;

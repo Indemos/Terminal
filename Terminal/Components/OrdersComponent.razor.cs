@@ -82,11 +82,11 @@ namespace Terminal.Components
         {
           Name = o.Name,
           Type = o.Type,
-          Time = o.Transaction.Time,
+          Time = o.Time,
           Group = o.BasisName ?? o.Name,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Transaction.Volume ?? 0,
-          Price = o.Price ?? 0,
+          Size = o.OpenAmount ?? 0,
+          Price = o.OpenPrice ?? 0,
 
         }).ToList();
 

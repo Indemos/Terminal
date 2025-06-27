@@ -17,7 +17,6 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderMessage GetOrder(IAccount account, OrderModel order)
     {
-      var action = order.Transaction;
       var message = new OrderMessage
       {
         Session = "NORMAL",
@@ -28,10 +27,10 @@ namespace Schwab.Mappers
 
       switch (order.Type)
       {
-        case OrderTypeEnum.Stop: message.StopPrice = order.Price; break;
-        case OrderTypeEnum.Limit: message.Price = order.Price; break;
+        case OrderTypeEnum.Stop: message.StopPrice = order.OpenPrice; break;
+        case OrderTypeEnum.Limit: message.Price = order.OpenPrice; break;
         case OrderTypeEnum.StopLimit:
-          message.Price = order.Price;
+          message.Price = order.OpenPrice;
           message.StopPrice = order.ActivationPrice;
           break;
       }
@@ -54,7 +53,7 @@ namespace Schwab.Mappers
         })
         .ToList();
 
-      if (order?.Volume is not 0)
+      if (order?.Amount is not 0)
       {
         message.OrderLegCollection.Add(GetSubOrder(account, order));
       }
@@ -126,19 +125,18 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static OrderLegMessage GetSubOrder(IAccount account, OrderModel order, OrderModel group = null)
     {
-      var action = order?.Transaction ?? group?.Transaction;
-      var assetType = action?.Instrument?.Type ?? group?.Transaction?.Instrument?.Type;
+      var assetType = order?.Instrument?.Type ?? group?.Instrument?.Type;
       var side = order?.Side ?? group?.Side;
       var instrument = new InstrumentMessage
       {
         AssetType = GetInstrumentType(assetType),
-        Symbol = action.Instrument.Name
+        Symbol = order.Instrument.Name
       };
 
       var response = new OrderLegMessage
       {
         Instrument = instrument,
-        Quantity = order.Volume,
+        Quantity = order.Amount,
         Instruction = GetSide(account, order)
       };
 
@@ -154,7 +152,7 @@ namespace Schwab.Mappers
     public static string GetSide(IAccount account, OrderModel order)
     {
       var position = account.Positions.Get(order.Name);
-      var option = order.Transaction.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
+      var option = order.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
 
       if (option)
       {

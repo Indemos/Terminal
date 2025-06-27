@@ -22,24 +22,23 @@ namespace InteractiveBrokers.Mappers
     {
       var response = new List<OpenOrderMessage>();
       var order = new Order();
-      var action = orderModel.Transaction;
-      var instrument = action.Instrument;
-      var contract = GetContract(action.Instrument);
+      var instrument = orderModel.Instrument;
+      var contract = GetContract(instrument);
 
       order.OrderId = orderId;
       order.Action = GetSide(orderModel.Side);
       order.Tif = GetTimeSpan(orderModel.TimeSpan);
       order.OrderType = GetOrderType(orderModel.Type);
-      order.TotalQuantity = (decimal)orderModel.Volume;
+      order.TotalQuantity = (decimal)orderModel.Amount;
       order.ExtOperator = orderModel.Descriptor;
       order.Account = account.Descriptor;
 
       switch (orderModel.Type)
       {
-        case OrderTypeEnum.Stop: order.AuxPrice = orderModel.Price.Value; break;
-        case OrderTypeEnum.Limit: order.LmtPrice = orderModel.Price.Value; break;
+        case OrderTypeEnum.Stop: order.AuxPrice = orderModel.OpenPrice.Value; break;
+        case OrderTypeEnum.Limit: order.LmtPrice = orderModel.OpenPrice.Value; break;
         case OrderTypeEnum.StopLimit:
-          order.LmtPrice = orderModel.Price.Value;
+          order.LmtPrice = orderModel.OpenPrice.Value;
           order.AuxPrice = orderModel.ActivationPrice.Value;
           break;
       }
@@ -244,9 +243,9 @@ namespace InteractiveBrokers.Mappers
       var nextOrder = order
         .Orders
         .Where(o => Equals(o.Name, order.Name))
-        .FirstOrDefault(o => (o.Price - order.Price) * direction > 0);
+        .FirstOrDefault(o => (o.OpenPrice - order.OpenPrice) * direction > 0);
 
-      return nextOrder?.Price;
+      return nextOrder?.OpenPrice;
     }
 
     /// <summary>

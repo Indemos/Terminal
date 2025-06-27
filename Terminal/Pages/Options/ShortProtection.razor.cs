@@ -104,9 +104,9 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
+          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
         },
       };
 
@@ -122,7 +122,7 @@ namespace Terminal.Pages.Options
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -151,19 +151,19 @@ namespace Terminal.Pages.Options
 
         if (optionDelta is 0)
         {
-          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
+          await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
         }
         else if (basisDelta is 0 || isBuy || isSell)
         {
           var order = new OrderModel
           {
-            Volume = 50,
+            Amount = 50,
             Type = OrderTypeEnum.Market,
             Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Transaction = new() { Instrument = point.Instrument }
+            Instrument = point.Instrument
           };
 
-          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
+          await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
           await adapter.SendOrders([order]);
         }
       }
@@ -191,20 +191,20 @@ namespace Terminal.Pages.Options
       var basisDelta = Math.Round(account
         .Positions
         .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .Where(o => o.Instrument.Derivative is null)
         .Sum(GetDelta), MidpointRounding.ToZero);
 
       var optionDelta = Math.Round(account
         .Positions
         .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Where(o => o.Instrument.Derivative is not null)
         .Sum(GetDelta), MidpointRounding.ToZero);
 
       var positionSigma = account
         .Positions
         .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .Sum(o => o.Transaction.Instrument.Derivative.Volatility ?? 0);
+        .Where(o => o.Instrument.Derivative is not null)
+        .Sum(o => o.Instrument.Derivative.Volatility ?? 0);
 
       ExposureView.UpdateItems(point.Time.Value.Ticks, "Exposure", "Sigma", new AreaShape { Y = positionSigma, Component = com });
       DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = comUp });
@@ -277,31 +277,31 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longPut }
+            Instrument = longPut
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longCall }
+            Instrument = longCall
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortPut }
+            Instrument = shortPut
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortCall }
+            Instrument = shortCall
           }
         ]
       };
@@ -325,13 +325,10 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);
@@ -346,9 +343,9 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Volume;
-      var units = order.Transaction?.Instrument?.Leverage;
-      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
+      var volume = order.Amount;
+      var units = order.Instrument?.Leverage;
+      var delta = order.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;

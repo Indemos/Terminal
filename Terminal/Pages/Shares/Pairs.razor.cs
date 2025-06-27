@@ -71,10 +71,10 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [assetX] = new StateModel { Instrument = new InstrumentModel { Name = assetX } },
-          [assetY] = new StateModel { Instrument = new InstrumentModel { Name = assetY } }
+          [assetX] = new SummaryModel { Instrument = new InstrumentModel { Name = assetX } },
+          [assetY] = new SummaryModel { Instrument = new InstrumentModel { Name = assetY } }
         },
       };
 
@@ -90,7 +90,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
@@ -119,12 +119,12 @@ namespace Terminal.Pages.Shares
       {
         var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Long);
         var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Short);
-        var gain = buy.Value.GetPointsEstimate() + sell.Value.GetPointsEstimate();
+        var gain = buy.Value.GetEstimate() + sell.Value.GetEstimate();
 
         switch (true)
         {
           case true when gain > expenses: await ClosePositions(); break;
-          case true when gain < -expenses: OpenPositions(buy.Value.Transaction.Instrument, sell.Value.Transaction.Instrument); break;
+          case true when gain < -expenses: OpenPositions(buy.Value.Instrument, sell.Value.Instrument); break;
         }
       }
 
@@ -161,18 +161,18 @@ namespace Terminal.Pages.Shares
       var adapter = View.Adapters["Prime"];
       var orderSell = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = assetSell }
+        Instrument = assetSell
       };
 
       var orderBuy = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = assetBuy }
+        Instrument = assetBuy
       };
 
       adapter.SendOrders(orderBuy, orderSell);
@@ -194,13 +194,10 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Amount = position.OpenAmount,
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);

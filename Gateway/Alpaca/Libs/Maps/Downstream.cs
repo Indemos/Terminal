@@ -78,40 +78,34 @@ namespace Alpaca.Mappers
         Type = GetInstrumentType(message.AssetClass)
       };
 
-      var action = new TransactionModel
-      {
-        Id = $"{message.OrderId}",
-        Instrument = instrument,
-        Volume = GetValue(message.FilledQuantity, message.Quantity),
-        Time = message.CreatedAtUtc,
-        Status = GetStatus(message.OrderStatus)
-      };
-
       var order = new OrderModel
       {
-        Transaction = action,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
+        Time = message.CreatedAtUtc,
         Side = GetOrderSide(message.OrderSide),
+        Status = GetStatus(message.OrderStatus),
         TimeSpan = GetTimeSpan(message.TimeInForce),
-        Volume = GetValue(message.Quantity, message.FilledQuantity),
-        Id = message.ClientOrderId
+        Amount = GetValue(message.Quantity, message.FilledQuantity),
+        OpenAmount = GetValue(message.FilledQuantity, message.Quantity),
+        Id = $"{message.OrderId}"
       };
 
       switch (message.OrderType)
       {
         case OrderType.Stop:
           order.Type = OrderTypeEnum.Stop;
-          order.Price = (double)message.StopPrice;
+          order.OpenPrice = (double)message.StopPrice;
           break;
 
         case OrderType.Limit:
           order.Type = OrderTypeEnum.Limit;
-          order.Price = (double)message.LimitPrice;
+          order.OpenPrice = (double)message.LimitPrice;
           break;
 
         case OrderType.StopLimit:
           order.Type = OrderTypeEnum.StopLimit;
-          order.Price = (double)message.StopPrice;
+          order.OpenPrice = (double)message.StopPrice;
           order.ActivationPrice = (double)message.LimitPrice;
           break;
       }
@@ -146,21 +140,16 @@ namespace Alpaca.Mappers
         instrument.Leverage = 100;
       }
 
-      var action = new TransactionModel
+      var order = new OrderModel
       {
         Price = price,
         Instrument = instrument,
-        Descriptor = $"{message.AssetId}",
-        Volume = GetValue(message.Quantity, message.AvailableQuantity)
-      };
-
-      var order = new OrderModel
-      {
-        Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message.Side),
-        Price = (double)message.AverageEntryPrice,
-        Volume = GetValue(message.Quantity, message.AvailableQuantity)
+        OpenPrice = (double)message.AverageEntryPrice,
+        Amount = GetValue(message.Quantity, message.AvailableQuantity),
+        OpenAmount = GetValue(message.Quantity, message.AvailableQuantity),
+        Descriptor = $"{message.AssetId}"
       };
 
       return order;

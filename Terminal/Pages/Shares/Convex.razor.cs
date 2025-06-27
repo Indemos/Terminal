@@ -71,9 +71,9 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset, TimeFrame = TimeSpan.FromMinutes(1) } },
+          [asset] = new SummaryModel { Instrument = new InstrumentModel { Name = asset, TimeFrame = TimeSpan.FromMinutes(1) } },
         },
       };
 
@@ -89,7 +89,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
@@ -163,9 +163,9 @@ namespace Terminal.Pages.Shares
       var order = new OrderModel
       {
         Side = side,
-        Volume = volume,
-        Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument }
+        Amount = volume,
+        Instrument = instrument,
+        Type = OrderTypeEnum.Market
       };
 
       await adapter.SendOrders(order);
@@ -188,13 +188,10 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
           };
 
           await adapter.SendOrders(order);

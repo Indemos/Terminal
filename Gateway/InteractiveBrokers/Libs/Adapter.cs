@@ -397,7 +397,7 @@ namespace InteractiveBrokers
 
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
       });
@@ -553,7 +553,7 @@ namespace InteractiveBrokers
           summary.Instrument = instrument;
           summary.Instrument.Point = summary.PointGroups.Last();
 
-          DataStream(new MessageModel<PointModel> { Next = instrument.Point });
+          Stream(new MessageModel<PointModel> { Next = instrument.Point });
         }
       });
 
@@ -662,7 +662,7 @@ namespace InteractiveBrokers
     {
       Account.Orders[order.Id] = order;
 
-      await Subscribe(order.Transaction.Instrument);
+      await Subscribe(order.Instrument);
 
       var orderId = this.order++;
       var response = new ResponseModel<OrderModel>();
@@ -698,8 +698,8 @@ namespace InteractiveBrokers
       }
 
       response.Data = order;
-      response.Data.Transaction.Id = $"{orderId}";
-      response.Data.Transaction.Status = Downstream.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
+      response.Data.Id = $"{orderId}";
+      response.Data.Status = Downstream.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
 
       return response;
     }
@@ -713,7 +713,7 @@ namespace InteractiveBrokers
     {
       var response = new ResponseModel<OrderModel>();
       var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var orderId = int.Parse(order.Transaction.Id);
+      var orderId = int.Parse(order.Id);
       var exResponse = null as OrderStatusMessage;
 
       void subscribe(OrderStatusMessage message)
@@ -737,8 +737,8 @@ namespace InteractiveBrokers
       await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
 
       response.Data = order;
-      response.Data.Transaction.Id = $"{orderId}";
-      response.Data.Transaction.Status = Downstream.GetOrderStatus(exResponse.Status);
+      response.Data.Id = $"{orderId}";
+      response.Data.Status = Downstream.GetOrderStatus(exResponse.Status);
 
       return response;
     }

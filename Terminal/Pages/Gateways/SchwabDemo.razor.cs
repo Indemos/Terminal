@@ -70,13 +70,13 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel
+          ["SPY"] = new SummaryModel
           {
             Instrument = Instrument
           },
-          ["/ESM25"] = new StateModel
+          ["/ESM25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -85,7 +85,7 @@ namespace Terminal.Pages.Gateways
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/NQM25"] = new StateModel
+          ["/NQM25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -94,7 +94,7 @@ namespace Terminal.Pages.Gateways
               TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/YMM25"] = new StateModel
+          ["/YMM25"] = new SummaryModel
           {
             Instrument = new InstrumentModel
             {
@@ -120,7 +120,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, "/ESM25"))
           {
@@ -177,31 +177,31 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(direction) + 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(direction) + 15 * direction,
+        Instrument = instrument
       };
 
       var SL = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(-direction) - 15 * direction,
-        Transaction = new() { Instrument = instrument }
+        OpenPrice = GetPrice(-direction) - 15 * direction,
+        Instrument = instrument
       };
 
       var order = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = side,
-        Price = GetPrice(direction),
+        OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Transaction = new() { Instrument = instrument },
+        Instrument = instrument,
         Orders = [SL, TP]
       };
 
@@ -218,12 +218,9 @@ namespace Terminal.Pages.Gateways
         var order = new OrderModel
         {
           Side = side,
+          Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Volume = position.Volume,
-          Transaction = new()
-          {
-            Instrument = position.Transaction.Instrument
-          }
+          Instrument = position.Instrument
         };
 
         await adapter.SendOrders(order);

@@ -100,9 +100,9 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        State = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
+          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
         },
       };
 
@@ -118,7 +118,7 @@ namespace Terminal.Pages.Options
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -210,18 +210,18 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = longPut }
+            Instrument = longPut
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Transaction = new() { Instrument = shortPut }
-          },
+            Instrument = shortPut
+          }
         ]
       };
 
@@ -243,22 +243,22 @@ namespace Terminal.Pages.Options
         .Positions
         .Values
         .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Where(o => o.Instrument.Derivative is not null)
         .FirstOrDefault();
 
-      var isExpired = shortPosition is not null && shortPosition.GetCloseEstimate() <= 0.05;
-      var isPenetrated = shortPosition is not null && point.Last + 1 > shortPosition.Transaction.Instrument.Derivative.Strike;
+      var isExpired = shortPosition is not null && shortPosition.GetClosePrice() <= 0.05;
+      var isPenetrated = shortPosition is not null && point.Last + 1 > shortPosition.Instrument.Derivative.Strike;
 
       if (isExpired || isPenetrated)
       {
-        await ClosePositions(o => o.Transaction.Instrument.Derivative is not null && o.Side is OrderSideEnum.Short);
+        await ClosePositions(o => o.Instrument.Derivative is not null && o.Side is OrderSideEnum.Short);
       }
 
       var shortUpdate = account
         .Positions
         .Values
         .Where(o => o.Side is OrderSideEnum.Short)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Where(o => o.Instrument.Derivative is not null)
         .ToList();
 
       if (shortUpdate.Count is 0)
@@ -266,7 +266,7 @@ namespace Terminal.Pages.Options
         var orders = GetOrders(point, longOptions, shortOptions);
         var shortOrder = orders?.FirstOrDefault()?.Orders?.LastOrDefault();
 
-        if (shortOrder is null || shortOrder.Transaction.Instrument.Point.Last <= 0.10)
+        if (shortOrder is null || shortOrder.Instrument.Point.Last <= 0.10)
         {
           return;
         }
@@ -289,33 +289,32 @@ namespace Terminal.Pages.Options
       var sharesPosition = account
         .Positions
         .Values
-        .Where(o => o.Transaction.Instrument.Derivative is null)
+        .Where(o => o.Instrument.Derivative is null)
         .ToList();
 
       var strike = account
         .Positions
         .Values
         .Where(o => o.Side is OrderSideEnum.Long)
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Where(o => o.Instrument.Derivative is not null)
         .First()
-        .Transaction
         .Instrument
         .Derivative
         .Strike;
 
       if (sharesPosition.Count is not 0 && point.Last.Value + 1 < strike)
       {
-        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await ClosePositions(o => o.Instrument.Derivative is null);
       }
 
       if (sharesPosition.Count is 0 && point.Last.Value + 1 > strike)
       {
         var order = new OrderModel
         {
-          Volume = 100,
-          Type = OrderTypeEnum.Market,
+          Amount = 100,
           Side = OrderSideEnum.Long,
-          Transaction = new() { Instrument = point.Instrument }
+          Type = OrderTypeEnum.Market,
+          Instrument = point.Instrument
         };
 
         await adapter.SendOrders([order]);
@@ -338,13 +337,10 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
-            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Transaction = new()
-            {
-              Instrument = position.Transaction.Instrument
-            }
+            Instrument = position.Instrument,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
           await adapter.SendOrders(order);
@@ -359,9 +355,9 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Volume;
-      var units = order.Transaction?.Instrument?.Leverage;
-      var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
+      var volume = order.Amount;
+      var units = order.Instrument?.Leverage;
+      var delta = order.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;

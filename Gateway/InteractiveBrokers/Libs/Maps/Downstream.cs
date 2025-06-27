@@ -39,40 +39,34 @@ namespace InteractiveBrokers.Mappers
     public static OrderModel GetOrder(OpenOrderMessage message)
     {
       var instrument = GetInstrument(message.Contract);
-      var action = new TransactionModel
+      var order = new OrderModel
       {
         Instrument = instrument,
         Id = $"{message.Order.PermId}",
-        Volume = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
-        Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow,
-        Status = GetOrderStatus(message.OrderState.Status)
-      };
-
-      var order = new OrderModel
-      {
-        Transaction = action,
-        Id = $"{message.OrderId}",
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.Order.Action),
         TimeSpan = GetTimeSpan($"{message.Order.Tif}"),
-        Volume = (double)message.Order.TotalQuantity
+        Amount = (double)message.Order.TotalQuantity,
+        Status = GetOrderStatus(message.OrderState.Status),
+        OpenAmount = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
+        Time = DateTime.TryParse(message.Order.ActiveStartTime, out var o) ? o : DateTime.UtcNow
       };
 
       switch (message.Order.OrderType)
       {
         case "STP":
           order.Type = OrderTypeEnum.Stop;
-          order.Price = message.Order.AuxPrice;
+          order.OpenPrice = message.Order.AuxPrice;
           break;
 
         case "LMT":
           order.Type = OrderTypeEnum.Limit;
-          order.Price = message.Order.LmtPrice;
+          order.OpenPrice = message.Order.LmtPrice;
           break;
 
         case "STP LMT":
           order.Type = OrderTypeEnum.StopLimit;
-          order.Price = message.Order.LmtPrice;
+          order.OpenPrice = message.Order.LmtPrice;
           order.ActivationPrice = message.Order.AuxPrice;
           break;
       }
@@ -89,19 +83,14 @@ namespace InteractiveBrokers.Mappers
     {
       var volume = (double)Math.Abs(message.Position);
       var instrument = GetInstrument(message.Contract);
-      var action = new TransactionModel
-      {
-        Instrument = instrument,
-        Descriptor = $"{message.Contract.ConId}",
-        Volume = volume
-      };
-
       var order = new OrderModel
       {
-        Volume = volume,
-        Transaction = action,
+        Amount = volume,
+        OpenAmount = volume,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
-        Price = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
+        Descriptor = $"{message.Contract.ConId}",
+        OpenPrice = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
         Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 

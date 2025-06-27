@@ -92,11 +92,11 @@ namespace Terminal.Components
         var inputModel = new OptionInputModel
         {
           Price = point.Last.Value,
-          Amount = pos.Volume ?? 0,
-          Strike = pos.Transaction.Instrument?.Derivative?.Strike ?? 0,
-          Premium = pos.Transaction.Instrument?.Point?.Last ?? 0,
-          Date = pos.Transaction.Instrument?.Derivative?.ExpirationDate,
-          Side = pos.Transaction.Instrument?.Derivative?.Side ?? 0,
+          Amount = pos.Amount ?? 0,
+          Strike = pos.Instrument?.Derivative?.Strike ?? 0,
+          Premium = pos.Instrument?.Point?.Last ?? 0,
+          Date = pos.Instrument?.Derivative?.ExpirationDate,
+          Side = pos.Instrument?.Derivative?.Side ?? 0,
           Position = pos.Side.Value
         };
 

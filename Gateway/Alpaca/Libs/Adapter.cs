@@ -186,7 +186,7 @@ namespace Alpaca
         Account.Balance = (double)account.Equity;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions.Values.ForEach(async o => await Subscribe(o.Transaction.Instrument));
+        Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
       });
@@ -383,7 +383,7 @@ namespace Alpaca
 
       foreach (var order in orders)
       {
-        var o = await Response(async () => await tradingClient.CancelOrderAsync(Guid.Parse(order.Transaction.Id)));
+        var o = await Response(async () => await tradingClient.CancelOrderAsync(Guid.Parse(order.Id)));
 
         response.Errors = [.. response.Errors.Concat(o.Errors)];
         response.Data = [.. response.Data.Append(order)];
@@ -403,14 +403,14 @@ namespace Alpaca
     {
       Account.Orders[order.Id] = order;
 
-      await Subscribe(order.Transaction.Instrument);
+      await Subscribe(order.Instrument);
 
       var exOrder = Upstream.GetOrder(order);
       var response = new ResponseModel<OrderModel>();
       var exResponse = await tradingClient.PostOrderAsync(exOrder);
 
-      order.Transaction.Id = $"{exResponse.OrderId}";
-      order.Transaction.Status = Downstream.GetStatus(exResponse.OrderStatus);
+      order.Id = $"{exResponse.OrderId}";
+      order.Status = Downstream.GetStatus(exResponse.OrderStatus);
 
       return response;
     }
@@ -428,7 +428,7 @@ namespace Alpaca
       summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
       summary.Instrument.Point = summary.PointGroups.Last();
 
-      DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+      Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
     }));
 
     /// <summary>
@@ -437,18 +437,14 @@ namespace Alpaca
     /// <param name="streamOrder"></param>
     protected virtual void OnTrade(ITrade streamOrder) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
     {
-      var action = new TransactionModel
+      var order = new OrderModel
       {
         Id = $"{streamOrder.TradeId}",
         Time = streamOrder.TimestampUtc,
         Price = (double)streamOrder.Price,
-        Volume = (double)streamOrder.Size,
+        OpenAmount = (double)streamOrder.Size,
+        Side = Downstream.GetTakerSide(streamOrder.TakerSide),
         Instrument = new InstrumentModel { Name = streamOrder.Symbol }
-      };
-
-      var order = new OrderModel
-      {
-        Side = Downstream.GetTakerSide(streamOrder.TakerSide)
       };
 
       var message = new MessageModel<OrderModel>
