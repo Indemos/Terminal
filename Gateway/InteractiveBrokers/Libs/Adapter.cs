@@ -90,7 +90,7 @@ namespace InteractiveBrokers
 
         await GetAccount();
 
-        foreach (var summary in Account.State.Values)
+        foreach (var summary in Account.States.Values)
         {
           await Subscribe(summary.Instrument);
         }
@@ -110,7 +110,7 @@ namespace InteractiveBrokers
       {
         await Unsubscribe(instrument);
 
-        Account.State.Get(instrument.Name).Instrument ??= instrument;
+        Account.States.Get(instrument.Name).Instrument ??= instrument;
 
         var id = subscriptions[instrument.Name] = counter++;
         var contracts = await GetContracts(instrument);
@@ -248,19 +248,50 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
+      var response = new ResponseModel<OrderModel>();
 
-      foreach (var order in ComposeOrders(orders))
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        var o = await Response(async () => await SendOrder(order));
+        Account.Orders[order.Id] = order;
 
-        response.Errors = [.. response.Errors.Concat(o.Errors)];
-        response.Data = [.. response.Data.Append(order)];
+        var orderId = this.order++;
+        var exOrders = Upstream.GetOrders(orderId, order, Account);
+        var exResponses = new Dictionary<int, OpenOrderMessage>();
+
+        foreach (var exOrder in exOrders)
+        {
+          var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+          void subscribe(OpenOrderMessage message)
+          {
+            if (Equals(exOrder.Order.OrderId, message.OrderId))
+            {
+              exResponses[message.OrderId] = message;
+              unsubscribe();
+              source.TrySetResult();
+            }
+          }
+
+          void unsubscribe()
+          {
+            client.OpenOrder -= subscribe;
+            client.OpenOrderEnd -= unsubscribe;
+          }
+
+          client.OpenOrder += subscribe;
+          client.OpenOrderEnd += unsubscribe;
+          client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
+
+          await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
+          await Task.Delay(Interval);
+        }
+
+        response.Data = order;
+        response.Data.Id = $"{orderId}";
+        response.Data.Status = Downstream.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
       }
-
-      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -494,7 +525,7 @@ namespace InteractiveBrokers
       var max = short.MaxValue;
       var point = new PointModel();
       var contract = Upstream.GetContract(instrument);
-      var summary = Account.State.Get(instrument.Name);
+      var summary = Account.States.Get(instrument.Name);
 
       double? value(double data, double min, double max, double? original)
       {
@@ -546,10 +577,10 @@ namespace InteractiveBrokers
           }
 
           point.Time = DateTime.Now;
-          point.Instrument = instrument;
+          point.Name = instrument.Name;
 
           summary.Points.Add(point);
-          summary.PointGroups.Add(point, instrument.TimeFrame);
+          summary.PointGroups.Add(point, summary.TimeFrame);
           summary.Instrument = instrument;
           summary.Instrument.Point = summary.PointGroups.Last();
 
@@ -651,57 +682,6 @@ namespace InteractiveBrokers
       response.Data = reader;
 
       return Task.FromResult(response);
-    }
-
-    /// <summary>
-    /// Send order
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
-    {
-      Account.Orders[order.Id] = order;
-
-      await Subscribe(order.Instrument);
-
-      var orderId = this.order++;
-      var response = new ResponseModel<OrderModel>();
-      var exOrders = Upstream.GetOrders(orderId, order, Account);
-      var exResponses = new Dictionary<int, OpenOrderMessage>();
-
-      foreach (var exOrder in exOrders)
-      {
-        var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-
-        void subscribe(OpenOrderMessage message)
-        {
-          if (Equals(exOrder.Order.OrderId, message.OrderId))
-          {
-            exResponses[message.OrderId] = message;
-            unsubscribe();
-            source.TrySetResult();
-          }
-        }
-
-        void unsubscribe()
-        {
-          client.OpenOrder -= subscribe;
-          client.OpenOrderEnd -= unsubscribe;
-        }
-
-        client.OpenOrder += subscribe;
-        client.OpenOrderEnd += unsubscribe;
-        client.ClientSocket.placeOrder(exOrder.Order.OrderId, exOrder.Contract, exOrder.Order);
-
-        await await Task.WhenAny(source.Task, Task.Delay(Timeout).ContinueWith(o => unsubscribe()));
-        await Task.Delay(Interval);
-      }
-
-      response.Data = order;
-      response.Data.Id = $"{orderId}";
-      response.Data.Status = Downstream.GetOrderStatus(exResponses?.Get(orderId)?.OrderState?.Status);
-
-      return response;
     }
 
     /// <summary>

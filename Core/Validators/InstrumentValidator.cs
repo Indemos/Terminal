@@ -1,5 +1,6 @@
 using FluentValidation;
 using Terminal.Core.Domains;
+using Terminal.Core.Enums;
 
 namespace Terminal.Core.Validators
 {
@@ -17,6 +18,19 @@ namespace Terminal.Core.Validators
       RuleFor(o => o.StepValue).NotEmpty();
       RuleFor(o => o.Leverage).NotEmpty();
       RuleFor(o => o.Point).NotEmpty().SetValidator(new PointValidator());
+
+      When(o => o.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions, () =>
+      {
+        RuleFor(o => o.Derivative.Side).NotEmpty();
+        RuleFor(o => o.Derivative.Strike).NotEmpty();
+        RuleFor(o => o.Derivative.TradeDate).NotEmpty();
+        RuleFor(o => o.Derivative.ExpirationDate).NotEmpty();
+      });
+
+      When(o => o.Type is InstrumentEnum.Futures, () =>
+      {
+        RuleFor(o => o.Derivative.ExpirationDate).NotEmpty();
+      });
     }
   }
 }

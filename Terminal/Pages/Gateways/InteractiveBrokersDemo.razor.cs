@@ -34,7 +34,6 @@ namespace Terminal.Pages.Gateways
       Name = "ESH5",
       Exchange = "CME",
       Type = InstrumentEnum.Futures,
-      TimeFrame = TimeSpan.FromMinutes(1),
       Basis = new InstrumentModel { Name = "ES" }
     };
 
@@ -71,9 +70,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new SummaryModel { Instrument = Instrument }
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) }
         }
       };
 
@@ -90,7 +89,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Instrument.Name, Instrument.Name))
+          if (Equals(message.Next.Name, Instrument.Name))
           {
             await OnData(message.Next);
           }
@@ -101,10 +100,10 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.State[name].Instrument;
+      var instrument = account.States[name].Instrument;
       var performance = Performance.Update([account]);
-      var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
-      var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
+      var openOrders = account.Orders.Values.Where(o => Equals(o.Instrument.Name, name));
+      var openPositions = account.Positions.Values.Where(o => Equals(o.Instrument.Name, name));
 
       if (openOrders.IsEmpty() && openPositions.IsEmpty())
       {
@@ -114,7 +113,7 @@ namespace Terminal.Pages.Gateways
           var position = account
             .Positions
             .Values
-            .Where(o => Equals(o.BasisName ?? o.Name, name))
+            .Where(o => Equals(o.Instrument.Basis.Name ?? o.Name, name))
             .FirstOrDefault();
 
           if (position is not null)
@@ -150,7 +149,7 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(direction) + 15 * direction,
-        Instrument = instrument
+        Name = instrument.Name
       };
 
       var SL = new OrderModel
@@ -160,7 +159,7 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(-direction) - 15 * direction,
-        Instrument = instrument
+        Name = instrument.Name
       };
 
       var order = new OrderModel
@@ -169,11 +168,11 @@ namespace Terminal.Pages.Gateways
         Side = side,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         Orders = [SL, TP]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     protected async Task ClosePositions(string name)
@@ -188,10 +187,10 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Instrument = position.Instrument
+          Name = position.Name
         };
 
-        await adapter.SendOrders(order);
+        await adapter.SendOrder(order);
       }
     }
 

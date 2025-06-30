@@ -34,7 +34,6 @@ namespace Terminal.Pages.Gateways
     {
       Name = "DOGE/USD",
       Type = InstrumentEnum.Coins,
-      TimeFrame = TimeSpan.FromMinutes(1)
     };
 
     /// <summary>
@@ -78,9 +77,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = "Demo",
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new SummaryModel { Instrument = Instrument },
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) },
         }
       };
 
@@ -99,7 +98,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Instrument.Name, Instrument.Name))
+          if (Equals(message.Next.Name, Instrument.Name))
           {
             await OnData(message.Next);
           }
@@ -115,7 +114,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.State[Instrument.Name].Instrument;
+      var instrument = account.States[Instrument.Name].Instrument;
       var performance = Performance.Update([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
@@ -175,7 +174,6 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(direction) + 15 * direction,
-        Instrument = instrument
       };
 
       var SL = new OrderModel
@@ -185,7 +183,6 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(-direction) - 15 * direction,
-        Instrument = instrument
       };
 
       var order = new OrderModel
@@ -194,11 +191,11 @@ namespace Terminal.Pages.Gateways
         Amount = 10,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         //Orders = [SL, TP]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     /// <summary>
@@ -218,10 +215,10 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Instrument = position.Instrument
+          Name = name
         };
 
-        await adapter.SendOrders(order);
+        await adapter.SendOrder(order);
       }
     }
 

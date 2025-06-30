@@ -69,7 +69,7 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
           [asset] = new SummaryModel { Instrument = new InstrumentModel { Name = asset } },
         },
@@ -95,7 +95,7 @@ namespace Terminal.Pages.Shares
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summary = account.State[asset];
+      var summary = account.States[asset];
       var instrument = summary.Instrument;
       var series = summary.Points;
       var performance = Performance.Update([account]);
@@ -145,7 +145,7 @@ namespace Terminal.Pages.Shares
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summary = account.State[asset];
+      var summary = account.States[asset];
       var instrument = summary.Instrument;
 
       var order = new OrderModel
@@ -153,7 +153,7 @@ namespace Terminal.Pages.Shares
         Side = side,
         Amount = volume,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         Orders = [
           new OrderModel
           {
@@ -161,12 +161,11 @@ namespace Terminal.Pages.Shares
             OpenPrice = side is OrderSideEnum.Long ? point.Last - 0.5 : point.Last + 0.5,
             Amount = volume,
             Type = OrderTypeEnum.Stop,
-            Instrument = instrument
           }
         ]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     /// <summary>
@@ -186,13 +185,13 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
 
           response.Add(order);
         }

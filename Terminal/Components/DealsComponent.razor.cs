@@ -80,7 +80,7 @@ namespace Terminal.Components
         .Select(o => new Row
         {
           Name = o.Name,
-          Group = o.BasisName ?? o.Name,
+          Group = o?.Instrument?.Basis?.Name ?? o.Instrument.Name,
           Time = o.Time,
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.OpenAmount ?? 0,

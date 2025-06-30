@@ -76,7 +76,7 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
           [assetX] = new SummaryModel { Instrument = new InstrumentModel { Name = assetX } },
           [assetY] = new SummaryModel { Instrument = new InstrumentModel { Name = assetY } }
@@ -102,8 +102,8 @@ namespace Terminal.Pages.Shares
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summaryX = account.State[assetX];
-      var summaryY = account.State[assetY];
+      var summaryX = account.States[assetX];
+      var summaryY = account.States[assetY];
       var instrumentX = summaryX.Instrument;
       var instrumentY = summaryY.Instrument;
       var seriesX = summaryX.Points;
@@ -180,10 +180,10 @@ namespace Terminal.Pages.Shares
         Side = side,
         Amount = volume,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument
+        Name = instrument.Name
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     /// <summary>
@@ -202,13 +202,13 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }

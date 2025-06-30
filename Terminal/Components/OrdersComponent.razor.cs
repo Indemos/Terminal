@@ -83,7 +83,7 @@ namespace Terminal.Components
           Name = o.Name,
           Type = o.Type,
           Time = o.Time,
-          Group = o.BasisName ?? o.Name,
+          Group = o?.Instrument?.Basis?.Name ?? o.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.OpenAmount ?? 0,
           Price = o.OpenPrice ?? 0,

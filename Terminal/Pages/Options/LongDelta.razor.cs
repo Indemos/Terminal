@@ -14,6 +14,7 @@ using Terminal.Components;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Services;
@@ -34,7 +35,7 @@ namespace Terminal.Pages.Options
     protected virtual PositionsComponent PositionsView { get; set; }
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
-    protected virtual InstrumentModel Instrument { get; set; } = new() { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) };
+    protected virtual InstrumentModel Instrument { get; set; } = new() { Name = "SPY" };
 
     /// <summary>
     /// Setup views and adapters
@@ -104,10 +105,10 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new SummaryModel { Instrument = Instrument },
-        },
+          ["SPY"] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) }
+        }
       };
 
       View.Adapters["Prime"] = new Adapter
@@ -139,15 +140,15 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, options);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, options);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
-        var orders = GetUpdates(point, basisDelta, optionDelta);
-        await adapter.SendOrders([.. orders]);
+        var order = GetUpdate(point, basisDelta, optionDelta);
+        await adapter.SendOrder(order);
       }
 
       DealsView.UpdateItems([.. View.Adapters.Values]);
@@ -194,8 +195,10 @@ namespace Terminal.Pages.Options
     /// <param name="basisDelta"></param>
     /// <param name="optionDelta"></param>
     /// <returns></returns>
-    public IList<OrderModel> GetUpdates(PointModel point, double basisDelta, double optionDelta)
+    public OrderModel GetUpdate(PointModel point, double basisDelta, double optionDelta)
     {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
       var delta = optionDelta + basisDelta;
 
       if (Math.Abs((point.Last - Strike).Value) >= 0.50)
@@ -205,15 +208,15 @@ namespace Terminal.Pages.Options
           Amount = Math.Abs(delta),
           Type = OrderTypeEnum.Market,
           Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
-          Instrument = point.Instrument
+          Name = point.Name
         };
 
         Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
 
-        return [order];
+        return order;
       }
 
-      return [];
+      return null;
     }
 
     /// <summary>
@@ -230,7 +233,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = point.Instrument
+        Instrument = account.States.Get(point.Name).Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -242,7 +245,7 @@ namespace Terminal.Pages.Options
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -258,7 +261,7 @@ namespace Terminal.Pages.Options
 
       if (longPut is null || longCall is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -272,21 +275,21 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longCall
+            Name = longCall.Name
           },
         ]
       };
 
       Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
 
-      return [order];
+      return order;
     }
 
     /// <summary>

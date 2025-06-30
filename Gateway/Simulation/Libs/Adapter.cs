@@ -15,7 +15,6 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Validators;
 
 namespace Simulation
 {
@@ -88,7 +87,7 @@ namespace Simulation
       SetupAccounts(Account);
 
       streams = Account
-        .State
+        .States
         .ToDictionary(
           o => o.Key,
           o => Directory
@@ -98,7 +97,7 @@ namespace Simulation
 
       streams.ForEach(o => connections.Add(o.Value));
 
-      await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
+      await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
       response.Data = StatusEnum.Active;
 
@@ -116,7 +115,7 @@ namespace Simulation
 
       await Unsubscribe(instrument);
 
-      Account.State.Get(instrument.Name).Instrument ??= instrument;
+      Account.States.Get(instrument.Name).Instrument ??= instrument;
 
       Stream += OnPoint;
 
@@ -131,7 +130,7 @@ namespace Simulation
         states.TryGetValue(instrument.Name, out var state);
         streams.TryGetValue(instrument.Name, out var stream);
 
-        if (state is null || state.Status is StatusEnum.Suspended)
+        if (stream is not null && (state is null || state.Status is StatusEnum.Suspended))
         {
           stream.MoveNext();
 
@@ -159,16 +158,17 @@ namespace Simulation
 
         if (Equals(counter, streams.Count) && Equals(next.Key, instrument.Name))
         {
-          var summary = Account.State.Get(instrument.Name);
+          var summary = Account.States.Get(instrument.Name);
 
           summary.Instrument = instrument;
           summary.Instrument.Point = next.Value.Instrument.Point;
           summary.Instrument.Point.Bar = null;
-          summary.Instrument.Point.Instrument = instrument;
+          summary.Instrument.Point.Name = instrument.Name;
+          summary.Instrument.Point.Account = Account;
           summary.Dom = next.Value.Dom;
           summary.Options = next.Value.Options;
           summary.Points.Add(summary.Instrument.Point);
-          summary.PointGroups.Add(summary.Instrument.Point, instrument.TimeFrame);
+          summary.PointGroups.Add(summary.Instrument.Point, summary.TimeFrame);
 
           Stream(new MessageModel<PointModel> { Next = summary.PointGroups.Last() });
 
@@ -190,7 +190,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      await Task.WhenAll(Account.State.Values.Select(o => Unsubscribe(o.Instrument)));
+      await Task.WhenAll(Account.States.Values.Select(o => Unsubscribe(o.Instrument)));
 
       connections?.ForEach(o => o?.Dispose());
       connections?.Clear();
@@ -220,42 +220,29 @@ namespace Simulation
     /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
-    /// <param name="orders"></param>
-    public override Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
+    /// <param name="order"></param>
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
-      var validator = InstanceService<OrderPriceValidator>.Instance;
+      var response = new ResponseModel<OrderModel>();
 
-      response.Errors = [.. orders.SelectMany(o => validator
-        .Validate(o)
-        .Errors
-        .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage }))];
-
-      if (response.Errors.Count is not 0)
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        return Task.FromResult(response);
-      }
-
-      foreach (var order in orders)
-      {
-        var nextOrders = ComposeOrders(order);
-
-        foreach (var nextOrder in nextOrders)
+        foreach (var nextOrder in ComposeOrders(order))
         {
           switch (nextOrder.Type)
           {
             case OrderTypeEnum.Stop:
             case OrderTypeEnum.Limit:
             case OrderTypeEnum.StopLimit: SendPendingOrder(nextOrder); break;
-            case OrderTypeEnum.Market: SendOrder(nextOrder); break;
+            case OrderTypeEnum.Market: await SendMarketOrder(nextOrder); break;
           }
 
           nextOrder.Orders.ForEach(o => SendPendingOrder(o));
-          response.Data.Add(nextOrder);
+          response.Data = nextOrder;
         }
       }
 
-      return Task.FromResult(response);
+      return response;
     }
 
     /// <summary>
@@ -302,10 +289,17 @@ namespace Simulation
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual OrderModel SendOrder(OrderModel order)
+    protected virtual async Task<OrderModel> SendMarketOrder(OrderModel order)
     {
       var nextOrder = order.Clone() as OrderModel;
 
+      await Task.WhenAll(order
+        .Orders
+        .Append(order)
+        .Where(o => o.Name is not null)
+        .Select(o => Subscribe((o.Account = Account).States.Get(o.Name).Instrument)));
+
+      nextOrder.OpenAmount = nextOrder.Amount;
       nextOrder.Status = OrderStatusEnum.Filled;
 
       if (Account.Positions.TryGetValue(nextOrder.Name, out var currentOrder))
@@ -405,7 +399,7 @@ namespace Simulation
     /// Process pending orders on each quote
     /// </summary>
     /// <param name="message"></param>
-    protected virtual void OnPoint(MessageModel<PointModel> message)
+    protected virtual async void OnPoint(MessageModel<PointModel> message)
     {
       var estimates = Account
         .Positions
@@ -416,7 +410,8 @@ namespace Simulation
       {
         if (IsOrderExecutable(order))
         {
-          SendOrder(order);
+          await SendMarketOrder(order);
+
           Account.Orders = Account
             .Orders
             .Where(o => Equals(o.Value.Descriptor, order.Descriptor) is false)
@@ -490,7 +485,7 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var point = Account.State.Get(criteria.Instrument.Name).Instrument.Point;
+      var point = Account.States.Get(criteria.Instrument.Name).Instrument.Point;
       var response = new ResponseModel<DomModel>
       {
         Data = new DomModel
@@ -513,7 +508,7 @@ namespace Simulation
     {
       var response = new ResponseModel<List<PointModel>>
       {
-        Data = [.. Account.State.Get(criteria.Instrument.Name).Points]
+        Data = [.. Account.States.Get(criteria.Instrument.Name).Points]
       };
 
       return Task.FromResult(response);
@@ -531,26 +526,10 @@ namespace Simulation
         ?.Derivative
         ?.Side;
 
-      var orderMap = Account
-        .Positions
-        .Values
-        .SelectMany(o => o.Orders.Append(o))
-        .GroupBy(o => o.Instrument.Name)
-        .ToDictionary(o => o.Key, o => o);
-
       var options = Account
-        .State
+        .States
         .Get(criteria.Instrument.Name)
         .Options
-        .Select(option =>
-        {
-          if (orderMap.TryGetValue(option.Name, out var orders))
-          {
-            orders.ForEach(o => o.Instrument = option);
-          }
-
-          return option;
-        })
         .Where(o => side is null || Equals(o.Derivative.Side, side))
         .Where(o => criteria?.MinDate is null || o.Derivative.ExpirationDate?.Date >= criteria.MinDate?.Date)
         .Where(o => criteria?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= criteria.MaxDate?.Date)
@@ -559,6 +538,7 @@ namespace Simulation
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
+        .Select(o => Account.States.Get(o.Name).Instrument = o)
         .ToList();
 
       var response = new ResponseModel<List<InstrumentModel>>

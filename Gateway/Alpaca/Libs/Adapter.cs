@@ -82,7 +82,7 @@ namespace Alpaca
 
         await Task.WhenAll(streamingClients.Values.Select(o => o.ConnectAndAuthenticateAsync()));
         await GetAccount();
-        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
         return StatusEnum.Active;
       });
@@ -99,7 +99,7 @@ namespace Alpaca
       {
         await Unsubscribe(instrument);
 
-        Account.State.Get(instrument.Name).Instrument ??= instrument;
+        Account.States.Get(instrument.Name).Instrument ??= instrument;
 
         var client = streamingClients[instrument.Type.Value] as T;
         var onPointSub = client.GetQuoteSubscription(instrument.Name);
@@ -185,7 +185,7 @@ namespace Alpaca
 
         Account.Balance = (double)account.Equity;
         Account.Orders = orders.Data.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = positions.Data.GroupBy(o => o.Instrument.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
@@ -353,21 +353,22 @@ namespace Alpaca
     /// <summary>
     /// Send orders
     /// </summary>
-    /// <param name="orders"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
+      var response = new ResponseModel<OrderModel>();
 
-      foreach (var order in ComposeOrders(orders))
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        var o = await Response(async () => (await SendOrder(order))?.Data);
+        Account.Orders[order.Id] = order;
 
-        response.Errors = [.. response.Errors.Concat(o.Errors)];
-        response.Data = [.. response.Data.Append(order)];
+        var exOrder = Upstream.GetOrder(order);
+        var exResponse = await tradingClient.PostOrderAsync(exOrder);
+
+        order.Id = $"{exResponse.OrderId}";
+        order.Status = Downstream.GetStatus(exResponse.OrderStatus);
       }
-
-      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -395,37 +396,16 @@ namespace Alpaca
     }
 
     /// <summary>
-    /// Send order
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
-    {
-      Account.Orders[order.Id] = order;
-
-      await Subscribe(order.Instrument);
-
-      var exOrder = Upstream.GetOrder(order);
-      var response = new ResponseModel<OrderModel>();
-      var exResponse = await tradingClient.PostOrderAsync(exOrder);
-
-      order.Id = $"{exResponse.OrderId}";
-      order.Status = Downstream.GetStatus(exResponse.OrderStatus);
-
-      return response;
-    }
-
-    /// <summary>
     /// Process quote from the stream
     /// </summary>
     /// <param name="streamPoint"></param>
     protected virtual void OnPoint(IQuote streamPoint) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
     {
-      var summary = Account.State.Get(streamPoint.Symbol);
+      var summary = Account.States.Get(streamPoint.Symbol);
       var point = Downstream.GetPrice(streamPoint, summary.Instrument);
 
       summary.Points.Add(point);
-      summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+      summary.PointGroups.Add(point, summary.TimeFrame);
       summary.Instrument.Point = summary.PointGroups.Last();
 
       Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
@@ -444,7 +424,7 @@ namespace Alpaca
         Price = (double)streamOrder.Price,
         OpenAmount = (double)streamOrder.Size,
         Side = Downstream.GetTakerSide(streamOrder.TakerSide),
-        Instrument = new InstrumentModel { Name = streamOrder.Symbol }
+        Name = streamOrder.Symbol
       };
 
       var message = new MessageModel<OrderModel>

@@ -13,6 +13,7 @@ using Terminal.Components;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Services;
@@ -101,10 +102,10 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
-        },
+          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY" }, TimeFrame = TimeSpan.FromMinutes(1) }
+        }
       };
 
       View.Adapters["Prime"] = new Adapter
@@ -136,8 +137,8 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, options);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, options);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
@@ -147,7 +148,7 @@ namespace Terminal.Pages.Options
         if (orders.Count > 0)
         {
           await ClosePositions(o => Equals(o.Instrument.Derivative.Strike, orders[0].Instrument.Derivative.Strike));
-          await adapter.SendOrders(orders[1]);
+          await adapter.SendOrder(orders.Last());
         }
       }
 
@@ -173,7 +174,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = point.Instrument
+        Instrument = account.States.Get(point.Name).Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -185,7 +186,7 @@ namespace Terminal.Pages.Options
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -212,7 +213,7 @@ namespace Terminal.Pages.Options
 
       if (shortPut is null || shortCall is null || longPut is null || longCall is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -226,33 +227,33 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longCall
+            Name = longCall.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortPut
+            Name = shortPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortCall
+            Name = shortCall.Name
           }
         ]
       };
 
-      return [order];
+      return order;
     }
 
     /// <summary>
@@ -292,22 +293,24 @@ namespace Terminal.Pages.Options
 
       if (point.Last + 1 > posCall.Instrument.Derivative.Strike)
       {
-        order.Instrument = options
+        order.Name = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Call)
           .Where(o => o.Derivative.Strike > point.Last + 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
-          .FirstOrDefault();
+          .FirstOrDefault()
+          .Name;
 
         return [posCall, order];
       }
 
       if (point.Last - 1 < posPut.Instrument.Derivative.Strike)
       {
-        order.Instrument = options
+        order.Name = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Put)
           .Where(o => o.Derivative.Strike < point.Last - 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
-          .LastOrDefault();
+          .LastOrDefault()
+          .Name;
 
         return [posPut, order];
       }
@@ -331,13 +334,13 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }

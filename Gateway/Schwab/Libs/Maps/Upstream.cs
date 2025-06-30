@@ -44,7 +44,7 @@ namespace Schwab.Mappers
       message.ChildOrderStrategies = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Brace)
-        .Where(o => Equals(o.Name, order.Name))
+        .Where(o => Equals(o.Instrument.Name, order.Instrument.Name))
         .Select(o =>
         {
           var subOrder = GetOrder(account, o);

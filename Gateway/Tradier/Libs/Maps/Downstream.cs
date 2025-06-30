@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Tradier.Messages.Account;
 using Tradier.Messages.MarketData;
@@ -17,8 +16,9 @@ namespace Tradier
     /// Get point
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="instrument"></param>
     /// <returns></returns>
-    public static PointModel GetPrice(Messages.Stream.QuoteMessage message)
+    public static PointModel GetPrice(Messages.Stream.QuoteMessage message, InstrumentModel instrument)
     {
       var point = new PointModel
       {
@@ -27,6 +27,7 @@ namespace Tradier
         Last = message.Bid,
         AskSize = message.AskSize,
         BidSize = message.BidSize,
+        Name = instrument.Name,
         Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime()
       };
 
@@ -116,7 +117,7 @@ namespace Tradier
       var order = new OrderModel
       {
         Id = $"{message.Id}",
-        Instrument = instrument,
+        Name = message.Symbol,
         Type = OrderTypeEnum.Market,
         Amount = message.Quantity,
         OpenAmount = message.Quantity,
@@ -152,7 +153,7 @@ namespace Tradier
       }
 
       var order = GetSubOrder(message);
-      var name = string.Join(" / ", orders.Select(o => o.Name).Distinct());
+      var name = string.Join(" / ", orders.Select(o => o.Instrument.Name).Distinct());
 
       order.Instrument.Name = string.IsNullOrEmpty(name) ? order.Instrument.Name : name;
       order.Orders = orders;
@@ -186,7 +187,7 @@ namespace Tradier
       {
         Amount = volume,
         OpenAmount = volume,
-        Instrument = instrument,
+        Name = instrument.Name,
         Type = OrderTypeEnum.Market,
         OpenPrice = Math.Abs((value / amount) ?? 0),
         Side = message.Quantity > 0 ? OrderSideEnum.Long : OrderSideEnum.Short

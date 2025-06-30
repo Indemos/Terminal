@@ -20,6 +20,7 @@ using Terminal.Components;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
 using Terminal.Services;
@@ -54,7 +55,7 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
           ["/ESU25"] = new SummaryModel
           {
@@ -62,7 +63,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/ESU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/NQU25"] = new SummaryModel
@@ -71,7 +71,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/NQU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/YMU25"] = new SummaryModel
@@ -80,7 +79,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/YMU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/CLN25"] = new SummaryModel
@@ -89,7 +87,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/CLN25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6EU25"] = new SummaryModel
@@ -98,7 +95,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6EU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6CU25"] = new SummaryModel
@@ -107,7 +103,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6CU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6SU25"] = new SummaryModel
@@ -116,7 +111,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6SU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6AU25"] = new SummaryModel
@@ -125,7 +119,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6AU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6BU25"] = new SummaryModel
@@ -134,7 +127,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6BU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/6JU25"] = new SummaryModel
@@ -143,7 +135,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/6JU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/GCQ25"] = new SummaryModel
@@ -152,7 +143,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/GCQ25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/ZBU25"] = new SummaryModel
@@ -161,7 +151,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/ZBU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/ZNU25"] = new SummaryModel
@@ -170,7 +159,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/ZNU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/ZQU25"] = new SummaryModel
@@ -179,7 +167,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/ZQU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["/BTCU25"] = new SummaryModel
@@ -188,7 +175,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "/BTCU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
           ["SPY"] = new SummaryModel
@@ -197,7 +183,6 @@ namespace Terminal.Pages.Utils
             {
               Name = "SPY",
               Type = InstrumentEnum.Shares,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
         }
@@ -218,9 +203,9 @@ namespace Terminal.Pages.Utils
         .ForEach(adapter => adapter.Stream += message =>
         {
           var date = $"{DateTime.Now:yyyy-MM-dd}";
-          var asset = message.Next.Instrument.Name;
+          var asset = message.Next.Name;
           var storage = $"D:/Code/NET/Terminal/Data/Series/{date}/{asset}";
-          var summary = adapter.Account.State[asset];
+          var summary = adapter.Account.States.Get(asset);
 
           summary.Points.Clear();
           summary.PointGroups.Clear();

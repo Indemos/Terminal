@@ -1,11 +1,9 @@
 using Flurl;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
-using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Tradier.Mappers;
 using Tradier.Messages.Trading;
@@ -22,9 +20,9 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "option" },
-        { "symbol", order.BasisName ?? order.Name },
+        { "symbol", order?.Instrument?.Basis?.Name ?? order.Instrument.Name },
         { "option_symbol", GetOptionName(order) },
-        { "side", Upstream.GetSide(order, Account) },
+        { "side", Upstream.GetSide(order) },
         { "quantity", order.Amount },
         { "type", Upstream.GetOrderType(order.Type) },
         { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
@@ -49,7 +47,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "multileg" },
-        { "symbol", order.BasisName ?? order.Name },
+        { "symbol", order?.Instrument?.Basis?.Name ?? order.Instrument.Name },
         { "type", Upstream.GetOrderType(order.Type) },
         { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.OpenPrice },
@@ -59,7 +57,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item);
         data[$"quantity[{index}]"] = item.Amount;
 
         index++;
@@ -80,8 +78,8 @@ namespace Tradier
       {
         { "account_id", Account.Descriptor },
         { "class", "equity" },
-        { "symbol", order.BasisName ?? order.Name },
-        { "side", Upstream.GetSide(order, Account) },
+        { "symbol", order?.Instrument?.Basis?.Name ?? order.Instrument.Name },
+        { "side", Upstream.GetSide(order) },
         { "quantity", order.Amount},
         { "type", Upstream.GetOrderType(order.Type) },
         { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
@@ -106,7 +104,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "combo" },
-        { "symbol", order.BasisName ?? order.Name },
+        { "symbol", order?.Instrument?.Basis?.Name ?? order.Instrument.Name },
         { "type", Upstream.GetOrderType(order.Type) },
         { "duration", Upstream.GetTimeSpan(order.TimeSpan) },
         { "price", order.OpenPrice },
@@ -116,7 +114,7 @@ namespace Tradier
       foreach (var item in order.Orders)
       {
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item);
         data[$"quantity[{index}]"] = item.Amount;
 
         index++;
@@ -149,11 +147,11 @@ namespace Tradier
 
       foreach (var item in subOrders)
       {
-        data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
+        data[$"symbol[{index}]"] = item?.Instrument?.Basis?.Name ?? item.Instrument.Name;
         data[$"quantity[{index}]"] = item.Amount;
         data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = Upstream.GetSide(order, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(order);
         data[$"price[{index}]"] = item.OpenPrice;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.OpenPrice;
 
@@ -187,11 +185,11 @@ namespace Tradier
 
       foreach (var item in subOrders)
       {
-        data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
+        data[$"symbol[{index}]"] = item?.Instrument?.Basis?.Name ?? item.Instrument.Name;
         data[$"quantity[{index}]"] = item.Amount;
         data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = Upstream.GetSide(order, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(order);
         data[$"price[{index}]"] = item.OpenPrice;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.OpenPrice;
 
@@ -225,11 +223,11 @@ namespace Tradier
 
       foreach (var item in subOrders)
       {
-        data[$"symbol[{index}]"] = item.BasisName ?? item.Name;
+        data[$"symbol[{index}]"] = item?.Instrument?.Basis?.Name ?? item.Instrument.Name;
         data[$"quantity[{index}]"] = item.Amount;
         data[$"type[{index}]"] = Upstream.GetOrderType(item.Type);
         data[$"option_symbol[{index}]"] = GetOptionName(item);
-        data[$"side[{index}]"] = Upstream.GetSide(item, Account);
+        data[$"side[{index}]"] = Upstream.GetSide(item);
         data[$"price[{index}]"] = item.OpenPrice;
         data[$"stop[{index}]"] = item.ActivationPrice ?? item.OpenPrice;
 
@@ -282,7 +280,7 @@ namespace Tradier
       switch (order.Instrument.Type)
       {
         case InstrumentEnum.Options: 
-        case InstrumentEnum.FutureOptions: return order.Name;
+        case InstrumentEnum.FutureOptions: return order.Instrument.Name;
       }
 
       return null;

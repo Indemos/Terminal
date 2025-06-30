@@ -4,25 +4,21 @@ using System.Linq;
 using System.Text.Json.Serialization;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 
 namespace Terminal.Core.Models
 {
   public class OrderModel : ICloneable
   {
     /// <summary>
-    /// Name
-    /// </summary>
-    public virtual string Name => Instrument?.Name;
-
-    /// <summary>
-    /// Basis name
-    /// </summary>
-    public virtual string BasisName => Instrument?.Basis?.Name;
-
-    /// <summary>
-    /// Client order ID
+    /// Order ID
     /// </summary>
     public virtual string Id { get; set; }
+
+    /// <summary>
+    /// Instrument name
+    /// </summary>
+    public virtual string Name { get; set; }
 
     /// <summary>
     /// Group
@@ -100,9 +96,9 @@ namespace Terminal.Core.Models
     public virtual InstructionEnum? Instruction { get; set; }
 
     /// <summary>
-    /// Instrument to buy or sell
+    /// Account
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public virtual IAccount Account { get; set; }
 
     /// <summary>
     /// List of related orders in the hierarchy
@@ -114,6 +110,11 @@ namespace Terminal.Core.Models
     /// </summary>
     [JsonIgnore]
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
+
+    /// <summary>
+    /// Summary
+    /// </summary>
+    public virtual InstrumentModel Instrument => Account.States.Get(Name).Instrument;
 
     /// <summary>
     /// Constructor
@@ -214,8 +215,9 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetValueEstimate(double? price = null)
     {
-      var step = Instrument.StepValue / Instrument.StepSize;
-      var estimate = OpenAmount * GetEstimate(price) * step * Instrument.Leverage - Instrument.Commission;
+      var asset = Instrument;
+      var step = asset.StepValue / asset.StepSize;
+      var estimate = OpenAmount * GetEstimate(price) * step * asset.Leverage - asset.Commission;
 
       Gain = estimate ?? Gain ?? 0;
       GainMin = Math.Min(GainMin ?? 0, Gain.Value);

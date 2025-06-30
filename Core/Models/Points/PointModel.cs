@@ -39,6 +39,11 @@ namespace Terminal.Core.Models
     public virtual double? Volume { get; set; }
 
     /// <summary>
+    /// Instrument name
+    /// </summary>
+    public virtual string Name { get; set; }
+
+    /// <summary>
     /// Time stamp
     /// </summary>
     public virtual DateTime? Time { get; set; }
@@ -49,14 +54,19 @@ namespace Terminal.Core.Models
     public virtual BarModel Bar { get; set; }
 
     /// <summary>
-    /// Reference to the instrument
+    /// Account
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public virtual IAccount Account { get; set; }
 
     /// <summary>
     /// Indicator values calculated for the current data point
     /// </summary>
     public virtual IDictionary<string, PointModel> Series { get; set; }
+
+    /// <summary>
+    /// Summary
+    /// </summary>
+    public virtual InstrumentModel Instrument => Account.States.Get(Name).Instrument;
 
     /// <summary>
     /// Constructor
@@ -85,9 +95,11 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual long GetIndex()
     {
-      if (Instrument.TimeFrame is not null)
+      var summary = Account.States.Get(Name);
+
+      if (summary.TimeFrame is not null)
       {
-        return Time.Round(Instrument.TimeFrame).Value.Ticks;
+        return Time.Round(summary.TimeFrame).Value.Ticks;
       }
 
       return Time.Value.Ticks;
@@ -102,6 +114,7 @@ namespace Terminal.Core.Models
     {
       var currentPrice = Last;
       var previousPrice = o?.Last;
+      var summary = Account.States.Get(Name);
       var price = (currentPrice ?? previousPrice).Value;
 
       Ask ??= o?.Ask ?? price;
@@ -113,7 +126,7 @@ namespace Terminal.Core.Models
       Bar.Open = Bar.Open ?? o?.Bar?.Open ?? price;
       Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? previousPrice ?? price);
       Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? previousPrice ?? price);
-      Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
+      Time = Time.Round(summary.TimeFrame) ?? o?.Time;
 
       return this;
     }

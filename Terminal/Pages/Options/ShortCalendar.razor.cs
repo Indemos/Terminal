@@ -14,6 +14,7 @@ using Terminal.Components;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Services;
@@ -100,9 +101,9 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
+          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY" }, TimeFrame = TimeSpan.FromMinutes(1) },
         },
       };
 
@@ -136,8 +137,8 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, longOptions, shortOptions);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, longOptions, shortOptions);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
@@ -169,7 +170,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = point.Instrument
+        Instrument = account.States.Get(point.Name).Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -182,7 +183,7 @@ namespace Terminal.Pages.Options
     /// <param name="longOptions"></param>
     /// <param name="shortOptions"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> longOptions, IList<InstrumentModel> shortOptions)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> longOptions, IList<InstrumentModel> shortOptions)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -199,7 +200,7 @@ namespace Terminal.Pages.Options
 
       if (shortPut is null || longPut is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -213,19 +214,19 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortPut
+            Name = shortPut.Name
           }
         ]
       };
 
-      return [order];
+      return order;
     }
 
     /// <summary>
@@ -263,8 +264,8 @@ namespace Terminal.Pages.Options
 
       if (shortUpdate.Count is 0)
       {
-        var orders = GetOrders(point, longOptions, shortOptions);
-        var shortOrder = orders?.FirstOrDefault()?.Orders?.LastOrDefault();
+        var order = GetOrder(point, longOptions, shortOptions);
+        var shortOrder = order?.Orders?.LastOrDefault();
 
         if (shortOrder is null || shortOrder.Instrument.Point.Last <= 0.10)
         {
@@ -272,7 +273,7 @@ namespace Terminal.Pages.Options
         }
 
         shortOrder.Type = OrderTypeEnum.Market;
-        await adapter.SendOrders([shortOrder]);
+        await adapter.SendOrder(shortOrder);
       }
     }
 
@@ -314,10 +315,10 @@ namespace Terminal.Pages.Options
           Amount = 100,
           Side = OrderSideEnum.Long,
           Type = OrderTypeEnum.Market,
-          Instrument = point.Instrument
+          Name = point.Name
         };
 
-        await adapter.SendOrders([order]);
+        await adapter.SendOrder(order);
       }
     }
 
@@ -339,11 +340,11 @@ namespace Terminal.Pages.Options
           {
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
+            Name = position.Name,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }

@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
+using Terminal.Core.Validators;
 
 namespace Terminal.Core.Domains
 {
@@ -92,8 +93,8 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Send new orders
     /// </summary>
-    /// <param name="orders"></param>
-    Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
+    /// <param name="order"></param>
+    Task<ResponseModel<OrderModel>> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
@@ -199,8 +200,8 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Send new orders
     /// </summary>
-    /// <param name="orders"></param>
-    public abstract Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
+    /// <param name="order"></param>
+    public abstract Task<ResponseModel<OrderModel>> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
@@ -225,16 +226,16 @@ namespace Terminal.Core.Domains
         var groupOrders = subOrder
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
-          ?.Where(o => Equals(o.Name, nextOrder.Name))
+          ?.Where(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name))
           ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.OpenPrice ??= nextOrder.GetOpenPrice();
+        nextOrder.Name ??= group?.Name;
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
+        nextOrder.OpenPrice ??= nextOrder.GetOpenPrice();
         nextOrder.Time ??= nextOrder?.Instrument?.Point?.Time;
-        nextOrder.OpenAmount ??= nextOrder.Amount;
         nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;
@@ -256,6 +257,37 @@ namespace Terminal.Core.Domains
         return nextOrders;
 
       }).ToList();
+    }
+
+    /// <summary>
+    /// Preprocess order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected virtual async Task<IList<ErrorModel>> SubscribeToOrder(OrderModel order)
+    {
+      var response = new List<ErrorModel>();
+      var validator = InstanceService<OrderValidator>.Instance;
+
+      foreach (var subOrder in order.Orders.SelectMany(o => o.Orders).Append(order))
+      {
+        order.Account = Account;
+        order.Orders.ForEach(o => o.Account = Account);
+
+        var errors = validator
+          .Validate(order)
+          .Errors
+          .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage });
+
+        response.AddRange(errors);
+
+        if (errors.IsEmpty() && subOrder.Name is not null)
+        {
+          //await Subscribe(subOrder.Instrument);
+        }
+      }
+
+      return response;
     }
 
     /// <summary>

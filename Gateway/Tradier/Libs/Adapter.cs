@@ -115,13 +115,11 @@ namespace Tradier
             case "quote":
 
               var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
-              var point = Downstream.GetPrice(quoteMessage);
-              var summary = Account.State.Get(quoteMessage.Symbol);
-
-              point.Instrument = summary.Instrument;
+              var summary = Account.States.Get(quoteMessage.Symbol);
+              var point = Downstream.GetPrice(quoteMessage, summary.Instrument);
 
               summary.Points.Add(point);
-              summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+              summary.PointGroups.Add(point, summary.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
 
               Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
@@ -146,7 +144,7 @@ namespace Tradier
         connections.Add(dataStreamer);
         connections.Add(accountStreamer);
 
-        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
         return StatusEnum.Active;
       });
@@ -177,10 +175,10 @@ namespace Tradier
       {
         await Unsubscribe(instrument);
 
-        Account.State.Get(instrument.Name).Instrument ??= instrument;
+        Account.States.Get(instrument.Name).Instrument ??= instrument;
 
         var names = Account
-          .State
+          .States
           .Values
           .Select(o => o.Instrument.Name)
           .Distinct();
@@ -232,7 +230,7 @@ namespace Tradier
 
         Account.Balance = account.TotalEquity;
         Account.Orders = openOrders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions = positions.Data.GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = positions.Data.GroupBy(o => o.Instrument.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
@@ -326,21 +324,48 @@ namespace Tradier
     /// <summary>
     /// Create orders
     /// </summary>
-    /// <param name="orders"></param>
+    /// <param name="order"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
+      var preview = false;
+      var message = null as OrderResponseMessage;
+      var response = new ResponseModel<OrderModel>();
 
-      foreach (var order in orders)
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        var o = await Response(async () => await SendOrder(order));
+        Account.Orders[order.Id] = order;
 
-        response.Errors = [.. response.Errors.Concat(o.Errors)];
-        response.Data = [.. response.Data.Append(order)];
+        if (order.Orders.IsEmpty())
+        {
+          switch (order.Instrument.Type)
+          {
+            case InstrumentEnum.Shares: message = await SendEquityOrder(order, preview); break;
+            case InstrumentEnum.Options: message = await SendOptionOrder(order, preview); break;
+          }
+        }
+        else
+        {
+          var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
+          var isCombo = order
+            .Orders
+            .Append(order)
+            .Where(o => o?.OpenAmount is not null)
+            .Any(o => o?.Instrument?.Type is InstrumentEnum.Shares);
+
+          switch (true)
+          {
+            case true when isBrace: message = await SendBraceOrder(order, preview); break;
+            case true when isCombo: message = await SendComboOrder(order, preview); break;
+            case true when isCombo is false: message = await SendGroupOrder(order, preview); break;
+          }
+        }
+
+        order.Id = $"{message?.Id}";
+        order.Status = Equals(message?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Status;
+
+        response.Data = order;
       }
-
-      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
@@ -400,55 +425,6 @@ namespace Tradier
         .ConfigureAwait(false);
 
       return JsonSerializer.Deserialize<T>(responseContent, sender.Options);
-    }
-
-    /// <summary>
-    /// Create order
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="preview"></param>
-    /// <returns></returns>
-    protected virtual async Task<OrderModel> SendOrder(OrderModel order, bool preview = false)
-    {
-      var response = null as OrderResponseMessage;
-
-      Account.Orders[order.Id] = order;
-
-      await Task.WhenAll(order
-        .Orders
-        .Append(order)
-        .Where(o => o.Instrument is not null)
-        .Select(o => Subscribe(o.Instrument)));
-
-      if (order.Orders.IsEmpty())
-      {
-        switch (order.Instrument.Type)
-        {
-          case InstrumentEnum.Shares: response = await SendEquityOrder(order, preview); break;
-          case InstrumentEnum.Options: response = await SendOptionOrder(order, preview); break;
-        }
-      }
-      else
-      {
-        var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
-        var isCombo = order
-          .Orders
-          .Append(order)
-          .Where(o => o?.OpenAmount is not null)
-          .Any(o => o?.Instrument?.Type is InstrumentEnum.Shares);
-
-        switch (true)
-        {
-          case true when isBrace: response = await SendBraceOrder(order, preview); break;
-          case true when isCombo: response = await SendComboOrder(order, preview); break;
-          case true when isCombo is false: response = await SendGroupOrder(order, preview); break;
-        }
-      }
-
-      order.Id = $"{response?.Id}";
-      order.Status = Equals(response?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Status;
-
-      return order;
     }
 
     /// <summary>

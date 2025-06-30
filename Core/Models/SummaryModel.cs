@@ -9,6 +9,11 @@ namespace Terminal.Core.Models
   public class SummaryModel : ICloneable
   {
     /// <summary>
+    /// Aggregation period for the quotes
+    /// </summary>
+    public virtual TimeSpan? TimeFrame { get; set; }
+
+    /// <summary>
     /// Status
     /// </summary>
     public virtual StatusEnum? Status { get; set; }

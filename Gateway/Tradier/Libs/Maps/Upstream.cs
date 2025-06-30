@@ -1,4 +1,3 @@
-using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
@@ -12,8 +11,9 @@ namespace Tradier.Mappers
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public static string GetSide(OrderModel order, IAccount account)
+    public static string GetSide(OrderModel order)
     {
+      var account = order.Account;
       var position = account.Positions.Get(order.Name);
       var option = order.Instrument.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
 

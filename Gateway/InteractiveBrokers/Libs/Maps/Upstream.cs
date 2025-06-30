@@ -242,7 +242,7 @@ namespace InteractiveBrokers.Mappers
     {
       var nextOrder = order
         .Orders
-        .Where(o => Equals(o.Name, order.Name))
+        .Where(o => Equals(o.Instrument.Name, order.Instrument.Name))
         .FirstOrDefault(o => (o.OpenPrice - order.OpenPrice) * direction > 0);
 
       return nextOrder?.OpenPrice;

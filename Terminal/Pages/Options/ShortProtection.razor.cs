@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -104,17 +103,17 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, SummaryModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new SummaryModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
-        },
+          ["SPY"] = new SummaryModel {Instrument = new InstrumentModel { Name = "SPY" }, TimeFrame = TimeSpan.FromMinutes(1) }
+        }
       };
 
       View.Adapters["Prime"] = new Adapter
       {
         Speed = 1,
         Account = account,
-        Source = Configuration["Simulation:Source"]
+        Source = "D:/Code/Options" // Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
@@ -139,8 +138,8 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, options);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, options);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
@@ -160,11 +159,11 @@ namespace Terminal.Pages.Options
             Amount = 50,
             Type = OrderTypeEnum.Market,
             Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Instrument = point.Instrument
+            Name = point.Name
           };
 
           await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
-          await adapter.SendOrders([order]);
+          await adapter.SendOrder(order);
         }
       }
 
@@ -239,7 +238,7 @@ namespace Terminal.Pages.Options
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -266,7 +265,7 @@ namespace Terminal.Pages.Options
 
       if (shortPut is null || shortCall is null || longPut is null || longCall is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -280,33 +279,33 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longCall
+            Name = longCall.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortPut
+            Name = shortPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortCall
+            Name = shortCall.Name
           }
         ]
       };
 
-      return [order];
+      return order;
     }
 
     /// <summary>
@@ -325,13 +324,13 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }

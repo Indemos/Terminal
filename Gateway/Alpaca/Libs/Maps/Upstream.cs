@@ -23,7 +23,7 @@ namespace Alpaca.Mappers
       var braces = order
         .Orders
         .Where(o => o.Instruction is InstructionEnum.Brace)
-        .Where(o => Equals(o.Name, name));
+        .Where(o => Equals(o.Instrument.Name, name));
 
       exOrder.ClientOrderId = order.Id;
 

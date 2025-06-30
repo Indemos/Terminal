@@ -7,9 +7,9 @@ using Terminal.Core.Models;
 
 namespace Terminal.Tests
 {
-  public class Positions : Adapter, IDisposable
+  public class SendOrders : Adapter, IDisposable
   {
-    public Positions()
+    public SendOrders()
     {
       Account = new Account
       {
@@ -47,14 +47,10 @@ namespace Terminal.Tests
         Type = orderType,
         OpenPrice = orderPrice,
         ActivationPrice = activationPrice,
-        Instrument = new InstrumentModel()
-        {
-          Name = "X",
-          Point = point,
-        }
+        Name = "X",
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Single(Account.Orders);
@@ -87,24 +83,18 @@ namespace Terminal.Tests
         Time = DateTime.Now,
       };
 
-      var instrument = new InstrumentModel()
-      {
-        Name = "X",
-        Point = point,
-      };
-
       var order = new OrderModel
       {
         Amount = 1,
         Side = orderSide,
         Type = orderType,
         Descriptor = "Demo",
-        Instrument = instrument
+        Name = "X",
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
-      var position = Account.Positions[order.Name];
+      var position = Account.Positions[order.Instrument.Name];
       var openPrice = position.Side is OrderSideEnum.Long ? point.Ask : point.Bid;
 
       Assert.Empty(Account.Deals);
@@ -135,12 +125,6 @@ namespace Terminal.Tests
         Time = DateTime.Now,
       };
 
-      var instrument = new InstrumentModel()
-      {
-        Name = "X",
-        Point = point,
-      };
-
       var TP = new OrderModel
       {
         Amount = 1,
@@ -148,7 +132,6 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Instrument = instrument
       };
 
       var SL = new OrderModel
@@ -158,7 +141,6 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Instrument = instrument
       };
 
       var order = new OrderModel
@@ -167,10 +149,10 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
-        Instrument = instrument
+        Name = "X",
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Equal(2, Account.Orders.Count);
@@ -189,7 +171,7 @@ namespace Terminal.Tests
         Time = DateTime.Now,
       };
 
-      instrument.Point = newPoint;
+      //instrument.Point = newPoint;
 
       Assert.Equal(balance, 50000);
 
@@ -202,7 +184,7 @@ namespace Terminal.Tests
     }
 
     [Fact]
-    public void CreateComplexMarketOrder()
+    public void CreateMarketOrderWithGroups()
     {
       var basis = new InstrumentModel
       {
@@ -231,34 +213,33 @@ namespace Terminal.Tests
         Type = OrderTypeEnum.Market,
         TimeSpan = OrderTimeSpanEnum.Gtc,
         Instruction = InstructionEnum.Group,
-        
         Orders =
         [
           new OrderModel
           {
             Amount = 100,
-            Instrument = basis,
+            Name = basis.Name,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
           },
           new OrderModel
           {
             Amount = 5,
-            Instrument = optionLong,
+            Name = optionLong.Name,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
           },
           new OrderModel
           {
             Amount = 1,
-            Instrument = optionShort,
+            Name = optionShort.Name,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
           }
         ]
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -349,26 +330,26 @@ namespace Terminal.Tests
             Amount  = 100,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = basis,
+            Name = basis.Name,
           },
           new OrderModel
           {
             Amount  = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = optionLong
+            Name = optionLong.Name
           },
           new OrderModel
           {
             Amount  = 2,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = optionShort
+            Name = optionShort.Name
           }
         ]
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
       // Increase
 
@@ -377,10 +358,10 @@ namespace Terminal.Tests
         Amount = 50,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = basis,
+        Name = basis.Name,
       };
 
-      base.SendOrders(increase);
+      base.SendOrder(increase);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -405,10 +386,10 @@ namespace Terminal.Tests
         Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Instrument = optionShort,
+        Name = optionShort.Name,
       };
 
-      base.SendOrders(decrease);
+      base.SendOrder(decrease);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -433,10 +414,10 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Amount = Account.Positions[basis.Name].Amount,
-        Instrument = basis,
+        Name = basis.Name,
       };
 
-      base.SendOrders(close);
+      base.SendOrder(close);
 
       var closeSide = Account.Deals.Last();
 
@@ -458,19 +439,19 @@ namespace Terminal.Tests
             Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = optionLong
+            Name = optionLong.Name
           },
           new OrderModel
           {
             Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = optionShort
+            Name = optionShort.Name
           }
         ]
       };
 
-      base.SendOrders(closePosition);
+      base.SendOrder(closePosition);
 
       Assert.Empty(Account.Positions);
       Assert.Empty(Account.Orders);
@@ -491,20 +472,20 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
-      base.SendOrders(order);
+      base.SendOrder(order);
 
       var reverseOrder = new OrderModel
       {
         Amount = 10,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
-      base.SendOrders(reverseOrder);
+      base.SendOrder(reverseOrder);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -531,11 +512,7 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = new InstrumentModel
-        {
-          Name = "SPY",
-          Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
-        }
+        Name = "SPY",
       };
 
       var orderY = new OrderModel
@@ -543,15 +520,11 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = new InstrumentModel
-        {
-          Name = "MSFT",
-          Point = new PointModel { Bid = 145, Ask = 150, Last = 150, Time = DateTime.Now }
-        }
+        Name = "MSFT",
       };
 
-      base.SendOrders(orderX);
-      base.SendOrders(orderY);
+      base.SendOrder(orderX);
+      base.SendOrder(orderY);
 
       Assert.Empty(Account.Orders);
       Assert.Equal(2, Account.Positions.Count);
