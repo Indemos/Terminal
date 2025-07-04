@@ -89,7 +89,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Name, Instrument.Name))
+          if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
             await OnData(message.Next);
           }
@@ -149,7 +149,6 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(direction) + 15 * direction,
-        Name = instrument.Name
       };
 
       var SL = new OrderModel
@@ -159,7 +158,6 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(-direction) - 15 * direction,
-        Name = instrument.Name
       };
 
       var order = new OrderModel
@@ -168,7 +166,7 @@ namespace Terminal.Pages.Gateways
         Side = side,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Name = instrument.Name,
+        Instrument = instrument,
         Orders = [SL, TP]
       };
 
@@ -187,7 +185,7 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Name = position.Name
+          Instrument = position.Instrument
         };
 
         await adapter.SendOrder(order);

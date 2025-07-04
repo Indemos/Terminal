@@ -577,7 +577,8 @@ namespace InteractiveBrokers
           }
 
           point.Time = DateTime.Now;
-          point.Name = instrument.Name;
+          point.Instrument = instrument;
+          point.TimeFrame = summary.TimeFrame;
 
           summary.Points.Add(point);
           summary.PointGroups.Add(point, summary.TimeFrame);

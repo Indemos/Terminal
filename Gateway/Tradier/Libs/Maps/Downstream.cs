@@ -27,7 +27,7 @@ namespace Tradier
         Last = message.Bid,
         AskSize = message.AskSize,
         BidSize = message.BidSize,
-        Name = instrument.Name,
+        Instrument = instrument,
         Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime()
       };
 
@@ -117,7 +117,7 @@ namespace Tradier
       var order = new OrderModel
       {
         Id = $"{message.Id}",
-        Name = message.Symbol,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
         Amount = message.Quantity,
         OpenAmount = message.Quantity,
@@ -187,7 +187,7 @@ namespace Tradier
       {
         Amount = volume,
         OpenAmount = volume,
-        Name = instrument.Name,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
         OpenPrice = Math.Abs((value / amount) ?? 0),
         Side = message.Quantity > 0 ? OrderSideEnum.Long : OrderSideEnum.Short

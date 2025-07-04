@@ -208,7 +208,7 @@ namespace Terminal.Pages.Options
           Amount = Math.Abs(delta),
           Type = OrderTypeEnum.Market,
           Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
-          Name = point.Name
+          Instrument = Instrument
         };
 
         Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
@@ -233,7 +233,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = account.States.Get(point.Name).Instrument
+        Instrument = point.Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -275,14 +275,14 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longPut.Name
+            Instrument = longPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longCall.Name
+            Instrument = longCall
           },
         ]
       };

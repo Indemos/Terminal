@@ -174,7 +174,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = account.States.Get(point.Name).Instrument
+        Instrument = point.Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -227,28 +227,28 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longPut.Name
+            Instrument = longPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longCall.Name
+            Instrument = longCall
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Name = shortPut.Name
+            Instrument = shortPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Name = shortCall.Name
+            Instrument = shortCall
           }
         ]
       };
@@ -293,24 +293,22 @@ namespace Terminal.Pages.Options
 
       if (point.Last + 1 > posCall.Instrument.Derivative.Strike)
       {
-        order.Name = options
+        order.Instrument = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Call)
           .Where(o => o.Derivative.Strike > point.Last + 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
-          .FirstOrDefault()
-          .Name;
+          .FirstOrDefault();
 
         return [posCall, order];
       }
 
       if (point.Last - 1 < posPut.Instrument.Derivative.Strike)
       {
-        order.Name = options
+        order.Instrument = options
           .Where(o => o.Derivative.Side is OptionSideEnum.Put)
           .Where(o => o.Derivative.Strike < point.Last - 1)
           .Where(o => openStrikes.ContainsKey(o.Derivative.Strike) is false)
-          .LastOrDefault()
-          .Name;
+          .LastOrDefault();
 
         return [posPut, order];
       }
@@ -334,9 +332,9 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
+            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

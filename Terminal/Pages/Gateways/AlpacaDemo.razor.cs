@@ -98,7 +98,7 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Name, Instrument.Name))
+          if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
             await OnData(message.Next);
           }
@@ -191,7 +191,7 @@ namespace Terminal.Pages.Gateways
         Amount = 10,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Name = instrument.Name,
+        Instrument = instrument,
         //Orders = [SL, TP]
       };
 
@@ -215,7 +215,7 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Name = name
+          Instrument = position.Instrument,
         };
 
         await adapter.SendOrder(order);

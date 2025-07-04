@@ -164,7 +164,7 @@ namespace Terminal.Pages.Shares
         Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Name = assetSell.Name
+        Instrument = assetSell
       };
 
       var orderBuy = new OrderModel
@@ -172,7 +172,7 @@ namespace Terminal.Pages.Shares
         Amount = 1,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Name = assetBuy.Name
+        Instrument = assetBuy
       };
 
       adapter.SendOrder(orderBuy);
@@ -195,9 +195,9 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Name = position.Name,
             Type = OrderTypeEnum.Market,
             Amount = position.OpenAmount,
+            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

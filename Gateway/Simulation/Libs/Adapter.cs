@@ -38,7 +38,7 @@ namespace Simulation
     /// <summary>
     /// Disposable subscriptions
     /// </summary>
-    protected ConcurrentDictionary<string, IDisposable> subscriptions;
+    protected ConcurrentDictionary<string, Action> subscriptions;
 
     /// <summary>
     /// Instrument streams
@@ -99,6 +99,18 @@ namespace Simulation
 
       await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
+      var span = TimeSpan.FromMicroseconds(Speed);
+      var scheduler = InstanceService<ScheduleService>.Instance;
+      var interval = new Timer(span);
+
+      interval.Enabled = true;
+      interval.AutoReset = true;
+      interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()));
+
+      connections.Add(interval);
+
+      Stream += OnPoint;
+
       response.Data = StatusEnum.Active;
 
       return response;
@@ -117,20 +129,12 @@ namespace Simulation
 
       Account.States.Get(instrument.Name).Instrument ??= instrument;
 
-      Stream += OnPoint;
-
-      var span = TimeSpan.FromMicroseconds(Speed);
-      var scheduler = InstanceService<ScheduleService>.Instance;
-      var interval = new Timer(span);
-
-      interval.Enabled = true;
-      interval.AutoReset = true;
-      interval.Elapsed += (sender, e) => scheduler.Send(async () =>
+      subscriptions[instrument.Name] = async () =>
       {
         states.TryGetValue(instrument.Name, out var state);
         streams.TryGetValue(instrument.Name, out var stream);
 
-        if (stream is not null && (state is null || state.Status is StatusEnum.Suspended))
+        if (stream is not null && (state is null || state.Status is StatusEnum.Pause))
         {
           stream.MoveNext();
 
@@ -147,24 +151,19 @@ namespace Simulation
           }
         }
 
-        var counter = 1;
-        var next = states
-          .Where(o => o.Value.Status is StatusEnum.Active or StatusEnum.Inactive)
-          .Aggregate((min, o) =>
-          {
-            counter++;
-            return o.Value.Instrument.Point.Time <= min.Value.Instrument.Point.Time ? o : min;
-          });
+        var next = states.First();
 
-        if (Equals(counter, streams.Count) && Equals(next.Key, instrument.Name))
+        states.ForEach(o => next = o.Value.Instrument.Point.Time <= next.Value.Instrument.Point.Time ? o : next);
+
+        if (Equals(next.Key, instrument.Name))
         {
           var summary = Account.States.Get(instrument.Name);
 
           summary.Instrument = instrument;
           summary.Instrument.Point = next.Value.Instrument.Point;
           summary.Instrument.Point.Bar = null;
-          summary.Instrument.Point.Name = instrument.Name;
-          summary.Instrument.Point.Account = Account;
+          summary.Instrument.Point.Instrument = instrument;
+          summary.Instrument.Point.TimeFrame = summary.TimeFrame;
           summary.Dom = next.Value.Dom;
           summary.Options = next.Value.Options;
           summary.Points.Add(summary.Instrument.Point);
@@ -172,11 +171,9 @@ namespace Simulation
 
           Stream(new MessageModel<PointModel> { Next = summary.PointGroups.Last() });
 
-          states[instrument.Name].Status = StatusEnum.Suspended;
+          states[instrument.Name].Status = StatusEnum.Pause;
         }
-      });
-
-      subscriptions[instrument.Name] = interval;
+      };
 
       response.Data = StatusEnum.Active;
 
@@ -189,6 +186,8 @@ namespace Simulation
     public override async Task<ResponseModel<StatusEnum>> Disconnect()
     {
       var response = new ResponseModel<StatusEnum>();
+
+      Stream -= OnPoint;
 
       await Task.WhenAll(Account.States.Values.Select(o => Unsubscribe(o.Instrument)));
 
@@ -207,12 +206,7 @@ namespace Simulation
     {
       var response = new ResponseModel<StatusEnum>();
 
-      Stream -= OnPoint;
-
-      if (subscriptions.TryRemove(instrument.Name, out var subscription))
-      {
-        subscription.Dispose();
-      }
+      subscriptions.TryRemove(instrument.Name, out var subscription);
 
       return Task.FromResult(response);
     }
@@ -234,7 +228,7 @@ namespace Simulation
             case OrderTypeEnum.Stop:
             case OrderTypeEnum.Limit:
             case OrderTypeEnum.StopLimit: SendPendingOrder(nextOrder); break;
-            case OrderTypeEnum.Market: await SendMarketOrder(nextOrder); break;
+            case OrderTypeEnum.Market: ProcessOrder(nextOrder); break;
           }
 
           nextOrder.Orders.ForEach(o => SendPendingOrder(o));
@@ -289,15 +283,9 @@ namespace Simulation
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<OrderModel> SendMarketOrder(OrderModel order)
+    protected virtual OrderModel ProcessOrder(OrderModel order)
     {
       var nextOrder = order.Clone() as OrderModel;
-
-      await Task.WhenAll(order
-        .Orders
-        .Append(order)
-        .Where(o => o.Name is not null)
-        .Select(o => Subscribe((o.Account = Account).States.Get(o.Name).Instrument)));
 
       nextOrder.OpenAmount = nextOrder.Amount;
       nextOrder.Status = OrderStatusEnum.Filled;
@@ -399,7 +387,7 @@ namespace Simulation
     /// Process pending orders on each quote
     /// </summary>
     /// <param name="message"></param>
-    protected virtual async void OnPoint(MessageModel<PointModel> message)
+    protected virtual void OnPoint(MessageModel<PointModel> message)
     {
       var estimates = Account
         .Positions
@@ -410,7 +398,7 @@ namespace Simulation
       {
         if (IsOrderExecutable(order))
         {
-          await SendMarketOrder(order);
+          ProcessOrder(order);
 
           Account.Orders = Account
             .Orders
@@ -485,14 +473,9 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<DomModel>> GetDom(ConditionModel criteria = null)
     {
-      var point = Account.States.Get(criteria.Instrument.Name).Instrument.Point;
       var response = new ResponseModel<DomModel>
       {
-        Data = new DomModel
-        {
-          Bids = [point],
-          Asks = [point]
-        }
+        Data = Account.States.Get(criteria.Instrument.Name).Dom
       };
 
       return Task.FromResult(response);
@@ -501,7 +484,6 @@ namespace Simulation
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
-    /// <param name="screener"></param>
     /// <param name="criteria"></param>
     /// <returns></returns>
     public override Task<ResponseModel<List<PointModel>>> GetPoints(ConditionModel criteria = null)
@@ -538,7 +520,12 @@ namespace Simulation
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
-        .Select(o => Account.States.Get(o.Name).Instrument = o)
+        .Select(o =>
+        {
+          Account.Positions.Get(o.Name).Instrument = o;
+          Account.States.Get(o.Name).Instrument = o;
+          return o;
+        })
         .ToList();
 
       var response = new ResponseModel<List<InstrumentModel>>

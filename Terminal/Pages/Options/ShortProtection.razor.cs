@@ -159,7 +159,7 @@ namespace Terminal.Pages.Options
             Amount = 50,
             Type = OrderTypeEnum.Market,
             Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Name = point.Name
+            Instrument = point.Instrument
           };
 
           await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
@@ -279,28 +279,28 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longPut.Name
+            Instrument = longPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longCall.Name
+            Instrument = longCall
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Name = shortPut.Name
+            Instrument = shortPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Name = shortCall.Name
+            Instrument = shortCall
           }
         ]
       };
@@ -324,9 +324,9 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
+            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

@@ -203,7 +203,7 @@ namespace Terminal.Pages.Utils
         .ForEach(adapter => adapter.Stream += message =>
         {
           var date = $"{DateTime.Now:yyyy-MM-dd}";
-          var asset = message.Next.Name;
+          var asset = message.Next.Instrument.Name;
           var storage = $"D:/Code/NET/Terminal/Data/Series/{date}/{asset}";
           var summary = adapter.Account.States.Get(asset);
 

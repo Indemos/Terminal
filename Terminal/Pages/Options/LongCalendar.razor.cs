@@ -169,7 +169,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = account.States.Get(point.Name).Instrument
+        Instrument = point.Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -211,14 +211,14 @@ namespace Terminal.Pages.Options
           new OrderModel
           {
             Amount = 1,
-            Name = longCall.Name,
+            Instrument = longCall,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
           },
           new OrderModel
           {
             Amount = 1,
-            Name = shortCall.Name,
+            Instrument = shortCall,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
           }
@@ -311,9 +311,9 @@ namespace Terminal.Pages.Options
         var order = new OrderModel
         {
           Amount = 100,
-          Name = point.Name,
           Side = OrderSideEnum.Short,
           Type = OrderTypeEnum.Market,
+          Instrument = point.Instrument,
         };
 
         await adapter.SendOrder(order);
@@ -336,9 +336,9 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
+            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

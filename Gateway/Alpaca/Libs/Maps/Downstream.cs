@@ -25,7 +25,7 @@ namespace Alpaca.Mappers
         BidSize = (double)message.BidSize,
         Last = (double)message.BidPrice,
         Time = message.TimestampUtc,
-        Name = instrument.Name
+        Instrument = instrument
       };
 
       return point;
@@ -80,7 +80,6 @@ namespace Alpaca.Mappers
 
       var order = new OrderModel
       {
-        Name = message.Symbol,
         Type = OrderTypeEnum.Market,
         Time = message.CreatedAtUtc,
         Side = GetOrderSide(message.OrderSide),
@@ -88,6 +87,7 @@ namespace Alpaca.Mappers
         TimeSpan = GetTimeSpan(message.TimeInForce),
         Amount = GetValue(message.Quantity, message.FilledQuantity),
         OpenAmount = GetValue(message.FilledQuantity, message.Quantity),
+        Instrument = instrument,
         Id = $"{message.OrderId}"
       };
 
@@ -143,7 +143,7 @@ namespace Alpaca.Mappers
       var order = new OrderModel
       {
         Price = price,
-        Name = instrument.Name,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message.Side),
         OpenPrice = (double)message.AverageEntryPrice,

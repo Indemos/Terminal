@@ -5,9 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
@@ -170,7 +168,7 @@ namespace Terminal.Pages.Options
       {
         MinDate = date,
         MaxDate = date,
-        Instrument = account.States.Get(point.Name).Instrument
+        Instrument = point.Instrument
       };
 
       return (await adapter.GetOptions(screener)).Data;
@@ -214,14 +212,14 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Name = longPut.Name
+            Instrument = longPut
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Name = shortPut.Name
+            Instrument = shortPut
           }
         ]
       };
@@ -315,7 +313,7 @@ namespace Terminal.Pages.Options
           Amount = 100,
           Side = OrderSideEnum.Long,
           Type = OrderTypeEnum.Market,
-          Name = point.Name
+          Instrument = point.Instrument
         };
 
         await adapter.SendOrder(order);
@@ -340,7 +338,7 @@ namespace Terminal.Pages.Options
           {
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Name = position.Name,
+            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

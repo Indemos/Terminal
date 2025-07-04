@@ -230,7 +230,7 @@ namespace Terminal.Core.Domains
           ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.Name ??= group?.Name;
+        nextOrder.Instrument ??= group?.Instrument;
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
@@ -268,8 +268,9 @@ namespace Terminal.Core.Domains
     {
       var response = new List<ErrorModel>();
       var validator = InstanceService<OrderValidator>.Instance;
+      var orders = order.Orders.SelectMany(o => o.Orders).Append(order);
 
-      foreach (var subOrder in order.Orders.SelectMany(o => o.Orders).Append(order))
+      foreach (var subOrder in orders)
       {
         order.Account = Account;
         order.Orders.ForEach(o => o.Account = Account);
@@ -281,7 +282,7 @@ namespace Terminal.Core.Domains
 
         response.AddRange(errors);
 
-        if (errors.IsEmpty() && subOrder.Name is not null)
+        if (errors.IsEmpty() && subOrder.Instrument is not null)
         {
           //await Subscribe(subOrder.Instrument);
         }

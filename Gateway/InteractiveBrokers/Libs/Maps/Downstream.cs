@@ -25,7 +25,7 @@ namespace InteractiveBrokers.Mappers
         BidSize = (double)message.SizeBid,
         Last = message.PriceBid,
         Time = DateTimeOffset.FromUnixTimeSeconds(message.Time).UtcDateTime,
-        Name = instrument.Name
+        Instrument = instrument
       };
 
       return point;
@@ -41,7 +41,7 @@ namespace InteractiveBrokers.Mappers
       var instrument = GetInstrument(message.Contract);
       var order = new OrderModel
       {
-        Name = instrument.Name,
+        Instrument = instrument,
         Id = $"{message.Order.PermId}",
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.Order.Action),
@@ -87,7 +87,7 @@ namespace InteractiveBrokers.Mappers
       {
         Amount = volume,
         OpenAmount = volume,
-        Name = instrument.Name,
+        Instrument = instrument,
         Type = OrderTypeEnum.Market,
         Descriptor = $"{message.Contract.ConId}",
         OpenPrice = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),

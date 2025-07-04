@@ -5,6 +5,6 @@ namespace Terminal.Core.Enums
     None,
     Active,
     Inactive,
-    Suspended,
+    Pause,
   }
 }
