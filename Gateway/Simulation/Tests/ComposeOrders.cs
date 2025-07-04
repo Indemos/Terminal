@@ -51,7 +51,7 @@ namespace Terminal.Tests
       {
         Id = "X1",
         Amount = 1,
-        Instrument = instrument,
+        Name = instrument.Name,
         Side = OrderSideEnum.Long,
       };
 
@@ -59,7 +59,7 @@ namespace Terminal.Tests
       {
         Id = "X2",
         Amount = 1,
-        Instrument = instrument,
+        Name = instrument.Name,
         Side = OrderSideEnum.Short,
       };
 
@@ -67,14 +67,14 @@ namespace Terminal.Tests
       {
         Id = "X3",
         Amount = 1,
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
       var noAmountOrder = new OrderModel
       {
         Id = "X4",
         Amount = 1,
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
       var noInstrumentOrder = new OrderModel
@@ -94,7 +94,7 @@ namespace Terminal.Tests
         Instruction = InstructionEnum.Group,
         Time = point.Time,
         Orders = [subOrder, separateOrder, noSideOrder],
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
       var res = ComposeOrders(order);

@@ -226,11 +226,11 @@ namespace Terminal.Core.Domains
         var groupOrders = subOrder
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
-          ?.Where(o => Equals(o.Instrument.Name, nextOrder.Instrument.Name))
+          ?.Where(o => Equals(o.Name, nextOrder.Name))
           ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
 
+        nextOrder.Name ??= group?.Name;
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.Instrument ??= group?.Instrument;
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
@@ -241,7 +241,7 @@ namespace Terminal.Core.Domains
         return nextOrder;
       }
 
-      return orders.SelectMany(order =>
+      return [.. orders.SelectMany(order =>
       {
         var nextOrders = order
           .Orders
@@ -256,7 +256,7 @@ namespace Terminal.Core.Domains
 
         return nextOrders;
 
-      }).ToList();
+      })];
     }
 
     /// <summary>
@@ -282,9 +282,9 @@ namespace Terminal.Core.Domains
 
         response.AddRange(errors);
 
-        if (errors.IsEmpty() && subOrder.Instrument is not null)
+        if (errors.IsEmpty() && subOrder.Name is not null)
         {
-          //await Subscribe(subOrder.Instrument);
+          await Subscribe(subOrder.Instrument);
         }
       }
 

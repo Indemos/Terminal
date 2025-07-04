@@ -9,6 +9,11 @@ namespace Terminal.Core.Models
   public class PointModel : ICloneable, IGroup<PointModel>
   {
     /// <summary>
+    /// Instrument name
+    /// </summary>
+    public virtual string Name { get; set; }
+
+    /// <summary>
     /// Bid
     /// </summary>
     public virtual double? Bid { get; set; }
@@ -49,6 +54,11 @@ namespace Terminal.Core.Models
     public virtual TimeSpan? TimeFrame { get; set; }
 
     /// <summary>
+    /// Account
+    /// </summary>
+    public virtual IAccount Account { get; set; }
+
+    /// <summary>
     /// Reference to the complex data point
     /// </summary>
     public virtual BarModel Bar { get; set; }
@@ -56,7 +66,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Instrument
     /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
+    public virtual InstrumentModel Instrument => Account.States.Get(Name).Instrument;
 
     /// <summary>
     /// Indicator values calculated for the current data point

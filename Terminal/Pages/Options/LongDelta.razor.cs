@@ -208,7 +208,7 @@ namespace Terminal.Pages.Options
           Amount = Math.Abs(delta),
           Type = OrderTypeEnum.Market,
           Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
-          Instrument = Instrument
+          Name = Instrument.Name
         };
 
         Strike = Math.Round(point.Last.Value, MidpointRounding.ToEven);
@@ -275,14 +275,14 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longCall
+            Name = longCall.Name
           },
         ]
       };

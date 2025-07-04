@@ -424,7 +424,7 @@ namespace Alpaca
         Price = (double)streamOrder.Price,
         OpenAmount = (double)streamOrder.Size,
         Side = Downstream.GetTakerSide(streamOrder.TakerSide),
-        Instrument = new InstrumentModel { Name = streamOrder.Symbol }
+        Name = streamOrder.Symbol
       };
 
       var message = new MessageModel<OrderModel>

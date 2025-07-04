@@ -133,7 +133,7 @@ namespace Schwab.Mappers
         BidSize = o.BidSize,
         Last = o.AskTime > o.BidTime ? o.AskPrice : o.BidPrice,
         Time = DateTimeOffset.FromUnixTimeMilliseconds(o.QuoteTime ?? DateTime.Now.Ticks).UtcDateTime.ToLocalTime(),
-        Instrument = instrument
+        Name = instrument.Name
       };
 
       return point;
@@ -274,7 +274,7 @@ namespace Schwab.Mappers
       {
         Amount = volume,
         OpenAmount = volume,
-        Instrument = instrument,
+        Name = instrument.Name,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message),
         OpenPrice = message.AveragePrice,
@@ -322,7 +322,7 @@ namespace Schwab.Mappers
       var order = new OrderModel
       {
         Id = message.OrderId,
-        Instrument = instrument,
+        Name = instrument.Name,
         Time = message.EnteredTime,
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message),
@@ -367,7 +367,7 @@ namespace Schwab.Mappers
 
           order.Orders.Add(new OrderModel
           {
-            Instrument = subInstrument,
+            Name = subInstrument.Name,
             Amount = subOrder.Quantity,
             OpenAmount = subOrder.Quantity,
             Side = GetSubOrderSide(subOrder.Instruction)

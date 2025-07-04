@@ -162,8 +162,9 @@ namespace Simulation
           summary.Instrument = instrument;
           summary.Instrument.Point = next.Value.Instrument.Point;
           summary.Instrument.Point.Bar = null;
-          summary.Instrument.Point.Instrument = instrument;
+          summary.Instrument.Point.Name = instrument.Name;
           summary.Instrument.Point.TimeFrame = summary.TimeFrame;
+          summary.Instrument.Point.Account = Account;
           summary.Dom = next.Value.Dom;
           summary.Options = next.Value.Options;
           summary.Points.Add(summary.Instrument.Point);
@@ -520,12 +521,7 @@ namespace Simulation
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
-        .Select(o =>
-        {
-          Account.Positions.Get(o.Name).Instrument = o;
-          Account.States.Get(o.Name).Instrument = o;
-          return o;
-        })
+        .Select(o => Account.States.Get(o.Name).Instrument = o)
         .ToList();
 
       var response = new ResponseModel<List<InstrumentModel>>

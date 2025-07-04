@@ -153,7 +153,7 @@ namespace Terminal.Pages.Shares
         Side = side,
         Amount = volume,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         Orders = [
           new OrderModel
           {
@@ -185,9 +185,9 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

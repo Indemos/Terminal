@@ -581,7 +581,7 @@ namespace Schwab
 
           point.Time = DateTime.Now;
           point.TimeFrame = summary.TimeFrame;
-          point.Instrument = summary.Instrument;
+          point.Name = summary.Instrument.Name;
           point.Bid = parse($"{data.Get(map.Get("Bid Price"))}", point.Bid);
           point.Ask = parse($"{data.Get(map.Get("Ask Price"))}", point.Ask);
           point.BidSize = parse($"{data.Get(map.Get("Bid Size"))}", point.BidSize);

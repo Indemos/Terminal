@@ -11,14 +11,14 @@ namespace Terminal.Core.Models
   public class OrderModel : ICloneable
   {
     /// <summary>
-    /// Instrument name
-    /// </summary>
-    public virtual string Name => Instrument.Name;
-
-    /// <summary>
     /// Order ID
     /// </summary>
     public virtual string Id { get; set; }
+
+    /// <summary>
+    /// Instrument name
+    /// </summary>
+    public virtual string Name { get; set; }
 
     /// <summary>
     /// Group
@@ -96,14 +96,14 @@ namespace Terminal.Core.Models
     public virtual InstructionEnum? Instruction { get; set; }
 
     /// <summary>
-    /// Summary
-    /// </summary>
-    public virtual InstrumentModel Instrument { get; set; }
-
-    /// <summary>
     /// Account
     /// </summary>
     public virtual IAccount Account { get; set; }
+
+    /// <summary>
+    /// Instrument
+    /// </summary>
+    public virtual InstrumentModel Instrument => Account.States.Get(Name).Instrument;
 
     /// <summary>
     /// List of related orders in the hierarchy
@@ -113,7 +113,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Order events
     /// </summary>
-    [JsonIgnore]
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
@@ -163,7 +162,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual double? GetOpenPrice()
     {
-      var point = Account.States.Get(Instrument.Name).Instrument.Point;
+      var point = Instrument.Point;
 
       if (point is not null)
       {
@@ -184,7 +183,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual double? GetClosePrice()
     {
-      var point = Account.States.Get(Instrument.Name).Instrument.Point;
+      var point = Instrument.Point;
 
       if (point is not null)
       {
@@ -215,7 +214,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetValueEstimate(double? price = null)
     {
-      var asset = Account.States.Get(Instrument.Name).Instrument;
+      var asset = Instrument;
       var step = asset.StepValue / asset.StepSize;
       var estimate = OpenAmount * GetEstimate(price) * step * asset.Leverage - asset.Commission;
 

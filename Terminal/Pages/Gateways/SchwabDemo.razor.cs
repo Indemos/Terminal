@@ -182,7 +182,7 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(direction) + 15 * direction,
-        Instrument = instrument
+        Name = instrument.Name
       };
 
       var SL = new OrderModel
@@ -192,7 +192,7 @@ namespace Terminal.Pages.Gateways
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
         OpenPrice = GetPrice(-direction) - 15 * direction,
-        Instrument = instrument
+        Name = instrument.Name
       };
 
       var order = new OrderModel
@@ -201,7 +201,7 @@ namespace Terminal.Pages.Gateways
         Side = side,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         Orders = [SL, TP]
       };
 
@@ -220,7 +220,7 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Instrument = position.Instrument
+          Name = position.Name
         };
 
         await adapter.SendOrder(order);

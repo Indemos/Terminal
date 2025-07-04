@@ -48,7 +48,7 @@ namespace Terminal.Tests
         Type = orderType,
         OpenPrice = orderPrice,
         ActivationPrice = activationPrice,
-        Instrument = new InstrumentModel { Name = "X" },
+        Name = "X"
       };
 
       await base.SendOrder(order);
@@ -90,7 +90,7 @@ namespace Terminal.Tests
         Side = orderSide,
         Type = orderType,
         Descriptor = "Demo",
-        Instrument = new InstrumentModel { Name = "X" },
+        Name = "X",
       };
 
       await base.SendOrder(order);
@@ -150,7 +150,7 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
-        Instrument = new InstrumentModel { Name = "X" },
+        Name = "X",
       };
 
       await base.SendOrder(order);
@@ -219,21 +219,21 @@ namespace Terminal.Tests
           new OrderModel
           {
             Amount = 100,
-            Instrument = basis,
+            Name = basis.Name,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
           },
           new OrderModel
           {
             Amount = 5,
-            Instrument = optionLong,
+            Name = optionLong.Name,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
           },
           new OrderModel
           {
             Amount = 1,
-            Instrument = optionShort,
+            Name = optionShort.Name,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
           }
@@ -331,21 +331,21 @@ namespace Terminal.Tests
             Amount  = 100,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = basis,
+            Name = basis.Name,
           },
           new OrderModel
           {
             Amount  = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = optionLong
+            Name = optionLong.Name
           },
           new OrderModel
           {
             Amount  = 2,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = optionShort
+            Name = optionShort.Name
           }
         ]
       };
@@ -359,7 +359,7 @@ namespace Terminal.Tests
         Amount = 50,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = basis,
+        Name = basis.Name,
       };
 
       await base.SendOrder(increase);
@@ -387,7 +387,7 @@ namespace Terminal.Tests
         Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Instrument = optionShort,
+        Name = optionShort.Name,
       };
 
       await base.SendOrder(decrease);
@@ -415,7 +415,7 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Amount = Account.Positions[basis.Name].Amount,
-        Instrument = basis,
+        Name = basis.Name,
       };
 
       await base.SendOrder(close);
@@ -440,14 +440,14 @@ namespace Terminal.Tests
             Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = optionLong
+            Name = optionLong.Name
           },
           new OrderModel
           {
             Amount  = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = optionShort
+            Name = optionShort.Name
           }
         ]
       };
@@ -473,7 +473,7 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
       };
 
       await base.SendOrder(order);
@@ -483,7 +483,7 @@ namespace Terminal.Tests
         Amount = 10,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name
       };
 
       await base.SendOrder(reverseOrder);
@@ -513,7 +513,7 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = new InstrumentModel { Name = "SPY" },
+        Name = "SPY"
       };
 
       var orderY = new OrderModel
@@ -521,7 +521,7 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Instrument = new InstrumentModel { Name = "MSFT" },
+        Name = "MSFT"
       };
 
       await base.SendOrder(orderX);

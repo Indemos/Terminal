@@ -212,14 +212,14 @@ namespace Terminal.Pages.Options
             Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
-            Instrument = longPut
+            Name = longPut.Name
           },
           new OrderModel
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
-            Instrument = shortPut
+            Name = shortPut.Name
           }
         ]
       };
@@ -313,7 +313,7 @@ namespace Terminal.Pages.Options
           Amount = 100,
           Side = OrderSideEnum.Long,
           Type = OrderTypeEnum.Market,
-          Instrument = point.Instrument
+          Name = point.Instrument.Name
         };
 
         await adapter.SendOrder(order);
@@ -336,9 +336,9 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
+            Name = position.Name,
             Amount = position.Amount,
             Type = OrderTypeEnum.Market,
-            Instrument = position.Instrument,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long
           };
 

@@ -168,7 +168,7 @@ namespace Terminal.Pages.Gateways
         Amount = 10,
         OpenPrice = GetPrice(direction),
         Type = OrderTypeEnum.Market,
-        Instrument = instrument,
+        Name = instrument.Name,
         Orders = [SL, TP]
       };
 
@@ -187,7 +187,7 @@ namespace Terminal.Pages.Gateways
           Side = side,
           Amount = position.Amount,
           Type = OrderTypeEnum.Market,
-          Instrument = position.Instrument
+          Name = position.Name
         };
 
         await adapter.SendOrder(order);
