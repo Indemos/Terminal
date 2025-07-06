@@ -226,8 +226,7 @@ namespace Terminal.Core.Domains
         var groupOrders = subOrder
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
-          ?.Where(o => Equals(o.Name, nextOrder.Name))
-          ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
+          ?.Select(o => merge(o, group)) ?? [];
 
         nextOrder.Name ??= group?.Name;
         nextOrder.Descriptor = group.Descriptor;

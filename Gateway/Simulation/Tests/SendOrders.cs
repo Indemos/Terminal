@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Terminal.Tests
@@ -17,6 +18,18 @@ namespace Terminal.Tests
         Descriptor = "Demo",
         Balance = 50000
       };
+    }
+
+    private void SetStates(params InstrumentModel[] instruments)
+    {
+      foreach (var o in instruments)
+      {
+        Account.States.Get(o.Name).Instrument = new InstrumentModel
+        {
+          Name = o.Name,
+          Point = o.Point,
+        };
+      }
     }
 
     [Theory]
@@ -39,7 +52,16 @@ namespace Terminal.Tests
         Ask = price,
         Last = price,
         Time = DateTime.Now,
+        Name = "X"
       };
+
+      var instrument = new InstrumentModel
+      {
+        Name = "X",
+        Point = point
+      };
+
+      SetStates(instrument);
 
       var order = new OrderModel
       {
@@ -48,7 +70,7 @@ namespace Terminal.Tests
         Type = orderType,
         OpenPrice = orderPrice,
         ActivationPrice = activationPrice,
-        Name = "X"
+        Name = instrument.Name
       };
 
       await base.SendOrder(order);
@@ -84,13 +106,21 @@ namespace Terminal.Tests
         Time = DateTime.Now,
       };
 
+      var instrument = new InstrumentModel
+      {
+        Name = "X",
+        Point = point
+      };
+
+      SetStates(instrument);
+
       var order = new OrderModel
       {
         Amount = 1,
         Side = orderSide,
         Type = orderType,
         Descriptor = "Demo",
-        Name = "X",
+        Name = instrument.Name,
       };
 
       await base.SendOrder(order);
@@ -124,14 +154,23 @@ namespace Terminal.Tests
         Ask = price,
         Last = price,
         Time = DateTime.Now,
+        Name = "X"
       };
+
+      var instrument = new InstrumentModel
+      {
+        Name = "X",
+        Point = point
+      };
+
+      SetStates(instrument);
 
       var TP = new OrderModel
       {
         Amount = 1,
         OpenPrice = price + 5,
         Side = OrderSideEnum.Short,
-        Type = OrderTypeEnum.Stop,
+        Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
       };
 
@@ -140,7 +179,7 @@ namespace Terminal.Tests
         Amount = 1,
         OpenPrice = price - 5,
         Side = OrderSideEnum.Short,
-        Type = OrderTypeEnum.Limit,
+        Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
       };
 
@@ -150,7 +189,7 @@ namespace Terminal.Tests
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Orders = [SL, TP],
-        Name = "X",
+        Name = instrument.Name,
       };
 
       await base.SendOrder(order);
@@ -159,29 +198,49 @@ namespace Terminal.Tests
       Assert.Equal(2, Account.Orders.Count);
       Assert.Single(Account.Positions);
 
-      // Trigger SL
-
       base.SetupAccounts();
 
       var balance = Account.Balance;
-      var newPoint = new PointModel
+
+      // Price change without trigger
+
+      var noChangePoint = new PointModel
+      {
+        Bid = point.Bid - 1,
+        Ask = point.Ask - 1,
+        Last = point.Last - 1,
+        Time = DateTime.Now,
+        Name = instrument.Name
+      };
+
+      Account.States.Get(instrument.Name).Instrument.Point = noChangePoint;
+
+      base.OnPoint(null);
+
+      Assert.Equal(balance, 50000);
+      Assert.Empty(Account.Deals);
+      Assert.Equal(2, Account.Orders.Count);
+      Assert.Single(Account.Positions);
+
+      // Trigger SL
+
+      var changePoint = new PointModel
       {
         Bid = point.Bid - 15,
         Ask = point.Ask - 10,
         Last = point.Last - 15,
         Time = DateTime.Now,
+        Name = instrument.Name
       };
 
-      //instrument.Point = newPoint;
-
-      Assert.Equal(balance, 50000);
+      Account.States.Get(instrument.Name).Instrument.Point = changePoint;
 
       base.OnPoint(null);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
       Assert.Empty(Account.Positions);
-      Assert.Equal(Account.Balance, balance + (newPoint.Bid - point.Ask));
+      Assert.Equal(Account.Balance, balance + (changePoint.Bid - point.Ask));
     }
 
     [Fact]
@@ -206,6 +265,8 @@ namespace Terminal.Tests
         Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25, Time = DateTime.Now.AddSeconds(3) },
         Basis = basis
       };
+
+      SetStates(basis, optionLong, optionShort);
 
       var order = new OrderModel
       {
@@ -318,6 +379,8 @@ namespace Terminal.Tests
         Point = new PointModel { Bid = 1.15, Ask = 1.25, Last = 1.25, Time = DateTime.Now, },
         Basis = basis
       };
+
+      SetStates(basis, optionLong, optionShort);
 
       var order = new OrderModel
       {
@@ -468,6 +531,8 @@ namespace Terminal.Tests
         Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
       };
 
+      SetStates(instrument);
+
       var order = new OrderModel
       {
         Amount = 5,
@@ -508,12 +573,24 @@ namespace Terminal.Tests
     [Fact]
     public async Task SeparatePosition()
     {
+      var assetX = new InstrumentModel
+      {
+        Name = "SPY",
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
+      };
+
+      var assetY = new InstrumentModel
+      {
+        Name = "MSFT",
+        Point = new PointModel { Bid = 545, Ask = 550, Last = 550, Time = DateTime.Now, }
+      };
+
       var orderX = new OrderModel
       {
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Name = "SPY"
+        Name = assetX.Name
       };
 
       var orderY = new OrderModel
@@ -521,8 +598,10 @@ namespace Terminal.Tests
         Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Name = "MSFT"
+        Name = assetY.Name
       };
+
+      SetStates(assetX, assetY);
 
       await base.SendOrder(orderX);
       await base.SendOrder(orderY);

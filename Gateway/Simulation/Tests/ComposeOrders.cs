@@ -3,6 +3,7 @@ using System;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Terminal.Tests
@@ -47,12 +48,15 @@ namespace Terminal.Tests
         Point = point,
       };
 
+      Account.States.Get(instrument.Name).Instrument = instrument;
+
       var subOrder = new OrderModel
       {
         Id = "X1",
         Amount = 1,
         Name = instrument.Name,
         Side = OrderSideEnum.Long,
+        Account = Account
       };
 
       var separateOrder = new OrderModel
@@ -61,6 +65,7 @@ namespace Terminal.Tests
         Amount = 1,
         Name = instrument.Name,
         Side = OrderSideEnum.Short,
+        Account = Account
       };
 
       var noSideOrder = new OrderModel
@@ -68,6 +73,7 @@ namespace Terminal.Tests
         Id = "X3",
         Amount = 1,
         Name = instrument.Name,
+        Account = Account
       };
 
       var noAmountOrder = new OrderModel
@@ -75,12 +81,14 @@ namespace Terminal.Tests
         Id = "X4",
         Amount = 1,
         Name = instrument.Name,
+        Account = Account
       };
 
       var noInstrumentOrder = new OrderModel
       {
         Id = "X5",
         Amount = 1,
+        Account = Account
       };
 
       var order = new OrderModel
@@ -95,6 +103,7 @@ namespace Terminal.Tests
         Time = point.Time,
         Orders = [subOrder, separateOrder, noSideOrder],
         Name = instrument.Name,
+        Account = Account
       };
 
       var res = ComposeOrders(order);
