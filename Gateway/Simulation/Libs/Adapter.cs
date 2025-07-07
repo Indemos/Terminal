@@ -124,7 +124,7 @@ namespace Simulation
 
       Account.States.Get(instrument.Name).Instrument ??= instrument;
 
-      subscriptions[instrument.Name] = async () =>
+      subscriptions[instrument.Name] = () =>
       {
         states.TryGetValue(instrument.Name, out var state);
         streams.TryGetValue(instrument.Name, out var stream);
@@ -140,7 +140,7 @@ namespace Simulation
               break;
 
             case false:
-              states[instrument.Name] = await GetState(instrument.Name, stream.Current);
+              states[instrument.Name] = GetState(instrument.Name, stream.Current);
               states[instrument.Name].Status = StatusEnum.Active;
               break;
           }
@@ -430,7 +430,7 @@ namespace Simulation
     /// <param name="name"></param>
     /// <param name="source"></param>
     /// <returns></returns>
-    protected virtual async Task<SummaryModel> GetState(string name, string source)
+    protected virtual SummaryModel GetState(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -447,7 +447,7 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          return await JsonSerializer.DeserializeAsync<SummaryModel>(content, sender.Options);
+          return JsonSerializer.Deserialize<SummaryModel>(content, sender.Options);
         }
       }
 
