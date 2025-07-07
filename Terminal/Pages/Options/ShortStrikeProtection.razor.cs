@@ -19,10 +19,11 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortProtection
+  public partial class ShortStrikeProtection
   {
     [Inject] IConfiguration Configuration { get; set; }
 
+    protected virtual double? Strike { get; set; }
     protected virtual ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
     protected virtual ChartsComponent DeltaView { get; set; }
@@ -138,31 +139,31 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
+        Strike = point.Last;
         var order = GetOrder(point, options);
         await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
       {
+        var position = account.Positions.Values.FirstOrDefault(o => o.Instrument.Derivative is null);
         var (basisDelta, optionDelta) = UpdateIndicators(point);
-        var isSell = basisDelta < 0 && optionDelta > 0;
-        var isBuy = basisDelta > 0 && optionDelta < 0;
+        var isBuy = point.Last > Strike;
+        var isSell = point.Last < Strike;
+        var isBuyReverse = isBuy && position?.Side is OrderSideEnum.Short;
+        var isSellReverse = isSell && position?.Side is OrderSideEnum.Long;
 
-        if (optionDelta is 0)
-        {
-          await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
-        }
-        else if (basisDelta is 0 || isBuy || isSell)
+        if (position is null || isBuyReverse || isSellReverse)
         {
           var order = new OrderModel
           {
             Amount = 50,
             Type = OrderTypeEnum.Market,
-            Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Side = isSellReverse ? OrderSideEnum.Short : OrderSideEnum.Long,
             Name = point.Name
           };
 
-          await ClosePositions(o => o.Instrument.Type is InstrumentEnum.Shares);
+          await ClosePositions(o => o.Instrument.Derivative is null);
           await adapter.SendOrder(order);
         }
       }

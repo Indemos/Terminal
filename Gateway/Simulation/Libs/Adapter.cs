@@ -15,6 +15,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Validators;
 
 namespace Simulation
 {
@@ -80,8 +81,6 @@ namespace Simulation
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Connect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
       await Disconnect();
 
       SetupAccounts(Account);
@@ -111,9 +110,7 @@ namespace Simulation
 
       Stream += OnPoint;
 
-      response.Data = StatusEnum.Active;
-
-      return response;
+      return new ResponseModel<StatusEnum>();
     }
 
     /// <summary>
@@ -123,8 +120,6 @@ namespace Simulation
     /// <returns></returns>
     public override async Task<ResponseModel<StatusEnum>> Subscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
       await Unsubscribe(instrument);
 
       Account.States.Get(instrument.Name).Instrument ??= instrument;
@@ -176,9 +171,7 @@ namespace Simulation
         }
       };
 
-      response.Data = StatusEnum.Active;
-
-      return response;
+      return new ResponseModel<StatusEnum>();
     }
 
     /// <summary>
@@ -186,8 +179,6 @@ namespace Simulation
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Disconnect()
     {
-      var response = new ResponseModel<StatusEnum>();
-
       Stream -= OnPoint;
 
       await Task.WhenAll(Account.States.Values.Select(o => Unsubscribe(o.Instrument)));
@@ -195,7 +186,7 @@ namespace Simulation
       connections?.ForEach(o => o?.Dispose());
       connections?.Clear();
 
-      return response;
+      return new ResponseModel<StatusEnum>();
     }
 
     /// <summary>
@@ -205,11 +196,9 @@ namespace Simulation
     /// <returns></returns>
     public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
     {
-      var response = new ResponseModel<StatusEnum>();
-
       subscriptions.TryRemove(instrument.Name, out var subscription);
 
-      return Task.FromResult(response);
+      return Task.FromResult(new ResponseModel<StatusEnum>());
     }
 
     /// <summary>
@@ -466,6 +455,34 @@ namespace Simulation
 
       return JsonSerializer.Deserialize<SummaryModel>(inputMessage, sender.Options);
     }
+
+    /// <summary>
+    /// Preprocess order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected override Task<List<ErrorModel>> SubscribeToOrder(OrderModel order)
+    {
+      var response = new List<ErrorModel>();
+      var validator = InstanceService<OrderValidator>.Instance;
+      var orders = order.Orders.SelectMany(o => o.Orders).Append(order);
+
+      foreach (var subOrder in orders)
+      {
+        order.Account = Account;
+        order.Orders.ForEach(o => o.Account = Account);
+
+        var errors = validator
+          .Validate(order)
+          .Errors
+          .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage });
+
+        response.AddRange(errors);
+      }
+
+      return Task.FromResult(response);
+    }
+
 
     /// <summary>
     /// Get depth of market when available or just a top of the book

@@ -263,7 +263,7 @@ namespace Terminal.Core.Domains
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected virtual async Task<IList<ErrorModel>> SubscribeToOrder(OrderModel order)
+    protected virtual async Task<List<ErrorModel>> SubscribeToOrder(OrderModel order)
     {
       var response = new List<ErrorModel>();
       var validator = InstanceService<OrderValidator>.Instance;
