@@ -404,6 +404,8 @@ namespace Alpaca
       var summary = Account.States.Get(streamPoint.Symbol);
       var point = Downstream.GetPrice(streamPoint, summary.Instrument);
 
+      point.Account = Account;
+
       summary.Points.Add(point);
       summary.PointGroups.Add(point, summary.TimeFrame);
       summary.Instrument.Point = summary.PointGroups.Last();

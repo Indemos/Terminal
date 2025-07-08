@@ -576,6 +576,7 @@ namespace InteractiveBrokers
             return;
           }
 
+          point.Account = Account;
           point.Time = DateTime.Now;
           point.Name = instrument.Name;
           point.TimeFrame = summary.TimeFrame;

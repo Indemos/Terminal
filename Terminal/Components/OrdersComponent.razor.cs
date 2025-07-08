@@ -85,7 +85,7 @@ namespace Terminal.Components
           Time = o.Time,
           Group = o?.Instrument?.Basis?.Name ?? o.Instrument.Name,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.OpenAmount ?? 0,
+          Size = o.Amount ?? 0,
           Price = o.OpenPrice ?? 0,
 
         }).ToList();

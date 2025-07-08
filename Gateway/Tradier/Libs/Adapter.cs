@@ -118,6 +118,8 @@ namespace Tradier
               var summary = Account.States.Get(quoteMessage.Symbol);
               var point = Downstream.GetPrice(quoteMessage, summary.Instrument);
 
+              point.Account = Account;
+
               summary.Points.Add(point);
               summary.PointGroups.Add(point, summary.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
@@ -281,7 +283,7 @@ namespace Tradier
 
         return response
           ?.Options
-          ?.Select(Downstream.GetOption)
+          ?.Select(o => Account.States.Get(o.Symbol).Instrument = Downstream.GetOption(o))
           ?.OrderBy(o => o.Derivative.ExpirationDate)
           ?.ThenBy(o => o.Derivative.Strike)
           ?.ThenBy(o => o.Derivative.Side)
@@ -350,7 +352,7 @@ namespace Tradier
           var isCombo = order
             .Orders
             .Append(order)
-            .Where(o => o?.OpenAmount is not null)
+            .Where(o => o?.Amount is not null)
             .Any(o => o?.Instrument?.Type is InstrumentEnum.Shares);
 
           switch (true)

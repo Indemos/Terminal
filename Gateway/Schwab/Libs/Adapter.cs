@@ -579,6 +579,7 @@ namespace Schwab
           var summary = Account.States.Get(instrumentName);
           var point = new PointModel();
 
+          point.Account = Account;
           point.Time = DateTime.Now;
           point.TimeFrame = summary.TimeFrame;
           point.Name = summary.Instrument.Name;

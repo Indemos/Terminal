@@ -267,7 +267,7 @@ namespace Terminal.Core.Domains
     {
       var response = new List<ErrorModel>();
       var validator = InstanceService<OrderValidator>.Instance;
-      var orders = order.Orders.SelectMany(o => o.Orders).Append(order);
+      var orders = order.Orders.Append(order);
 
       foreach (var subOrder in orders)
       {

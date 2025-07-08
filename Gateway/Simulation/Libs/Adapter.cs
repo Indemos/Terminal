@@ -457,34 +457,6 @@ namespace Simulation
     }
 
     /// <summary>
-    /// Preprocess order
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected override Task<List<ErrorModel>> SubscribeToOrder(OrderModel order)
-    {
-      var response = new List<ErrorModel>();
-      var validator = InstanceService<OrderValidator>.Instance;
-      var orders = order.Orders.SelectMany(o => o.Orders).Append(order);
-
-      foreach (var subOrder in orders)
-      {
-        order.Account = Account;
-        order.Orders.ForEach(o => o.Account = Account);
-
-        var errors = validator
-          .Validate(order)
-          .Errors
-          .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage });
-
-        response.AddRange(errors);
-      }
-
-      return Task.FromResult(response);
-    }
-
-
-    /// <summary>
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
