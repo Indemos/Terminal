@@ -4,6 +4,7 @@ using System;
 using System.Globalization;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace InteractiveBrokers.Mappers
@@ -35,12 +36,14 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetOrder(OpenOrderMessage message)
+    public static OrderModel GetOrder(OpenOrderMessage message, IAccount account)
     {
       var instrument = GetInstrument(message.Contract);
       var order = new OrderModel
       {
+        Account = account,
         Name = instrument.Name,
         Id = $"{message.Order.PermId}",
         Type = OrderTypeEnum.Market,
@@ -71,6 +74,8 @@ namespace InteractiveBrokers.Mappers
           break;
       }
 
+      account.States.Get(instrument.Name).Instrument = instrument;
+
       return order;
     }
 
@@ -78,14 +83,16 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetPosition(PositionMultiMessage message)
+    public static OrderModel GetPosition(PositionMultiMessage message, IAccount account)
     {
       var volume = (double)Math.Abs(message.Position);
       var instrument = GetInstrument(message.Contract);
       var order = new OrderModel
       {
         Amount = volume,
+        Account = account,
         OpenAmount = volume,
         Name = instrument.Name,
         Type = OrderTypeEnum.Market,
@@ -93,6 +100,8 @@ namespace InteractiveBrokers.Mappers
         OpenPrice = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
         Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
+
+      account.States.Get(instrument.Name).Instrument = instrument;
 
       return order;
     }

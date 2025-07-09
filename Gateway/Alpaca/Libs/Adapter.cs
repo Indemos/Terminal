@@ -203,7 +203,7 @@ namespace Alpaca
       {
         var query = new ListOrdersRequest { OrderStatusFilter = OrderStatusFilter.Open };
         var orders = await tradingClient.ListOrdersAsync(query);
-        var response = orders.Select(Downstream.GetOrder).ToList();
+        var response = orders.Select(o => Downstream.GetOrder(o, Account)).ToList();
 
         return response ?? [];
       });
@@ -219,7 +219,7 @@ namespace Alpaca
       return await Response(async () =>
       {
         var orders = await tradingClient.ListPositionsAsync();
-        var response = orders.Select(Downstream.GetPosition).ToList();
+        var response = orders.Select(o => Downstream.GetPosition(o, Account)).ToList();
 
         return response ?? [];
       });

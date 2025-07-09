@@ -3,6 +3,7 @@ using System;
 using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 
 namespace Alpaca.Mappers
@@ -69,8 +70,9 @@ namespace Alpaca.Mappers
     /// Convert remote order to local
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetOrder(IOrder message)
+    public static OrderModel GetOrder(IOrder message, Terminal.Core.Domains.IAccount account)
     {
       var instrument = new InstrumentModel
       {
@@ -80,6 +82,7 @@ namespace Alpaca.Mappers
 
       var order = new OrderModel
       {
+        Account = account,
         Type = OrderTypeEnum.Market,
         Time = message.CreatedAtUtc,
         Side = GetOrderSide(message.OrderSide),
@@ -110,6 +113,8 @@ namespace Alpaca.Mappers
           break;
       }
 
+      account.States.Get(instrument.Name).Instrument = instrument;
+
       return order;
     }
 
@@ -117,8 +122,9 @@ namespace Alpaca.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetPosition(IPosition message)
+    public static OrderModel GetPosition(IPosition message, Terminal.Core.Domains.IAccount account)
     {
       var price = (double)message.AssetCurrentPrice;
       var point = new PointModel
@@ -143,6 +149,7 @@ namespace Alpaca.Mappers
       var order = new OrderModel
       {
         Price = price,
+        Account = account,
         Name = message.Symbol,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message.Side),
@@ -151,6 +158,8 @@ namespace Alpaca.Mappers
         OpenAmount = GetValue(message.Quantity, message.AvailableQuantity),
         Descriptor = $"{message.AssetId}"
       };
+
+      account.States.Get(instrument.Name).Instrument = instrument;
 
       return order;
     }

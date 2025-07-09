@@ -298,7 +298,7 @@ namespace Terminal.Core.Domains
     {
       foreach (var account in accounts)
       {
-        account.InitialBalance = account.Balance;
+        account.Contribution = account.Balance;
       }
 
       return accounts;

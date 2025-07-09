@@ -13,7 +13,6 @@ namespace Terminal.Core.Validators
       RuleFor(o => o.States).NotEmpty();
       RuleFor(o => o.Balance).NotEmpty();
       RuleFor(o => o.Descriptor).NotEmpty();
-      RuleFor(o => o.InitialBalance).NotEmpty();
     }
   }
 }

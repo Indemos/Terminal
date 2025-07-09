@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -106,7 +105,7 @@ namespace Terminal.Core.Models
     public virtual InstrumentModel Instrument => Account.States.Get(Name).Instrument;
 
     /// <summary>
-    /// List of related orders in the hierarchy
+    /// Suborders
     /// </summary>
     public virtual IList<OrderModel> Orders { get; set; }
 

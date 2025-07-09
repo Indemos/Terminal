@@ -18,7 +18,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// State of the account in the beginning
     /// </summary>
-    double? InitialBalance { get; set; }
+    double? Contribution { get; set; }
 
     /// <summary>
     /// Name
@@ -59,7 +59,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// State of the account in the beginning
     /// </summary>
-    public virtual double? InitialBalance { get; set; }
+    public virtual double? Contribution { get; set; }
 
     /// <summary>
     /// Name
@@ -92,7 +92,6 @@ namespace Terminal.Core.Domains
     public Account()
     {
       Balance = 0.0;
-      InitialBalance = 0.0;
 
       Deals = [];
       Orders = new();

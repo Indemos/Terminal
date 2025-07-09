@@ -49,7 +49,8 @@ namespace Terminal.Pages.Options
 
     protected static DateTime OptionDate(PointModel point)
     {
-      var date = point?.Time ?? DateTime.Now;
+      //var date = point?.Time ?? DateTime.Now;
+      var date = DateTime.Now.AddDays(4);
 
       switch (date.DayOfWeek)
       {
@@ -239,7 +240,12 @@ namespace Terminal.Pages.Options
       var account = adapter.Account;
       var performance = Performance.Update([account]);
 
-      if (GetOrders(OptionDate(point)).Count is 0 && GetPositions(OptionDate(point)).Count is 0)
+      if (Options.Count is 0 || ProtectionOptions.Count is 0)
+      {
+        return;
+      }
+
+      if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var order = GetOrder(point, Options);
         await adapter.SendOrder(order);

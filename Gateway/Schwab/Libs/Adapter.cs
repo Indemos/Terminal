@@ -409,7 +409,7 @@ namespace Schwab
 
         return orders
           .Where(o => o.CloseTime is null)
-          .Select(Downstream.GetOrder)
+          .Select(o => Downstream.GetOrder(o, Account))
           .ToList() ?? [];
       });
     }
@@ -429,7 +429,7 @@ namespace Schwab
         return account
           ?.SecuritiesAccount
           ?.Positions
-          ?.Select(Downstream.GetPosition)
+          ?.Select(o => Downstream.GetPosition(o, Account))
           ?.ToList() ?? [];
       });
     }
@@ -581,8 +581,8 @@ namespace Schwab
 
           point.Account = Account;
           point.Time = DateTime.Now;
+          point.Name = instrumentName;
           point.TimeFrame = summary.TimeFrame;
-          point.Name = summary.Instrument.Name;
           point.Bid = parse($"{data.Get(map.Get("Bid Price"))}", point.Bid);
           point.Ask = parse($"{data.Get(map.Get("Ask Price"))}", point.Ask);
           point.BidSize = parse($"{data.Get(map.Get("Bid Size"))}", point.BidSize);

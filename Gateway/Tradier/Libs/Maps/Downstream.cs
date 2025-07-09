@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Tradier.Messages.Account;
 using Tradier.Messages.MarketData;
@@ -16,9 +17,8 @@ namespace Tradier
     /// Get point
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="instrument"></param>
     /// <returns></returns>
-    public static PointModel GetPrice(Messages.Stream.QuoteMessage message, InstrumentModel instrument)
+    public static PointModel GetPrice(Messages.Stream.QuoteMessage message)
     {
       var point = new PointModel
       {
@@ -27,8 +27,7 @@ namespace Tradier
         Last = message.Bid,
         AskSize = message.AskSize,
         BidSize = message.BidSize,
-        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime(),
-        Name = instrument.Name
+        Time = DateTimeOffset.FromUnixTimeMilliseconds(message?.BidDate ?? DateTime.UtcNow.Ticks).UtcDateTime.ToLocalTime()
       };
 
       return point;
@@ -98,8 +97,9 @@ namespace Tradier
     /// Get order
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetSubOrder(OrderMessage message)
+    public static OrderModel GetSubOrder(OrderMessage message, IAccount account)
     {
       var basis = new InstrumentModel
       {
@@ -123,7 +123,8 @@ namespace Tradier
         OpenAmount = message.Quantity,
         Side = GetOrderSide(message),
         Time = message.TransactionDate,
-        Status = GetStatus(message.Status)
+        Status = GetStatus(message.Status),
+        Account = account
       };
 
       switch (message?.Type?.ToUpper())
@@ -135,6 +136,8 @@ namespace Tradier
         case "STOP_LIMIT": order.Type = OrderTypeEnum.StopLimit; order.ActivationPrice = message.StopPrice; order.OpenPrice = message.Price; break;
       }
 
+      account.States.Get(instrument.Name).Instrument = instrument;
+
       return order;
     }
 
@@ -142,17 +145,18 @@ namespace Tradier
     /// Get order
     /// </summary>
     /// <param name="message"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static List<OrderModel> GetOrder(OrderMessage message)
+    public static List<OrderModel> GetOrder(OrderMessage message, IAccount account)
     {
-      var orders = (message.Orders ?? []).Select(GetSubOrder).ToList();
+      var orders = (message.Orders ?? []).Select(o => GetSubOrder(o, account)).ToList();
 
       if (message.Quantity is null || message.Symbol is null)
       {
         return orders;
       }
 
-      var order = GetSubOrder(message);
+      var order = GetSubOrder(message, account);
       var name = string.Join(" / ", orders.Select(o => o.Instrument.Name).Distinct());
 
       order.Instrument.Name = string.IsNullOrEmpty(name) ? order.Instrument.Name : name;
@@ -165,9 +169,9 @@ namespace Tradier
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="instrument"></param>
+    /// <param name="account"></param>
     /// <returns></returns>
-    public static OrderModel GetPosition(PositionMessage message)
+    public static OrderModel GetPosition(PositionMessage message, IAccount account)
     {
       var volume = Math.Abs(message.Quantity ?? 0);
       var instrument = new InstrumentModel();
@@ -186,12 +190,15 @@ namespace Tradier
       var order = new OrderModel
       {
         Amount = volume,
+        Account = account,
         OpenAmount = volume,
         Name = instrument.Name,
         Type = OrderTypeEnum.Market,
         OpenPrice = Math.Abs((value / amount) ?? 0),
         Side = message.Quantity > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
+
+      account.States.Get(instrument.Name).Instrument = instrument;
 
       return order;
     }

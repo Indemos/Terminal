@@ -20,6 +20,7 @@ namespace Tradier
       var data = new Hashtable
       {
         { "class", "option" },
+        { "account_id", Account.Descriptor },
         { "symbol", order?.Instrument?.Basis?.Name ?? order.Instrument.Name },
         { "option_symbol", GetOptionName(order) },
         { "side", Upstream.GetSide(order) },

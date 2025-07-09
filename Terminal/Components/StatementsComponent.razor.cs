@@ -60,7 +60,7 @@ namespace Terminal.Components
     public virtual Task UpdateItems(IEnumerable<IAccount> accounts)
     {
       var values = new List<InputData>();
-      var balance = accounts.Sum(o => o.InitialBalance).Value;
+      var balance = accounts.Sum(o => o.Contribution).Value;
       var orders = accounts
         .SelectMany(account => account.Deals.SelectMany(o => o.Orders.Append(o)))
         .OrderBy(o => o.Time)

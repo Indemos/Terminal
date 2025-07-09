@@ -2,7 +2,9 @@ using Distribution.Services;
 using Distribution.Stream;
 using Flurl.Http;
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
@@ -18,6 +20,7 @@ using Terminal.Core.Models;
 using Tradier.Messages.Account;
 using Tradier.Messages.Stream;
 using Tradier.Messages.Trading;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Tradier
 {
@@ -116,10 +119,14 @@ namespace Tradier
 
               var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
               var summary = Account.States.Get(quoteMessage.Symbol);
-              var point = Downstream.GetPrice(quoteMessage, summary.Instrument);
+              var point = Downstream.GetPrice(quoteMessage);
 
+              point.Bar = null;
               point.Account = Account;
+              point.Name = quoteMessage.Symbol;
+              point.TimeFrame = summary.TimeFrame;
 
+              summary.Instrument.Point = point;
               summary.Points.Add(point);
               summary.PointGroups.Add(point, summary.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
@@ -228,11 +235,11 @@ namespace Tradier
         var account = await GetBalances(num);
         var orders = await GetOrders();
         var positions = await GetPositions();
-        var openOrders = orders.Data.Where(o => o.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
+        var openOrders = (orders.Data ?? []).Where(o => o.Status is OrderStatusEnum.Pending or OrderStatusEnum.Partitioned);
 
         Account.Balance = account.TotalEquity;
         Account.Orders = openOrders.GroupBy(o => o.Id).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
-        Account.Positions = positions.Data.GroupBy(o => o.Instrument.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
+        Account.Positions = (positions.Data ?? []).GroupBy(o => o.Name).ToDictionary(o => o.Key, o => o.FirstOrDefault()).Concurrent();
         Account.Positions.Values.ForEach(async o => await Subscribe(o.Instrument));
 
         return Account;
@@ -301,7 +308,7 @@ namespace Tradier
       return await Response(async () =>
       {
         var messages = await GetPositions(Account.Descriptor);
-        var positions = messages?.Select(Downstream.GetPosition)?.ToList();
+        var positions = messages?.Select(o => Downstream.GetPosition(o, Account))?.ToList();
 
         return positions ?? [];
       });
@@ -317,7 +324,7 @@ namespace Tradier
       return await base.Response(async () =>
       {
         var messages = await GetOrders(Account.Descriptor);
-        var orders = messages?.SelectMany(Downstream.GetOrder)?.ToList();
+        var orders = messages?.SelectMany(o => Downstream.GetOrder(o, Account))?.ToList();
 
         return orders ?? [];
       });
@@ -363,8 +370,18 @@ namespace Tradier
           }
         }
 
-        order.Id = $"{message?.Id}";
-        order.Status = Equals(message?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Status;
+        if (Equals(message?.Status?.ToUpper(), "OK"))
+        {
+          Account.Orders.TryRemove(order.Id, out _);
+
+          order.Id = $"{message?.Id}";
+          order.Status = order.Type is OrderTypeEnum.Market ? OrderStatusEnum.Filled : OrderStatusEnum.Pending;
+
+          if (order.Status is OrderStatusEnum.Filled)
+          {
+            Account.Positions[order.Name] = order;
+          }
+        }
 
         response.Data = order;
       }
@@ -402,18 +419,26 @@ namespace Tradier
     /// <param name="verb"></param>
     /// <param name="content"></param>
     /// <param name="token"></param>
-    public virtual async Task<T> Send<T>(string source, HttpMethod verb = null, object content = null, string token = null)
+    public virtual async Task<T> Send<T>(string source, HttpMethod verb = null, Hashtable content = null, string token = null)
     {
       var message = $"{new UriBuilder(source)}"
         .WithHeader("Accept", "application/json")
         .WithHeader("Authorization", $"Bearer {token ?? Token}");
 
-      var data = null as StringContent;
+      var data = null as FormUrlEncodedContent;
       var sender = InstanceService<Service>.Instance;
 
       if (content is not null)
       {
-        data = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
+        var map = new Dictionary<string, string>();
+
+        foreach (DictionaryEntry o in content)
+        {
+          map[$"{o.Key}"] = $"{o.Value}";
+        }
+
+        //data = new StringContent(JsonSerializer.Serialize(content, sender.Options), Encoding.UTF8, "application/json");
+        data = new FormUrlEncodedContent(map);
       }
 
       var response = await message

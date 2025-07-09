@@ -408,7 +408,7 @@ namespace InteractiveBrokers
     {
       client.OpenOrder += o => Observe(() =>
       {
-        OrderStream(new MessageModel<OrderModel> { Next = Downstream.GetOrder(o) });
+        OrderStream(new MessageModel<OrderModel> { Next = Downstream.GetOrder(o, Account) });
       });
 
       client.ClientSocket.reqAutoOpenOrders(true);
@@ -448,7 +448,7 @@ namespace InteractiveBrokers
       {
         if (Equals(message.Order.Account, Account.Descriptor))
         {
-          orders[$"{message.Order.PermId}"] = Downstream.GetOrder(message);
+          orders[$"{message.Order.PermId}"] = Downstream.GetOrder(message, Account);
         }
       }
 
@@ -488,7 +488,7 @@ namespace InteractiveBrokers
       {
         if (Equals(id, message.ReqId) && Equals(message.Account, Account.Descriptor))
         {
-          positions[$"{message.Contract.LocalSymbol}"] = Downstream.GetPosition(message);
+          positions[$"{message.Contract.LocalSymbol}"] = Downstream.GetPosition(message, Account);
         }
       }
 
