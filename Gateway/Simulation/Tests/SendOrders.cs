@@ -1,14 +1,17 @@
 using Simulation;
 using System;
+using System.Linq;
+using System.Security.Principal;
+using System.Threading.Tasks;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Models;
 
 namespace Terminal.Tests
 {
-  public class Positions : Adapter, IDisposable
+  public class SendOrders : Adapter, IDisposable
   {
-    public Positions()
+    public SendOrders()
     {
       Account = new Account
       {
@@ -24,7 +27,7 @@ namespace Terminal.Tests
     [InlineData(OrderSideEnum.Short, OrderTypeEnum.Limit, 15.0, null, 25.0)]
     [InlineData(OrderSideEnum.Long, OrderTypeEnum.StopLimit, 15.0, 20.0, 25.0)]
     [InlineData(OrderSideEnum.Short, OrderTypeEnum.StopLimit, 15.0, 10.0, 5.0)]
-    public void CreatePendingOrder(
+    public async Task CreatePendingOrder(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double? price,
@@ -41,7 +44,7 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = orderSide,
         Type = orderType,
         Price = orderPrice,
@@ -56,7 +59,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Single(Account.Orders);
@@ -67,6 +70,7 @@ namespace Terminal.Tests
       Assert.Equal(outOrder.Type, orderType);
       Assert.Equal(outOrder.Price, orderPrice);
       Assert.Equal(outOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
+      Assert.NotEmpty(outOrder.Id);
       Assert.NotEmpty(outOrder.Transaction.Id);
       Assert.Equal(outOrder.Transaction.Id, order.Id);
       Assert.Equal(outOrder.Transaction.Status, OrderStatusEnum.Pending);
@@ -75,7 +79,7 @@ namespace Terminal.Tests
     [Theory]
     [InlineData(OrderSideEnum.Long, OrderTypeEnum.Market, 10.0, 15.0, null)]
     [InlineData(OrderSideEnum.Short, OrderTypeEnum.Market, 10.0, 15.0, 10.0)]
-    public void CreateMarketOrder(
+    public async Task CreateMarketOrder(
       OrderSideEnum orderSide,
       OrderTypeEnum orderType,
       double? bid,
@@ -98,18 +102,18 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Price = price,
         Side = orderSide,
         Type = orderType,
+        Descriptor = "Demo",
         Transaction = new()
         {
-          Descriptor = "Demo",
           Instrument = instrument
         }
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       var position = Account.Positions[order.Name];
       var openPrice = position.Side is OrderSideEnum.Long ? point.Ask : point.Bid;
@@ -119,20 +123,21 @@ namespace Terminal.Tests
       Assert.Single(Account.Positions);
 
       Assert.Equal(position.Price, openPrice);
+      Assert.Equal(position.Transaction.AveragePrice, openPrice);
       Assert.Equal(position.Instruction, InstructionEnum.Side);
-      Assert.Equal(position.Transaction.Price, openPrice);
+      Assert.Null(position.Transaction.Price);
       Assert.Equal(position.Type, OrderTypeEnum.Market);
       Assert.Equal(position.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.Equal(position.Transaction.Status, OrderStatusEnum.Filled);
       Assert.Equal(position.Transaction.Id, order.Id);
-      Assert.Equal(position.Volume, order.Volume);
-      Assert.Equal(position.Transaction.Volume, order.Volume);
-      Assert.NotEmpty(position.Transaction.Id);
-      Assert.NotNull(position.Volume);
+      Assert.Equal(position.Amount, order.Amount);
+      Assert.Equal(position.Transaction.Amount, order.Amount);
+      Assert.NotNull(position.Transaction.Id);
+      Assert.NotNull(position.Amount);
     }
 
     [Fact]
-    public void CreateMarketOrderWithBrackets()
+    public async Task CreateMarketOrderWithBrackets()
     {
       var price = 155;
       var point = new PointModel()
@@ -151,7 +156,7 @@ namespace Terminal.Tests
 
       var TP = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Price = price + 5,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Stop,
@@ -164,7 +169,7 @@ namespace Terminal.Tests
 
       var SL = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Price = price - 5,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Limit,
@@ -177,7 +182,7 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Price = price,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
@@ -188,7 +193,7 @@ namespace Terminal.Tests
         }
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Equal(2, Account.Orders.Count);
@@ -196,7 +201,7 @@ namespace Terminal.Tests
 
       // Trigger SL
 
-      base.SetupAccounts();
+      Account.InitialBalance = Account.Balance;
 
       var balance = Account.Balance;
       var newPoint = new PointModel
@@ -220,7 +225,7 @@ namespace Terminal.Tests
     }
 
     [Fact]
-    public void CreateComplexMarketOrder()
+    public async Task CreateComplexMarketOrder()
     {
       var basis = new InstrumentModel
       {
@@ -251,21 +256,21 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
-            Volume = 100,
+            Amount = 100,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = basis },
           },
           new OrderModel
           {
-            Volume = 1, 
+            Amount = 1, 
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
-            Volume = 2,
+            Amount = 2,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionShort }
@@ -273,7 +278,7 @@ namespace Terminal.Tests
         ]
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -288,34 +293,31 @@ namespace Terminal.Tests
       Assert.Equal(openShare.Price, basis.Point.Ask);
       Assert.Equal(openShare.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShare.Transaction.Time);
-      Assert.Equal(openShare.Volume, 100);
-      Assert.Equal(openShare.Transaction.Volume, openShare.Volume);
+      Assert.Equal(openShare.Amount, 100);
+      Assert.Equal(openShare.Transaction.Amount, openShare.Amount);
       Assert.Equal(openShare.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openShare.Transaction.Price, openShare.Price);
 
       Assert.Equal(openLong.Side, OrderSideEnum.Long);
       Assert.Equal(openLong.Type, OrderTypeEnum.Market);
       Assert.Equal(openLong.Price, optionLong.Point.Ask);
       Assert.Equal(openLong.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openLong.Transaction.Time);
-      Assert.Equal(openLong.Volume, 1);
-      Assert.Equal(openLong.Transaction.Volume, openLong.Volume);
+      Assert.Equal(openLong.Amount, 1);
+      Assert.Equal(openLong.Transaction.Amount, openLong.Amount);
       Assert.Equal(openLong.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openLong.Transaction.Price, openLong.Price);
 
       Assert.Equal(openShort.Side, OrderSideEnum.Long);
       Assert.Equal(openShort.Type, OrderTypeEnum.Market);
       Assert.Equal(openShort.Price, optionShort.Point.Ask);
       Assert.Equal(openShort.TimeSpan, OrderTimeSpanEnum.Day);
       Assert.NotNull(openShort.Transaction.Time);
-      Assert.Equal(openShort.Volume, 2);
-      Assert.Equal(openShort.Transaction.Volume, openShort.Volume);
+      Assert.Equal(openShort.Amount, 2);
+      Assert.Equal(openShort.Transaction.Amount, openShort.Amount);
       Assert.Equal(openShort.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(openShort.Transaction.Price, openShort.Price);
     }
 
     [Fact]
-    public void UpdatePosition()
+    public async Task UpdatePosition()
     {
       var basis = new InstrumentModel
       {
@@ -346,21 +348,21 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
-            Volume = 100,
+            Amount = 100,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = basis },
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
-            Volume = 2,
+            Amount = 2,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionShort }
@@ -368,19 +370,19 @@ namespace Terminal.Tests
         ]
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       // Increase
 
       var increase = new OrderModel
       {
-        Volume = 50,
+        Amount = 50,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = basis },
       };
 
-      base.SendOrders(increase);
+      await base.SendOrder(increase);
 
       Assert.Empty(Account.Deals);
       Assert.Empty(Account.Orders);
@@ -392,39 +394,47 @@ namespace Terminal.Tests
       Assert.Equal(increaseShare.Type, OrderTypeEnum.Market);
       Assert.Equal(increaseShare.Price, basis.Point.Ask);
       Assert.Equal(increaseShare.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(increaseShare.Transaction.Time);
-      Assert.Equal(increaseShare.Volume, 150);
-      Assert.Equal(increaseShare.Transaction.Volume, increaseShare.Volume);
+      Assert.Equal(increaseShare.Transaction.Time, basis.Point.Time);
+      Assert.Equal(increaseShare.Amount, 100);
+      Assert.Equal(increaseShare.Transaction.Amount, 150);
       Assert.Equal(increaseShare.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(increaseShare.Transaction.Price, increaseShare.Price);
 
       // Decrease
 
       var decrease = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = optionShort },
       };
 
-      base.SendOrders(decrease);
+      await base.SendOrder(decrease);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
       Assert.Equal(3, Account.Positions.Count);
 
+      var closeShort = Account.Deals.Last();
       var decreaseShort = Account.Positions[optionShort.Name];
+
+      Assert.Equal(closeShort.Side, OrderSideEnum.Long);
+      Assert.Equal(closeShort.Type, OrderTypeEnum.Market);
+      Assert.Equal(closeShort.Price, optionShort.Point.Ask);
+      Assert.Equal(closeShort.TimeSpan, OrderTimeSpanEnum.Day);
+      Assert.Equal(closeShort.Transaction.Time, optionShort.Point.Time);
+      Assert.Equal(closeShort.Transaction.Amount, 1);
+      Assert.Equal(closeShort.Amount, 2);
+      Assert.Equal(closeShort.Transaction.Status, OrderStatusEnum.Filled);
 
       Assert.Equal(decreaseShort.Side, OrderSideEnum.Long);
       Assert.Equal(decreaseShort.Type, OrderTypeEnum.Market);
       Assert.Equal(decreaseShort.Price, optionShort.Point.Ask);
       Assert.Equal(decreaseShort.TimeSpan, OrderTimeSpanEnum.Day);
-      Assert.NotNull(decreaseShort.Transaction.Time);
-      Assert.Equal(decreaseShort.Transaction.Volume, 1);
-      Assert.Equal(decreaseShort.Transaction.Volume, decreaseShort.Volume);
+      Assert.Equal(decreaseShort.Transaction.Time, optionShort.Point.Time);
+      Assert.Equal(decreaseShort.Transaction.Amount, 1);
+      Assert.Equal(decreaseShort.Amount, 2);
       Assert.Equal(decreaseShort.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(decreaseShort.Transaction.Price, decreaseShort.Price);
 
       // Close side
 
@@ -432,15 +442,18 @@ namespace Terminal.Tests
       {
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
-        Volume = Account.Positions[basis.Name].Volume,
+        Amount = Account.Positions[basis.Name].Transaction.Amount,
         Transaction = new() { Instrument = basis },
       };
 
-      base.SendOrders(close);
+      await base.SendOrder(close);
 
-      Assert.Equal(2, Account.Deals.Count);
+      var closeSide = Account.Deals.Last();
+
       Assert.Empty(Account.Orders);
+      Assert.Equal(2, Account.Deals.Count);
       Assert.Equal(2, Account.Positions.Count);
+      Assert.Equal(closeSide.Transaction.Price, basis.Point.Bid);
 
       // Close position
 
@@ -452,14 +465,14 @@ namespace Terminal.Tests
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionLong }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = optionShort }
@@ -467,15 +480,15 @@ namespace Terminal.Tests
         ]
       };
 
-      base.SendOrders(closePosition);
+      await base.SendOrder(closePosition);
 
-      Assert.Empty(Account.Positions);
       Assert.Empty(Account.Orders);
+      Assert.Empty(Account.Positions);
       Assert.Equal(4, Account.Deals.Count);
     }
 
     [Fact]
-    public void ReversePosition()
+    public async Task ReversePosition()
     {
       var instrument = new InstrumentModel
       {
@@ -485,47 +498,48 @@ namespace Terminal.Tests
 
       var order = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = instrument },
       };
 
-      base.SendOrders(order);
+      await base.SendOrder(order);
 
       var reverse = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = instrument },
       };
 
-      base.SendOrders(reverse);
+      await base.SendOrder(reverse);
 
       Assert.Single(Account.Deals);
       Assert.Empty(Account.Orders);
       Assert.Single(Account.Positions);
 
       var reverseOrder = Account.Positions[instrument.Name];
+      var closeOrder = Account.Deals.Last();
 
       Assert.Equal(reverseOrder.Side, OrderSideEnum.Short);
       Assert.Equal(reverseOrder.Type, OrderTypeEnum.Market);
       Assert.Equal(reverseOrder.Price, instrument.Point.Bid);
       Assert.Equal(reverseOrder.TimeSpan, OrderTimeSpanEnum.Gtc);
       Assert.NotNull(reverseOrder.Transaction.Time);
-      Assert.Equal(reverseOrder.Transaction.Volume, 5);
-      Assert.Equal(reverseOrder.Transaction.Volume, reverseOrder.Volume);
+      Assert.Equal(reverseOrder.Transaction.Amount, 5);
+      Assert.Equal(reverseOrder.Amount, 10);
       Assert.Equal(reverseOrder.Transaction.Status, OrderStatusEnum.Filled);
-      Assert.Equal(reverseOrder.Transaction.Price, reverseOrder.Price);
+      Assert.Equal(closeOrder.Transaction.Price, reverseOrder.Price);
     }
 
     [Fact]
-    public void SeparatePosition()
+    public async Task SeparatePosition()
     {
       var orderX = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new()
@@ -540,7 +554,7 @@ namespace Terminal.Tests
 
       var orderY = new OrderModel
       {
-        Volume = 5,
+        Amount = 5,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new()
@@ -553,8 +567,8 @@ namespace Terminal.Tests
         },
       };
 
-      base.SendOrders(orderX);
-      base.SendOrders(orderY);
+      await base.SendOrder(orderX);
+      await base.SendOrder(orderY);
 
       Assert.Empty(Account.Orders);
       Assert.Equal(2, Account.Positions.Count);

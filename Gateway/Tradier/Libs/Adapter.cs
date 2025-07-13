@@ -116,15 +116,18 @@ namespace Tradier
 
               var quoteMessage = message.Deserialize<QuoteMessage>(sender.Options);
               var point = Downstream.GetPrice(quoteMessage);
-              var summary = Account.State.Get(quoteMessage.Symbol);
-
-              point.Instrument = summary.Instrument;
+              var summary = Account.States.Get(quoteMessage.Symbol);
 
               summary.Points.Add(point);
-              summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+              summary.PointGroups.Add(point, summary.TimeFrame);
               summary.Instrument.Point = summary.PointGroups.Last();
+              summary.Instrument.Point.TimeFrame = summary.TimeFrame;
+              summary.Instrument.Point.Instrument = summary.Instrument;
+              summary.Instrument.Point.Time = DateTime.Now;
 
-              DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+              UpdateInstrument(summary.Instrument);
+
+              Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
 
               break;
 
@@ -146,7 +149,7 @@ namespace Tradier
         connections.Add(dataStreamer);
         connections.Add(accountStreamer);
 
-        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
         return StatusEnum.Active;
       });
@@ -177,10 +180,10 @@ namespace Tradier
       {
         await Unsubscribe(instrument);
 
-        Account.State.Get(instrument.Name).Instrument ??= instrument;
+        Account.States.Get(instrument.Name).Instrument ??= instrument;
 
         var names = Account
-          .State
+          .States
           .Values
           .Select(o => o.Instrument.Name)
           .Distinct();
@@ -324,28 +327,6 @@ namespace Tradier
     }
 
     /// <summary>
-    /// Create orders
-    /// </summary>
-    /// <param name="orders"></param>
-    /// <returns></returns>
-    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
-    {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
-
-      foreach (var order in orders)
-      {
-        var o = await Response(async () => await SendOrder(order));
-
-        response.Errors = [.. response.Errors.Concat(o.Errors)];
-        response.Data = [.. response.Data.Append(order)];
-      }
-
-      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
-
-      return response;
-    }
-
-    /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="orders"></param>
@@ -408,47 +389,57 @@ namespace Tradier
     /// <param name="order"></param>
     /// <param name="preview"></param>
     /// <returns></returns>
-    protected virtual async Task<OrderModel> SendOrder(OrderModel order, bool preview = false)
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = null as OrderResponseMessage;
+      var preview = false;
+      var message = null as OrderResponseMessage;
+      var response = new ResponseModel<OrderModel>();
 
-      Account.Orders[order.Id] = order;
-
-      await Task.WhenAll(order
-        .Orders
-        .Append(order)
-        .Where(o => o.Transaction?.Instrument is not null)
-        .Select(o => Subscribe(o.Transaction.Instrument)));
-
-      if (order.Orders.IsEmpty())
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        switch (order.Transaction.Instrument.Type)
+        Account.Orders[order.Id] = order;
+
+        if (order.Orders.IsEmpty())
         {
-          case InstrumentEnum.Shares: response = await SendEquityOrder(order, preview); break;
-          case InstrumentEnum.Options: response = await SendOptionOrder(order, preview); break;
+          switch (order.Transaction.Instrument.Type)
+          {
+            case InstrumentEnum.Shares: message = await SendEquityOrder(order, preview); break;
+            case InstrumentEnum.Options: message = await SendOptionOrder(order, preview); break;
+          }
         }
-      }
-      else
-      {
-        var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
-        var isCombo = order
-          .Orders
-          .Append(order)
-          .Where(o => o?.Transaction?.Volume is not null)
-          .Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
-
-        switch (true)
+        else
         {
-          case true when isBrace: response = await SendBraceOrder(order, preview); break;
-          case true when isCombo: response = await SendComboOrder(order, preview); break;
-          case true when isCombo is false: response = await SendGroupOrder(order, preview); break;
+          var isBrace = order.Orders.Any(o => o.Instruction is InstructionEnum.Brace);
+          var isCombo = order
+            .Orders
+            .Append(order)
+            .Where(o => o?.Amount is not null)
+            .Any(o => o?.Transaction?.Instrument?.Type is InstrumentEnum.Shares);
+
+          switch (true)
+          {
+            case true when isBrace: message = await SendBraceOrder(order, preview); break;
+            case true when isCombo: message = await SendComboOrder(order, preview); break;
+            case true when isCombo is false: message = await SendGroupOrder(order, preview); break;
+          }
         }
+
+        if (Equals(message?.Status?.ToUpper(), "OK"))
+        {
+          Account.Orders.TryRemove(order.Id, out _);
+
+          order.Transaction.Id = $"{message?.Id}";
+          order.Transaction.Status = order.Type is OrderTypeEnum.Market ? OrderStatusEnum.Filled : OrderStatusEnum.Pending;
+
+          if (order.Transaction.Status is OrderStatusEnum.Filled)
+          {
+            Account.Positions[order.Name] = order;
+          }
+        }
+        response.Data = order;
       }
 
-      order.Transaction.Id = $"{response?.Id}";
-      order.Transaction.Status = Equals(response?.Status?.ToUpper(), "OK") ? OrderStatusEnum.Filled : order.Transaction.Status;
-
-      return order;
+      return response;
     }
 
     /// <summary>

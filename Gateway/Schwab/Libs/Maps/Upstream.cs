@@ -54,7 +54,7 @@ namespace Schwab.Mappers
         })
         .ToList();
 
-      if (order?.Volume is not 0)
+      if (order?.Amount is not 0)
       {
         message.OrderLegCollection.Add(GetSubOrder(account, order));
       }
@@ -138,7 +138,7 @@ namespace Schwab.Mappers
       var response = new OrderLegMessage
       {
         Instrument = instrument,
-        Quantity = order.Volume,
+        Quantity = order.Amount,
         Instruction = GetSide(account, order)
       };
 

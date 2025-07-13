@@ -13,7 +13,7 @@ namespace Terminal.Core.Indicators
     /// <returns></returns>
     public PerformanceIndicator Update(IList<IAccount> accounts)
     {
-      Point.Last = accounts.Sum(o => o.Balance + o.Positions.Sum(v => v.Value.GetGainEstimate() ?? 0));
+      Point.Last = accounts.Sum(o => o.Balance + o.Positions.Sum(v => v.Value.GetEstimate() ?? 0));
 
       return this;
     }

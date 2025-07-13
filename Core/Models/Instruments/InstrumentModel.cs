@@ -47,11 +47,6 @@ namespace Terminal.Core.Domains
     public virtual double? StepValue { get; set; }
 
     /// <summary>
-    /// Aggregation period for the quotes
-    /// </summary>
-    public virtual TimeSpan? TimeFrame { get; set; }
-
-    /// <summary>
     /// Instrument type
     /// </summary>
     public virtual InstrumentEnum? Type { get; set; }

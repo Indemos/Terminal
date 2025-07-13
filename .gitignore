@@ -36,6 +36,7 @@ Storage/
 #wwwroot/
 
 # MSTest test Results
+coveragereport
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*
 

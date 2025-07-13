@@ -43,7 +43,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Snapshots
     /// </summary>
-    Map<string, StateModel> State { get; set; }
+    Map<string, SummaryModel> States { get; set; }
   }
 
   /// <summary>
@@ -84,7 +84,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Market snapshot
     /// </summary>
-    public virtual Map<string, StateModel> State { get; set; }
+    public virtual Map<string, SummaryModel> States { get; set; }
 
     /// <summary>
     /// Constructor
@@ -97,7 +97,7 @@ namespace Terminal.Core.Domains
       Deals = [];
       Orders = new();
       Positions = new();
-      State = new();
+      States = new();
     }
   }
 }

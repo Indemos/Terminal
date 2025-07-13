@@ -83,11 +83,11 @@ namespace Terminal.Components
 
         values.Add(new InputData
         {
-          Min = o.GainMin.Value,
-          Max = o.GainMax.Value,
+          Min = o.Min.Value,
+          Max = o.Max.Value,
+          Value = o.Gain.Value,
           Time = o.Transaction.Time.Value,
-          Direction = o.GetDirection().Value,
-          Value = o.GetGainEstimate(o.Transaction.Price).Value,
+          Direction = o.GetSide().Value,
           Commission = o.Transaction.Instrument.Commission.Value * 2
         });
       }

@@ -57,9 +57,9 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument },
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument },
         },
       };
 
@@ -84,7 +84,7 @@ namespace Terminal.Pages.Utils
       try
       {
         var adapter = View.Adapters["Prime"];
-        var summary = adapter.Account.State[Instrument.Name];
+        var summary = adapter.Account.States[Instrument.Name];
         var optionArgs = new ConditionModel
         {
           Span = 50,

@@ -6,8 +6,13 @@ using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
 {
-  public class StateModel : ICloneable
+  public class SummaryModel : ICloneable
   {
+    /// <summary>
+    /// Aggregation period for the quotes
+    /// </summary>
+    public virtual TimeSpan? TimeFrame { get; set; }
+
     /// <summary>
     /// Status
     /// </summary>
@@ -41,7 +46,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Constructor
     /// </summary>
-    public StateModel()
+    public SummaryModel()
     {
       Points = [];
       PointGroups = [];

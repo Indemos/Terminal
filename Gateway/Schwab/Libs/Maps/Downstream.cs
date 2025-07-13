@@ -272,18 +272,18 @@ namespace Schwab.Mappers
 
       var action = new TransactionModel
       {
+        Amount = volume,
         Instrument = instrument,
-        Price = message.AveragePrice,
-        Descriptor = message.Instrument.Symbol,
-        Volume = volume
+        AveragePrice = message.AveragePrice
       };
 
       var order = new OrderModel
       {
-        Volume = volume,
+        Amount = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message),
+        Descriptor = message.Instrument.Symbol,
         Price = message.AveragePrice
       };
 
@@ -329,7 +329,7 @@ namespace Schwab.Mappers
       {
         Id = message.OrderId,
         Instrument = instrument,
-        Volume = Math.Max(message.FilledQuantity ?? 0, message.Quantity ?? 0),
+        Amount = Math.Max(message.FilledQuantity ?? 0, message.Quantity ?? 0),
         Time = message.EnteredTime,
         Status = GetStatus(message.Status)
       };
@@ -340,7 +340,7 @@ namespace Schwab.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message),
         TimeSpan = GetTimeSpan(message),
-        Volume = Math.Max(message.Quantity ?? 0, message.FilledQuantity ?? 0)
+        Amount = Math.Max(message.Quantity ?? 0, message.FilledQuantity ?? 0)
       };
 
       switch (message.OrderType.ToUpper())
@@ -379,13 +379,13 @@ namespace Schwab.Mappers
           var subAction = new TransactionModel
           {
             Instrument = subInstrument,
-            Volume = subOrder.Quantity
+            Amount = subOrder.Quantity
           };
 
           order.Orders.Add(new OrderModel
           {
             Transaction = subAction,
-            Volume = subOrder.Quantity,
+            Amount = subOrder.Quantity,
             Side = GetSubOrderSide(subOrder.Instruction)
           });
         }

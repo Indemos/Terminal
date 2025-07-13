@@ -30,7 +30,7 @@ namespace InteractiveBrokers.Mappers
       order.Action = GetSide(orderModel.Side);
       order.Tif = GetTimeSpan(orderModel.TimeSpan);
       order.OrderType = GetOrderType(orderModel.Type);
-      order.TotalQuantity = (decimal)orderModel.Volume;
+      order.TotalQuantity = (decimal)orderModel.Amount;
       order.ExtOperator = orderModel.Descriptor;
       order.Account = account.Descriptor;
 

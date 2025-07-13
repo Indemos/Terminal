@@ -69,9 +69,9 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [asset] = new StateModel { Instrument = new InstrumentModel { Name = asset } },
+          [asset] = new SummaryModel { Instrument = new InstrumentModel { Name = asset } },
         },
       };
 
@@ -88,14 +88,14 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summary = account.State[asset];
+      var summary = account.States[asset];
       var instrument = summary.Instrument;
       var series = summary.Points;
       var performance = Performance.Update([account]);
@@ -145,13 +145,13 @@ namespace Terminal.Pages.Shares
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summary = account.State[asset];
+      var summary = account.States[asset];
       var instrument = summary.Instrument;
 
       var order = new OrderModel
       {
         Side = side,
-        Volume = volume,
+        Amount = volume,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = instrument },
         Orders = [
@@ -159,14 +159,14 @@ namespace Terminal.Pages.Shares
           {
             Side = side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Price = side is OrderSideEnum.Long ? point.Last - 0.5 : point.Last + 0.5,
-            Volume = volume,
+            Amount = volume,
             Type = OrderTypeEnum.Stop,
             Transaction = new() { Instrument = instrument }
           }
         ]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     /// <summary>
@@ -186,7 +186,7 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
+            Amount = position.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
             Transaction = new()
@@ -195,7 +195,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
 
           response.Add(order);
         }

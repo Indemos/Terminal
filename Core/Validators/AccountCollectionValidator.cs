@@ -12,7 +12,7 @@ namespace Terminal.Core.Validators
     {
       Include(new AccountValidator());
 
-      RuleFor(o => o.State).NotEmpty();
+      RuleFor(o => o.States).NotEmpty();
     }
   }
 }

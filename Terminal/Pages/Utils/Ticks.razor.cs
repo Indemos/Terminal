@@ -54,150 +54,150 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          ["/ESU25"] = new StateModel
+          ["/ESU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/ESU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/NQU25"] = new StateModel
+          ["/NQU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/NQU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/YMU25"] = new StateModel
+          ["/YMU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/YMU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/CLN25"] = new StateModel
+          ["/CLN25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/CLN25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6EU25"] = new StateModel
+          ["/6EU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6EU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6CU25"] = new StateModel
+          ["/6CU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6CU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6SU25"] = new StateModel
+          ["/6SU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6SU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6AU25"] = new StateModel
+          ["/6AU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6AU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6BU25"] = new StateModel
+          ["/6BU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6BU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/6JU25"] = new StateModel
+          ["/6JU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/6JU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/GCQ25"] = new StateModel
+          ["/GCQ25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/GCQ25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZBU25"] = new StateModel
+          ["/ZBU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/ZBU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZNU25"] = new StateModel
+          ["/ZNU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/ZNU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/ZQU25"] = new StateModel
+          ["/ZQU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/ZQU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/BTCU25"] = new StateModel
+          ["/BTCU25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/BTCU25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["SPY"] = new StateModel
+          ["SPY"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "SPY",
               Type = InstrumentEnum.Shares,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
         }
@@ -215,12 +215,12 @@ namespace Terminal.Pages.Utils
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message =>
+        .ForEach(adapter => adapter.Stream += message =>
         {
           var date = $"{DateTime.Now:yyyy-MM-dd}";
           var asset = message.Next.Instrument.Name;
           var storage = $"D:/Code/NET/Terminal/Data/Series/{date}/{asset}";
-          var summary = adapter.Account.State[asset];
+          var summary = adapter.Account.States[asset];
 
           summary.Points.Clear();
           summary.PointGroups.Clear();

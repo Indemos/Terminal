@@ -11,7 +11,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
 using System.Net.WebSockets;
-using System.Reflection;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -122,7 +121,7 @@ namespace Schwab
         connections.Add(interval);
         connections.Add(scheduler);
 
-        await Task.WhenAll(Account.State.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
         return StatusEnum.Active;
       });
@@ -141,7 +140,7 @@ namespace Schwab
 
         await Unsubscribe(instrument);
 
-        Account.State.Get(instrument.Name).Instrument ??= instrument;
+        Account.States.Get(instrument.Name).Instrument ??= instrument;
 
         await SendStream(streamer, new StreamInputMessage
         {
@@ -265,7 +264,7 @@ namespace Schwab
       return await Response(async () =>
       {
         var instrument = criteria.Instrument;
-        var dom = Account.State.Get(instrument.Name).Dom;
+        var dom = Account.States.Get(instrument.Name).Dom;
 
         if (dom.Bids.Count is not 0 && dom.Asks.Count is not 0)
         {
@@ -321,23 +320,30 @@ namespace Schwab
     /// </summary>
     /// <param name="orders"></param>
     /// <returns></returns>
-    public override async Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders)
+    public override async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
     {
-      var response = new ResponseModel<List<OrderModel>> { Data = [] };
+      var response = new ResponseModel<OrderModel>();
 
-      foreach (var order in orders)
+      if ((response.Errors = await SubscribeToOrder(order)).Count is 0)
       {
-        var o = await Response(async () => await SendOrder(order));
+        Account.Orders[order.Id] = order;
 
-        response.Errors = [.. response.Errors.Concat(o.Errors)];
-        response.Data = [.. response.Data.Append(order)];
+        var exOrder = Upstream.GetOrder(Account, order);
+        var map = new Dictionary<string, IEnumerable<string>> { ["Location"] = null };
+        var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders", HttpMethod.Post, exOrder, map);
+
+        if (map["Location"] is not null)
+        {
+          var orderItem = map["Location"].First();
+
+          response.Data = order;
+          response.Data.Transaction.Status = OrderStatusEnum.Filled;
+          response.Data.Transaction.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
+        }
       }
-
-      response.Errors = [.. response.Errors.Concat((await GetAccount()).Errors)];
 
       return response;
     }
-
     /// <summary>
     /// Cancel orders
     /// </summary>
@@ -569,7 +575,7 @@ namespace Schwab
         foreach (var data in item.Content)
         {
           var instrumentName = $"{data.Get("key")}";
-          var summary = Account.State.Get(instrumentName);
+          var summary = Account.States.Get(instrumentName);
           var point = new PointModel();
 
           point.Time = DateTime.Now;
@@ -587,10 +593,14 @@ namespace Schwab
           }
 
           summary.Points.Add(point);
-          summary.PointGroups.Add(point, summary.Instrument.TimeFrame);
+          summary.PointGroups.Add(point, summary.TimeFrame);
           summary.Instrument.Point = summary.PointGroups.Last();
+          summary.Instrument.Point.Instrument = summary.Instrument;
+          summary.Instrument.Point.Time = DateTime.Now;
 
-          DataStream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+          UpdateInstrument(summary.Instrument);
+
+          Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
         }
       }
     }
@@ -608,9 +618,9 @@ namespace Schwab
         foreach (var data in item.Content)
         {
           var instrumentName = $"{data.Get("key")}";
-          var summary = Account.State.Get(instrumentName);
+          var summary = Account.States.Get(instrumentName);
           var instrument = summary.Instrument;
-          var dom = Account.State.Get(instrumentName).Dom = new();
+          var dom = Account.States.Get(instrumentName).Dom = new();
           var bids = data.Get(map.Get("Bid Side Levels"));
           var asks = data.Get(map.Get("Ask Side Levels"));
 
@@ -739,34 +749,6 @@ namespace Schwab
       var userResponse = await Send<UserDataMessage>($"{DataUri}/trader/v1/userPreference");
 
       userData = response.Data = userResponse;
-
-      return response;
-    }
-
-    /// <summary>
-    /// Send order
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected virtual async Task<ResponseModel<OrderModel>> SendOrder(OrderModel order)
-    {
-      Account.Orders[order.Id] = order;
-
-      await Subscribe(order.Transaction.Instrument);
-
-      var response = new ResponseModel<OrderModel>();
-      var exOrder = Upstream.GetOrder(Account, order);
-      var map = new Dictionary<string, IEnumerable<string>> { ["Location"] = null };
-      var exResponse = await Send<OrderMessage>($"{DataUri}/trader/v1/accounts/{accountCode}/orders", HttpMethod.Post, exOrder, map);
-
-      if (map["Location"] is not null)
-      {
-        var orderItem = map["Location"].First();
-
-        response.Data = order;
-        response.Data.Transaction.Status = OrderStatusEnum.Filled;
-        response.Data.Transaction.Id = $"{orderItem[(orderItem.LastIndexOf('/') + 1)..]}";
-      }
 
       return response;
     }

@@ -44,6 +44,11 @@ namespace Terminal.Core.Models
     public virtual DateTime? Time { get; set; }
 
     /// <summary>
+    /// Aggregation period for the quotes
+    /// </summary>
+    public virtual TimeSpan? TimeFrame { get; set; }
+
+    /// <summary>
     /// Reference to the complex data point
     /// </summary>
     public virtual BarModel Bar { get; set; }
@@ -85,9 +90,9 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public virtual long GetIndex()
     {
-      if (Instrument.TimeFrame is not null)
+      if (TimeFrame is not null)
       {
-        return Time.Round(Instrument.TimeFrame).Value.Ticks;
+        return Time.Round(TimeFrame).Value.Ticks;
       }
 
       return Time.Value.Ticks;
@@ -113,7 +118,7 @@ namespace Terminal.Core.Models
       Bar.Open = Bar.Open ?? o?.Bar?.Open ?? price;
       Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? previousPrice ?? price);
       Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? previousPrice ?? price);
-      Time = Time.Round(Instrument.TimeFrame) ?? o?.Time;
+      Time = Time.Round(TimeFrame) ?? o?.Time;
 
       return this;
     }

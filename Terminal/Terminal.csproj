@@ -12,6 +12,7 @@
     <PackageReference Include="Canvas.Views.Web" Version="5.6.9" />
     <PackageReference Include="Estimator" Version="1.0.8" />
     <PackageReference Include="MudBlazor" Version="8.6.0" />
+    <PackageReference Include="QuantLib" Version="1.38.0" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
   </ItemGroup>
 

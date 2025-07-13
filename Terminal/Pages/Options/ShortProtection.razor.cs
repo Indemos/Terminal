@@ -3,10 +3,10 @@ using Canvas.Core.Shapes;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using QuantLib;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -34,6 +34,7 @@ namespace Terminal.Pages.Options
     protected virtual PositionsComponent PositionsView { get; set; }
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual OptionPriceService OptionService { get; set; }
 
     /// <summary>
     /// Setup views and adapters
@@ -45,6 +46,8 @@ namespace Terminal.Pages.Options
 
       if (setup)
       {
+        OptionService = new OptionPriceService(0.05, 0.05, 0.10);
+
         InstanceService<SubscriptionService>.Instance.Update += state =>
         {
           switch (true)
@@ -104,10 +107,10 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
-        },
+          ["SPY"] = new SummaryModel { TimeFrame = TimeSpan.FromMinutes(1), Instrument = new InstrumentModel { Name = "SPY" } }
+        }
       };
 
       View.Adapters["Prime"] = new Adapter
@@ -122,7 +125,7 @@ namespace Terminal.Pages.Options
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -139,8 +142,8 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, options);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, options);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
@@ -157,14 +160,14 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = 50,
+            Amount = 50,
             Type = OrderTypeEnum.Market,
             Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
             Transaction = new() { Instrument = point.Instrument }
           };
 
           await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
-          await adapter.SendOrders([order]);
+          await adapter.SendOrder(order);
         }
       }
 
@@ -200,6 +203,23 @@ namespace Terminal.Pages.Options
         .Where(o => o.Transaction.Instrument.Derivative is not null)
         .Sum(GetDelta), MidpointRounding.ToZero);
 
+      var customOptionDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Sum(o =>
+        {
+          var instrument = o.Transaction.Instrument;
+          var delta = OptionService.ComputeDelta(
+            instrument.Derivative.Side is OptionSideEnum.Put ? Option.Type.Put : Option.Type.Call,
+            instrument.Basis.Point.Last,
+            instrument.Derivative.Strike,
+            0.01) * o.GetSide() * 100.0;
+
+          return delta.Value;
+
+        }), MidpointRounding.ToZero);
+
       var positionSigma = account
         .Positions
         .Values
@@ -209,8 +229,9 @@ namespace Terminal.Pages.Options
       ExposureView.UpdateItems(point.Time.Value.Ticks, "Exposure", "Sigma", new AreaShape { Y = positionSigma, Component = com });
       DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = comUp });
       DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Option Delta", new LineShape { Y = optionDelta, Component = comDown });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Custom Option Delta", new LineShape { Y = customOptionDelta, Component = com });
 
-      return (basisDelta, optionDelta);
+      return (basisDelta, customOptionDelta);
     }
 
     /// <summary>
@@ -239,7 +260,7 @@ namespace Terminal.Pages.Options
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -266,7 +287,7 @@ namespace Terminal.Pages.Options
 
       if (shortPut is null || shortCall is null || longPut is null || longCall is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -277,28 +298,28 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longPut }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longCall }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortPut }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortCall }
@@ -306,7 +327,7 @@ namespace Terminal.Pages.Options
         ]
       };
 
-      return [order];
+      return order;
     }
 
     /// <summary>
@@ -325,7 +346,7 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
+            Amount = position.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
             Transaction = new()
@@ -334,7 +355,7 @@ namespace Terminal.Pages.Options
             }
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }
@@ -346,7 +367,7 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Volume;
+      var volume = order.Amount;
       var units = order.Transaction?.Instrument?.Leverage;
       var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;

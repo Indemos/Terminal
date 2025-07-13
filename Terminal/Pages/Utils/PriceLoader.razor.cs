@@ -25,7 +25,7 @@ namespace Terminal.Pages.Utils
 
     protected virtual ControlsComponent View { get; set; }
     protected virtual Service Srv { get; set; } = new Service();
-    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel { Name = "ESH5", Exchange = "CME", Type = InstrumentEnum.Futures, TimeFrame = TimeSpan.FromMinutes(1) };
+    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel { Name = "ESH5", Exchange = "CME", Type = InstrumentEnum.Futures };
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -68,9 +68,9 @@ namespace Terminal.Pages.Utils
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:Account"],
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument }
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) }
         }        
       };
 

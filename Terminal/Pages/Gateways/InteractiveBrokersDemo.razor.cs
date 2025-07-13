@@ -34,7 +34,6 @@ namespace Terminal.Pages.Gateways
       Name = "ESH5",
       Exchange = "CME",
       Type = InstrumentEnum.Futures,
-      TimeFrame = TimeSpan.FromMinutes(1),
       Basis = new InstrumentModel { Name = "ES" }
     };
 
@@ -71,9 +70,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument }
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) }
         }
       };
 
@@ -88,7 +87,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
@@ -101,7 +100,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.State[name].Instrument;
+      var instrument = account.States[name].Instrument;
       var performance = Performance.Update([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
@@ -145,7 +144,7 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
@@ -155,7 +154,7 @@ namespace Terminal.Pages.Gateways
 
       var SL = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
@@ -165,7 +164,7 @@ namespace Terminal.Pages.Gateways
 
       var order = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = side,
         Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
@@ -173,7 +172,7 @@ namespace Terminal.Pages.Gateways
         Orders = [SL, TP]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     protected async Task ClosePositions(string name)
@@ -187,14 +186,14 @@ namespace Terminal.Pages.Gateways
         {
           Side = side,
           Type = OrderTypeEnum.Market,
-          Volume = position.Volume,
+          Amount = position.Amount,
           Transaction = new()
           {
             Instrument = position.Transaction.Instrument
           }
         };
 
-        await adapter.SendOrders(order);
+        await adapter.SendOrder(order);
       }
     }
 

@@ -70,7 +70,7 @@ namespace Tradier
       var action = new TransactionModel
       {
         Id = $"{message.Id}",
-        Volume = message.ExecQuantity,
+        Amount = message.ExecQuantity,
         Time = message.TransactionDate,
         Status = GetStatus(message.Status)
       };
@@ -80,7 +80,7 @@ namespace Tradier
         Id = $"{message.Id}",
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Volume = message.ExecQuantity
+        Amount = message.ExecQuantity
       };
 
       switch (message?.Type?.ToUpper())
@@ -122,7 +122,7 @@ namespace Tradier
       var action = new TransactionModel
       {
         Id = $"{message.Id}",
-        Volume = message.Quantity,
+        Amount = message.Quantity,
         Time = message.TransactionDate,
         Status = GetStatus(message.Status),
         Instrument = instrument
@@ -132,7 +132,7 @@ namespace Tradier
       {
         Transaction = action,
         Type = OrderTypeEnum.Market,
-        Volume = message.Quantity,
+        Amount = message.Quantity,
         Side = GetOrderSide(message)
       };
 
@@ -194,14 +194,14 @@ namespace Tradier
       var action = new TransactionModel
       {
         Instrument = instrument,
-        Volume = volume
+        Amount = volume
       };
 
       var value = message.CostBasis;
       var amount = volume * Math.Max(1, instrument.Leverage.Value);
       var order = new OrderModel
       {
-        Volume = volume,
+        Amount = volume,
         Transaction = action,
         Type = OrderTypeEnum.Market,
         Price = Math.Abs((value / amount) ?? 0),

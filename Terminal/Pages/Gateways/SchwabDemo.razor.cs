@@ -33,7 +33,6 @@ namespace Terminal.Pages.Gateways
     {
       Name = "SPY",
       Type = InstrumentEnum.Shares,
-      TimeFrame = TimeSpan.FromMinutes(1)
     };
 
     protected override async Task OnAfterRenderAsync(bool setup)
@@ -70,37 +69,38 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = Configuration["Schwab:Account"],
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel
+          ["SPY"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = Instrument
           },
-          ["/ESM25"] = new StateModel
+          ["/ESM25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/ESM25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/NQM25"] = new StateModel
+          ["/NQM25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/NQM25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           },
-          ["/YMM25"] = new StateModel
+          ["/YMM25"] = new SummaryModel
           {
+            TimeFrame = TimeSpan.FromMinutes(1),
             Instrument = new InstrumentModel
             {
               Name = "/YMM25",
               Type = InstrumentEnum.Futures,
-              TimeFrame = TimeSpan.FromMinutes(1)
             }
           }
         }
@@ -120,7 +120,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, "/ESM25"))
           {
@@ -133,7 +133,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.State[name].Instrument;
+      var instrument = account.States[name].Instrument;
       var performance = Performance.Update([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
@@ -177,7 +177,7 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
@@ -187,7 +187,7 @@ namespace Terminal.Pages.Gateways
 
       var SL = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
@@ -197,7 +197,7 @@ namespace Terminal.Pages.Gateways
 
       var order = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = side,
         Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
@@ -205,7 +205,7 @@ namespace Terminal.Pages.Gateways
         Orders = [SL, TP]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     protected async Task ClosePositions(string name)
@@ -219,14 +219,14 @@ namespace Terminal.Pages.Gateways
         {
           Side = side,
           Type = OrderTypeEnum.Market,
-          Volume = position.Volume,
+          Amount = position.Amount,
           Transaction = new()
           {
             Instrument = position.Transaction.Instrument
           }
         };
 
-        await adapter.SendOrders(order);
+        await adapter.SendOrder(order);
       }
     }
 

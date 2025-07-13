@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json.Serialization;
+using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
@@ -31,7 +31,7 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Contract size
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public virtual double? Amount { get; set; }
 
     /// <summary>
     /// Current PnL
@@ -41,12 +41,12 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Min possible PnL in account's currency
     /// </summary>
-    public virtual double? GainMin { get; set; }
+    public virtual double? Min { get; set; }
 
     /// <summary>
     /// Max possible PnL in account's currency
     /// </summary>
-    public virtual double? GainMax { get; set; }
+    public virtual double? Max { get; set; }
 
     /// <summary>
     /// Price the makes order active, e.g. limit price for stop limit order
@@ -91,7 +91,6 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Order events
     /// </summary>
-    [JsonIgnore]
     public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
 
     /// <summary>
@@ -110,7 +109,7 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public double? GetDirection()
+    public double? GetSide()
     {
       switch (Side)
       {
@@ -126,10 +125,10 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public double? GetVolume()
+    public double? GetAmount()
     {
-      var volume = Transaction?.Volume ?? 0;
-      var sideVolume = Orders.Sum(o => o.Transaction?.Volume ?? 0);
+      var volume = Transaction?.Amount ?? 0;
+      var sideVolume = Orders.Sum(o => o.Transaction?.Amount ?? 0);
 
       return volume + sideVolume;
     }
@@ -139,7 +138,7 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public virtual double? GetOpenEstimate()
+    public virtual double? GetOpenPrice()
     {
       var point = Transaction.Instrument.Point;
 
@@ -160,7 +159,7 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    public virtual double? GetCloseEstimate()
+    public virtual double? GetClosePrice()
     {
       var point = Transaction.Instrument.Point;
 
@@ -183,7 +182,7 @@ namespace Terminal.Core.Models
     /// <returns></returns>
     public double? GetPointsEstimate(double? price = null)
     {
-      return ((price ?? GetCloseEstimate()) - Price) * GetDirection();
+      return ((price ?? GetClosePrice()) - Transaction.AveragePrice) * GetSide();
     }
 
     /// <summary>
@@ -191,16 +190,16 @@ namespace Terminal.Core.Models
     /// </summary>
     /// <param name="price"></param>
     /// <returns></returns>
-    public double? GetGainEstimate(double? price = null)
+    public double? GetEstimate(double? price = null)
     {
-      var volume = Transaction.Volume;
+      var amount = Transaction.Amount;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
-      var estimate = volume * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;
+      var estimate = amount * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;
 
       Gain = estimate ?? Gain ?? 0;
-      GainMin = Math.Min(GainMin ?? 0, Gain.Value);
-      GainMax = Math.Max(GainMax ?? 0, Gain.Value);
+      Min = Math.Min(Min ?? 0, Gain.Value);
+      Max = Math.Max(Max ?? 0, Gain.Value);
 
       return estimate;
     }
@@ -210,11 +209,11 @@ namespace Terminal.Core.Models
     /// </summary>
     public virtual object Clone()
     {
-      var clone = MemberwiseClone() as OrderModel;
+      var copy = MemberwiseClone() as OrderModel;
 
-      clone.Transaction = Transaction?.Clone() as TransactionModel;
+      copy.Transaction = Transaction?.Clone() as TransactionModel;
 
-      return clone;
+      return copy;
     }
   }
 }

@@ -34,7 +34,6 @@ namespace Terminal.Pages.Gateways
     {
       Name = "DOGE/USD",
       Type = InstrumentEnum.Coins,
-      TimeFrame = TimeSpan.FromMinutes(1)
     };
 
     /// <summary>
@@ -78,9 +77,9 @@ namespace Terminal.Pages.Gateways
       var account = new Account
       {
         Descriptor = "Demo",
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [Instrument.Name] = new StateModel { Instrument = Instrument },
+          [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) },
         }
       };
 
@@ -97,7 +96,7 @@ namespace Terminal.Pages.Gateways
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message =>
+        .ForEach(adapter => adapter.Stream += async message =>
         {
           if (Equals(message.Next.Instrument.Name, Instrument.Name))
           {
@@ -115,7 +114,7 @@ namespace Terminal.Pages.Gateways
     {
       var name = Instrument.Name;
       var account = View.Adapters["Prime"].Account;
-      var instrument = account.State[Instrument.Name].Instrument;
+      var instrument = account.States[Instrument.Name].Instrument;
       var performance = Performance.Update([account]);
       var openOrders = account.Orders.Values.Where(o => Equals(o.Name, name));
       var openPositions = account.Positions.Values.Where(o => Equals(o.Name, name));
@@ -170,7 +169,7 @@ namespace Terminal.Pages.Gateways
 
       var TP = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
@@ -180,7 +179,7 @@ namespace Terminal.Pages.Gateways
 
       var SL = new OrderModel
       {
-        Volume = 10,
+        Amount = 10,
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
@@ -191,14 +190,14 @@ namespace Terminal.Pages.Gateways
       var order = new OrderModel
       {
         Side = side,
-        Volume = 10,
+        Amount = 10,
         Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = instrument }
         //Orders = [SL, TP]
       };
 
-      await adapter.SendOrders(order);
+      await adapter.SendOrder(order);
     }
 
     /// <summary>
@@ -216,7 +215,7 @@ namespace Terminal.Pages.Gateways
         var order = new OrderModel
         {
           Side = side,
-          Volume = position.Volume,
+          Amount = position.Amount,
           Type = OrderTypeEnum.Market,
           Transaction = new()
           {
@@ -224,7 +223,7 @@ namespace Terminal.Pages.Gateways
           }
         };
 
-        await adapter.SendOrders(order);
+        await adapter.SendOrder(order);
       }
     }
 

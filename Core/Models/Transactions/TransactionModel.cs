@@ -12,17 +12,17 @@ namespace Terminal.Core.Models
     public virtual string Id { get; set; }
 
     /// <summary>
-    /// Group
-    /// </summary>
-    public virtual string Descriptor { get; set; }
-
-    /// <summary>
     /// Size of partially filled contract
     /// </summary>
-    public virtual double? Volume { get; set; }
+    public virtual double? Amount { get; set; }
 
     /// <summary>
-    /// Open price for the order
+    /// Open price 
+    /// </summary>
+    public virtual double? AveragePrice { get; set; }
+
+    /// <summary>
+    /// Close price 
     /// </summary>
     public virtual double? Price { get; set; }
 

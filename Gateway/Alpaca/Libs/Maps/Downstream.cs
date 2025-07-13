@@ -82,7 +82,7 @@ namespace Alpaca.Mappers
       {
         Id = $"{message.OrderId}",
         Instrument = instrument,
-        Volume = GetValue(message.FilledQuantity, message.Quantity),
+        Amount = GetValue(message.FilledQuantity, message.Quantity),
         Time = message.CreatedAtUtc,
         Status = GetStatus(message.OrderStatus)
       };
@@ -93,7 +93,7 @@ namespace Alpaca.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetOrderSide(message.OrderSide),
         TimeSpan = GetTimeSpan(message.TimeInForce),
-        Volume = GetValue(message.Quantity, message.FilledQuantity),
+        Amount = GetValue(message.Quantity, message.FilledQuantity),
         Id = message.ClientOrderId
       };
 
@@ -148,10 +148,9 @@ namespace Alpaca.Mappers
 
       var action = new TransactionModel
       {
-        Price = price,
+        AveragePrice = price,
         Instrument = instrument,
-        Descriptor = $"{message.AssetId}",
-        Volume = GetValue(message.Quantity, message.AvailableQuantity)
+        Amount = GetValue(message.Quantity, message.AvailableQuantity)
       };
 
       var order = new OrderModel
@@ -160,7 +159,8 @@ namespace Alpaca.Mappers
         Type = OrderTypeEnum.Market,
         Side = GetPositionSide(message.Side),
         Price = (double)message.AverageEntryPrice,
-        Volume = GetValue(message.Quantity, message.AvailableQuantity)
+        Amount = GetValue(message.Quantity, message.AvailableQuantity),
+        Descriptor = $"{message.AssetId}"
       };
 
       return order;

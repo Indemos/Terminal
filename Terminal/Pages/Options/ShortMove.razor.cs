@@ -101,10 +101,10 @@ namespace Terminal.Pages.Options
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          ["SPY"] = new StateModel { Instrument = new InstrumentModel { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) } },
-        },
+          ["SPY"] = new SummaryModel { TimeFrame = TimeSpan.FromMinutes(1), Instrument = new InstrumentModel { Name = "SPY" } }
+        }
       };
 
       View.Adapters["Prime"] = new Adapter
@@ -119,7 +119,7 @@ namespace Terminal.Pages.Options
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += async message => await OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += async message => await OnData(message.Next));
     }
 
     /// <summary>
@@ -136,8 +136,8 @@ namespace Terminal.Pages.Options
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
-        var orders = GetOrders(point, options);
-        await adapter.SendOrders([.. orders]);
+        var order = GetOrder(point, options);
+        await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
@@ -147,7 +147,7 @@ namespace Terminal.Pages.Options
         if (orders.Count > 0)
         {
           await ClosePositions(o => Equals(o.Transaction.Instrument.Derivative.Strike, orders[0].Transaction.Instrument.Derivative.Strike));
-          await adapter.SendOrders(orders[1]);
+          await adapter.SendOrder(orders[1]);
         }
       }
 
@@ -185,7 +185,7 @@ namespace Terminal.Pages.Options
     /// <param name="point"></param>
     /// <param name="options"></param>
     /// <returns></returns>
-    protected IList<OrderModel> GetOrders(PointModel point, IList<InstrumentModel> options)
+    protected OrderModel GetOrder(PointModel point, IList<InstrumentModel> options)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -212,7 +212,7 @@ namespace Terminal.Pages.Options
 
       if (shortPut is null || shortCall is null || longPut is null || longCall is null)
       {
-        return [];
+        return null;
       }
 
       var order = new OrderModel
@@ -223,28 +223,28 @@ namespace Terminal.Pages.Options
         [
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longPut }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Long,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = longCall }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortPut }
           },
           new OrderModel
           {
-            Volume = 1,
+            Amount = 1,
             Side = OrderSideEnum.Short,
             Instruction = InstructionEnum.Side,
             Transaction = new() { Instrument = shortCall }
@@ -252,7 +252,7 @@ namespace Terminal.Pages.Options
         ]
       };
 
-      return [order];
+      return order;
     }
 
     /// <summary>
@@ -285,7 +285,7 @@ namespace Terminal.Pages.Options
 
       var order = new OrderModel
       {
-        Volume = posCall.Volume,
+        Amount = posCall.Amount,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Transaction = new()
@@ -332,7 +332,7 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
+            Amount = position.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
             Transaction = new()
@@ -341,7 +341,7 @@ namespace Terminal.Pages.Options
             }
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }
@@ -353,7 +353,7 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Volume;
+      var volume = order.Amount;
       var units = order.Transaction?.Instrument?.Leverage;
       var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;

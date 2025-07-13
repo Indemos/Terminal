@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
@@ -71,10 +70,10 @@ namespace Terminal.Pages.Shares
       var account = new Account
       {
         Balance = 25000,
-        State = new Map<string, StateModel>
+        States = new Map<string, SummaryModel>
         {
-          [assetX] = new StateModel { Instrument = new InstrumentModel { Name = assetX } },
-          [assetY] = new StateModel { Instrument = new InstrumentModel { Name = assetY } }
+          [assetX] = new SummaryModel { Instrument = new InstrumentModel { Name = assetX } },
+          [assetY] = new SummaryModel { Instrument = new InstrumentModel { Name = assetY } }
         },
       };
 
@@ -90,15 +89,15 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.DataStream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
     }
 
     protected async void OnData(PointModel point)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var summaryX = account.State[assetX];
-      var summaryY = account.State[assetY];
+      var summaryX = account.States[assetX];
+      var summaryY = account.States[assetY];
       var instrumentX = summaryX.Instrument;
       var instrumentY = summaryY.Instrument;
       var seriesX = summaryX.Points;
@@ -113,18 +112,19 @@ namespace Terminal.Pages.Shares
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var spread = (xPoint.Ask - xPoint.Bid) + (yPoint.Ask - yPoint.Bid);
-      var expenses = spread * 2;
+      var expenses = spread;
+      var positions = account.Positions.Values.Sum(o => o.Transaction.Amount);
 
       if (account.Positions.Count == 2)
       {
-        var buy = account.Positions.First(o => o.Value.Side == OrderSideEnum.Long);
-        var sell = account.Positions.First(o => o.Value.Side == OrderSideEnum.Short);
-        var gain = buy.Value.GetPointsEstimate() + sell.Value.GetPointsEstimate();
+        var buy = account.Positions.Values.First(o => o.Side == OrderSideEnum.Long);
+        var sell = account.Positions.Values.First(o => o.Side == OrderSideEnum.Short);
+        var gain = buy.GetPointsEstimate() + sell.GetPointsEstimate();
 
         switch (true)
         {
-          case true when gain > expenses: await ClosePositions(); break;
-          case true when gain < -expenses: OpenPositions(buy.Value.Transaction.Instrument, sell.Value.Transaction.Instrument); break;
+          case true when gain > expenses * 2: await ClosePositions(); break;
+          case true when gain < -expenses * positions: OpenPositions(buy.Transaction.Instrument, sell.Transaction.Instrument); break;
         }
       }
 
@@ -161,7 +161,7 @@ namespace Terminal.Pages.Shares
       var adapter = View.Adapters["Prime"];
       var orderSell = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Short,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = assetSell }
@@ -169,13 +169,14 @@ namespace Terminal.Pages.Shares
 
       var orderBuy = new OrderModel
       {
-        Volume = 1,
+        Amount = 1,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
         Transaction = new() { Instrument = assetBuy }
       };
 
-      adapter.SendOrders(orderBuy, orderSell);
+      adapter.SendOrder(orderBuy);
+      adapter.SendOrder(orderSell);
     }
 
     /// <summary>
@@ -194,7 +195,7 @@ namespace Terminal.Pages.Shares
         {
           var order = new OrderModel
           {
-            Volume = position.Volume,
+            Amount = position.Transaction.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
             Transaction = new()
@@ -203,7 +204,7 @@ namespace Terminal.Pages.Shares
             }
           };
 
-          await adapter.SendOrders(order);
+          await adapter.SendOrder(order);
         }
       }
     }

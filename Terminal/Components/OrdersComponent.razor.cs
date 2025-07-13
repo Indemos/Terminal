@@ -85,7 +85,7 @@ namespace Terminal.Components
           Time = o.Transaction.Time,
           Group = o.BasisName ?? o.Name,
           Side = o.Side ?? OrderSideEnum.None,
-          Size = o.Transaction.Volume ?? 0,
+          Size = o.Amount ?? 0,
           Price = o.Price ?? 0,
 
         }).ToList();

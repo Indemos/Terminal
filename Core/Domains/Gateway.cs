@@ -4,8 +4,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Models;
 using Terminal.Core.Services;
+using Terminal.Core.Validators;
 
 namespace Terminal.Core.Domains
 {
@@ -19,7 +21,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    Action<MessageModel<PointModel>> DataStream { get; set; }
+    Action<MessageModel<PointModel>> Stream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -92,8 +94,8 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Send new orders
     /// </summary>
-    /// <param name="orders"></param>
-    Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
+    /// <param name="order"></param>
+    Task<ResponseModel<OrderModel>> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
@@ -115,7 +117,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    public virtual Action<MessageModel<PointModel>> DataStream { get; set; }
+    public virtual Action<MessageModel<PointModel>> Stream { get; set; }
 
     /// <summary>
     /// Order stream
@@ -127,7 +129,7 @@ namespace Terminal.Core.Domains
     /// </summary>
     public Gateway()
     {
-      DataStream = o => { };
+      Stream = o => { };
       OrderStream = o => { };
     }
 
@@ -199,8 +201,8 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Send new orders
     /// </summary>
-    /// <param name="orders"></param>
-    public abstract Task<ResponseModel<List<OrderModel>>> SendOrders(params OrderModel[] orders);
+    /// <param name="order"></param>
+    public abstract Task<ResponseModel<OrderModel>> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
@@ -222,20 +224,17 @@ namespace Terminal.Core.Domains
       OrderModel merge(OrderModel subOrder, OrderModel group)
       {
         var nextOrder = subOrder.Clone() as OrderModel;
-        var groupOrders = group
+        var groupOrders = subOrder
           ?.Orders
           ?.Where(o => o.Instruction is InstructionEnum.Brace)
-          ?.Where(o => Equals(o.Name, nextOrder.Name))
-          ?.Select(o => { o.Descriptor = group.Descriptor; return o; }) ?? [];
+          ?.Select(o => merge(o, group)) ?? [];
 
         nextOrder.Descriptor = group.Descriptor;
-        nextOrder.Price ??= nextOrder.GetOpenEstimate();
         nextOrder.Type ??= group.Type ?? OrderTypeEnum.Market;
         nextOrder.TimeSpan ??= group.TimeSpan ?? OrderTimeSpanEnum.Gtc;
         nextOrder.Instruction ??= InstructionEnum.Side;
-        nextOrder.Transaction.Price ??= nextOrder.Price;
+        nextOrder.Price ??= nextOrder.GetOpenPrice();
         nextOrder.Transaction.Time ??= nextOrder?.Transaction?.Instrument?.Point?.Time;
-        nextOrder.Transaction.Volume = nextOrder.Volume;
         nextOrder.Orders = [.. groupOrders];
 
         return nextOrder;
@@ -249,7 +248,7 @@ namespace Terminal.Core.Domains
           .Select(o => merge(o, order))
           .ToList();
 
-        if (order.Volume is not null)
+        if (order.Amount is not null)
         {
           nextOrders.Add(merge(order, order));
         }
@@ -260,17 +259,51 @@ namespace Terminal.Core.Domains
     }
 
     /// <summary>
-    /// Setup accounts
+    /// Preprocess order
     /// </summary>
-    /// <param name="point"></param>
-    protected virtual IList<IAccount> SetupAccounts(params IAccount[] accounts)
+    /// <param name="order"></param>
+    /// <returns></returns>
+    protected virtual async Task<List<ErrorModel>> SubscribeToOrder(OrderModel order)
     {
-      foreach (var account in accounts)
+      var response = new List<ErrorModel>();
+      var validator = InstanceService<OrderValidator>.Instance;
+      var orders = order.Orders.Append(order);
+
+      foreach (var subOrder in orders)
       {
-        account.InitialBalance = account.Balance;
+        var errors = validator
+          .Validate(order)
+          .Errors
+          .Select(error => new ErrorModel { ErrorMessage = error.ErrorMessage });
+
+        response.AddRange(errors);
+
+        if (errors.IsEmpty() && subOrder.Name is not null)
+        {
+          await Subscribe(subOrder.Transaction.Instrument);
+        }
       }
 
-      return accounts;
+      return response;
+    }
+
+    /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="instrument"></param>
+    protected virtual InstrumentModel UpdateInstrument(InstrumentModel instrument)
+    {
+      var summary = Account.States.Get(instrument.Name);
+      var position = Account.Positions.Get(instrument.Name);
+
+      summary.Instrument = instrument;
+
+      if (position?.Transaction is not null)
+      {
+        position.Transaction.Instrument = instrument;
+      }
+
+      return instrument;
     }
 
     /// <summary>
