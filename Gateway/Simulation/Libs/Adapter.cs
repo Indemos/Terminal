@@ -291,7 +291,7 @@ namespace Simulation
       }
 
       return currentOrder.Transaction.Amount < nextOrder.Amount ?
-        ReverseSide(currentOrder, nextOrder) : 
+        ReverseSide(currentOrder, nextOrder) :
         ReduceSide(currentOrder, nextOrder);
     }
 
@@ -346,7 +346,6 @@ namespace Simulation
     /// <summary>
     /// Increase size of the order
     /// </summary>
-    /// <param name="currentOrder"></param>
     /// <param name="nextOrder"></param>
     /// <returns></returns>
     protected virtual OrderModel CreateSide(OrderModel nextOrder)
@@ -375,6 +374,7 @@ namespace Simulation
 
       order.Transaction.AveragePrice = GetGroupPrice(currentOrder, nextOrder);
       order.Transaction.Amount = currentOrder.Transaction.Amount + nextOrder.Amount;
+      order.Amount = order.Transaction.Amount;
 
       Account.Positions[order.Name] = order;
 
@@ -394,8 +394,10 @@ namespace Simulation
 
       closeOrder.Transaction.Price = nextOrder.Price;
       closeOrder.Transaction.Amount = nextOrder.Amount;
+      closeOrder.Amount = closeOrder.Transaction.Amount;
 
       order.Transaction.Amount = currentOrder.Transaction.Amount - nextOrder.Amount;
+      order.Amount = order.Transaction.Amount;
 
       Account.Positions[order.Name] = order;
       Account.Deals.Add(closeOrder);
@@ -416,8 +418,10 @@ namespace Simulation
       var order = nextOrder.Clone() as OrderModel;
 
       closeOrder.Transaction.Price = nextOrder.Price;
+      order.Transaction.AveragePrice = nextOrder.Price;
       order.Transaction.Amount = nextOrder.Amount - currentOrder.Transaction.Amount;
       order.Transaction.Status = OrderStatusEnum.Filled;
+      order.Amount = order.Transaction.Amount;
 
       Account.Positions[order.Name] = order;
       Account.Deals.Add(closeOrder);
@@ -442,9 +446,10 @@ namespace Simulation
         if (IsOrderExecutable(order))
         {
           ProcessOrder(order);
+
           Account.Orders = Account
             .Orders
-            .Where(o => Equals(o.Value.Descriptor, order.Descriptor) is false)
+            .Where(o => o.Value.Instruction is not InstructionEnum.Brace && Equals(o.Value.Id, order.Id) is false)
             .ToDictionary(o => o.Key, o => o.Value)
             .Concurrent();
         }
@@ -458,22 +463,25 @@ namespace Simulation
     /// <returns></returns>
     protected virtual bool IsOrderExecutable(OrderModel order)
     {
-      var isExecutable = false;
       var point = order.Transaction.Instrument.Point;
-      var isBuyStopLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.StopLimit && point.Ask >= order.ActivationPrice;
-      var isSellStopLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.StopLimit && point.Bid <= order.ActivationPrice;
+      var isLong = order.Side is OrderSideEnum.Long;
+      var isShort = order.Side is OrderSideEnum.Short;
 
-      order.Type = isBuyStopLimit || isSellStopLimit ? OrderTypeEnum.Limit : order.Type;
+      if (order.Type is OrderTypeEnum.StopLimit)
+      {
+        var isLongLimit = isLong && point.Ask >= order.ActivationPrice;
+        var isShortLimit = isShort && point.Bid <= order.ActivationPrice;
 
-      var isBuyStop = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.Stop;
-      var isSellStop = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.Stop;
-      var isBuyLimit = order.Side is OrderSideEnum.Long && order.Type is OrderTypeEnum.Limit;
-      var isSellLimit = order.Side is OrderSideEnum.Short && order.Type is OrderTypeEnum.Limit;
+        order.Type = isLongLimit || isShortLimit ? OrderTypeEnum.Limit : order.Type;
+      }
 
-      isExecutable = isBuyStop || isSellLimit ? point.Ask >= order.Price : isExecutable;
-      isExecutable = isSellStop || isBuyLimit ? point.Bid <= order.Price : isExecutable;
+      switch (order.Type)
+      {
+        case OrderTypeEnum.Stop: return isLong ? point.Ask >= order.Price : point.Bid <= order.Price;
+        case OrderTypeEnum.Limit: return isLong ? point.Ask <= order.Price : point.Bid >= order.Price;
+      }
 
-      return isExecutable;
+      return false;
     }
 
     /// <summary>

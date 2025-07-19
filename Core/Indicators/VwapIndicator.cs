@@ -14,9 +14,9 @@ namespace Terminal.Core.Indicators
     /// <param name="collection"></param>
     public override VwapIndicator Update(IList<PointModel> collection)
     {
-      var current = collection.LastOrDefault();
+      var currentPoint = collection.LastOrDefault();
 
-      if (current?.Bar is null)
+      if (currentPoint?.Bar is null)
       {
         return this;
       }
@@ -49,7 +49,7 @@ namespace Terminal.Core.Indicators
         Point.Bar.Low = average - 2.0 * deviation;
       }
 
-      current.Series[Name] = Point.Clone() as PointModel;
+      currentPoint.Series[Name] = Point.Clone() as PointModel;
 
       return this;
     }

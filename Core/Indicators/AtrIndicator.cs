@@ -28,13 +28,14 @@ namespace Terminal.Core.Indicators
         return this;
       }
 
+      var interval = Math.Min(Interval, collection.Count);
       var value =
         Math.Max(currentPoint.Bar.High.Value, previousPoint.Bar.Close.Value) -
         Math.Min(currentPoint.Bar.Low.Value, previousPoint.Bar.Close.Value);
 
-      if (collection.Count > Interval)
+      if (interval is not 0)
       {
-        value = (currentPoint.Series[Name].Last.Value * Math.Max(Interval - 1, 0) + value) / Interval;
+        value = (currentPoint.Series[Name].Last.Value * Math.Max(Interval - 1, 0) + value) / interval;
       }
 
       Point.Last = value;

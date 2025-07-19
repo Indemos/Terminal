@@ -50,6 +50,7 @@ namespace Terminal.Core.Indicators
       }
 
       var value = currentPoint.Last ?? 0.0;
+      var interval = Math.Min(Interval, collection.Count);
       var comService = InstanceService<AverageService>.Instance;
 
       min = min is null ? value : Math.Min(min.Value, value);
@@ -60,7 +61,7 @@ namespace Terminal.Core.Indicators
         value = Min + (value - min.Value) * (Max - Min) / (max.Value - min.Value);
       }
 
-      Point.Last = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, Interval);
+      Point.Last = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, interval);
 
       return this;
     }

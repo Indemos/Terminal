@@ -178,24 +178,20 @@ namespace Terminal.Core.Models
     /// <summary>
     /// Estimated PnL in points for one side of the order
     /// </summary>
-    /// <param name="price"></param>
-    /// <returns></returns>
-    public double? GetPointsEstimate(double? price = null)
+    public double? GetPointsEstimate()
     {
-      return ((price ?? GetClosePrice()) - Transaction.AveragePrice) * GetSide();
+      return ((Transaction.Price ?? GetClosePrice()) - Transaction.AveragePrice) * GetSide();
     }
 
     /// <summary>
     /// Estimated PnL in account's currency for one side of the order
     /// </summary>
-    /// <param name="price"></param>
-    /// <returns></returns>
-    public double? GetEstimate(double? price = null)
+    public double? GetEstimate()
     {
       var amount = Transaction.Amount;
       var instrument = Transaction.Instrument;
       var step = instrument.StepValue / instrument.StepSize;
-      var estimate = amount * GetPointsEstimate(price) * step * instrument.Leverage - instrument.Commission;
+      var estimate = amount * GetPointsEstimate() * step * instrument.Leverage - instrument.Commission;
 
       Gain = estimate ?? Gain ?? 0;
       Min = Math.Min(Min ?? 0, Gain.Value);

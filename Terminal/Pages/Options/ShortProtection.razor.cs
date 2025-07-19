@@ -14,6 +14,7 @@ using Terminal.Components;
 using Terminal.Core.Collections;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
+using Terminal.Core.Extensions;
 using Terminal.Core.Indicators;
 using Terminal.Core.Models;
 using Terminal.Services;
@@ -24,16 +25,19 @@ namespace Terminal.Pages.Options
   {
     [Inject] IConfiguration Configuration { get; set; }
 
+    protected virtual double? Strike { get; set; }
     protected virtual ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
+    protected virtual ChartsComponent IndicatorsView { get; set; }
     protected virtual ChartsComponent DeltaView { get; set; }
-    protected virtual ChartsComponent ExposureView { get; set; }
     protected virtual ChartsComponent PerformanceView { get; set; }
     protected virtual DealsComponent DealsView { get; set; }
     protected virtual OrdersComponent OrdersView { get; set; }
     protected virtual PositionsComponent PositionsView { get; set; }
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
+    protected virtual MaIndicator HPF { get; set; }
+    protected virtual MaIndicator LPF { get; set; }
     protected virtual OptionPriceService OptionService { get; set; }
 
     /// <summary>
@@ -76,12 +80,12 @@ namespace Terminal.Pages.Options
     {
       await DeltaView.Create("Delta");
       await ChartsView.Create("Prices");
-      await ExposureView.Create("Exposure");
+      await IndicatorsView.Create("Indicators");
       await PerformanceView.Create("Performance");
 
       DeltaView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      ExposureView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
       ChartsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
+      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
       PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
     }
 
@@ -120,6 +124,8 @@ namespace Terminal.Pages.Options
         Source = Configuration["Simulation:Source"]
       };
 
+      HPF = new MaIndicator { Name = "HPF", Interval = 5 };
+      LPF = new MaIndicator { Name = "LPF", Interval = 50 };
       Performance = new PerformanceIndicator { Name = "Balance" };
 
       View
@@ -139,50 +145,246 @@ namespace Terminal.Pages.Options
       var account = adapter.Account;
       var performance = Performance.Update([account]);
       var options = await GetOptions(point, point.Time.Value);
+      var averageL = LPF.Update(account.States.Get(point.Instrument.Name).PointGroups);
+      var averageH = HPF.Update(account.States.Get(point.Instrument.Name).PointGroups);
+      var (basisDelta, callDelta, putDelta) = UpdateIndicators(point);
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
+        Strike = point.Last;
         var order = GetOrder(point, options);
         await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
       {
-        var (basisDelta, optionDelta) = UpdateIndicators(point);
-        var isSell = basisDelta < 0 && optionDelta > 0;
-        var isBuy = basisDelta > 0 && optionDelta < 0;
-
-        if (optionDelta is 0)
-        {
-          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
-        }
-        else if (basisDelta is 0 || isBuy || isSell)
-        {
-          var order = new OrderModel
-          {
-            Amount = 50,
-            Type = OrderTypeEnum.Market,
-            Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
-            Transaction = new() { Instrument = point.Instrument }
-          };
-
-          await ClosePositions(o => o.Transaction.Instrument.Type is InstrumentEnum.Shares);
-          await adapter.SendOrder(order);
-        }
+        await DeltaHedge(point, averageL, averageH, callDelta, putDelta, basisDelta);
+        //await StrikeHedge(point);
+        //await AverageHedge(point, averageL, averageH);
+        //await LargestLossHedge(point);
+        //await SideDeltaHedge(point, callDelta, putDelta);
+        //await BarCountHedge(point);
       }
 
       DealsView.UpdateItems([.. View.Adapters.Values]);
       OrdersView.UpdateItems([.. View.Adapters.Values]);
       PositionsView.UpdateItems([.. View.Adapters.Values]);
       ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Bars", ChartsView.GetShape<CandleShape>(point));
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "LPF", new LineShape { Y = averageL.Point.Last });
+      ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "HPF", new LineShape { Y = averageH.Point.Last });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
       PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Point, SKColors.OrangeRed));
     }
 
     /// <summary>
+    /// Calculate delta of the entire condor and open protective position in the same direction
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task DeltaHedge(
+      PointModel point,
+      MaIndicator averageL,
+      MaIndicator averageH,
+      double callDelta,
+      double putDelta,
+      double basisDelta)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var optionDelta = putDelta + callDelta;
+      var isLong = basisDelta < 0 && optionDelta > 0;
+      var isShort = basisDelta > 0 && optionDelta < 0;
+
+      if (basisDelta is 0 || isLong || isShort)
+      {
+        var order = new OrderModel
+        {
+          Amount = 50,
+          Type = OrderTypeEnum.Market,
+          Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await adapter.SendOrder(order);
+      }
+    }
+
+    /// <summary>
+    /// Open protective position with the same delta as a single short option when it becomes ITM and its delta increases
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task LargestLossHedge(PointModel point)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var shortCall = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative?.Side is OptionSideEnum.Call)
+        .FirstOrDefault();
+
+      var shortPut = account
+        .Positions
+        .Values
+        .Where(o => o.Side is OrderSideEnum.Short)
+        .Where(o => o.Transaction.Instrument.Derivative?.Side is OptionSideEnum.Put)
+        .FirstOrDefault();
+
+      if (shortPut is not null && shortCall is not null)
+      {
+        var rawDelta = GetDelta(point.Last < shortPut.Transaction.Instrument.Derivative.Strike ? shortPut : shortCall);
+        var optionDelta = Math.Round(rawDelta, MidpointRounding.ToZero);
+        var basisDelta = Math.Round(account
+          .Positions
+          .Values
+          .Where(o => o.Transaction.Instrument.Derivative is null)
+          .Sum(GetDelta), MidpointRounding.ToZero);
+
+        var delta = optionDelta + basisDelta;
+
+        if (Equals(optionDelta, -basisDelta) is false)
+        {
+          var order = new OrderModel
+          {
+            Amount = Math.Abs(delta),
+            Type = OrderTypeEnum.Market,
+            Side = delta < 0 ? OrderSideEnum.Long : OrderSideEnum.Short,
+            Transaction = new() { Instrument = point.Instrument }
+          };
+
+          await adapter.SendOrder(order);
+        }
+      }
+    }
+
+    /// <summary>
+    /// Protect only one side of the condor, either call or put spread, based on which delta is penetrated deeper
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task SideDeltaHedge(PointModel point, double callDelta, double putDelta)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var position = account.Positions.Values.FirstOrDefault(o => o.Transaction.Instrument.Derivative is null);
+      var isLong = (position is null || position.Side is OrderSideEnum.Short) && Math.Abs(putDelta) < Math.Abs(callDelta);
+      var isShort = (position is null || position.Side is OrderSideEnum.Long) && Math.Abs(putDelta) > Math.Abs(callDelta);
+
+      if (isLong || isShort)
+      {
+        var order = new OrderModel
+        {
+          Amount = 50,
+          Type = OrderTypeEnum.Market,
+          Side = isShort ? OrderSideEnum.Short : OrderSideEnum.Long,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await adapter.SendOrder(order);
+      }
+    }
+
+    /// <summary>
+    /// Open position in the direction of prevailing bars, above or below moving average
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task BarCountHedge(PointModel point)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var summary = account.States.Get(point.Instrument.Name);
+      var position = account.Positions.Values.FirstOrDefault(o => o.Transaction.Instrument.Derivative is null);
+      var countUps = summary.PointGroups.Sum(o => o.Series.Get("HPF").Last > o.Series.Get("LPF").Last ? 1 : 0);
+      var countDowns = summary.PointGroups.Sum(o => o.Series.Get("HPF").Last < o.Series.Get("LPF").Last ? 1 : 0);
+      var isLong = (position is null || position.Side is OrderSideEnum.Short) && countUps > countDowns;
+      var isShort = (position is null || position.Side is OrderSideEnum.Long) && countUps < countDowns;
+      var com = new ComponentModel { Color = SKColors.LimeGreen };
+      var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
+      var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+
+      if (isLong || isShort)
+      {
+        var order = new OrderModel
+        {
+          Amount = 50,
+          Type = OrderTypeEnum.Market,
+          Side = isShort ? OrderSideEnum.Short : OrderSideEnum.Long,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await adapter.SendOrder(order);
+      }
+
+      IndicatorsView.UpdateItems(point.Time.Value.Ticks, "Indicators", "Ups", new BarShape { Y = countUps, Component = comUp });
+      IndicatorsView.UpdateItems(point.Time.Value.Ticks, "Indicators", "Downs", new BarShape { Y = -countDowns, Component = comDown });
+    }
+
+    /// <summary>
+    /// Hedge total option position 
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task StrikeHedge(PointModel point)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var position = account.Positions.Values.FirstOrDefault(o => o.Transaction.Instrument.Derivative is null);
+      var isUp = (position is null || position.Side is OrderSideEnum.Short) && point.Last > Strike;
+      var isDown = (position is null || position.Side is OrderSideEnum.Long) && point.Last < Strike;
+
+      if (isUp || isDown)
+      {
+        var order = new OrderModel
+        {
+          Amount = 50,
+          Type = OrderTypeEnum.Market,
+          Side = isUp ? OrderSideEnum.Long : OrderSideEnum.Short,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await adapter.SendOrder(order);
+      }
+    }
+
+    /// <summary>
+    /// Hedge total option position based on moving average
+    /// </summary>
+    /// <param name="point"></param>
+    /// <returns></returns>
+    protected virtual async Task AverageHedge(PointModel point, MaIndicator averageL, MaIndicator averageH)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var position = account.Positions.Values.FirstOrDefault(o => o.Transaction.Instrument.Derivative is null);
+      var isUp = (position is null || position.Side is OrderSideEnum.Short) && averageH.Point.Last > averageL.Point.Last;
+      var isDown = (position is null || position.Side is OrderSideEnum.Long) && averageH.Point.Last < averageL.Point.Last;
+
+      if (isUp || isDown)
+      {
+        var order = new OrderModel
+        {
+          Amount = 100,
+          Type = OrderTypeEnum.Market,
+          Side = isUp ? OrderSideEnum.Long : OrderSideEnum.Short,
+          Transaction = new() { Instrument = point.Instrument }
+        };
+
+        await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
+        await adapter.SendOrder(order);
+      }
+    }
+
+    /// <summary>
     /// Render indicators
     /// </summary>
-    protected virtual (double, double) UpdateIndicators(PointModel point)
+    protected virtual (double, double, double) UpdateIndicators(PointModel point)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -197,10 +399,16 @@ namespace Terminal.Pages.Options
         .Where(o => o.Transaction.Instrument.Derivative is null)
         .Sum(GetDelta), MidpointRounding.ToZero);
 
-      var optionDelta = Math.Round(account
+      var putDelta = Math.Round(account
         .Positions
         .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Where(o => o.Transaction.Instrument.Derivative?.Side is OptionSideEnum.Put)
+        .Sum(GetDelta), MidpointRounding.ToZero);
+
+      var callDelta = Math.Round(account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative?.Side is OptionSideEnum.Call)
         .Sum(GetDelta), MidpointRounding.ToZero);
 
       var customOptionDelta = Math.Round(account
@@ -220,18 +428,12 @@ namespace Terminal.Pages.Options
 
         }), MidpointRounding.ToZero);
 
-      var positionSigma = account
-        .Positions
-        .Values
-        .Where(o => o.Transaction.Instrument.Derivative is not null)
-        .Sum(o => o.Transaction.Instrument.Derivative.Volatility ?? 0);
-
-      ExposureView.UpdateItems(point.Time.Value.Ticks, "Exposure", "Sigma", new AreaShape { Y = positionSigma, Component = com });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = comUp });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Option Delta", new LineShape { Y = optionDelta, Component = comDown });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = com });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Call Delta", new LineShape { Y = callDelta, Component = comUp });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Put Delta", new LineShape { Y = putDelta, Component = comDown });
       DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Custom Option Delta", new LineShape { Y = customOptionDelta, Component = com });
 
-      return (basisDelta, customOptionDelta);
+      return (basisDelta, callDelta, putDelta);
     }
 
     /// <summary>
@@ -346,7 +548,7 @@ namespace Terminal.Pages.Options
         {
           var order = new OrderModel
           {
-            Amount = position.Amount,
+            Amount = position.Transaction.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
             Type = OrderTypeEnum.Market,
             Transaction = new()

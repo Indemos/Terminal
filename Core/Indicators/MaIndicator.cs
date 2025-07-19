@@ -1,4 +1,5 @@
 using Distribution.Services;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
@@ -53,9 +54,12 @@ namespace Terminal.Core.Indicators
         case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
       }
 
-      var average = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, Interval);
+      var interval = Math.Min(Interval, collection.Count);
+      var average = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, interval);
 
       Point.Last = average.Is(0) ? value : average;
+
+      currentPoint.Series[Name] = Point.Clone() as PointModel;
 
       return this;
     }

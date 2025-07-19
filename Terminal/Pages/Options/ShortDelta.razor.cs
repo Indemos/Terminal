@@ -138,14 +138,14 @@ namespace Terminal.Pages.Options
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var order = GetOrder(point, options);
-        await adapter.SendOrder(order);
+        if (order is not null) await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
         var order = GetUpdate(point, basisDelta, optionDelta);
-        await adapter.SendOrder(order);
+        if (order is not null) await adapter.SendOrder(order);
       }
 
       DealsView.UpdateItems([.. View.Adapters.Values]);
@@ -196,7 +196,7 @@ namespace Terminal.Pages.Options
     {
       var delta = optionDelta + basisDelta;
 
-      if (Math.Abs(delta) > 0)
+      if (Equals(optionDelta, -basisDelta) is false)
       {
         var order = new OrderModel
         {
@@ -315,12 +315,42 @@ namespace Terminal.Pages.Options
     /// <returns></returns>
     protected static double GetDelta(OrderModel order)
     {
-      var volume = order.Amount;
+      var volume = order.Transaction.Amount;
       var units = order.Transaction?.Instrument?.Leverage;
       var delta = order.Transaction?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 
       return ((delta ?? volume) * units * side) ?? 0;
+    }
+
+    /// <summary>
+    /// Close positions
+    /// </summary>
+    /// <param name="condition"></param>
+    /// <returns></returns>
+    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
+    {
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+
+      foreach (var position in adapter.Account.Positions.Values.ToList())
+      {
+        if (condition is null || condition(position))
+        {
+          var order = new OrderModel
+          {
+            Amount = position.Transaction.Amount,
+            Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+            Type = OrderTypeEnum.Market,
+            Transaction = new()
+            {
+              Instrument = position.Transaction.Instrument
+            }
+          };
+
+          await adapter.SendOrder(order);
+        }
+      }
     }
   }
 }

@@ -46,8 +46,9 @@ namespace Terminal.Core.Indicators
         }
       }
 
-      var averageUp = comService.SimpleAverage(ups, ups.Count - 1, Interval);
-      var averageDown = comService.SimpleAverage(downs, downs.Count - 1, Interval);
+      var interval = Math.Min(Interval, collection.Count);
+      var averageUp = comService.SimpleAverage(ups, ups.Count - 1, interval);
+      var averageDown = comService.SimpleAverage(downs, downs.Count - 1, interval);
       var average = averageDown.Is(0) ? 1.0 : averageUp / averageDown;
 
       Point.Last = 100.0 - 100.0 / (1.0 + average);

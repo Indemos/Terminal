@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Terminal.Core.Collections;
 using Terminal.Core.Models;
 
 namespace Terminal.Core.Domains
@@ -16,7 +17,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point
     /// </summary>
-    PointModel Point { get; set; }
+    PointModel Point { get; }
 
     /// <summary>
     /// Calculate indicator values
@@ -38,7 +39,7 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point
     /// </summary>
-    public virtual PointModel Point { get; set; }
+    public virtual PointModel Point { get; protected set; }
 
     /// <summary>
     /// Constructor

@@ -10,9 +10,9 @@ namespace Terminal.Core.Validators
   {
     public AccountValidator()
     {
-      RuleFor(o => o.Descriptor).NotEmpty();
+      RuleFor(o => o.States).NotEmpty();
       RuleFor(o => o.Balance).NotEmpty();
-      RuleFor(o => o.InitialBalance).NotEmpty();
+      RuleFor(o => o.Descriptor).NotEmpty();
     }
   }
 }

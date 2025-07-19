@@ -84,7 +84,7 @@ namespace Terminal.Components
           Time = o.Transaction.Time,
           Side = o.Side ?? OrderSideEnum.None,
           Size = o.Transaction.Amount ?? 0,
-          OpenPrice = o.Transaction.Price ?? 0,
+          OpenPrice = o.Transaction.AveragePrice ?? 0,
           ClosePrice = o.GetClosePrice() ?? 0,
           Gain = o.GetEstimate() ?? o.Gain ?? 0
 
