@@ -100,13 +100,7 @@ namespace Terminal.Components
           Next = SubscriptionEnum.Progress,
         };
 
-        await Task.WhenAll(Adapters
-          .Values
-          .SelectMany(adapter => adapter
-            .Account
-            .States
-            .Values
-            .Select(o => adapter.Subscribe(o.Instrument))));
+        await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Subscribe()));
 
         SubscriptionState = new MessageModel<SubscriptionEnum>
         {
@@ -130,13 +124,7 @@ namespace Terminal.Components
           Next = SubscriptionEnum.Progress,
         };
 
-        await Task.WhenAll(Adapters
-          .Values
-          .SelectMany(adapter => adapter
-            .Account
-            .States
-            .Values
-            .Select(o => adapter.Unsubscribe(o.Instrument))));
+        await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Unsubscribe()));
 
         SubscriptionState = new MessageModel<SubscriptionEnum>
         {

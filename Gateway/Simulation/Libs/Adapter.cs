@@ -8,11 +8,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Security.Principal;
 using System.Text.Json;
 using System.Threading.Tasks;
 using System.Timers;
-using System.Transactions;
 using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
@@ -22,6 +20,11 @@ namespace Simulation
 {
   public class Adapter : Gateway, IDisposable
   {
+    /// <summary>
+    /// Timer
+    /// </summary>
+    protected Timer interval;
+
     /// <summary>
     /// HTTP service
     /// </summary>
@@ -101,11 +104,11 @@ namespace Simulation
 
       var span = TimeSpan.FromMicroseconds(Speed);
       var scheduler = InstanceService<ScheduleService>.Instance;
-      var interval = new Timer(span);
 
+      interval = new Timer(span);
       interval.Enabled = true;
       interval.AutoReset = true;
-      interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()));
+      interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()), false);
 
       connections.Add(interval);
 
@@ -175,6 +178,35 @@ namespace Simulation
     }
 
     /// <summary>
+    /// Unsubscribe from streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
+    {
+      subscriptions.TryRemove(instrument.Name, out var subscription);
+      return Task.FromResult(new ResponseModel<StatusEnum>());
+    }
+
+    /// <summary>
+    /// Subscribe
+    /// </summary>
+    public override Task<ResponseModel<StatusEnum>> Subscribe()
+    {
+      interval.Start();
+      return base.Subscribe();
+    }
+
+    /// <summary>
+    /// Unsubscribe
+    /// </summary>
+    public override Task<ResponseModel<StatusEnum>> Unsubscribe()
+    {
+      interval.Stop();
+      return base.Unsubscribe();
+    }
+
+    /// <summary>
     /// Save state and dispose
     /// </summary>
     public override async Task<ResponseModel<StatusEnum>> Disconnect()
@@ -187,18 +219,6 @@ namespace Simulation
       connections?.Clear();
 
       return new ResponseModel<StatusEnum>();
-    }
-
-    /// <summary>
-    /// Unsubscribe from streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    /// <returns></returns>
-    public override Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument)
-    {
-      subscriptions.TryRemove(instrument.Name, out var subscription);
-
-      return Task.FromResult(new ResponseModel<StatusEnum>());
     }
 
     /// <summary>

@@ -53,6 +53,16 @@ namespace Terminal.Core.Domains
     Task<ResponseModel<StatusEnum>> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
+    /// Subscribe
+    /// </summary>
+    Task<ResponseModel<StatusEnum>> Subscribe();
+
+    /// <summary>
+    /// Unsubscribe
+    /// </summary>
+    Task<ResponseModel<StatusEnum>> Unsubscribe();
+
+    /// <summary>
     /// Get account state
     /// </summary>
     Task<ResponseModel<IAccount>> GetAccount();
@@ -214,6 +224,38 @@ namespace Terminal.Core.Domains
     /// Dispose
     /// </summary>
     public virtual void Dispose() => Disconnect();
+
+    /// <summary>
+    /// Subscribe
+    /// </summary>
+    public virtual async Task<ResponseModel<StatusEnum>> Subscribe()
+    {
+      await Task.WhenAll(Account
+        .States
+        .Values
+        .Select(o => Subscribe(o.Instrument)));
+
+      return new ResponseModel<StatusEnum>
+      {
+        Data = StatusEnum.Active
+      };
+    }
+
+    /// <summary>
+    /// Unsubscribe
+    /// </summary>
+    public virtual async Task<ResponseModel<StatusEnum>> Unsubscribe()
+    {
+      await Task.WhenAll(Account
+        .States
+        .Values
+        .Select(o => Unsubscribe(o.Instrument)));
+
+      return new ResponseModel<StatusEnum>
+      {
+        Data = StatusEnum.Active
+      };
+    }
 
     /// <summary>
     /// Create separate orders when combo-orders are not supported
