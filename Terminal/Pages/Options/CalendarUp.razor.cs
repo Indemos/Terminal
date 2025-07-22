@@ -5,7 +5,6 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -19,7 +18,7 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class LongCalendar
+  public partial class CalendarUp
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -301,16 +300,16 @@ namespace Terminal.Pages.Options
         .Derivative
         .Strike;
 
-      if (sharesPosition.Count is not 0 && point.Last.Value - 1 > strike)
+      if (sharesPosition.Count is not 0 && point.Last.Value > strike)
       {
         await ClosePositions(o => o.Transaction.Instrument.Derivative is null);
       }
 
-      if (sharesPosition.Count is 0 && point.Last.Value - 1 < strike)
+      if (sharesPosition.Count is 0 && point.Last.Value < strike)
       {
         var order = new OrderModel
         {
-          Amount = 100,
+          Amount = 50,
           Type = OrderTypeEnum.Market,
           Side = OrderSideEnum.Short,
           Transaction = new() { Instrument = point.Instrument }

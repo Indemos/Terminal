@@ -18,6 +18,7 @@ namespace Terminal.Core.Validators
         RuleFor(o => o.Type).NotEmpty();
         RuleFor(o => o.Side).NotEmpty();
         RuleFor(o => o.Name).NotEmpty();
+        RuleFor(o => o.Amount).GreaterThan(0);
       });
 
       When(o => o.Transaction is not null, () =>

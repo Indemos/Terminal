@@ -6,7 +6,6 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -140,14 +139,14 @@ namespace Terminal.Pages.Options
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var order = GetOrder(point, options);
-        await adapter.SendOrder(order);
+        if (order is not null) await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
       {
         var (basisDelta, optionDelta) = UpdateIndicators(point);
         var order = GetUpdate(point, basisDelta, optionDelta);
-        await adapter.SendOrder(order);
+        if (order is not null) await adapter.SendOrder(order);
       }
 
       DealsView.UpdateItems([.. View.Adapters.Values]);
@@ -198,7 +197,7 @@ namespace Terminal.Pages.Options
     {
       var delta = optionDelta + basisDelta;
 
-      if (Math.Abs((point.Last - Strike).Value) >= 0.50)
+      if (Equals(optionDelta, -basisDelta) is false)
       {
         var order = new OrderModel
         {

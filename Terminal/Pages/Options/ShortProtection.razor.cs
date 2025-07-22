@@ -147,7 +147,7 @@ namespace Terminal.Pages.Options
       var options = await GetOptions(point, point.Time.Value);
       var averageL = LPF.Update(account.States.Get(point.Instrument.Name).PointGroups);
       var averageH = HPF.Update(account.States.Get(point.Instrument.Name).PointGroups);
-      var (basisDelta, callDelta, putDelta) = UpdateIndicators(point);
+      var (basisDelta, callDelta, putDelta, indicator) = UpdateIndicators(point);
 
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
@@ -158,11 +158,11 @@ namespace Terminal.Pages.Options
 
       if (account.Positions.Count > 0)
       {
-        await DeltaHedge(point, averageL, averageH, callDelta, putDelta, basisDelta);
+        //await GammaHedge(point, averageL, averageH, callDelta, putDelta, basisDelta, indicator);
         //await StrikeHedge(point);
-        //await AverageHedge(point, averageL, averageH);
-        //await LargestLossHedge(point);
-        //await SideDeltaHedge(point, callDelta, putDelta);
+        await AverageHedge(point, averageL, averageH);
+        //await SideDeltaHedge(point);
+        //await SideHedge(point, callDelta, putDelta);
         //await BarCountHedge(point);
       }
 
@@ -181,19 +181,20 @@ namespace Terminal.Pages.Options
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    protected virtual async Task DeltaHedge(
+    protected virtual async Task GammaHedge(
       PointModel point,
       MaIndicator averageL,
       MaIndicator averageH,
       double callDelta,
       double putDelta,
-      double basisDelta)
+      double basisDelta,
+      double indicator)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var optionDelta = putDelta + callDelta;
-      var isLong = basisDelta < 0 && optionDelta > 0;
-      var isShort = basisDelta > 0 && optionDelta < 0;
+      var isLong = basisDelta < 0 && indicator > 0;
+      var isShort = basisDelta > 0 && indicator < 0;
 
       if (basisDelta is 0 || isLong || isShort)
       {
@@ -201,7 +202,7 @@ namespace Terminal.Pages.Options
         {
           Amount = 50,
           Type = OrderTypeEnum.Market,
-          Side = optionDelta < 0 ? OrderSideEnum.Short : OrderSideEnum.Long,
+          Side = isShort ? OrderSideEnum.Short : OrderSideEnum.Long,
           Transaction = new() { Instrument = point.Instrument }
         };
 
@@ -215,7 +216,7 @@ namespace Terminal.Pages.Options
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    protected virtual async Task LargestLossHedge(PointModel point)
+    protected virtual async Task SideDeltaHedge(PointModel point)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -265,7 +266,7 @@ namespace Terminal.Pages.Options
     /// </summary>
     /// <param name="point"></param>
     /// <returns></returns>
-    protected virtual async Task SideDeltaHedge(PointModel point, double callDelta, double putDelta)
+    protected virtual async Task SideHedge(PointModel point, double callDelta, double putDelta)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
@@ -370,7 +371,7 @@ namespace Terminal.Pages.Options
       {
         var order = new OrderModel
         {
-          Amount = 100,
+          Amount = 50,
           Type = OrderTypeEnum.Market,
           Side = isUp ? OrderSideEnum.Long : OrderSideEnum.Short,
           Transaction = new() { Instrument = point.Instrument }
@@ -384,12 +385,13 @@ namespace Terminal.Pages.Options
     /// <summary>
     /// Render indicators
     /// </summary>
-    protected virtual (double, double, double) UpdateIndicators(PointModel point)
+    protected virtual (double, double, double, double) UpdateIndicators(PointModel point)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var positions = account.Positions.Values;
       var com = new ComponentModel { Color = SKColors.LimeGreen };
+      var comX = new ComponentModel { Color = SKColors.Gray };
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
 
@@ -428,12 +430,24 @@ namespace Terminal.Pages.Options
 
         }), MidpointRounding.ToZero);
 
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = com });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Call Delta", new LineShape { Y = callDelta, Component = comUp });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Put Delta", new LineShape { Y = putDelta, Component = comDown });
-      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Custom Option Delta", new LineShape { Y = customOptionDelta, Component = com });
+      var indicator = account
+        .Positions
+        .Values
+        .Where(o => o.Transaction.Instrument.Derivative is not null)
+        .Sum(o =>
+        {
+          var side = o.Side is OrderSideEnum.Short ? -1 : 1;
+          var optionSide = o.Transaction.Instrument.Derivative.Side is OptionSideEnum.Put ? -1 : 1;
 
-      return (basisDelta, callDelta, putDelta);
+          return o.Transaction.Instrument.Derivative.Variance.Gamma.Value * side * optionSide;
+
+        }) * 100;
+
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Basis Delta", new BarShape { Y = basisDelta, Component = com });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Option Delta", new LineShape { Y = callDelta + putDelta, Component = com });
+      DeltaView.UpdateItems(point.Time.Value.Ticks, "Delta", "Indicator", new LineShape { Y = indicator, Component = comX });
+
+      return (basisDelta, callDelta, putDelta, indicator);
     }
 
     /// <summary>

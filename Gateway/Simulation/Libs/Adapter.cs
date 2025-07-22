@@ -103,7 +103,7 @@ namespace Simulation
       await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
       var span = TimeSpan.FromMicroseconds(Speed);
-      var scheduler = InstanceService<ScheduleService>.Instance;
+      var scheduler = new ScheduleService();
 
       interval = new Timer(span);
       interval.Enabled = true;
@@ -111,6 +111,7 @@ namespace Simulation
       interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()), false);
 
       connections.Add(interval);
+      connections.Add(scheduler);
 
       Stream += OnPoint;
 

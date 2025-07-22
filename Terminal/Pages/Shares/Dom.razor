@@ -1,0 +1,12 @@
+@page "/shares/dom"
+
+<ControlsComponent @ref="View">
+  <ChartsComponent Name="Prices" @ref="ChartsView" />
+  <ChartsComponent Name="Indicators" @ref="IndicatorsView" />
+  <ChartsComponent Name="Chain Indicators" @ref="OptionsView" />
+  <ChartsComponent Name="Performance" @ref="PerformanceView" />
+  <OrdersComponent Name="Orders" @ref="OrdersView" />
+  <PositionsComponent Name="Positions" @ref="PositionsView" />
+  <DealsComponent Name="Deals" @ref="DealsView" />
+  <StatementsComponent Name="Statements" Adapters="View.Adapters" @ref="StatementsView" />
+</ControlsComponent>

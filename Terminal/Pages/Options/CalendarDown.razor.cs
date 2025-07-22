@@ -5,9 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Drawing;
 using System.Linq;
 using System.Threading.Tasks;
 using Terminal.Components;
@@ -20,7 +18,7 @@ using Terminal.Services;
 
 namespace Terminal.Pages.Options
 {
-  public partial class ShortCalendar
+  public partial class CalendarDown
   {
     [Inject] IConfiguration Configuration { get; set; }
 
@@ -137,7 +135,7 @@ namespace Terminal.Pages.Options
       if (account.Orders.Count is 0 && account.Positions.Count is 0)
       {
         var order = GetOrder(point, longOptions, shortOptions);
-        await adapter.SendOrder(order);
+        if (order is not null) await adapter.SendOrder(order);
       }
 
       if (account.Positions.Count > 0)
