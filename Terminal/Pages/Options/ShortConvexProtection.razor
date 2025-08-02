@@ -1,12 +1,9 @@
-@page "/shares/dom"
+@page "/options/short-convex-protection"
 
 <ControlsComponent @ref="View">
   <ChartsComponent Name="Prices" @ref="ChartsView" />
-  <ChartsComponent Name="Trades" @ref="TradeView" />
-  <ChartsComponent Name="ATM Dom" @ref="DomView" />
-  <ChartsComponent Name="OTM Dom" @ref="InverseDomView" />
-  <ChartsComponent Name="Daily Vix" @ref="VixView" />
-  <ChartsComponent Name="Monthly Vix" @ref="LongVixView" />
+  <ChartsComponent Name="Delta" @ref="DeltaView" />
+  <ChartsComponent Name="Exposure" @ref="ExposureView" />
   <ChartsComponent Name="Performance" @ref="PerformanceView" />
   <OrdersComponent Name="Orders" @ref="OrdersView" />
   <PositionsComponent Name="Positions" @ref="PositionsView" />

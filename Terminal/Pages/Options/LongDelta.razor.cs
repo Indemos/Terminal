@@ -3,6 +3,7 @@ using Canvas.Core.Shapes;
 using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
+using MudBlazor.Extensions;
 using Simulation;
 using SkiaSharp;
 using System;
@@ -197,7 +198,7 @@ namespace Terminal.Pages.Options
     {
       var delta = optionDelta + basisDelta;
 
-      if (Equals(optionDelta, -basisDelta) is false)
+      if (Math.Abs(Math.Abs(optionDelta) - Math.Abs(basisDelta)) > 5)
       {
         var order = new OrderModel
         {

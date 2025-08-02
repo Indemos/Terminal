@@ -104,7 +104,11 @@ namespace Terminal.Pages.Utils
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.Update(new MessageModel<string> { Error = e });
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
+        {
+          Error = e,
+          Content = e.Message,
+        });
       }
 
       return null;

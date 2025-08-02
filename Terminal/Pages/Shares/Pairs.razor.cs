@@ -117,14 +117,14 @@ namespace Terminal.Pages.Shares
 
       if (account.Positions.Count == 2)
       {
-        var buy = account.Positions.Values.First(o => o.Side == OrderSideEnum.Long);
-        var sell = account.Positions.Values.First(o => o.Side == OrderSideEnum.Short);
+        var buy = account.Positions.Values.First(o => o.Side is OrderSideEnum.Long);
+        var sell = account.Positions.Values.First(o => o.Side is OrderSideEnum.Short);
         var gain = buy.GetPointsEstimate() + sell.GetPointsEstimate();
 
         switch (true)
         {
           case true when gain > expenses * 2: await ClosePositions(); break;
-          case true when gain < -expenses * positions: OpenPositions(buy.Transaction.Instrument, sell.Transaction.Instrument); break;
+          case true when gain < -expenses * positions: await OpenPositions(buy.Transaction.Instrument, sell.Transaction.Instrument); break;
         }
       }
 
@@ -132,8 +132,8 @@ namespace Terminal.Pages.Shares
       {
         switch (true)
         {
-          case true when (xPoint.Bid - yPoint.Ask) > expenses: OpenPositions(instrumentY, instrumentX); break;
-          case true when (yPoint.Bid - xPoint.Ask) > expenses: OpenPositions(instrumentX, instrumentY); break;
+          case true when (xPoint.Bid - yPoint.Ask) > expenses: await OpenPositions(instrumentY, instrumentX); break;
+          case true when (yPoint.Bid - xPoint.Ask) > expenses: await OpenPositions(instrumentX, instrumentY); break;
         }
       }
 
@@ -156,7 +156,7 @@ namespace Terminal.Pages.Shares
     /// </summary>
     /// <param name="assetBuy"></param>
     /// <param name="assetSell"></param>
-    protected void OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
+    protected async Task OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
       var adapter = View.Adapters["Prime"];
       var orderSell = new OrderModel
@@ -175,8 +175,8 @@ namespace Terminal.Pages.Shares
         Transaction = new() { Instrument = assetBuy }
       };
 
-      adapter.SendOrder(orderBuy);
-      adapter.SendOrder(orderSell);
+      await adapter.SendOrder(orderBuy);
+      await adapter.SendOrder(orderSell);
     }
 
     /// <summary>

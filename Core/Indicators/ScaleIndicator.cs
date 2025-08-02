@@ -12,11 +12,6 @@ namespace Terminal.Core.Indicators
   public class ScaleIndicator : Indicator<ScaleIndicator>
   {
     /// <summary>
-    /// Number of bars to average
-    /// </summary>
-    public int Interval { get; set; }
-
-    /// <summary>
     /// Bottom border of the normalized series
     /// </summary>
     public double Min { get; set; }
@@ -50,18 +45,17 @@ namespace Terminal.Core.Indicators
       }
 
       var value = currentPoint.Last ?? 0.0;
-      var interval = Math.Min(Interval, collection.Count);
-      var comService = InstanceService<AverageService>.Instance;
 
-      min = min is null ? value : Math.Min(min.Value, value);
-      max = max is null ? value : Math.Max(max.Value, value);
+      min = Math.Min(min ?? value, value);
+      max = Math.Max(max ?? value, value);
 
-      if (min.Value.Is(max.Value) is false)
+      switch (min.Value.Is(max.Value))
       {
-        value = Min + (value - min.Value) * (Max - Min) / (max.Value - min.Value);
+        case true: value = (Max + Min) / 2.0; break;
+        case false: value = Min + (Max - Min) * (value - min.Value) / (max.Value - min.Value); break;
       }
 
-      Point.Last = comService.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, interval);
+      Point.Last = value;
 
       return this;
     }

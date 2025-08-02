@@ -108,16 +108,18 @@ namespace Terminal.Core.Models
       var currentPrice = Last;
       var previousPrice = o?.Last;
       var price = (currentPrice ?? previousPrice).Value;
+      var min = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? price);
+      var max = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? price);
 
       Ask ??= o?.Ask ?? price;
       Bid ??= o?.Bid ?? price;
-      AskSize += o?.AskSize ?? 0.0;
-      BidSize += o?.BidSize ?? 0.0;
+      AskSize ??= o?.AskSize ?? 0.0;
+      BidSize ??= o?.BidSize ?? 0.0;
       Bar ??= new BarModel();
       Bar.Close = Last = price;
+      Bar.Low = Math.Min(min, price);
+      Bar.High = Math.Max(max, price);
       Bar.Open = Bar.Open ?? o?.Bar?.Open ?? price;
-      Bar.Low = Math.Min(Bar?.Low ?? price, o?.Bar?.Low ?? previousPrice ?? price);
-      Bar.High = Math.Max(Bar?.High ?? price, o?.Bar?.High ?? previousPrice ?? price);
       Time = Time.Round(TimeFrame) ?? o?.Time;
 
       return this;

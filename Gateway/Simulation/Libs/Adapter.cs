@@ -15,6 +15,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Simulation
 {
@@ -87,33 +88,46 @@ namespace Simulation
     {
       await Disconnect();
 
-      Account.InitialBalance = Account.Balance;
+      try
+      {
+        Account.InitialBalance = Account.Balance;
 
-      streams = Account
-        .States
-        .ToDictionary(
-          o => o.Key,
-          o => Directory
-            .EnumerateFiles(Path.Combine(Source, o.Value.Instrument.Name), "*", SearchOption.AllDirectories)
-            .GetEnumerator())
-            .Concurrent();
+        streams = Account
+          .States
+          .ToDictionary(
+            o => o.Key,
+            o => Directory
+              .EnumerateFiles(Path.Combine(Source, o.Value.Instrument.Name), "*", SearchOption.AllDirectories)
+              .GetEnumerator())
+              .Concurrent();
 
-      streams.ForEach(o => connections.Add(o.Value));
+        streams.ForEach(o => connections.Add(o.Value));
 
-      await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
+        await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
-      var span = TimeSpan.FromMicroseconds(Speed);
-      var scheduler = new ScheduleService();
+        var span = TimeSpan.FromMicroseconds(Speed);
+        var scheduler = new ScheduleService();
 
-      interval = new Timer(span);
-      interval.Enabled = true;
-      interval.AutoReset = true;
-      interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()), false);
+        interval = new Timer(span);
+        interval.Enabled = true;
+        interval.AutoReset = true;
+        interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()), false);
 
-      connections.Add(interval);
-      connections.Add(scheduler);
+        connections.Add(interval);
+        connections.Add(scheduler);
 
-      Stream += OnPoint;
+        Stream += OnPoint;
+      }
+      catch (Exception e)
+      {
+        await Disconnect();
+
+        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
+        {
+          Error = e,
+          Content = e.Message,
+        });
+      }
 
       return new ResponseModel<StatusEnum>();
     }
@@ -306,7 +320,7 @@ namespace Simulation
         return IncreaseSide(currentOrder, nextOrder);
       }
 
-      if ((currentOrder.Transaction.Amount - nextOrder.Amount).Is(0))
+      if ((currentOrder.Transaction.Amount - nextOrder.Amount).Value.Is(0))
       {
         return CloseSide(currentOrder, nextOrder);
       }

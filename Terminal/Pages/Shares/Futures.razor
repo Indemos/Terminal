@@ -1,12 +1,9 @@
-@page "/shares/dom"
+@page "/shares/futures"
 
 <ControlsComponent @ref="View">
-  <ChartsComponent Name="Prices" @ref="ChartsView" />
-  <ChartsComponent Name="Trades" @ref="TradeView" />
-  <ChartsComponent Name="ATM Dom" @ref="DomView" />
-  <ChartsComponent Name="OTM Dom" @ref="InverseDomView" />
-  <ChartsComponent Name="Daily Vix" @ref="VixView" />
-  <ChartsComponent Name="Monthly Vix" @ref="LongVixView" />
+  <ChartsComponent Name="Prices" @ref="LeaderView" />
+  <ChartsComponent Name="Spread" @ref="FollowerView" />
+  <ChartsComponent Name="Indicators" @ref="IndicatorsView" />
   <ChartsComponent Name="Performance" @ref="PerformanceView" />
   <OrdersComponent Name="Orders" @ref="OrdersView" />
   <PositionsComponent Name="Positions" @ref="PositionsView" />

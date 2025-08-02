@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 
 namespace Terminal.Core.Models
@@ -190,8 +189,7 @@ namespace Terminal.Core.Models
     {
       var amount = Transaction.Amount;
       var instrument = Transaction.Instrument;
-      var step = instrument.StepValue / instrument.StepSize;
-      var estimate = amount * GetPointsEstimate() * step * instrument.Leverage - instrument.Commission;
+      var estimate = amount * GetPointsEstimate() * instrument.Leverage - instrument.Commission;
 
       Gain = estimate ?? Gain ?? 0;
       Min = Math.Min(Min ?? 0, Gain.Value);
