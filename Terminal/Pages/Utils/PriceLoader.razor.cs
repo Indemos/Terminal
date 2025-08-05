@@ -4,7 +4,6 @@ using InteractiveBrokers;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using System;
-using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -25,7 +24,12 @@ namespace Terminal.Pages.Utils
 
     protected virtual ControlsComponent View { get; set; }
     protected virtual Service Srv { get; set; } = new Service();
-    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel { Name = "ESH5", Exchange = "CME", Type = InstrumentEnum.Futures };
+    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
+    {
+      Name = "ESH5",
+      Exchange = "CME",
+      Type = InstrumentEnum.Futures
+    };
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -71,7 +75,7 @@ namespace Terminal.Pages.Utils
         States = new Map<string, SummaryModel>
         {
           [Instrument.Name] = new SummaryModel { Instrument = Instrument, TimeFrame = TimeSpan.FromMinutes(1) }
-        }        
+        }
       };
 
       View.Adapters["Prime"] = new Adapter

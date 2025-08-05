@@ -5,6 +5,7 @@ using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Drawing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -516,6 +517,7 @@ namespace InteractiveBrokers
             case PropertyEnum.LastPrice: point.Last = message.Data ?? point.Last; break;
           }
 
+          point.Time = DateTime.Now;
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
 
           if (point.Bid is null || point.Ask is null)
@@ -528,7 +530,6 @@ namespace InteractiveBrokers
           summary.Instrument = instrument;
           summary.Instrument.Point = summary.PointGroups.Last();
           summary.Instrument.Point.Instrument = instrument;
-          summary.Instrument.Point.Time = DateTime.Now;
 
           UpdateInstrument(summary.Instrument);
 

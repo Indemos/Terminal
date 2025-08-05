@@ -1,4 +1,25 @@
-@page "/options"
+@page "/utils/options"
+
+<MudPaper Class="d-flex flex-grow-0 pa-4 my-3 align-baseline controls">
+  <MudTextField Class="mr-3" @bind-Value="Name" Label="Asset" Variant="Variant.Outlined" Margin="Margin.Dense" />
+  <MudTextField Class="mr-3" @bind-Value="Expression" Label="Top Formula" Variant="Variant.Outlined" Margin="Margin.Dense" />
+  <MudTextField Class="mr-3" @bind-Value="ExpressionInverse" Label="Bottom Formula" Variant="Variant.Outlined" Margin="Margin.Dense" />
+  <MudDateRangePicker
+    Class="mr-2"
+    @bind-DateRange="Range"
+    Variant="Variant.Outlined"
+    Margin="Margin.Dense"
+    Clearable="true"
+    PlaceholderStart="Min"
+    PlaceholderEnd="Max"
+    Label="Range" />
+  <MudButton
+    OnClick="Show"
+    Variant="Variant.Filled"
+    Size="Size.Large"
+    Color="Color.Primary">Show
+  </MudButton>
+</MudPaper>
 
 <MudPaper Class="flex-grow-1 d-flex flex-column overflow-auto">
   <MudDrawerContainer Class="mud-height-full d-flex">

@@ -7,6 +7,7 @@ using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using SkiaSharp;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -39,7 +40,7 @@ namespace Terminal.Components
     /// <summary>
     /// Indices
     /// </summary>
-    protected virtual IDictionary<long, IShape> Indices { get; set; } = new Dictionary<long, IShape>();
+    protected virtual IDictionary<long, IShape> Indices { get; set; } = new ConcurrentDictionary<long, IShape>();
 
     /// <summary>
     /// Reference to view control

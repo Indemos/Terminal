@@ -29,34 +29,30 @@ namespace Terminal.Pages.Utils
     [Inject] IConfiguration Configuration { get; set; }
 
     protected bool IsConnected { get; set; }
+    protected string Name { get; set; } = "SPY";
+    protected string Expression { get; set; } = "CVolume * COpenInterest";
+    protected string ExpressionInverse { get; set; } = "PVolume * POpenInterest";
+    protected DateRange Range { get; set; } = new DateRange(DateTime.Now.Date, DateTime.Now.AddDays(30).Date);
     protected List<IDisposable> Subscriptions { get; set; } = [];
     protected Dictionary<string, Dictionary<string, CanvasView>> Groups { get; set; } = [];
 
     /// <summary>
-    /// Page setup
+    /// Date change event
     /// </summary>
-    /// <param name="setup"></param>
-    /// <returns></returns>
-    protected override async Task OnAfterRenderAsync(bool setup)
+    /// <param name="range"></param>
+    private async Task Show()
     {
-      if (setup)
+      await OnChart(Name, Range.Start.Value.Date, Range.End.Value.Date, async (options) =>
       {
-        var name = "GME";
-
-        await OnChart(name, DateTime.Now, DateTime.Now.AddDays(5), async (options) =>
+        await Group(Name, true, options, async (view, records) =>
         {
-          await Group(name, true, options, async (view, records) =>
-          {
-            await ShowBars(
-              "Volume",
-              "OpenInterest",
-              view,
-              records);
-          });
+          await ShowBars(
+            Expression,
+            ExpressionInverse,
+            view,
+            records);
         });
-      }
-
-      await base.OnAfterRenderAsync(setup);
+      });
     }
 
     /// <summary>

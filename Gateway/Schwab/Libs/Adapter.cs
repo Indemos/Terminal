@@ -274,7 +274,7 @@ namespace Schwab
         var props = new Hashtable
         {
           ["indicative"] = false,
-          ["symbols"] = instrument.Name,
+          ["symbols"] = instrument?.Name ?? criteria.Get("symbols"),
           ["fields"] = "quote,fundamental,extended,reference,regular"
         };
 
@@ -300,11 +300,11 @@ namespace Schwab
       {
         var props = new Hashtable
         {
-          ["periodType"] = "day",
-          ["period"] = 1,
-          ["frequencyType"] = "minute",
-          ["frequency"] = 1
-
+          ["period"] = criteria.Get("period") ?? 1,
+          ["periodType"] = criteria.Get("periodType") ?? "day",
+          ["frequency"] = criteria.Get("frequency") ?? 1,
+          ["frequencyType"] = criteria.Get("frequencyType") ?? "minute",
+          ["symbol"] = criteria?.Instrument?.Name ?? criteria.Get("symbol")
         };
 
         var pointResponse = await Send<BarsMessage>($"{DataUri}/marketdata/v1/pricehistory".SetQueryParams(props));
@@ -586,6 +586,7 @@ namespace Schwab
           point.AskSize = parse($"{data.Get(map.Get("Ask Size"))}", point.AskSize);
           point.Last = parse($"{data.Get(map.Get("Last Price"))}", point.Last);
           point.Last = point.Last is 0 or null ? point.Bid ?? point.Ask : point.Last;
+          point.Volume = parse($"{data.Get(map.Get("Last Size"))}", point.Volume);
 
           if (point.Bid is null || point.Ask is null)
           {

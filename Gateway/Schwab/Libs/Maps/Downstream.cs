@@ -432,7 +432,7 @@ namespace Schwab.Mappers
     /// <returns></returns>
     public static DerivativeModel GetDerivative(string name)
     {
-      var data = Regex.Match(name, @"^(\w{1,5})(\d{6})([CP])(\d{8})$");
+      var data = Regex.Match(name, @"^(\w{1,5})\s*(\d{6})([CP])(\d+)$");
 
       if (data.Success is false)
       {
