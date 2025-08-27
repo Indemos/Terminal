@@ -285,7 +285,7 @@ namespace Core.Common.Grains
       var point = Account
         .Instruments
         .Get(order.Operation.Instrument.Name)
-        .Point;
+        .Price;
 
       var openPrice = order.Side switch
       {
@@ -306,7 +306,7 @@ namespace Core.Common.Grains
         TimeSpan = order.TimeSpan ?? group.TimeSpan ?? OrderTimeSpanEnum.Gtc,
         Instruction = order.Instruction ?? InstructionEnum.Side,
         Price = order.Price ?? openPrice,
-        Operation = order.Operation with { Time = order?.Operation?.Instrument?.Point?.Time },
+        Operation = order.Operation with { Time = order?.Operation?.Instrument?.Price?.Time },
         Orders = [.. groupOrders]
       };
 

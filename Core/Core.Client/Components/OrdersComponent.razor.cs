@@ -5,6 +5,7 @@ using Core.Common.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core.Client.Components
@@ -63,35 +64,31 @@ namespace Core.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual void UpdateItems(params IGateway[] adapters)
+    public virtual async Task UpdateItems(params IGateway[] adapters)
     {
-      // TODO: Get adapter and account from grain
-      //if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
-      //{
-      //  Items = adapters.SelectMany(adapter =>
-      //  {
-      //    var orders = adapter.Account.Orders.Values;
-      //    var positions = adapter.Account.Positions.Values;
-      //    var subOrders = orders.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
-      //    var subPositions = positions.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
+      if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
+      {
+        var queries = adapters.Select(o => o.GetPositions());
+        var responses = await Task.WhenAll(queries);
+        var orders = responses
+          .SelectMany(o => o.Data)
+          .OrderBy(o => o.Operation.Time)
+          .ToList();
 
-      //    return subOrders.Concat(subPositions.SelectMany(o => o.Orders));
+        Items = [.. orders.Select(o => new Row
+        {
+          Name = o?.Operation?.Instrument?.Name,
+          Type = o.Type,
+          Time = o.Operation.Time,
+          Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+          Side = o.Side,
+          Size = o.Amount ?? 0,
+          Price = o.Price ?? 0,
 
-      //  })
-      //  .Select(o => new Row
-      //  {
-      //    Name = o.Name,
-      //    Type = o.Type,
-      //    Time = o.Transaction.Time,
-      //    Group = o.BasisName ?? o.Name,
-      //    Side = o.Side ?? OrderSideEnum.None,
-      //    Size = o.Amount ?? 0,
-      //    Price = o.Price ?? 0,
+        })];
 
-      //  }).ToList();
-
-      //  Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
-      //}
+        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+      }
     }
 
     /// <summary>

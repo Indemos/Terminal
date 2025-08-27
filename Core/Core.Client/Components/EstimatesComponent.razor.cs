@@ -93,7 +93,7 @@ namespace Core.Client.Components
           Price = point.Last.Value,
           Amount = pos.Amount ?? 0,
           Strike = pos.Operation.Instrument?.Derivative?.Strike ?? 0,
-          Premium = pos.Operation.Instrument?.Point?.Last ?? 0,
+          Premium = pos.Operation.Instrument?.Price?.Last ?? 0,
           Date = pos.Operation.Instrument?.Derivative?.ExpirationDate,
           Side = pos.Operation.Instrument?.Derivative?.Side ?? 0,
           Position = pos.Side.Value

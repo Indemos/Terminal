@@ -83,7 +83,7 @@ namespace Core.Common.Grains
     /// </summary>
     protected bool IsExecutable()
     {
-      var point = State.Operation.Instrument.Point;
+      var point = State.Operation.Instrument.Price;
       var isLong = State.Side is OrderSideEnum.Long;
       var isShort = State.Side is OrderSideEnum.Short;
 

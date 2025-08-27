@@ -39,15 +39,15 @@ namespace Core.Common.Grains
     public Task Store(PriceState point)
     {
       var currentPrice = point.Last;
-      var previousPrice = State.Instrument.Point.Last;
+      var previousPrice = State.Instrument.Price.Last;
       var price = (currentPrice ?? previousPrice).Value;
-      var min = Math.Min(point.Bar?.Low ?? price, State.Instrument.Point?.Bar?.Low ?? price);
-      var max = Math.Max(point.Bar?.High ?? price, State.Instrument.Point?.Bar?.High ?? price);
+      var min = Math.Min(point.Bar?.Low ?? price, State.Instrument.Price?.Bar?.Low ?? price);
+      var max = Math.Max(point.Bar?.High ?? price, State.Instrument.Price?.Bar?.High ?? price);
       var currentTime = point.Time.Round(point.TimeFrame);
       var previousTime = point.Time.Round(point.TimeFrame);
-      var openPrice = currentTime > previousTime ? price : State.Instrument.Point?.Bar?.Open ?? price;
+      var openPrice = currentTime > previousTime ? price : State.Instrument.Price?.Bar?.Open ?? price;
 
-      var bar = State.Instrument.Point.Bar with
+      var bar = State.Instrument.Price.Bar with
       {
         Close = price,
         Low = Math.Min(min, price),
@@ -55,7 +55,7 @@ namespace Core.Common.Grains
         Open = openPrice
       };
 
-      var pointUpdate = State.Instrument.Point with
+      var pointUpdate = State.Instrument.Price with
       {
         Bar = bar,
         Ask = point?.Ask ?? price,
@@ -67,14 +67,14 @@ namespace Core.Common.Grains
 
       State = State with
       {
-        Instrument = State.Instrument with { Point = pointUpdate }
+        Instrument = State.Instrument with { Price = pointUpdate }
       };
 
       State.Prices.Add(point);
 
       if (currentTime > previousTime)
       {
-        State.PriceGroups.Add(State.Instrument.Point);
+        State.PriceGroups.Add(State.Instrument.Price);
       }
 
       return Task.CompletedTask;

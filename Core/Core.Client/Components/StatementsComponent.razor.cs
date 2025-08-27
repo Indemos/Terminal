@@ -50,7 +50,7 @@ namespace Core.Client.Components
               break;
 
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Pause:
-              await UpdateItems(Adapters.Values);
+              await UpdateItems([.. Adapters.Values]);
               break;
           }
         };
@@ -61,32 +61,30 @@ namespace Core.Client.Components
     /// Update UI
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual async Task UpdateItems(IEnumerable<IGateway> adapters)
+    public virtual async Task UpdateItems(params IGateway[] adapters)
     {
       var values = new List<InputData>();
       var balance = adapters.Sum(o => o.Account.InitialBalance).Value;
       var queries = adapters.Select(o => o.GetTransactions());
-      var grainOrders = await Task.WhenAll(queries);
-      var orders = grainOrders
+      var responses = await Task.WhenAll(queries);
+      var actions = responses
         .SelectMany(o => o.Data)
         .OrderBy(o => o.Operation.Time)
         .ToList();
 
-      if (orders.Count > 0)
+      if (actions.Count > 0)
       {
         values.Add(new InputData
         {
-          Time = orders.First().Operation.Time.Value,
+          Time = actions.First().Operation.Time.Value,
           Value = 0,
           Min = 0,
           Max = 0
         });
       }
 
-      for (var i = 0; i < orders.Count; i++)
+      foreach (var o in actions)
       {
-        var o = orders[i];
-
         values.Add(new InputData
         {
           Min = o.Min.Value,

@@ -5,6 +5,7 @@ using Core.Common.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core.Client.Components
@@ -64,34 +65,32 @@ namespace Core.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="account"></param>
-    public virtual void UpdateItems(params IGateway[] adapters)
+    public virtual async Task UpdateItems(params IGateway[] adapters)
     {
-      // TODO: Get adapter and account from grain
-      //if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
-      //{
-      //  Items = adapters.SelectMany(adapter =>
-      //  {
-      //    var orders = adapter.Account.Positions.Values;
-      //    var subOrders = orders.SelectMany(o => (adapter as Gateway).ComposeOrders(o));
+      if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
+      {
+        var queries = adapters.Select(o => o.GetPositions());
+        var responses = await Task.WhenAll(queries);
+        var positions = responses
+          .SelectMany(o => o.Data)
+          .OrderBy(o => o.Operation.Time)
+          .ToList();
 
-      //    return subOrders;
+        Items = [.. positions.Select(o => new Row
+        {
+          Name = o?.Operation?.Instrument?.Name,
+          Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+          Time = o.Operation.Time,
+          Side = o.Side,
+          Size = o.Operation.Amount ?? 0,
+          OpenPrice = o.Operation.AveragePrice ?? 0,
+          ClosePrice = o?.Operation?.Instrument?.Price?.Last ?? 0,
+          Gain = o.Gain ?? 0
 
-      //  })
-      //  .Select(o => new Row
-      //  {
-      //    Name = o.Name,
-      //    Group = o.BasisName ?? o.Name,
-      //    Time = o.Transaction.Time,
-      //    Side = o.Side ?? OrderSideEnum.None,
-      //    Size = o.Transaction.Amount ?? 0,
-      //    OpenPrice = o.Transaction.AveragePrice ?? 0,
-      //    ClosePrice = o.GetClosePrice() ?? 0,
-      //    Gain = o.GetEstimate() ?? o.Gain ?? 0
+        })];
 
-      //  }).ToList();
-
-      //  Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
-      //}
+        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+      }
     }
 
     /// <summary>

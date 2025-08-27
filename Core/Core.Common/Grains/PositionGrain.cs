@@ -265,7 +265,7 @@ namespace Core.Common.Grains
     /// </summary>
     protected double? OpenPrice()
     {
-      var point = State.Operation.Instrument.Point;
+      var point = State.Operation.Instrument.Price;
 
       if (point is not null)
       {
@@ -284,7 +284,7 @@ namespace Core.Common.Grains
     /// </summary>
     protected double? ClosePrice()
     {
-      var point = State.Operation.Instrument.Point;
+      var point = State.Operation.Instrument.Price;
 
       if (point is not null)
       {
