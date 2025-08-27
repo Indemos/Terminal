@@ -1,0 +1,121 @@
+using Core.Client.Services;
+using Core.Common.Enums;
+using Core.Common.Grains;
+using Core.Common.States;
+using Core.Common.Services;
+using Estimator.Models;
+using Microsoft.AspNetCore.Components;
+using Orleans;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Core.Client.Components
+{
+  public partial class StatementsComponent
+  {
+    [Inject] public virtual IClusterClient Client { get; set; }
+
+    [Parameter] public virtual string Name { get; set; }
+
+    [Parameter] public virtual IDictionary<string, IGateway> Adapters { get; set; }
+
+    /// <summary>
+    /// Subscription state
+    /// </summary>
+    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
+
+    /// <summary>
+    /// Common performance statistics
+    /// </summary>
+    protected IDictionary<string, IList<ScoreData>> Stats = new Dictionary<string, IList<ScoreData>>();
+
+    /// <summary>
+    /// Setup views
+    /// </summary>
+    /// <param name="setup"></param>
+    protected override async Task OnAfterRenderAsync(bool setup)
+    {
+      await base.OnAfterRenderAsync(setup);
+
+      if (setup)
+      {
+        Subscription.Update += async state =>
+        {
+          switch (true)
+          {
+            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None:
+              Clear();
+              break;
+
+            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Pause:
+              await UpdateItems(Adapters.Values);
+              break;
+          }
+        };
+      }
+    }
+
+    /// <summary>
+    /// Update UI
+    /// </summary>
+    /// <param name="adapters"></param>
+    public virtual async Task UpdateItems(IEnumerable<IGateway> adapters)
+    {
+      var values = new List<InputData>();
+      var balance = adapters.Sum(o => o.Account.InitialBalance).Value;
+      var queries = adapters.Select(o => o.GetTransactions());
+      var grainOrders = await Task.WhenAll(queries);
+      var orders = grainOrders
+        .SelectMany(o => o.Data)
+        .OrderBy(o => o.Operation.Time)
+        .ToList();
+
+      if (orders.Count > 0)
+      {
+        values.Add(new InputData
+        {
+          Time = orders.First().Operation.Time.Value,
+          Value = 0,
+          Min = 0,
+          Max = 0
+        });
+      }
+
+      for (var i = 0; i < orders.Count; i++)
+      {
+        var o = orders[i];
+
+        values.Add(new InputData
+        {
+          Min = o.Min.Value,
+          Max = o.Max.Value,
+          Value = o.Gain.Value,
+          Time = o.Operation.Time.Value,
+          Direction = o.Side is OrderSideEnum.Long ? 1 : -1,
+          Commission = o.Operation.Instrument.Commission.Value * 2
+        });
+      }
+
+      Stats = new Score { Items = values, Balance = balance }.Calculate();
+
+      await InvokeAsync(StateHasChanged);
+    }
+
+    /// <summary>
+    /// Clear records
+    /// </summary>
+    public virtual async void Clear() => await UpdateItems([]);
+
+    /// <summary>
+    /// Format double
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
+    protected virtual string ShowDouble(double? input)
+    {
+      return (input < 0 ? "-" : "") + string.Format("{0:0.00}", Math.Abs(input.Value));
+    }
+  }
+}
