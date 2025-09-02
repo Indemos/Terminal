@@ -1,7 +1,6 @@
 using Core.Client.Services;
 using Core.Common.Enums;
 using Core.Common.Implementations;
-using Core.Common.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -65,7 +64,7 @@ namespace Core.Client.Components
     {
       if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
       {
-        var queries = adapters.Select(o => o.GetPositions());
+        var queries = adapters.Select(o => o.GetOrders());
         var responses = await Task.WhenAll(queries);
         var orders = responses
           .SelectMany(o => o.Data)

@@ -105,12 +105,13 @@ namespace Core.Common.Grains
       var amount = State.Operation.Amount;
       var instrument = State.Operation.Instrument;
       var estimate = amount * pointEstimate * instrument.Leverage - instrument.Commission;
+      var gain = estimate ?? State.Gain ?? 0;
 
       State = State with
       {
-        Gain = estimate ?? State.Gain ?? 0,
-        Min = Math.Min(State.Min ?? 0, State.Gain.Value),
-        Max = Math.Max(State.Max ?? 0, State.Gain.Value)
+        Gain = gain,
+        Min = Math.Min(State.Min ?? 0, gain),
+        Max = Math.Max(State.Max ?? 0, gain)
       };
 
       return estimate.Value;

@@ -17,7 +17,11 @@ namespace Core.Common.Validators
       RuleFor(o => o.StepSize).NotEmpty();
       RuleFor(o => o.StepValue).NotEmpty();
       RuleFor(o => o.Leverage).NotEmpty();
-      RuleFor(o => o.Point).NotEmpty().SetValidator(new PointValidator());
+
+      When(o => o.Point is not null, () =>
+      {
+        RuleFor(o => o.Point).SetValidator(new PriceValidator());
+      });
 
       When(o => o.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions, () =>
       {

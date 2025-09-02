@@ -141,6 +141,9 @@ namespace Core.Common.Grains
           Price = point.Last,
           Operation = State.Operation with
           {
+            Time = point.Time,
+            Amount = State.Amount,
+            AveragePrice = point.Last,
             Status = OrderStatusEnum.Position
           }
         };

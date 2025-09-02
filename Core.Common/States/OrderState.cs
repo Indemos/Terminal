@@ -1,5 +1,6 @@
 using Core.Common.Enums;
 using Orleans;
+using System;
 using System.Collections.Generic;
 
 namespace Core.Common.States
@@ -9,7 +10,7 @@ namespace Core.Common.States
     /// <summary>
     /// Client order ID
     /// </summary>
-    public string Id { get; init; }
+    public string Id { get; init; } = $"{Guid.NewGuid()}";
 
     /// <summary>
     /// Group

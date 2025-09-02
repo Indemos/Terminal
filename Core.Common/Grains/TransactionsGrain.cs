@@ -98,7 +98,7 @@ namespace Core.Common.Grains
           Identity = order.Id
         };
 
-        var orderGrain = GrainFactory.Get<TransactionGrain>(orderDescriptor);
+        var orderGrain = GrainFactory.Get<ITransactionGrain>(orderDescriptor);
 
         await orderGrain.StoreTransaction(order);
 
