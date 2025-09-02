@@ -5,9 +5,9 @@ VisualStudioVersion = 17.0.31815.197
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Gateways", "Gateways", "{A7B0DEF1-75C8-440A-ADDC-D6C1B758D2AA}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Common", "Core\Core.Common\Core.Common.csproj", "{0E61D8C6-8781-CB1E-D867-7D279590DB67}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Common", "Core.Common\Core.Common.csproj", "{0E61D8C6-8781-CB1E-D867-7D279590DB67}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Client", "Core\Core.Client\Core.Client.csproj", "{14AF3CC2-B7E7-6389-7712-8860F428E986}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Client", "Core.Client\Core.Client.csproj", "{14AF3CC2-B7E7-6389-7712-8860F428E986}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Simulation", "Simulation", "{02EA681E-C7D8-13C7-8484-4AC65E1B71E8}"
 EndProject

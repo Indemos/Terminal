@@ -1,12 +1,11 @@
 using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Grains;
-using Core.Common.Services;
+using Core.Common.Implementations;
 using Core.Common.States;
-using Core.Common.Validators;
 using Simulation.Grains;
 using System;
-using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -29,7 +28,12 @@ namespace Simulation
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var grain = GrainFactory.GetGrain<ConnectionGrain>(Account.Descriptor);
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
+      var grain = Connector.Get<IConnectionGrain>(descriptor);
 
       await grain.StoreInstruments(Account.Instruments);
       await grain.Connect(Source, Speed);
@@ -41,27 +45,66 @@ namespace Simulation
     }
 
     /// <summary>
+    /// Save state and dispose
+    /// </summary>
+    public override async Task<StatusResponse> Disconnect()
+    {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
+      await Connector
+        .Get<IConnectionGrain>(descriptor)
+        .Disconnect();
+
+      return new()
+      {
+        Data = StatusEnum.Inactive
+      };
+    }
+
+    /// <summary>
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(InstrumentState instrument) => GrainFactory
-      .GetGrain<ConnectionGrain>(Account.Descriptor)
-      .Subscribe(instrument);
+    public override async Task<StatusResponse> Subscribe(InstrumentState instrument)
+    {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
+      await Connector
+        .Get<IConnectionGrain>(descriptor)
+        .Subscribe(instrument);
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
+    }
 
     /// <summary>
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentState instrument) => GrainFactory
-      .GetGrain<ConnectionGrain>(Account.Descriptor)
-      .Unsubscribe(instrument);
+    public override async Task<StatusResponse> Unsubscribe(InstrumentState instrument)
+    {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
 
-    /// <summary>
-    /// Save state and dispose
-    /// </summary>
-    public override Task<StatusResponse> Disconnect() => GrainFactory
-      .GetGrain<ConnectionGrain>(Account.Descriptor)
-      .Disconnect();
+      await Connector
+        .Get<IConnectionGrain>(descriptor)
+        .Unsubscribe(instrument);
+
+      return new()
+      {
+        Data = StatusEnum.Pause
+      };
+    }
 
     /// <summary>
     /// Get depth of market when available or just a top of the book
@@ -69,9 +112,15 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<DomResponse> GetDom(ConditionState criteria = null)
     {
-      var instrumentName = criteria.Instrument.Name;
-      var domGrain = GrainFactory.GetGrain<DomGrain>($"{Account.Descriptor}:{instrumentName}");
-      var domResponse = await domGrain.Get();
+      var descriptor = new InstrumentDescriptor
+      {
+        Account = Account.Descriptor,
+        Instrument = criteria.Instrument.Name
+      };
+
+      var domResponse = await Connector
+        .Get<IDomGrain>(descriptor)
+        .Dom();
 
       return new DomResponse
       {
@@ -85,15 +134,23 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<PricesResponse> GetBars(ConditionState criteria = null)
     {
-      var instrumentName = criteria.Instrument.Name;
-      var pricesGrain = GrainFactory.GetGrain<PricesGrain>($"{Account.Descriptor}:{instrumentName}");
-      var pointGroupResponse = await pricesGrain.GetPriceGroups();
+      var descriptor = new InstrumentDescriptor
+      {
+        Account = Account.Descriptor,
+        Instrument = criteria.Instrument.Name
+      };
+
+      var priceResponse = await Connector
+        .Get<IPricesGrain>(descriptor)
+        .PriceGroups();
+
       var response = new PricesResponse
       {
-        Data = [.. pointGroupResponse
+        Data = [.. priceResponse
           .Data
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)]
+          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
+          .TakeLast(criteria.Count ?? priceResponse.Data.Count)]
       };
 
       return response;
@@ -105,15 +162,23 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<PricesResponse> GetTicks(ConditionState criteria = null)
     {
-      var instrumentName = criteria.Instrument.Name;
-      var pricesGrain = GrainFactory.GetGrain<PricesGrain>($"{Account.Descriptor}:{instrumentName}");
-      var pointResponse = await pricesGrain.GetPrices();
+      var descriptor = new InstrumentDescriptor
+      {
+        Account = Account.Descriptor,
+        Instrument = criteria.Instrument.Name
+      };
+
+      var priceResponse = await Connector
+        .Get<IPricesGrain>(descriptor)
+        .Prices();
+
       var response = new PricesResponse
       {
-        Data = [.. pointResponse
+        Data = [.. priceResponse
           .Data
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)]
+          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
+          .TakeLast(criteria.Count ?? priceResponse.Data.Count)]
       };
 
       return response;
@@ -125,9 +190,16 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<InstrumentsResponse> GetOptions(ConditionState criteria = null)
     {
-      var instrumentName = criteria.Instrument.Name;
-      var optionsGrain = GrainFactory.GetGrain<OptionsGrain>($"{Account.Descriptor}:{instrumentName}");
-      var optionResponse = await optionsGrain.Get();
+      var descriptor = new InstrumentDescriptor
+      {
+        Account = Account.Descriptor,
+        Instrument = criteria.Instrument.Name
+      };
+
+      var optionResponse = await Connector
+        .Get<IOptionsGrain>(descriptor)
+        .Options();
+
       var side = criteria
         ?.Instrument
         ?.Derivative
@@ -173,14 +245,19 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(ConditionState criteria = null)
     {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
       var response = new OrdersResponse();
-      var ordersGrain = GrainFactory.GetGrain<OrdersGrain>(Account.Descriptor);
+      var ordersGrain = Connector.Get<IOrdersGrain>(descriptor);
       var count = await ordersGrain.Count();
 
       for (var i = 0; i < count; i++)
       {
-        var orderGrain = await ordersGrain.Get(i);
-        response.Data.Add(await orderGrain.Get());
+        var orderGrain = await ordersGrain.Grain(i);
+        response.Data.Add(await orderGrain.Order());
       }
 
       return response;
@@ -192,14 +269,19 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(ConditionState criteria = null)
     {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
       var response = new OrdersResponse();
-      var positionsGrain = GrainFactory.GetGrain<PositionsGrain>(Account.Descriptor);
+      var positionsGrain = Connector.Get<IPositionsGrain>(descriptor);
       var count = await positionsGrain.Count();
 
       for (var i = 0; i < count; i++)
       {
-        var positionGrain = await positionsGrain.Get(i);
-        response.Data.Add(await positionGrain.Get());
+        var positionGrain = await positionsGrain.Grain(i);
+        response.Data.Add(await positionGrain.Position());
       }
 
       return response;
@@ -211,14 +293,19 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetTransactions(ConditionState criteria = null)
     {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
       var response = new OrdersResponse();
-      var transactionsGrain = GrainFactory.GetGrain<TransactionsGrain>(Account.Descriptor);
+      var transactionsGrain = Connector.Get<ITransactionsGrain>(descriptor);
       var count = await transactionsGrain.Count();
 
       for (var i = 0; i < count; i++)
       {
-        var transactionGrain = await transactionsGrain.Get(i);
-        response.Data.Add(await transactionGrain.Get());
+        var transactionGrain = await transactionsGrain.Grain(i);
+        response.Data.Add(await transactionGrain.Transaction());
       }
 
       return response;
@@ -241,9 +328,15 @@ namespace Simulation
 
         if (orderResponse.Errors.Count is 0)
         {
-          await GrainFactory
-            .GetGrain<OrderGrain>($"{Account.Descriptor}:{order.Id}")
-            .Send(nextOrder);
+          var descriptor = new IdentityDescriptor
+          {
+            Account = Account.Descriptor,
+            Identity = order.Id
+          };
+
+          await Connector
+            .Get<IOrderGrain>(descriptor)
+            .StoreOrder(nextOrder);
 
           orderResponse = orderResponse with { Data = nextOrder };
         }
@@ -258,8 +351,16 @@ namespace Simulation
     /// Clear order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<DescriptorResponse> ClearOrder(OrderState order) => GrainFactory
-      .GetGrain<OrdersGrain>(Account.Descriptor)
-      .Remove(order);
+    public override Task<DescriptorResponse> ClearOrder(OrderState order)
+    {
+      var descriptor = new BaseDescriptor
+      {
+        Account = Account.Descriptor
+      };
+
+      return Connector
+        .Get<IOrdersGrain>(descriptor)
+        .Remove(order);
+    }
   }
 }

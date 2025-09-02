@@ -6,7 +6,6 @@ using Core.Common.States;
 using MessagePack;
 using MessagePack.Resolvers;
 using Orleans;
-using Orleans.Streams;
 using Simulation.States;
 using System;
 using System.Collections.Concurrent;
@@ -15,22 +14,49 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Simulation.Grains
 {
-  public class ConnectionGrain : Grain<ConnectionState>, IGrainWithStringKey
+  public interface IConnectionGrain : IGrainWithStringKey
+  {
+    /// <summary>
+    /// Connect
+    /// </summary>
+    /// <param name="source"></param>
+    /// <param name="speed"></param>
+    Task<StatusResponse> Connect(string source, int speed);
+
+    /// <summary>
+    /// Save state and dispose
+    /// </summary>
+    Task<StatusResponse> Disconnect();
+
+    /// <summary>
+    /// Subscribe to streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Subscribe(InstrumentState instrument);
+
+    /// <summary>
+    /// Unsubscribe from streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Unsubscribe(InstrumentState instrument);
+
+    /// <summary>
+    /// Set state
+    /// </summary>
+    /// <param name="instruments"></param>
+    Task StoreInstruments(Dictionary<string, InstrumentState> instruments);
+  }
+
+  public class ConnectionGrain : Grain<ConnectionState>, IConnectionGrain
   {
     /// <summary>
     /// Timer broadcasting quotes
     /// </summary>
     protected IDisposable interval;
-
-    /// <summary>
-    /// Quote stream
-    /// </summary>
-    protected IAsyncStream<PriceState> dataStream;
 
     /// <summary>
     /// HTTP service
@@ -50,7 +76,7 @@ namespace Simulation.Grains
     /// <summary>
     /// Subscriptions
     /// </summary>
-    protected ConcurrentDictionary<string, Action> subscriptions = new();
+    protected ConcurrentDictionary<string, Func<Task>> subscriptions = new();
 
     /// <summary>
     /// Instrument streams
@@ -65,23 +91,9 @@ namespace Simulation.Grains
       .WithResolver(ContractlessStandardResolver.Instance);
 
     /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override Task OnActivateAsync(CancellationToken cancellation)
-    {
-      dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(this.GetPrimaryKeyString(), Guid.Empty);
-
-      return base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
     /// Set state
     /// </summary>
     /// <param name="instruments"></param>
-    /// <returns></returns>
     public Task StoreInstruments(Dictionary<string, InstrumentState> instruments)
     {
       State = State with
@@ -112,18 +124,9 @@ namespace Simulation.Grains
 
       streams.ForEach(o => connections.Add(o.Value));
 
+      Run(speed);
+
       await Task.WhenAll(State.Instruments.Values.Select(Subscribe));
-
-      interval = this.RegisterGrainTimer(
-        cancellation =>
-        {
-          subscriptions.Values.ForEach(o => o());
-          return Task.CompletedTask;
-        },
-        TimeSpan.FromMicroseconds(0),
-        TimeSpan.FromMicroseconds(speed));
-
-      connections.Add(interval);
 
       return new StatusResponse
       {
@@ -136,6 +139,8 @@ namespace Simulation.Grains
     /// </summary>
     public async Task<StatusResponse> Disconnect()
     {
+      Stop();
+
       await Task.WhenAll(State.Instruments.Values.Select(Unsubscribe));
 
       connections?.ForEach(o => o?.Dispose());
@@ -143,7 +148,7 @@ namespace Simulation.Grains
 
       return new StatusResponse
       {
-        Data = StatusEnum.Active
+        Data = StatusEnum.Inactive
       };
     }
 
@@ -153,14 +158,21 @@ namespace Simulation.Grains
     /// <param name="instrument"></param>
     public async Task<StatusResponse> Subscribe(InstrumentState instrument)
     {
-      var descriptor = this.GetPrimaryKeyString();
-      var domGrain = GrainFactory.GetGrain<DomGrain>($"{descriptor}:{instrument.Name}");
-      var pricesGrain = GrainFactory.GetGrain<PricesGrain>($"{descriptor}:{instrument.Name}");
-      var optionsGrain = GrainFactory.GetGrain<OptionsGrain>($"{descriptor}:{instrument.Name}");
+      var converter = InstanceService<ConversionService>.Instance;
+      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      var instrumentDescriptor = new InstrumentDescriptor
+      {
+        Account = baseDescriptor.Account,
+        Instrument = instrument.Name
+      };
+
+      var domGrain = GrainFactory.Get<IDomGrain>(instrumentDescriptor);
+      var priceGrain = GrainFactory.Get<IPriceGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.Get<IOptionsGrain>(instrumentDescriptor);
 
       await Unsubscribe(instrument);
 
-      subscriptions[instrument.Name] = () =>
+      subscriptions[instrument.Name] = async () =>
       {
         streams.TryGetValue(instrument.Name, out var stream);
         summaries.TryGetValue(instrument.Name, out var state);
@@ -184,24 +196,22 @@ namespace Simulation.Grains
 
         var next = summaries.First();
 
-        summaries.ForEach(o => next = o.Value.Instrument.Price.Time <= next.Value.Instrument.Price.Time ? o : next);
+        summaries.ForEach(o => next = o.Value.Instrument.Point.Time <= next.Value.Instrument.Point.Time ? o : next);
 
         if (Equals(next.Key, instrument.Name))
         {
-          var point = next.Value.Instrument.Price with
+          var point = next.Value.Instrument.Point with
           {
             Bar = null,
-            Instrument = instrument,
+            Name = next.Key,
             TimeFrame = instrument.TimeFrame
           };
 
-          pricesGrain.Store(point);
-          domGrain.Store(next.Value.Dom);
-          optionsGrain.Store(next.Value.Options);
+          await domGrain.StoreDom(next.Value.Dom);
+          await optionsGrain.StoreOptions(next.Value.Options);
+          await priceGrain.StorePrice(point);
 
           summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Pause };
-
-          dataStream.OnNextAsync(point);
         }
       };
 
@@ -221,8 +231,28 @@ namespace Simulation.Grains
 
       return Task.FromResult(new StatusResponse
       {
-        Data = StatusEnum.Active
+        Data = StatusEnum.Pause
       });
+    }
+
+    /// <summary>
+    /// Start timer
+    /// </summary>
+    /// <param name="speed"></param>
+    protected void Run(int speed)
+    {
+      interval = this.RegisterGrainTimer(
+        async cancellation => await Task.WhenAll(subscriptions.Values.Select(o => o())),
+        TimeSpan.FromMicroseconds(0),
+        TimeSpan.FromMicroseconds(speed));
+    }
+
+    /// <summary>
+    /// Stop timer
+    /// </summary>
+    protected void Stop()
+    {
+      interval?.Dispose();
     }
 
     /// <summary>
