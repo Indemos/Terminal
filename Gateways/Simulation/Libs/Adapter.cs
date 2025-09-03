@@ -5,7 +5,6 @@ using Core.Common.Implementations;
 using Core.Common.States;
 using Simulation.Grains;
 using System;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -28,13 +27,14 @@ namespace Simulation
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
 
       var grain = Connector.Get<IConnectionGrain>(descriptor);
 
+      await ConnectOrders();
       await grain.StoreInstruments(Account.Instruments);
       await grain.Connect(Source, Speed);
 
@@ -49,11 +49,12 @@ namespace Simulation
     /// </summary>
     public override async Task<StatusResponse> Disconnect()
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
 
+      await DisconnectOrders();
       await Connector
         .Get<IConnectionGrain>(descriptor)
         .Disconnect();
@@ -70,7 +71,7 @@ namespace Simulation
     /// <param name="instrument"></param>
     public override async Task<StatusResponse> Subscribe(InstrumentState instrument)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
@@ -91,7 +92,7 @@ namespace Simulation
     /// <param name="instrument"></param>
     public override async Task<StatusResponse> Unsubscribe(InstrumentState instrument)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
@@ -216,7 +217,7 @@ namespace Simulation
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
         //.Select(UpdateInstrument)
-        .ToList();
+        .ToArray();
 
       var response = new InstrumentsResponse
       {
@@ -245,20 +246,16 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(ConditionState criteria = null)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
 
-      var response = new OrdersResponse();
       var ordersGrain = Connector.Get<IOrdersGrain>(descriptor);
-      var count = await ordersGrain.Count();
-
-      for (var i = 0; i < count; i++)
+      var response = new OrdersResponse
       {
-        var orderGrain = await ordersGrain.Grain(i);
-        response.Data.Add(await orderGrain.Order());
-      }
+        Data = await ordersGrain.Orders()
+      };
 
       return response;
     }
@@ -269,20 +266,16 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(ConditionState criteria = null)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
 
-      var response = new OrdersResponse();
       var positionsGrain = Connector.Get<IPositionsGrain>(descriptor);
-      var count = await positionsGrain.Count();
-
-      for (var i = 0; i < count; i++)
+      var response = new OrdersResponse
       {
-        var positionGrain = await positionsGrain.Grain(i);
-        response.Data.Add(await positionGrain.Position());
-      }
+        Data = await positionsGrain.Positions()
+      };
 
       return response;
     }
@@ -293,20 +286,16 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetTransactions(ConditionState criteria = null)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };
 
-      var response = new OrdersResponse();
       var transactionsGrain = Connector.Get<ITransactionsGrain>(descriptor);
-      var count = await transactionsGrain.Count();
-
-      for (var i = 0; i < count; i++)
+      var response = new OrdersResponse
       {
-        var transactionGrain = await transactionsGrain.Grain(i);
-        response.Data.Add(await transactionGrain.Transaction());
-      }
+        Data = await transactionsGrain.Transactions()
+      };
 
       return response;
     }
@@ -328,10 +317,10 @@ namespace Simulation
 
         if (orderResponse.Errors.Count is 0)
         {
-          var descriptor = new IdentityDescriptor
+          var descriptor = new OrderDescriptor
           {
             Account = Account.Descriptor,
-            Identity = order.Id
+            Order = order.Id
           };
 
           await Connector
@@ -353,7 +342,7 @@ namespace Simulation
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(OrderState order)
     {
-      var descriptor = new BaseDescriptor
+      var descriptor = new Descriptor
       {
         Account = Account.Descriptor
       };

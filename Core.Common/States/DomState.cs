@@ -7,11 +7,11 @@ namespace Core.Common.States
     /// <summary>
     /// Asks
     /// </summary>
-    public List<PriceState> Asks { get; init; } = [];
+    public IList<PriceState> Asks { get; init; } = [];
 
     /// <summary>
     /// Bids
     /// </summary>
-    public List<PriceState> Bids { get; init; } = [];
+    public IList<PriceState> Bids { get; init; } = [];
   }
 }

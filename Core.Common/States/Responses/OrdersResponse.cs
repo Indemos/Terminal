@@ -7,11 +7,11 @@ namespace Core.Common.States
     /// <summary>
     /// Data
     /// </summary>
-    public List<OrderState> Data { get; init; } = [];
+    public IList<OrderState> Data { get; init; } = [];
 
     /// <summary>
     /// Errors
     /// </summary>
-    public List<string> Errors { get; init; } = [];
+    public IList<string> Errors { get; init; } = [];
   }
 }

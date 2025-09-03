@@ -5,6 +5,7 @@ using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,19 +15,18 @@ namespace Core.Common.Grains
   public interface ITransactionsGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Get count
+    /// Get transactions
     /// </summary>
-    Task<int> Count();
-
-    /// <summary>
-    /// Get transaction by index
-    /// </summary>
-    /// <param name="index"></param>
-    Task<ITransactionGrain> Grain(int index);
+    Task<OrderState[]> Transactions();
   }
 
   public class TransactionsGrain : Grain<TransactionsState>, ITransactionsGrain
   {
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected Descriptor descriptor;
+
     /// <summary>
     /// Data subscription
     /// </summary>
@@ -38,12 +38,13 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
       var orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
 
       orderSubscription = await orderStream.SubscribeAsync(OnOrder);
 
@@ -65,20 +66,30 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Get transaction by index
+    /// Get transactions
     /// </summary>
-    /// <param name="index"></param>
-    public Task<ITransactionGrain> Grain(int index)
+    public async Task<OrderState[]> Transactions()
     {
-      return Task.FromResult(State.Grains.ElementAtOrDefault(index));
+      return await Task.WhenAll(State.Grains.Select(o => o.Transaction()));
     }
 
     /// <summary>
-    /// Get count
+    /// Add to the list
     /// </summary>
-    public Task<int> Count()
+    /// <param name="order"></param>
+    protected async Task Add(OrderState order)
     {
-      return Task.FromResult(State.Grains.Count);
+      var orderDescriptor = new OrderDescriptor
+      {
+        Account = descriptor.Account,
+        Order = order.Id
+      };
+
+      var orderGrain = GrainFactory.Get<ITransactionGrain>(orderDescriptor);
+
+      await orderGrain.StoreTransaction(order);
+
+      State.Grains.Add(orderGrain);
     }
 
     /// <summary>
@@ -90,19 +101,7 @@ namespace Core.Common.Grains
     {
       if (order.Operation.Status is OrderStatusEnum.Transaction)
       {
-        var converter = InstanceService<ConversionService>.Instance;
-        var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
-        var orderDescriptor = new IdentityDescriptor
-        {
-          Account = baseDescriptor.Account,
-          Identity = order.Id
-        };
-
-        var orderGrain = GrainFactory.Get<ITransactionGrain>(orderDescriptor);
-
-        await orderGrain.StoreTransaction(order);
-
-        State.Grains.Add(orderGrain);
+        await Add(order);
       }
     }
   }

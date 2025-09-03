@@ -1,4 +1,3 @@
-using Orleans;
 using System.Collections.Generic;
 
 namespace Core.Common.States
@@ -8,6 +7,6 @@ namespace Core.Common.States
     /// <summary>
     /// List of option contracts for the current point
     /// </summary>
-    public List<InstrumentState> Options { get; init; } = new();
+    public IList<InstrumentState> Options { get; init; } = [];
   }
 }

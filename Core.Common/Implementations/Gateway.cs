@@ -131,14 +131,14 @@ namespace Core.Common.Implementations
   public abstract class Gateway : IGateway
   {
     /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
-
-    /// <summary>
     /// Order subscription
     /// </summary>
     protected StreamSubscriptionHandle<OrderState> orderSubscription;
+
+    /// <summary>
+    /// Order validator
+    /// </summary>
+    protected OrderValidator orderValidator = InstanceService<OrderValidator>.Instance;
 
     /// <summary>
     /// Account
@@ -292,6 +292,36 @@ namespace Core.Common.Implementations
     }
 
     /// <summary>
+    /// Subscribe to order updates
+    /// </summary>
+    protected virtual async Task ConnectOrders()
+    {
+      orderSubscription = await OrderStream.SubscribeAsync((o, v) =>
+      {
+        if (o.Operation.Status is OrderStatusEnum.Transaction)
+        {
+          Account = Account with
+          {
+            Performance = Account.Performance + o.Gain
+          };
+        }
+
+        return Task.CompletedTask;
+      });
+    }
+
+    /// <summary>
+    /// Unsubscribe from order updates
+    /// </summary>
+    protected virtual async Task DisconnectOrders()
+    {
+      if (orderSubscription is not null)
+      {
+        await orderSubscription.UnsubscribeAsync();
+      }
+    }
+
+    /// <summary>
     /// Convert hierarchy of orders into a plain list
     /// </summary>
     protected virtual List<OrderState> Compose(OrderState order)
@@ -342,12 +372,11 @@ namespace Core.Common.Implementations
     protected virtual List<ErrorState> GetErrors(OrderState order)
     {
       var response = new List<ErrorState>();
-      var validator = InstanceService<OrderValidator>.Instance;
       var orders = order.Orders.Append(order);
 
       foreach (var subOrder in orders)
       {
-        var errors = validator
+        var errors = orderValidator
           .Validate(subOrder)
           .Errors
           .Select(error => new ErrorState { Message = error.ErrorMessage });

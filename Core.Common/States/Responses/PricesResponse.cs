@@ -7,11 +7,11 @@ namespace Core.Common.States
     /// <summary>
     /// Data
     /// </summary>
-    public List<PriceState> Data { get; init; } = [];
+    public IList<PriceState> Data { get; init; } = [];
 
     /// <summary>
     /// Errors
     /// </summary>
-    public List<string> Errors { get; init; } = [];
+    public IList<string> Errors { get; init; } = [];
   }
 }

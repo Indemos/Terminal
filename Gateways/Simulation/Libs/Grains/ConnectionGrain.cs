@@ -159,7 +159,7 @@ namespace Simulation.Grains
     public async Task<StatusResponse> Subscribe(InstrumentState instrument)
     {
       var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      var baseDescriptor = converter.Decompose<Descriptor>(this.GetPrimaryKeyString());
       var instrumentDescriptor = new InstrumentDescriptor
       {
         Account = baseDescriptor.Account,

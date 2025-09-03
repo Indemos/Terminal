@@ -14,25 +14,18 @@ namespace Core.Common.Grains
   public interface IPositionsGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Get count
+    /// Get positions
     /// </summary>
-    Task<int> Count();
-
-    /// <summary>
-    /// Get position by index
-    /// </summary>
-    /// <param name="index"></param>
-    Task<IPositionGrain> Grain(int index);
-
-    /// <summary>
-    /// Get position by name
-    /// </summary>
-    /// <param name="name"></param>
-    Task<IPositionGrain> Grain(string name);
+    Task<OrderState[]> Positions();
   }
 
   public class PositionsGrain : Grain<PositionsState>, IPositionsGrain
   {
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected Descriptor descriptor;
+
     /// <summary>
     /// Order stream
     /// </summary>
@@ -49,12 +42,13 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
       orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
 
       orderSubscription = await orderStream.SubscribeAsync(OnOrder);
 
@@ -62,29 +56,45 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Get position by name
+    /// Get positions
     /// </summary>
-    /// <param name="name"></param>
-    public Task<IPositionGrain> Grain(string name)
+    public async Task<OrderState[]> Positions()
     {
-      return Task.FromResult(State.Grains.Get(name));
+      return await Task.WhenAll(State.Grains.Values.Select(o => o.Position()));
     }
 
     /// <summary>
-    /// Get position by index
+    /// Update
     /// </summary>
-    /// <param name="index"></param>
-    public Task<IPositionGrain> Grain(int index)
+    /// <param name="order"></param>
+    protected async Task Update(OrderState order)
     {
-      return Task.FromResult(State.Grains.Values.ElementAtOrDefault(index));
+      var name = order.Operation.Instrument.Name;
+      var currentGrain = State.Grains.Get(name);
+      var response = await currentGrain.Combine(order);
+
+      if (response.Data is null)
+      {
+        State.Grains.Remove(name);
+      }
     }
 
     /// <summary>
-    /// Get count
+    /// Create
     /// </summary>
-    public Task<int> Count()
+    /// <param name="order"></param>
+    protected async Task Create(OrderState order)
     {
-      return Task.FromResult(State.Grains.Count);
+      var name = order.Operation.Instrument.Name;
+      var orderDescriptor = new OrderDescriptor
+      {
+        Account = descriptor.Account,
+        Order = order.Id
+      };
+
+      var nextGrain = State.Grains[name] = GrainFactory.Get<IPositionGrain>(orderDescriptor);
+
+      await nextGrain.StorePosition(order);
     }
 
     /// <summary>
@@ -96,34 +106,13 @@ namespace Core.Common.Grains
     {
       if (order.Operation.Status is OrderStatusEnum.Position)
       {
-        var name = order.Operation.Instrument.Name;
-        var currentGrain = State.Grains.Get(name);
-
-        if (currentGrain is not null)
+        if (State.Grains.Get(order.Operation.Instrument.Name) is null)
         {
-          var response = await currentGrain.Combine(order);
-
-          if (response.Data is null)
-          {
-            State.Grains.Remove(name);
-          }
-
+          await Create(order);
           return;
         }
 
-        var converter = InstanceService<ConversionService>.Instance;
-        var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
-        var orderDescriptor = new IdentityDescriptor
-        {
-          Account = baseDescriptor.Account,
-          Identity = order.Id
-        };
-
-        var nextGrain = GrainFactory.Get<IPositionGrain>(orderDescriptor);
-
-        await nextGrain.StorePosition(order);
-
-        State.Grains[name] = nextGrain;
+        await Update(order);
       }
     }
   }

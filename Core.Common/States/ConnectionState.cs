@@ -7,6 +7,6 @@ namespace Core.Common.States
     /// <summary>
     /// Instruments
     /// </summary>
-    public Dictionary<string, InstrumentState> Instruments { get; init; } = new();
+    public Dictionary<string, InstrumentState> Instruments { get; init; } = [];
   }
 }

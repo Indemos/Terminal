@@ -38,6 +38,6 @@ namespace Core.Common.States
     /// <summary>
     /// Criteria
     /// </summary>
-    public Dictionary<string, double> Criteria { get; set; } = new();
+    public Dictionary<string, double> Criteria { get; set; } = [];
   }
 }

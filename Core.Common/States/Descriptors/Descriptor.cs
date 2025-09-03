@@ -7,7 +7,7 @@ namespace Core.Common.States
   {
   }
 
-  public record BaseDescriptor : IDescriptor
+  public record Descriptor : IDescriptor
   {
     /// <summary>
     /// Account descriptor

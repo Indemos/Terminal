@@ -8,6 +8,6 @@ namespace Core.Common.States
     /// <summary>
     /// History of completed deals, closed positions
     /// </summary>
-    public List<ITransactionGrain> Grains { get; init; } = [];
+    public IList<ITransactionGrain> Grains { get; init; } = [];
   }
 }

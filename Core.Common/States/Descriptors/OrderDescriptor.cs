@@ -1,6 +1,6 @@
 namespace Core.Common.States
 {
-  public record IdentityDescriptor : IDescriptor
+  public record OrderDescriptor : IDescriptor
   {
     /// <summary>
     /// Account descriptor
@@ -10,6 +10,6 @@ namespace Core.Common.States
     /// <summary>
     /// Order descriptor
     /// </summary>
-    public string Identity { get; init; }
+    public string Order { get; init; }
   }
 }

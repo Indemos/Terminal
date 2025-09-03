@@ -14,7 +14,6 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Core.Client.Pages.Shares
@@ -111,6 +110,7 @@ namespace Core.Client.Pages.Shares
         return;
       }
 
+      var orders = (await adapter.GetOrders()).Data;
       var positions = (await adapter.GetPositions()).Data;
       var performance = await Performance.Update([adapter]);
       var xPoint = seriesX.Last();
@@ -119,25 +119,28 @@ namespace Core.Client.Pages.Shares
       var expenses = spread;
       var posAmount = positions.Sum(o => o.Operation.Amount);
 
-      if (positions.Count == 2)
+      if (orders.Count is 0)
       {
-        var buy = positions.First(o => o.Side is OrderSideEnum.Long);
-        var sell = positions.First(o => o.Side is OrderSideEnum.Short);
-        var gain = buy.Gain + sell.Gain;
-
-        switch (true)
+        if (positions.Count == 2)
         {
-          case true when gain > expenses * 2: await ClosePositions(); break;
-          case true when gain < -expenses * posAmount: await OpenPositions(buy.Operation.Instrument, sell.Operation.Instrument); break;
+          var buy = positions.First(o => o.Side is OrderSideEnum.Long);
+          var sell = positions.First(o => o.Side is OrderSideEnum.Short);
+          var gain = buy.Gain + sell.Gain;
+
+          switch (true)
+          {
+            case true when gain > expenses * 2: await ClosePositions(); break;
+            case true when gain < -expenses * posAmount: await OpenPositions(buy.Operation.Instrument, sell.Operation.Instrument); break;
+          }
         }
-      }
 
-      if (positions.Count is 0)
-      {
-        switch (true)
+        if (positions.Count is 0)
         {
-          case true when (xPoint.Bid - yPoint.Ask) > expenses: await OpenPositions(instrumentY, instrumentX); break;
-          case true when (yPoint.Bid - xPoint.Ask) > expenses: await OpenPositions(instrumentX, instrumentY); break;
+          switch (true)
+          {
+            case true when (xPoint.Bid - yPoint.Ask) > expenses: await OpenPositions(instrumentY, instrumentX); break;
+            case true when (yPoint.Bid - xPoint.Ask) > expenses: await OpenPositions(instrumentX, instrumentY); break;
+          }
         }
       }
 
@@ -152,9 +155,8 @@ namespace Core.Client.Pages.Shares
       await TransactionsView.UpdateItems([.. View.Adapters.Values]);
       await OrdersView.UpdateItems([.. View.Adapters.Values]);
       await PositionsView.UpdateItems([.. View.Adapters.Values]);
-      await ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "X", new LineShape { Y = xPoint.Last, Component = comUp });
-      await ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Y", new LineShape { Y = yPoint.Last, Component = comDown });
-      await PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance });
+      await ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Spread", new AreaShape { Y = range, Component = com });
+      await PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       await PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 

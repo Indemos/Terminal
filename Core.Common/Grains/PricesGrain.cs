@@ -46,13 +46,15 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<InstrumentDescriptor>(this.GetPrimaryKeyString());
+      var descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<InstrumentDescriptor>(this.GetPrimaryKeyString());
+
       var dataStream = this
         .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      instrumentName = baseDescriptor.Instrument;
+      instrumentName = descriptor.Instrument;
       dataSubscription = await dataStream.SubscribeAsync(OnPrice);
 
       await base.OnActivateAsync(cancellation);

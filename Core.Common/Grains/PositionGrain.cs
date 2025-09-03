@@ -44,6 +44,11 @@ namespace Core.Common.Grains
   public class PositionGrain : Grain<OrderState>, IPositionGrain
   {
     /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected Descriptor descriptor;
+
+    /// <summary>
     /// Order stream
     /// </summary>
     protected IAsyncStream<OrderState> orderStream;
@@ -59,15 +64,17 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<Descriptor>(this.GetPrimaryKeyString());
+
       var dataStream = this
         .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
       orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
 
       dataSubscription = await dataStream.SubscribeAsync(OnPrice);
 
@@ -134,9 +141,6 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     public async Task StorePosition(OrderState order)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
-
       State = order with
       {
         Operation = order.Operation with
@@ -147,10 +151,10 @@ namespace Core.Common.Grains
 
       foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {
-        var orderDescriptor = new IdentityDescriptor
+        var orderDescriptor = new OrderDescriptor
         {
-          Account = baseDescriptor.Account,
-          Identity = order.Id
+          Account = descriptor.Account,
+          Order = order.Id
         };
 
         await GrainFactory.Get<IOrderGrain>(orderDescriptor).StoreOrder(brace);
@@ -199,15 +203,12 @@ namespace Core.Common.Grains
     /// <returns></returns>
     protected async Task SendBraces(OrderState order)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
-
       foreach (var currentOrder in State.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {
-        var orderDescriptor = new IdentityDescriptor
+        var orderDescriptor = new OrderDescriptor
         {
-          Account = baseDescriptor.Account,
-          Identity = order.Id
+          Account = descriptor.Account,
+          Order = order.Id
         };
 
         await GrainFactory.Get<IOrdersGrain>(orderDescriptor).Remove(currentOrder);
@@ -215,10 +216,10 @@ namespace Core.Common.Grains
 
       foreach (var nextOrder in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {
-        var orderDescriptor = new IdentityDescriptor
+        var orderDescriptor = new OrderDescriptor
         {
-          Account = baseDescriptor.Account,
-          Identity = order.Id
+          Account = descriptor.Account,
+          Order = order.Id
         };
 
         await GrainFactory.Get<IOrderGrain>(orderDescriptor).StoreOrder(nextOrder);

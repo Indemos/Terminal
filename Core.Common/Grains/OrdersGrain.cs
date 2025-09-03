@@ -14,22 +14,9 @@ namespace Core.Common.Grains
   public interface IOrdersGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Count
+    /// Get orders
     /// </summary>
-    /// <param name="name"></param>
-    Task<int> Count();
-
-    /// <summary>
-    /// Get order by index
-    /// </summary>
-    /// <param name="name"></param>
-    Task<IOrderGrain> Grain(int index);
-
-    /// <summary>
-    /// Get order by name
-    /// </summary>
-    /// <param name="name"></param>
-    Task<IOrderGrain> Grain(string name);
+    Task<OrderState[]> Orders();
 
     /// <summary>
     /// Add order to the list
@@ -47,6 +34,11 @@ namespace Core.Common.Grains
   public class OrdersGrain : Grain<OrdersState>, IOrdersGrain
   {
     /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected Descriptor descriptor;
+
+    /// <summary>
     /// Order stream
     /// </summary>
     protected IAsyncStream<OrderState> orderStream;
@@ -62,12 +54,13 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
+      descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
       orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(baseDescriptor.Account, Guid.Empty);
+        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
 
       orderSubscription = await orderStream.SubscribeAsync(OnOrder);
 
@@ -89,29 +82,11 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Get order by name
+    /// Get orders
     /// </summary>
-    /// <param name="name"></param>
-    public Task<IOrderGrain> Grain(string name)
+    public async Task<OrderState[]> Orders()
     {
-      return Task.FromResult(State.Grains.Get(name));
-    }
-
-    /// <summary>
-    /// Get order by index
-    /// </summary>
-    /// <param name="index"></param>
-    public Task<IOrderGrain> Grain(int index)
-    {
-      return Task.FromResult(State.Grains.Values.ElementAtOrDefault(index));
-    }
-
-    /// <summary>
-    /// Get count
-    /// </summary>
-    public Task<int> Count()
-    {
-      return Task.FromResult(State.Grains.Count);
+      return await Task.WhenAll(State.Grains.Values.Select(o => o.Order()));
     }
 
     /// <summary>
@@ -120,12 +95,10 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     public Task<DescriptorResponse> Add(OrderState order)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<BaseDescriptor>(this.GetPrimaryKeyString());
-      var orderDescriptor = new IdentityDescriptor
+      var orderDescriptor = new OrderDescriptor
       {
-        Account = baseDescriptor.Account,
-        Identity = order.Id
+        Account = descriptor.Account,
+        Order = order.Id
       };
 
       var response = new DescriptorResponse

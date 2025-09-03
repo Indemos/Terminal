@@ -1,5 +1,4 @@
 using Core.Common.Enums;
-using Orleans;
 using System;
 using System.Collections.Generic;
 
@@ -75,6 +74,6 @@ namespace Core.Common.States
     /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
-    public List<OrderState> Orders { get; init; } = [];
+    public IList<OrderState> Orders { get; init; } = [];
   }
 }

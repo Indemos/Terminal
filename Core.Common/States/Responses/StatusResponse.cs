@@ -13,6 +13,6 @@ namespace Core.Common.States
     /// <summary>
     /// Errors
     /// </summary>
-    public List<string> Errors { get; init; } = [];
+    public IList<string> Errors { get; init; } = [];
   }
 }

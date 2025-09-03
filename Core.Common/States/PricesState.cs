@@ -7,11 +7,11 @@ namespace Core.Common.States
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    public List<PriceState> Prices { get; init; } = [];
+    public IList<PriceState> Prices { get; init; } = [];
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public List<PriceState> PriceGroups { get; init; } = [];
+    public IList<PriceState> PriceGroups { get; init; } = [];
   }
 }
