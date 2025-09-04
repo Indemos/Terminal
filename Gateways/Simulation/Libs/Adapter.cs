@@ -306,7 +306,13 @@ namespace Simulation
     /// <param name="order"></param>
     public override async Task<OrderGroupsResponse> SendOrder(OrderState order)
     {
+      var descriptor = new Descriptor
+      {
+        Account = Account.Descriptor
+      };
+
       var response = new OrderGroupsResponse();
+      var ordersGrain = Connector.Get<IOrdersGrain>(descriptor);
 
       foreach (var nextOrder in Compose(order))
       {
@@ -317,15 +323,9 @@ namespace Simulation
 
         if (orderResponse.Errors.Count is 0)
         {
-          var descriptor = new OrderDescriptor
-          {
-            Account = Account.Descriptor,
-            Order = order.Id
-          };
-
           await Connector
-            .Get<IOrderGrain>(descriptor)
-            .StoreOrder(nextOrder);
+            .Get<IOrdersGrain>(descriptor)
+            .Send(nextOrder);
 
           orderResponse = orderResponse with { Data = nextOrder };
         }

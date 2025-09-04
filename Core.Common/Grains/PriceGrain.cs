@@ -20,7 +20,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Aggregate points
     /// </summary>
-    Task StorePrice(PriceState point);
+    Task Store(PriceState point);
   }
 
   public class PriceGrain : Grain<PriceState>, IPriceGrain
@@ -60,7 +60,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Aggregate points
     /// </summary>
-    public async Task StorePrice(PriceState nextPoint)
+    public async Task Store(PriceState nextPoint)
     {
       var currentPoint = State;
       var price = (nextPoint.Last ?? currentPoint.Last).Value;

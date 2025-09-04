@@ -9,7 +9,6 @@ namespace Core.Common.Extensions
     /// </summary>
     /// <param name="input"></param>
     /// <param name="span"></param>
-    /// <returns></returns>
     public static DateTime? Round(this DateTime? input, TimeSpan? span)
     {
       if (input is null)
@@ -27,7 +26,6 @@ namespace Core.Common.Extensions
     /// Date without time
     /// </summary>
     /// <param name="input"></param>
-    /// <returns></returns>
     public static DateOnly? AsDate(this DateTime? input)
     {
       if (input is null)

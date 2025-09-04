@@ -124,7 +124,6 @@ namespace Core.Client.Components
     /// </summary>
     /// <param name="price"></param>
     /// <param name="inputModel"></param>
-    /// <returns></returns>
     protected virtual double GetEstimate(double price, DateTime date, OptionInputModel inputModel)
     {
       var direction = inputModel.Position is OrderSideEnum.Long ? 1.0 : -1.0;

@@ -12,7 +12,6 @@ namespace Core.Common.Extensions
     /// <typeparam name="V"></typeparam>
     /// <param name="input"></param>
     /// <param name="index"></param>
-    /// <returns></returns>
     public static V Get<K, V>(this IDictionary<K, V> input, K index)
     {
       return index is not null && input.TryGetValue(index, out var value) ? value : default;
@@ -24,7 +23,6 @@ namespace Core.Common.Extensions
     /// <typeparam name="K"></typeparam>
     /// <typeparam name="V"></typeparam>
     /// <param name="input"></param>
-    /// <returns></returns>
     public static ConcurrentDictionary<K, V> Concurrent<K, V>(this IDictionary<K, V> input)
     {
       return new ConcurrentDictionary<K, V>(input);

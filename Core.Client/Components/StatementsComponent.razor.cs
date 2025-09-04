@@ -79,9 +79,9 @@ namespace Core.Client.Components
       {
         values.Add(new InputData
         {
-          Min = o.Min.Value,
-          Max = o.Max.Value,
-          Value = o.Gain.Value,
+          Min = o.Balance.Min.Value,
+          Max = o.Balance.Max.Value,
+          Value = o.Balance.Current.Value,
           Time = o.Operation.Time.Value,
           Direction = o.Side is OrderSideEnum.Long ? 1 : -1,
           Commission = o.Operation.Instrument.Commission.Value * 2
@@ -102,7 +102,6 @@ namespace Core.Client.Components
     /// Format double
     /// </summary>
     /// <param name="input"></param>
-    /// <returns></returns>
     protected virtual string ShowDouble(double? input)
     {
       return (input < 0 ? "-" : "") + string.Format("{0:0.00}", Math.Abs(input.Value));

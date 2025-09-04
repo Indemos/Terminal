@@ -17,6 +17,12 @@ namespace Core.Common.Grains
     /// Get positions
     /// </summary>
     Task<OrderState[]> Positions();
+
+    /// <summary>
+    /// Process order to position conversion
+    /// </summary>
+    /// <param name="order"></param>
+    Task Send(OrderState order);
   }
 
   public class PositionsGrain : Grain<PositionsState>, IPositionsGrain
@@ -27,14 +33,9 @@ namespace Core.Common.Grains
     protected Descriptor descriptor;
 
     /// <summary>
-    /// Order stream
-    /// </summary>
-    protected IAsyncStream<OrderState> orderStream;
-
-    /// <summary>
     /// Data subscription
     /// </summary>
-    protected StreamSubscriptionHandle<OrderState> orderSubscription;
+    protected StreamSubscriptionHandle<PriceState> dataSubscription;
 
     /// <summary>
     /// Activation
@@ -46,13 +47,27 @@ namespace Core.Common.Grains
         .Instance
         .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
-      orderStream = this
-        .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
+      var dataStream = this
+        .GetStreamProvider(nameof(StreamEnum.Price))
+        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      orderSubscription = await orderStream.SubscribeAsync(OnOrder);
+      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
 
       await base.OnActivateAsync(cancellation);
+    }
+
+    /// <summary>
+    /// Deactivation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
+    {
+      if (dataSubscription is not null)
+      {
+        await dataSubscription.UnsubscribeAsync();
+      }
+
+      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
@@ -64,18 +79,40 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
+    /// Process order to position conversion
+    /// </summary>
+    /// <param name="order"></param>
+    public async Task Send(OrderState order)
+    {
+      if (State.Grains.ContainsKey(order.Operation.Instrument.Name))
+      {
+        await Combine(order);
+        return;
+      }
+
+      await Store(order);
+    }
+
+    /// <summary>
     /// Update
     /// </summary>
     /// <param name="order"></param>
-    protected async Task Update(OrderState order)
+    protected async Task Combine(OrderState order)
     {
       var name = order.Operation.Instrument.Name;
       var currentGrain = State.Grains.Get(name);
       var response = await currentGrain.Combine(order);
 
-      if (response.Data is null)
+      if (response.Data is not null)
       {
-        State.Grains.Remove(name);
+        if (order.Amount.Is(response.Data.Amount))
+        {
+          State.Grains.Remove(name);
+        }
+
+        await GrainFactory
+          .Get<ITransactionsGrain>(descriptor)
+          .Send(response.Data);
       }
     }
 
@@ -83,36 +120,29 @@ namespace Core.Common.Grains
     /// Create
     /// </summary>
     /// <param name="order"></param>
-    protected async Task Create(OrderState order)
+    protected async Task Store(OrderState order)
     {
-      var name = order.Operation.Instrument.Name;
-      var orderDescriptor = new OrderDescriptor
+      var nextGrain = GrainFactory.Get<IPositionGrain>(new OrderDescriptor
       {
         Account = descriptor.Account,
         Order = order.Id
-      };
+      });
 
-      var nextGrain = State.Grains[name] = GrainFactory.Get<IPositionGrain>(orderDescriptor);
+      await nextGrain.Store(order);
 
-      await nextGrain.StorePosition(order);
+      State.Grains[order.Operation.Instrument.Name] = nextGrain;
     }
 
     /// <summary>
-    /// Process order to position conversion
+    /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="order"></param>
+    /// <param name="price"></param>
     /// <param name="token"></param>
-    protected async Task OnOrder(OrderState order, StreamSequenceToken token)
+    protected async Task OnPrice(PriceState price, StreamSequenceToken token)
     {
-      if (order.Operation.Status is OrderStatusEnum.Position)
+      foreach (var grain in State.Grains.Values)
       {
-        if (State.Grains.Get(order.Operation.Instrument.Name) is null)
-        {
-          await Create(order);
-          return;
-        }
-
-        await Update(order);
+        await grain.Tap(price);
       }
     }
   }

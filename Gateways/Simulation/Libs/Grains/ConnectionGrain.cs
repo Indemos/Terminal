@@ -209,7 +209,7 @@ namespace Simulation.Grains
 
           await domGrain.StoreDom(next.Value.Dom);
           await optionsGrain.StoreOptions(next.Value.Options);
-          await priceGrain.StorePrice(point);
+          await priceGrain.Store(point);
 
           summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Pause };
         }

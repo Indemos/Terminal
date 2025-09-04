@@ -31,9 +31,9 @@ namespace Core.Common.Grains
   public class PricesGrain : Grain<PricesState>, IPricesGrain
   {
     /// <summary>
-    /// Instrument name
+    /// Descriptor
     /// </summary>
-    protected string instrumentName;
+    protected InstrumentDescriptor descriptor;
 
     /// <summary>
     /// Data subscription
@@ -46,7 +46,7 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      var descriptor = InstanceService<ConversionService>
+      descriptor = InstanceService<ConversionService>
         .Instance
         .Decompose<InstrumentDescriptor>(this.GetPrimaryKeyString());
 
@@ -54,7 +54,6 @@ namespace Core.Common.Grains
         .GetStreamProvider(nameof(StreamEnum.Price))
         .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      instrumentName = descriptor.Instrument;
       dataSubscription = await dataStream.SubscribeAsync(OnPrice);
 
       await base.OnActivateAsync(cancellation);
@@ -115,7 +114,7 @@ namespace Core.Common.Grains
     /// <param name="token"></param>
     protected async Task OnPrice(PriceState price, StreamSequenceToken token)
     {
-      if (Equals(price.Name, instrumentName))
+      if (Equals(price.Name, descriptor.Instrument))
       {
         await Add(price);
       }

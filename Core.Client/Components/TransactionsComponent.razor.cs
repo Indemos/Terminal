@@ -81,7 +81,7 @@ namespace Core.Client.Components
           Size = o.Operation.Amount ?? 0,
           OpenPrice = o.Operation.AveragePrice ?? 0,
           ClosePrice = o.Operation.Price ?? 0,
-          Gain = o.Gain ?? 0
+          Gain = o.Balance.Current ?? 0
 
         })];
 

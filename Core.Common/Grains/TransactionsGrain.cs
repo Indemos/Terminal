@@ -5,7 +5,6 @@ using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,6 +17,12 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     Task<OrderState[]> Transactions();
+
+    /// <summary>
+    /// Add to the list
+    /// </summary>
+    /// <param name="order"></param>
+    Task Send(OrderState order);
   }
 
   public class TransactionsGrain : Grain<TransactionsState>, ITransactionsGrain
@@ -28,9 +33,9 @@ namespace Core.Common.Grains
     protected Descriptor descriptor;
 
     /// <summary>
-    /// Data subscription
+    /// Order stream
     /// </summary>
-    protected StreamSubscriptionHandle<OrderState> orderSubscription;
+    protected IAsyncStream<OrderState> orderStream;
 
     /// <summary>
     /// Activation
@@ -42,27 +47,11 @@ namespace Core.Common.Grains
         .Instance
         .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
-      var orderStream = this
+      orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
         .GetStream<OrderState>(descriptor.Account, Guid.Empty);
 
-      orderSubscription = await orderStream.SubscribeAsync(OnOrder);
-
       await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      if (orderSubscription is not null)
-      {
-        await orderSubscription.UnsubscribeAsync();
-      }
-
-      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
@@ -77,7 +66,7 @@ namespace Core.Common.Grains
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    protected async Task Add(OrderState order)
+    public async Task Send(OrderState order)
     {
       var orderDescriptor = new OrderDescriptor
       {
@@ -87,22 +76,10 @@ namespace Core.Common.Grains
 
       var orderGrain = GrainFactory.Get<ITransactionGrain>(orderDescriptor);
 
-      await orderGrain.StoreTransaction(order);
+      await orderGrain.Store(order);
+      await orderStream.OnNextAsync(order);
 
       State.Grains.Add(orderGrain);
-    }
-
-    /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="token"></param>
-    protected async Task OnOrder(OrderState order, StreamSequenceToken token)
-    {
-      if (order.Operation.Status is OrderStatusEnum.Transaction)
-      {
-        await Add(order);
-      }
     }
   }
 }

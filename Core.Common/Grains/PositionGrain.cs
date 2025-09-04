@@ -3,9 +3,9 @@ using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using Orleans.Streams;
 using System;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,31 +14,27 @@ namespace Core.Common.Grains
   public interface IPositionGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Estimated PnL in account's currency for one side of the order
-    /// </summary>
-    Task<double> Gain();
-
-    /// <summary>
-    /// Estimated PnL in points for one side of the order
-    /// </summary>
-    Task<double> Range();
-
-    /// <summary>
     /// Get order state
     /// </summary>
     Task<OrderState> Position();
 
     /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="price"></param>
+    Task Tap(PriceState price);
+
+    /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task StorePosition(OrderState order);
+    Task Store(OrderState order);
 
     /// <summary>
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Combine(OrderState order);
+    Task<OrderResponse> Combine(OrderState order);
   }
 
   public class PositionGrain : Grain<OrderState>, IPositionGrain
@@ -47,16 +43,6 @@ namespace Core.Common.Grains
     /// Descriptor
     /// </summary>
     protected Descriptor descriptor;
-
-    /// <summary>
-    /// Order stream
-    /// </summary>
-    protected IAsyncStream<OrderState> orderStream;
-
-    /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
 
     /// <summary>
     /// Activation
@@ -68,31 +54,7 @@ namespace Core.Common.Grains
         .Instance
         .Decompose<Descriptor>(this.GetPrimaryKeyString());
 
-      var dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
-
-      orderStream = this
-        .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
-
-      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
-
       await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
-
-      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
@@ -104,70 +66,23 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Estimated PnL in account's currency for one side of the order
-    /// </summary>
-    public async Task<double> Gain()
-    {
-      var pointEstimate = await Range();
-      var amount = State.Operation.Amount;
-      var instrument = State.Operation.Instrument;
-      var estimate = amount * pointEstimate * instrument.Leverage - instrument.Commission;
-      var gain = estimate ?? State.Gain ?? 0;
-
-      State = State with
-      {
-        Gain = gain,
-        Min = Math.Min(State.Min ?? 0, gain),
-        Max = Math.Max(State.Max ?? 0, gain)
-      };
-
-      return estimate.Value;
-    }
-
-    /// <summary>
-    /// Estimated PnL in points for one side of the order
-    /// </summary>
-    public Task<double> Range()
-    {
-      var price = State.Operation.Price ?? ClosePrice();
-      var estimate = (price - State.Operation.AveragePrice) * Side();
-
-      return Task.FromResult(estimate.Value);
-    }
-
-    /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public async Task StorePosition(OrderState order)
+    public async Task Store(OrderState order)
     {
-      State = order with
-      {
-        Operation = order.Operation with
-        {
-          Status = OrderStatusEnum.Position
-        }
-      };
+      State = order;
 
-      foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
-      {
-        var orderDescriptor = new OrderDescriptor
-        {
-          Account = descriptor.Account,
-          Order = order.Id
-        };
-
-        await GrainFactory.Get<IOrderGrain>(orderDescriptor).StoreOrder(brace);
-      }
+      await SendBraces(order);
     }
 
     /// <summary>
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    public async Task<DescriptorResponse> Combine(OrderState order)
+    public async Task<OrderResponse> Combine(OrderState order)
     {
-      var response = new DescriptorResponse { Data = order.Id };
+      var response = new OrderResponse();
 
       if (Equals(State.Side, order.Side))
       {
@@ -175,55 +90,23 @@ namespace Core.Common.Grains
       }
       else
       {
-        var amount = State.Operation.Amount.IsGt(order.Amount) ? order.Amount : State.Operation.Amount;
-        var action = Decrease(order, amount);
-
-        if (order.Amount.Is(State.Operation.Amount))
-        {
-          response = response with { Data = null };
-        }
+        var state = Decrease(order);
 
         if (order.Amount.IsGt(State.Operation.Amount))
         {
-          State = Reverse(order);
+          state = Inverse(order);
         }
 
-        await orderStream.OnNextAsync(action);
+        response = response with { Data = State = state };
       }
 
-      await SendBraces(order);
+      if (response.Data is not null)
+      {
+        await SendBraces(State, ActionEnum.Delete);
+        await SendBraces(order);
+      }
 
       return response;
-    }
-
-    /// <summary>
-    /// Update SL and TP orders
-    /// </summary>
-    /// <param name="order"></param>
-    /// <returns></returns>
-    protected async Task SendBraces(OrderState order)
-    {
-      foreach (var currentOrder in State.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
-      {
-        var orderDescriptor = new OrderDescriptor
-        {
-          Account = descriptor.Account,
-          Order = order.Id
-        };
-
-        await GrainFactory.Get<IOrdersGrain>(orderDescriptor).Remove(currentOrder);
-      }
-
-      foreach (var nextOrder in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
-      {
-        var orderDescriptor = new OrderDescriptor
-        {
-          Account = descriptor.Account,
-          Order = order.Id
-        };
-
-        await GrainFactory.Get<IOrderGrain>(orderDescriptor).StoreOrder(nextOrder);
-      }
     }
 
     /// <summary>
@@ -232,26 +115,27 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     protected OrderState Increase(OrderState order)
     {
-      var increaseAmount = State.Operation.Amount + order.Amount;
+      var amount = State.Operation.Amount + order.Amount;
 
       return State with
       {
-        Amount = increaseAmount,
+        Amount = amount,
         Operation = State.Operation with
         {
-          Amount = increaseAmount,
+          Amount = amount,
           AveragePrice = GroupPrice(State, order)
         }
       };
     }
 
     /// <summary>
-    /// Close position
+    /// Decrease position by amount or close 
     /// </summary>
     /// <param name="order"></param>
-    /// <param name="amount"></param>
-    protected OrderState Decrease(OrderState order, double? amount)
+    protected OrderState Decrease(OrderState order)
     {
+      var amount = Math.Min(order.Amount.Value, State.Operation.Amount.Value);
+
       return State with
       {
         Amount = amount,
@@ -269,17 +153,16 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected OrderState Reverse(OrderState order)
+    protected OrderState Inverse(OrderState order)
     {
-      var nextAmount = order.Amount - State.Operation.Amount;
+      var amount = order.Amount - State.Operation.Amount;
 
       return order with
       {
-        Amount = nextAmount,
+        Amount = amount,
         Operation = State.Operation with
         {
-          Amount = nextAmount,
-          Status = OrderStatusEnum.Position
+          Amount = amount
         }
       };
     }
@@ -287,32 +170,50 @@ namespace Core.Common.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="point"></param>
-    /// <param name="token"></param>
-    protected async Task OnPrice(PriceState point, StreamSequenceToken token)
+    /// <param name="price"></param>
+    public Task Tap(PriceState price)
     {
-      if (Equals(point.Name, State.Operation.Instrument.Name))
+      if (Equals(price.Name, State.Operation.Instrument.Name))
       {
         State = State with
         {
+          Balance = Balance(),
           Operation = State.Operation with
           {
             Instrument = State.Operation.Instrument with
             {
-              Point = point
+              Point = price
             }
           }
         };
+      }
 
-        await Gain();
+      return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Update SL and TP orders
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="close"></param>
+    protected async Task SendBraces(OrderState order, ActionEnum action = ActionEnum.Create)
+    {
+      var ordersGrain = GrainFactory.Get<IOrdersGrain>(descriptor);
+
+      foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
+      {
+        switch (action)
+        {
+          case ActionEnum.Create: await ordersGrain.Send(brace); break;
+          case ActionEnum.Delete: await ordersGrain.Remove(brace); break;
+        }
       }
     }
 
     /// <summary>
     /// Position direction
     /// </summary>
-    /// <param name="order"></param>
-    protected double? Side()
+    protected double? Direction()
     {
       switch (State.Side)
       {
@@ -324,39 +225,9 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Position direction
-    /// </summary>
-    protected double? Amount()
-    {
-      var amount = State.Operation?.Amount ?? 0;
-      var sideAmount = State.Orders.Sum(o => o.Operation?.Amount ?? 0);
-
-      return amount + sideAmount;
-    }
-
-    /// <summary>
-    /// Estimate open price for one of the instruments in the order
-    /// </summary>
-    protected double? OpenPrice()
-    {
-      var point = State.Operation.Instrument.Point;
-
-      if (point is not null)
-      {
-        switch (State.Side)
-        {
-          case OrderSideEnum.Long: return point.Ask;
-          case OrderSideEnum.Short: return point.Bid;
-        }
-      }
-
-      return null;
-    }
-
-    /// <summary>
     /// Estimate close price for one of the instruments in the order
     /// </summary>
-    protected double? ClosePrice()
+    protected double? Price()
     {
       var point = State.Operation.Instrument.Point;
 
@@ -370,6 +241,36 @@ namespace Core.Common.Grains
       }
 
       return null;
+    }
+
+    /// <summary>
+    /// Estimated PnL in points for one side of the order
+    /// </summary>
+    protected double Range()
+    {
+      var price = State.Operation.Price ?? Price();
+      var estimate = (price - State.Operation.AveragePrice) * Direction();
+
+      return estimate.Value;
+    }
+
+    /// <summary>
+    /// Estimated PnL in account's currency for the order
+    /// </summary>
+    protected BalanceState Balance()
+    {
+      var range = Range();
+      var amount = State.Operation.Amount;
+      var instrument = State.Operation.Instrument;
+      var estimate = amount * range * instrument.Leverage - instrument.Commission;
+      var balance = estimate ?? State.Balance.Current ?? 0;
+
+      return State.Balance with
+      {
+        Current = balance,
+        Min = Math.Min(State.Balance.Min ?? 0, balance),
+        Max = Math.Max(State.Balance.Max ?? 0, balance)
+      };
     }
 
     /// <summary>

@@ -172,21 +172,18 @@ namespace Core.Common.Implementations
     /// <summary>
     /// Disconnect
     /// </summary>
-    /// <returns></returns>
     public abstract Task<StatusResponse> Disconnect();
 
     /// <summary>
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
-    /// <returns></returns>
     public abstract Task<StatusResponse> Subscribe(InstrumentState instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
-    /// <returns></returns>
     public abstract Task<StatusResponse> Unsubscribe(InstrumentState instrument);
 
     /// <summary>
@@ -198,35 +195,30 @@ namespace Core.Common.Implementations
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<DomResponse> GetDom(ConditionState criteria = null);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<PricesResponse> GetBars(ConditionState criteria = null);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<PricesResponse> GetTicks(ConditionState criteria = null);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<InstrumentsResponse> GetOptions(ConditionState criteria = null);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<OrdersResponse> GetPositions(ConditionState criteria = null);
 
     /// <summary>
@@ -239,7 +231,6 @@ namespace Core.Common.Implementations
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    /// <returns></returns>
     public abstract Task<OrdersResponse> GetOrders(ConditionState criteria = null);
 
     /// <summary>
@@ -302,7 +293,7 @@ namespace Core.Common.Implementations
         {
           Account = Account with
           {
-            Performance = Account.Performance + o.Gain
+            Performance = Account.Performance + o.Balance.Current
           };
         }
 

@@ -14,7 +14,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Store order
     /// </summary>
-    Task StoreTransaction(OrderState order);
+    Task Store(OrderState order);
   }
 
   public class TransactionGrain : Grain<OrderState>, ITransactionGrain
@@ -30,7 +30,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Store order
     /// </summary>
-    public Task StoreTransaction(OrderState order)
+    public Task Store(OrderState order)
     {
       State = order;
 

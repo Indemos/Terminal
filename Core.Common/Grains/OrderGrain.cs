@@ -1,10 +1,6 @@
 using Core.Common.Enums;
-using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using Orleans.Streams;
-using System;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Common.Grains
@@ -12,67 +8,32 @@ namespace Core.Common.Grains
   public interface IOrderGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Get order state
+    /// Get order
     /// </summary>
     Task<OrderState> Order();
 
     /// <summary>
     /// Send order
     /// </summary>
-    Task StoreOrder(OrderState order);
+    Task Store(OrderState order);
+
+    /// <summary>
+    /// Get position
+    /// </summary>
+    /// <param name="price"></param>
+    Task<OrderState> Position(PriceState price);
+
+    /// <summary>
+    /// Check if pending order can be executed
+    /// </summary>
+    /// <param name="price"></param>
+    Task<bool> IsExecutable(PriceState price);
   }
 
   public class OrderGrain : Grain<OrderState>, IOrderGrain
   {
     /// <summary>
-    /// Order stream
-    /// </summary>
-    protected IAsyncStream<OrderState> orderStream;
-
-    /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
-    {
-      var descriptor = InstanceService<ConversionService>
-        .Instance
-        .Decompose<Descriptor>(this.GetPrimaryKeyString());
-
-      var dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
-
-      orderStream = this
-        .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
-
-      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
-
-      await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
-
-      await base.OnDeactivateAsync(reason, cancellation);
-    }
-
-    /// <summary>
-    /// Get order state
+    /// Get order 
     /// </summary>
     public Task<OrderState> Order()
     {
@@ -82,7 +43,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Send order
     /// </summary>
-    public async Task StoreOrder(OrderState order)
+    public Task Store(OrderState order)
     {
       State = order with
       {
@@ -92,22 +53,52 @@ namespace Core.Common.Grains
         }
       };
 
-      await orderStream.OnNextAsync(State);
+      return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Get position
+    /// </summary>
+    /// <param name="price"></param>
+    public Task<OrderState> Position(PriceState price)
+    {
+      return Task.FromResult(State with
+      {
+        Price = price.Last,
+        Operation = State.Operation with
+        {
+          Time = price.Time,
+          Amount = State.Amount,
+          AveragePrice = price.Last,
+          Status = OrderStatusEnum.Position,
+          Instrument = State.Operation.Instrument with
+          {
+            Point = price
+          }
+        }
+      });
     }
 
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
-    protected bool IsExecutable()
+    /// <param name="price"></param>
+    public Task<bool> IsExecutable(PriceState price)
     {
-      var point = State.Operation.Instrument.Point;
+      var response = false;
+
+      if (Equals(price.Name, State.Operation.Instrument.Name) is false)
+      {
+        return Task.FromResult(response);
+      }
+
       var isLong = State.Side is OrderSideEnum.Long;
       var isShort = State.Side is OrderSideEnum.Short;
 
       if (State.Type is OrderTypeEnum.StopLimit)
       {
-        var isLongLimit = isLong && point.Ask >= State.ActivationPrice;
-        var isShortLimit = isShort && point.Bid <= State.ActivationPrice;
+        var isLongLimit = isLong && price.Ask >= State.ActivationPrice;
+        var isShortLimit = isShort && price.Bid <= State.ActivationPrice;
 
         if (isLongLimit || isShortLimit)
         {
@@ -117,41 +108,12 @@ namespace Core.Common.Grains
 
       switch (State.Type)
       {
-        case OrderTypeEnum.Market: return true;
-        case OrderTypeEnum.Stop: return isLong ? point.Ask >= State.Price : point.Bid <= State.Price;
-        case OrderTypeEnum.Limit: return isLong ? point.Ask <= State.Price : point.Bid >= State.Price;
+        case OrderTypeEnum.Market: response = true; break;
+        case OrderTypeEnum.Stop: response = isLong ? price.Ask >= State.Price : price.Bid <= State.Price; break;
+        case OrderTypeEnum.Limit: response = isLong ? price.Ask <= State.Price : price.Bid >= State.Price; break;
       }
 
-      return false;
-    }
-
-    /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="point"></param>
-    /// <param name="token"></param>
-    protected async Task OnPrice(PriceState point, StreamSequenceToken token)
-    {
-      var isConvertible = IsExecutable();
-      var isOrder = State.Operation.Status is OrderStatusEnum.Order;
-      var isInstrument = Equals(point.Name, State.Operation.Instrument.Name);
-
-      if (isOrder && isInstrument && isConvertible)
-      {
-        State = State with
-        {
-          Price = point.Last,
-          Operation = State.Operation with
-          {
-            Time = point.Time,
-            Amount = State.Amount,
-            AveragePrice = point.Last,
-            Status = OrderStatusEnum.Position
-          }
-        };
-
-        await orderStream.OnNextAsync(State);
-      }
+      return Task.FromResult(response);
     }
   }
 }

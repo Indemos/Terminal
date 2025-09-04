@@ -90,7 +90,6 @@ namespace Core.Client.Components
     /// Value to shape
     /// </summary>
     /// <param name="point"></param>
-    /// <returns></returns>
     public virtual IShape GetShape<T>(double? value, SKColor? color = null) where T : IShape, new()
     {
       return GetShape<T>(new PriceState { Last = value }, color);
@@ -100,7 +99,6 @@ namespace Core.Client.Components
     /// Point to shape
     /// </summary>
     /// <param name="point"></param>
-    /// <returns></returns>
     public virtual IShape GetShape<T>(PriceState point, SKColor? color = null) where T : IShape, new()
     {
       if (typeof(T).Equals(typeof(CandleShape)))

@@ -121,11 +121,12 @@ namespace Core.Client.Pages.Shares
 
       if (orders.Count is 0)
       {
-        if (positions.Count == 2)
+        var buy = positions.FirstOrDefault(o => o.Side is OrderSideEnum.Long);
+        var sell = positions.FirstOrDefault(o => o.Side is OrderSideEnum.Short);
+
+        if (buy is not null && sell is not null)
         {
-          var buy = positions.First(o => o.Side is OrderSideEnum.Long);
-          var sell = positions.First(o => o.Side is OrderSideEnum.Short);
-          var gain = buy.Gain + sell.Gain;
+          var gain = buy.Balance.Current + sell.Balance.Current;
 
           switch (true)
           {
@@ -192,7 +193,6 @@ namespace Core.Client.Pages.Shares
     /// Close positions
     /// </summary>
     /// <param name="condition"></param>
-    /// <returns></returns>
     public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];

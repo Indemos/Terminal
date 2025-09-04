@@ -22,21 +22,6 @@ namespace Core.Common.States
     public double? Amount { get; init; }
 
     /// <summary>
-    /// Current PnL
-    /// </summary>
-    public double? Gain { get; init; }
-
-    /// <summary>
-    /// Min possible PnL in account's currency
-    /// </summary>
-    public double? Min { get; init; }
-
-    /// <summary>
-    /// Max possible PnL in account's currency
-    /// </summary>
-    public double? Max { get; init; }
-
-    /// <summary>
     /// Price the makes order active, e.g. limit price for stop limit order
     /// </summary>
     public double? ActivationPrice { get; init; }
@@ -65,6 +50,11 @@ namespace Core.Common.States
     /// Custom order type
     /// </summary>
     public InstructionEnum? Instruction { get; init; }
+
+    /// <summary>
+    /// Balance
+    /// </summary>
+    public BalanceState Balance { get; init; } = new();
 
     /// <summary>
     /// Transaction
