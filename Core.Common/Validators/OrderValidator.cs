@@ -1,6 +1,6 @@
-using FluentValidation;
 using Core.Common.Enums;
 using Core.Common.States;
+using FluentValidation;
 
 namespace Core.Common.Validators
 {

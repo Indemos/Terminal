@@ -3,10 +3,10 @@ using FluentValidation;
 
 namespace Core.Common.Validators
 {
-    /// <summary>
-    /// Validation rules
-    /// </summary>
-    public class AccountValidator : AbstractValidator<AccountState>
+  /// <summary>
+  /// Validation rules
+  /// </summary>
+  public class AccountValidator : AbstractValidator<AccountState>
   {
     public AccountValidator()
     {

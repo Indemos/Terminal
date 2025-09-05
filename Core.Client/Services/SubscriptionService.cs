@@ -27,7 +27,7 @@ namespace Core.Client.Services
     /// <summary>
     /// Push notification
     /// </summary>
-    public virtual Action<MessageModel<SubscriptionEnum>> OnMessage { get; set; } = o => {};
+    public virtual Action<MessageModel<SubscriptionEnum>> OnMessage { get; set; } = o => { };
 
     /// <summary>
     /// Push notification

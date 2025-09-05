@@ -3,7 +3,7 @@ namespace Core.Common.Services
   /// <summary>
   /// Service to track account changes, including equity and quotes
   /// </summary>
-  public class InstanceService<T> where T: new()
+  public class InstanceService<T> where T : new()
   {
     private static readonly T instance = new T();
 
