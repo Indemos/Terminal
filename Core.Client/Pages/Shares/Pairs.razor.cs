@@ -102,16 +102,16 @@ namespace Core.Client.Pages.Shares
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await adapter.GetTicks(new ConditionState { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await adapter.GetTicks(new ConditionState { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = (await adapter.GetTicks(new MetaState { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await adapter.GetTicks(new MetaState { Count = 1, Instrument = instrumentY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = (await adapter.GetOrders()).Data;
-      var positions = (await adapter.GetPositions()).Data;
+      var orders = (await adapter.GetOrders(default)).Data;
+      var positions = (await adapter.GetPositions(default)).Data;
       var performance = await Performance.Update([adapter]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
@@ -156,9 +156,9 @@ namespace Core.Client.Pages.Shares
       await TransactionsView.UpdateItems([.. View.Adapters.Values]);
       await OrdersView.UpdateItems([.. View.Adapters.Values]);
       await PositionsView.UpdateItems([.. View.Adapters.Values]);
-      await ChartsView.UpdateItems(point.Time.Value.Ticks, "Prices", "Spread", new AreaShape { Y = range, Component = com });
-      await PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      await PerformanceView.UpdateItems(point.Time.Value.Ticks, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      await ChartsView.UpdateItems(point.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
+      await PerformanceView.UpdateItems(point.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      await PerformanceView.UpdateItems(point.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -196,7 +196,7 @@ namespace Core.Client.Pages.Shares
     public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = (await adapter.GetPositions()).Data;
+      var positions = (await adapter.GetPositions(default)).Data;
       var account = adapter.Account;
 
       foreach (var position in positions)

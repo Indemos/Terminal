@@ -64,7 +64,7 @@ namespace Core.Client.Components
     {
       if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
       {
-        var queries = adapters.Select(o => o.GetOrders());
+        var queries = adapters.Select(o => o.GetOrders(default));
         var responses = await Task.WhenAll(queries);
         var orders = responses
           .SelectMany(o => o.Data)
@@ -75,7 +75,7 @@ namespace Core.Client.Components
         {
           Name = o?.Operation?.Instrument?.Name,
           Type = o.Type,
-          Time = o.Operation.Time,
+          //Time = new DateTime(o.Operation.Time.Value),
           Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
           Side = o.Side,
           Size = o.Amount ?? 0,

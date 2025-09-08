@@ -1,9 +1,8 @@
-using System;
 using System.Collections.Generic;
 
 namespace Core.Common.States
 {
-  public record ConditionState
+  public record MetaState
   {
     /// <summary>
     /// Count
@@ -23,12 +22,12 @@ namespace Core.Common.States
     /// <summary>
     /// Start date
     /// </summary>
-    public DateTime? MinDate { get; init; }
+    public long? MinDate { get; init; }
 
     /// <summary>
     /// End date
     /// </summary>
-    public DateTime? MaxDate { get; init; }
+    public long? MaxDate { get; init; }
 
     /// <summary>
     /// Asset

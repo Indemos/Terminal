@@ -10,12 +10,14 @@ namespace Core.Common.Grains
     /// <summary>
     /// Option chain
     /// </summary>
-    Task<InstrumentsResponse> Options();
+    /// <param name="criteria"></param>
+    Task<InstrumentsResponse> Options(MetaState criteria);
 
     /// <summary>
     /// Update options
     /// </summary>
-    Task StoreOptions(List<InstrumentState> options);
+    /// <param name="options"></param>
+    Task Store(List<InstrumentState> options);
   }
 
   public class OptionsGrain : Grain<OptionsState>, IOptionsGrain
@@ -23,7 +25,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Option chain
     /// </summary>
-    public Task<InstrumentsResponse> Options() => Task.FromResult(new InstrumentsResponse
+    /// <param name="criteria"></param>
+    public virtual Task<InstrumentsResponse> Options(MetaState criteria) => Task.FromResult(new InstrumentsResponse
     {
       Data = State.Options
     });
@@ -31,7 +34,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Update options
     /// </summary>
-    public Task StoreOptions(List<InstrumentState> options)
+    /// <param name="options"></param>
+    public virtual Task Store(List<InstrumentState> options)
     {
       if (options is not null)
       {

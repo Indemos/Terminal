@@ -9,6 +9,24 @@ namespace Core.Common.Extensions
     /// </summary>
     /// <param name="input"></param>
     /// <param name="span"></param>
+    public static long? Round(this long? input, TimeSpan? span)
+    {
+      if (input is null)
+      {
+        return null;
+      }
+
+      var date = input.Value;
+      var excess = Math.Max(span?.Ticks ?? 1, 1);
+
+      return new DateTime(date - (date % excess)).Ticks;
+    }
+
+    /// <summary>
+    /// Round by interval
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="span"></param>
     public static DateTime? Round(this DateTime? input, TimeSpan? span)
     {
       if (input is null)

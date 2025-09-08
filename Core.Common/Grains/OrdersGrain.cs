@@ -16,7 +16,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get orders
     /// </summary>
-    Task<OrderState[]> Orders();
+    /// <param name="criteria"></param>
+    Task<OrderState[]> Orders(MetaState criteria);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -79,7 +80,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get orders
     /// </summary>
-    public async Task<OrderState[]> Orders()
+    /// <param name="criteria"></param>
+    public virtual async Task<OrderState[]> Orders(MetaState criteria)
     {
       return await Task.WhenAll(State.Grains.Values.Select(o => o.Order()));
     }
@@ -89,7 +91,7 @@ namespace Core.Common.Grains
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    public Task<DescriptorResponse> Remove(OrderState order)
+    public virtual Task<DescriptorResponse> Remove(OrderState order)
     {
       if (State.Grains.ContainsKey(order.Id))
       {
@@ -106,7 +108,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public async Task Send(OrderState order)
+    public virtual async Task Send(OrderState order)
     {
       var orderGrain = GrainFactory.Get<IOrderGrain>(new OrderDescriptor
       {
@@ -124,7 +126,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="price"></param>
     /// <param name="token"></param>
-    protected async Task OnPrice(PriceState price, StreamSequenceToken token)
+    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
     {
       var positionsGrain = GrainFactory.Get<IPositionsGrain>(descriptor);
       var grains = State.Grains.ToArray();

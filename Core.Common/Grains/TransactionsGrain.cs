@@ -16,7 +16,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get transactions
     /// </summary>
-    Task<OrderState[]> Transactions();
+    /// <param name="criteria"></param>
+    Task<OrderState[]> Transactions(MetaState criteria);
 
     /// <summary>
     /// Add to the list
@@ -57,7 +58,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get transactions
     /// </summary>
-    public async Task<OrderState[]> Transactions()
+    /// <param name="criteria"></param>
+    public virtual async Task<OrderState[]> Transactions(MetaState criteria)
     {
       return await Task.WhenAll(State.Grains.Select(o => o.Transaction()));
     }
@@ -66,7 +68,7 @@ namespace Core.Common.Grains
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    public async Task Send(OrderState order)
+    public virtual async Task Send(OrderState order)
     {
       var orderDescriptor = new OrderDescriptor
       {

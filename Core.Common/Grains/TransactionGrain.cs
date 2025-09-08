@@ -14,6 +14,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Store order
     /// </summary>
+    /// <param name="order"></param>
     Task Store(OrderState order);
   }
 
@@ -22,7 +23,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order state
     /// </summary>
-    public Task<OrderState> Transaction()
+    public virtual Task<OrderState> Transaction()
     {
       return Task.FromResult(State);
     }
@@ -30,7 +31,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Store order
     /// </summary>
-    public Task Store(OrderState order)
+    /// <param name="order"></param>
+    public virtual Task Store(OrderState order)
     {
       State = order;
 

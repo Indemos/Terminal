@@ -65,7 +65,7 @@ namespace Core.Client.Components
     {
       if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
       {
-        var queries = adapters.Select(o => o.GetPositions());
+        var queries = adapters.Select(o => o.GetPositions(default));
         var responses = await Task.WhenAll(queries);
         var positions = responses
           .SelectMany(o => o.Data)
@@ -76,11 +76,11 @@ namespace Core.Client.Components
         {
           Name = o?.Operation?.Instrument?.Name,
           Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-          Time = o.Operation.Time,
+          Time = new DateTime(o.Operation.Time.Value),
           Side = o.Side,
           Size = o.Operation.Amount ?? 0,
           OpenPrice = o.Operation.AveragePrice ?? 0,
-          ClosePrice = o?.Operation?.Instrument?.Point?.Last ?? 0,
+          ClosePrice = o?.Operation?.Instrument?.Price?.Last ?? 0,
           Gain = o.Balance.Current ?? 0
 
         })];

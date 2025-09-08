@@ -42,7 +42,7 @@ namespace Core.Common.States
     /// <summary>
     /// Time stamp
     /// </summary>
-    public DateTime? Time { get; init; }
+    public long? Time { get; init; }
 
     /// <summary>
     /// Aggregation period for the quotes

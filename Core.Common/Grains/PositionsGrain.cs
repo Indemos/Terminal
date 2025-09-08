@@ -16,7 +16,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get positions
     /// </summary>
-    Task<OrderState[]> Positions();
+    /// <param name="criteria"></param>
+    Task<OrderState[]> Positions(MetaState criteria);
 
     /// <summary>
     /// Process order to position conversion
@@ -73,7 +74,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get positions
     /// </summary>
-    public async Task<OrderState[]> Positions()
+    /// <param name="criteria"></param>
+    public virtual async Task<OrderState[]> Positions(MetaState criteria)
     {
       return await Task.WhenAll(State.Grains.Values.Select(o => o.Position()));
     }
@@ -82,7 +84,7 @@ namespace Core.Common.Grains
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    public async Task Send(OrderState order)
+    public virtual async Task Send(OrderState order)
     {
       if (State.Grains.ContainsKey(order.Operation.Instrument.Name))
       {
@@ -97,7 +99,7 @@ namespace Core.Common.Grains
     /// Update
     /// </summary>
     /// <param name="order"></param>
-    protected async Task Combine(OrderState order)
+    protected virtual async Task Combine(OrderState order)
     {
       var name = order.Operation.Instrument.Name;
       var currentGrain = State.Grains.Get(name);
@@ -120,7 +122,7 @@ namespace Core.Common.Grains
     /// Create
     /// </summary>
     /// <param name="order"></param>
-    protected async Task Store(OrderState order)
+    protected virtual async Task Store(OrderState order)
     {
       var nextGrain = GrainFactory.Get<IPositionGrain>(new OrderDescriptor
       {
@@ -138,7 +140,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="price"></param>
     /// <param name="token"></param>
-    protected async Task OnPrice(PriceState price, StreamSequenceToken token)
+    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
     {
       foreach (var grain in State.Grains.Values)
       {

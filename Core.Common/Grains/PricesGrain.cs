@@ -12,14 +12,16 @@ namespace Core.Common.Grains
   public interface IPricesGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// List of points by criteria
+    /// List of prices by criteria
     /// </summary>
-    Task<PricesResponse> Prices();
+    /// <param name="criteria"></param>
+    Task<PricesResponse> Prices(MetaState criteria);
 
     /// <summary>
-    /// List of points by criteria
+    /// List of prices by criteria
     /// </summary>
-    Task<PricesResponse> PriceGroups();
+    /// <param name="criteria"></param>
+    Task<PricesResponse> PriceGroups(MetaState criteria);
 
     /// <summary>
     /// Add price to the list
@@ -74,32 +76,37 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// List of points by criteria
+    /// List of prices by criteria
     /// </summary>
-    public Task<PricesResponse> Prices() => Task.FromResult(new PricesResponse
+    /// <param name="criteria"></param>
+    public virtual Task<PricesResponse> Prices(MetaState criteria) => Task.FromResult(new PricesResponse
     {
       Data = State.Prices
     });
 
     /// <summary>
-    /// List of points by criteria
+    /// List of prices by criteria
     /// </summary>
-    public Task<PricesResponse> PriceGroups() => Task.FromResult(new PricesResponse
+    /// <param name="criteria"></param>
+    public virtual Task<PricesResponse> PriceGroups(MetaState criteria)
     {
-      Data = State.PriceGroups
-    });
+      return Task.FromResult(new PricesResponse
+      {
+        Data = State.PriceGroups
+      });
+    }
 
     /// <summary>
     /// Add price to the list
     /// </summary>
     /// <param name="price"></param>
-    public Task<DescriptorResponse> Add(PriceState price)
+    public virtual Task<DescriptorResponse> Add(PriceState price)
     {
       var response = new DescriptorResponse { Data = price.Name };
 
       State.Prices.Add(price);
 
-      if (price.Bar is not null)
+      if (price.Bar is not null || price.TimeFrame is not null)
       {
         State.PriceGroups.Add(price);
       }
@@ -112,7 +119,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="price"></param>
     /// <param name="token"></param>
-    protected async Task OnPrice(PriceState price, StreamSequenceToken token)
+    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
     {
       if (Equals(price.Name, descriptor.Instrument))
       {

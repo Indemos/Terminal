@@ -35,7 +35,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order 
     /// </summary>
-    public Task<OrderState> Order()
+    public virtual Task<OrderState> Order()
     {
       return Task.FromResult(State);
     }
@@ -43,7 +43,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Send order
     /// </summary>
-    public Task Store(OrderState order)
+    /// <param name="order"></param>
+    public virtual Task Store(OrderState order)
     {
       State = order with
       {
@@ -60,7 +61,7 @@ namespace Core.Common.Grains
     /// Get position
     /// </summary>
     /// <param name="price"></param>
-    public Task<OrderState> Position(PriceState price)
+    public virtual Task<OrderState> Position(PriceState price)
     {
       return Task.FromResult(State with
       {
@@ -73,7 +74,7 @@ namespace Core.Common.Grains
           Status = OrderStatusEnum.Position,
           Instrument = State.Operation.Instrument with
           {
-            Point = price
+            Price = price
           }
         }
       });
@@ -83,7 +84,7 @@ namespace Core.Common.Grains
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="price"></param>
-    public Task<bool> IsExecutable(PriceState price)
+    public virtual Task<bool> IsExecutable(PriceState price)
     {
       var response = false;
 

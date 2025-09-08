@@ -111,7 +111,7 @@ namespace Simulation
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomResponse> GetDom(ConditionState criteria = null)
+    public override async Task<DomResponse> Dom(MetaState criteria)
     {
       var descriptor = new InstrumentDescriptor
       {
@@ -121,7 +121,7 @@ namespace Simulation
 
       var domResponse = await Connector
         .Get<IDomGrain>(descriptor)
-        .Dom();
+        .Dom(criteria);
 
       return new DomResponse
       {
@@ -133,7 +133,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> GetBars(ConditionState criteria = null)
+    public override async Task<PricesResponse> GetBars(MetaState criteria)
     {
       var descriptor = new InstrumentDescriptor
       {
@@ -141,18 +141,9 @@ namespace Simulation
         Instrument = criteria.Instrument.Name
       };
 
-      var priceResponse = await Connector
-        .Get<IPricesGrain>(descriptor)
-        .PriceGroups();
-
-      var response = new PricesResponse
-      {
-        Data = [.. priceResponse
-          .Data
-          .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
-          .TakeLast(criteria.Count ?? priceResponse.Data.Count)]
-      };
+      var response = await Connector
+        .Get<IPricesGrainAdapter>(descriptor)
+        .PriceGroups(criteria);
 
       return response;
     }
@@ -161,7 +152,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> GetTicks(ConditionState criteria = null)
+    public override async Task<PricesResponse> GetTicks(MetaState criteria)
     {
       var descriptor = new InstrumentDescriptor
       {
@@ -169,18 +160,9 @@ namespace Simulation
         Instrument = criteria.Instrument.Name
       };
 
-      var priceResponse = await Connector
-        .Get<IPricesGrain>(descriptor)
-        .Prices();
-
-      var response = new PricesResponse
-      {
-        Data = [.. priceResponse
-          .Data
-          .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-          .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
-          .TakeLast(criteria.Count ?? priceResponse.Data.Count)]
-      };
+      var response = await Connector
+        .Get<IPricesGrainAdapter>(descriptor)
+        .Prices(criteria);
 
       return response;
     }
@@ -189,7 +171,7 @@ namespace Simulation
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<InstrumentsResponse> GetOptions(ConditionState criteria = null)
+    public override async Task<InstrumentsResponse> GetOptions(MetaState criteria)
     {
       var descriptor = new InstrumentDescriptor
       {
@@ -197,32 +179,9 @@ namespace Simulation
         Instrument = criteria.Instrument.Name
       };
 
-      var optionResponse = await Connector
-        .Get<IOptionsGrain>(descriptor)
-        .Options();
-
-      var side = criteria
-        ?.Instrument
-        ?.Derivative
-        ?.Side;
-
-      var options = optionResponse
-        .Data
-        .Where(o => side is null || Equals(o.Derivative.Side, side))
-        .Where(o => criteria?.MinDate is null || o.Derivative.ExpirationDate?.Date >= criteria.MinDate?.Date)
-        .Where(o => criteria?.MaxDate is null || o.Derivative.ExpirationDate?.Date <= criteria.MaxDate?.Date)
-        .Where(o => criteria?.MinPrice is null || o.Derivative.Strike >= criteria.MinPrice)
-        .Where(o => criteria?.MaxPrice is null || o.Derivative.Strike <= criteria.MaxPrice)
-        .OrderBy(o => o.Derivative.ExpirationDate)
-        .ThenBy(o => o.Derivative.Strike)
-        .ThenBy(o => o.Derivative.Side)
-        //.Select(UpdateInstrument)
-        .ToArray();
-
-      var response = new InstrumentsResponse
-      {
-        Data = options
-      };
+      var response = await Connector
+        .Get<IOptionsGrainAdapter>(descriptor)
+        .Options(criteria);
 
       return response;
     }
@@ -244,7 +203,7 @@ namespace Simulation
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> GetOrders(ConditionState criteria = null)
+    public override async Task<OrdersResponse> GetOrders(MetaState criteria)
     {
       var descriptor = new Descriptor
       {
@@ -254,7 +213,7 @@ namespace Simulation
       var ordersGrain = Connector.Get<IOrdersGrain>(descriptor);
       var response = new OrdersResponse
       {
-        Data = await ordersGrain.Orders()
+        Data = await ordersGrain.Orders(criteria)
       };
 
       return response;
@@ -264,7 +223,7 @@ namespace Simulation
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> GetPositions(ConditionState criteria = null)
+    public override async Task<OrdersResponse> GetPositions(MetaState criteria)
     {
       var descriptor = new Descriptor
       {
@@ -274,7 +233,7 @@ namespace Simulation
       var positionsGrain = Connector.Get<IPositionsGrain>(descriptor);
       var response = new OrdersResponse
       {
-        Data = await positionsGrain.Positions()
+        Data = await positionsGrain.Positions(criteria)
       };
 
       return response;
@@ -284,7 +243,7 @@ namespace Simulation
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> GetTransactions(ConditionState criteria = null)
+    public override async Task<OrdersResponse> GetTransactions(MetaState criteria)
     {
       var descriptor = new Descriptor
       {
@@ -294,7 +253,7 @@ namespace Simulation
       var transactionsGrain = Connector.Get<ITransactionsGrain>(descriptor);
       var response = new OrdersResponse
       {
-        Data = await transactionsGrain.Transactions()
+        Data = await transactionsGrain.Transactions(criteria)
       };
 
       return response;

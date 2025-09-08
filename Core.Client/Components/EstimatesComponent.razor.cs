@@ -89,7 +89,7 @@ namespace Core.Client.Components
           Price = point.Last.Value,
           Amount = pos.Amount ?? 0,
           Strike = pos.Operation.Instrument?.Derivative?.Strike ?? 0,
-          Premium = pos.Operation.Instrument?.Point?.Last ?? 0,
+          Premium = pos.Operation.Instrument?.Price?.Last ?? 0,
           Date = pos.Operation.Instrument?.Derivative?.ExpirationDate,
           Side = pos.Operation.Instrument?.Derivative?.Side ?? 0,
           Position = pos.Side.Value
@@ -98,7 +98,7 @@ namespace Core.Client.Components
         var chartPoints = minusPercents.Concat(plusPercents).Select((o, i) =>
         {
           var step = inputModel.Price + inputModel.Price * o;
-          var sum = GetEstimate(step, point.Time.Value, inputModel);
+          var sum = GetEstimate(step, new DateTime(point.Time.Value), inputModel);
           var shape = new Shape();
 
           sums[o] = sums.TryGetValue(o, out var s) ? s + sum : sum;

@@ -59,7 +59,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order state
     /// </summary>
-    public Task<OrderState> Position()
+    public virtual Task<OrderState> Position()
     {
       return Task.FromResult(State);
     }
@@ -68,7 +68,7 @@ namespace Core.Common.Grains
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public async Task Store(OrderState order)
+    public virtual async Task Store(OrderState order)
     {
       State = order;
 
@@ -79,7 +79,7 @@ namespace Core.Common.Grains
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    public async Task<OrderResponse> Combine(OrderState order)
+    public virtual async Task<OrderResponse> Combine(OrderState order)
     {
       var response = new OrderResponse();
 
@@ -112,7 +112,7 @@ namespace Core.Common.Grains
     /// Increase position
     /// </summary>
     /// <param name="order"></param>
-    protected OrderState Increase(OrderState order)
+    protected virtual OrderState Increase(OrderState order)
     {
       var amount = State.Operation.Amount + order.Amount;
 
@@ -131,7 +131,7 @@ namespace Core.Common.Grains
     /// Decrease position by amount or close 
     /// </summary>
     /// <param name="order"></param>
-    protected OrderState Decrease(OrderState order)
+    protected virtual OrderState Decrease(OrderState order)
     {
       var amount = Math.Min(order.Amount.Value, State.Operation.Amount.Value);
 
@@ -152,7 +152,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <returns></returns>
-    protected OrderState Inverse(OrderState order)
+    protected virtual OrderState Inverse(OrderState order)
     {
       var amount = order.Amount - State.Operation.Amount;
 
@@ -170,7 +170,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    public Task Tap(PriceState price)
+    public virtual Task Tap(PriceState price)
     {
       if (Equals(price.Name, State.Operation.Instrument.Name))
       {
@@ -181,7 +181,7 @@ namespace Core.Common.Grains
           {
             Instrument = State.Operation.Instrument with
             {
-              Point = price
+              Price = price
             }
           }
         };
@@ -194,8 +194,8 @@ namespace Core.Common.Grains
     /// Update SL and TP orders
     /// </summary>
     /// <param name="order"></param>
-    /// <param name="close"></param>
-    protected async Task SendBraces(OrderState order, ActionEnum action = ActionEnum.Create)
+    /// <param name="action"></param>
+    protected virtual async Task SendBraces(OrderState order, ActionEnum action = ActionEnum.Create)
     {
       var ordersGrain = GrainFactory.Get<IOrdersGrain>(descriptor);
 
@@ -212,7 +212,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Position direction
     /// </summary>
-    protected double? Direction()
+    protected virtual double? Direction()
     {
       switch (State.Side)
       {
@@ -226,9 +226,9 @@ namespace Core.Common.Grains
     /// <summary>
     /// Estimate close price for one of the instruments in the order
     /// </summary>
-    protected double? Price()
+    protected virtual double? Price()
     {
-      var point = State.Operation.Instrument.Point;
+      var point = State.Operation.Instrument.Price;
 
       if (point is not null)
       {
@@ -245,7 +245,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Estimated PnL in points for one side of the order
     /// </summary>
-    protected double Range()
+    protected virtual double Range()
     {
       var price = State.Operation.Price ?? Price();
       var estimate = (price - State.Operation.AveragePrice) * Direction();
@@ -256,7 +256,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Estimated PnL in account's currency for the order
     /// </summary>
-    protected BalanceState Balance()
+    protected virtual BalanceState Balance()
     {
       var range = Range();
       var amount = State.Operation.Amount;
@@ -276,7 +276,7 @@ namespace Core.Common.Grains
     /// Compute aggregated position price
     /// </summary>
     /// <param name="orders"></param>
-    protected double? GroupPrice(params OrderState[] orders)
+    protected virtual double? GroupPrice(params OrderState[] orders)
     {
       var numerator = 0.0 as double?;
       var denominator = 0.0 as double?;

@@ -58,7 +58,7 @@ namespace Core.Common.States
     /// <summary>
     /// Current price data 
     /// </summary>
-    public PriceState Point { get; init; }
+    public PriceState Price { get; init; }
 
     /// <summary>
     /// Undelying symbol

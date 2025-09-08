@@ -9,12 +9,14 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get DOM
     /// </summary>
-    Task<DomResponse> Dom();
+    /// <param name="criteria"></param>
+    Task<DomResponse> Dom(MetaState criteria);
 
     /// <summary>
     /// Update DOM
     /// </summary>
-    Task StoreDom(DomState dom);
+    /// <param name="dom"></param>
+    Task Store(DomState dom);
   }
 
   public class DomGrain : Grain<DomState>, IDomGrain
@@ -22,7 +24,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get DOM
     /// </summary>
-    public Task<DomResponse> Dom() => Task.FromResult(new DomResponse
+    /// <param name="criteria"></param>
+    public virtual Task<DomResponse> Dom(MetaState criteria) => Task.FromResult(new DomResponse
     {
       Data = State
     });
@@ -30,7 +33,8 @@ namespace Core.Common.Grains
     /// <summary>
     /// Update DOM
     /// </summary>
-    public Task StoreDom(DomState dom)
+    /// <param name="dom"></param>
+    public virtual Task Store(DomState dom)
     {
       if (dom is not null)
       {

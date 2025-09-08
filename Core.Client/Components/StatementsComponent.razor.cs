@@ -57,7 +57,7 @@ namespace Core.Client.Components
     {
       var values = new List<InputData>();
       var balance = adapters.Sum(o => o.Account.Balance).Value;
-      var queries = adapters.Select(o => o.GetTransactions());
+      var queries = adapters.Select(o => o.GetTransactions(default));
       var responses = await Task.WhenAll(queries);
       var actions = responses
         .SelectMany(o => o.Data)
@@ -68,7 +68,7 @@ namespace Core.Client.Components
       {
         values.Add(new InputData
         {
-          Time = actions.First().Operation.Time.Value,
+          Time = new DateTime(actions.First().Operation.Time.Value),
           Value = 0,
           Min = 0,
           Max = 0
@@ -82,7 +82,7 @@ namespace Core.Client.Components
           Min = o.Balance.Min.Value,
           Max = o.Balance.Max.Value,
           Value = o.Balance.Current.Value,
-          Time = o.Operation.Time.Value,
+          Time = new DateTime(o.Operation.Time.Value),
           Direction = o.Side is OrderSideEnum.Long ? 1 : -1,
           Commission = o.Operation.Instrument.Commission.Value * 2
         });

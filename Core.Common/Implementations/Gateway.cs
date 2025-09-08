@@ -74,43 +74,43 @@ namespace Core.Common.Implementations
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomResponse> GetDom(ConditionState criteria = null);
+    Task<DomResponse> Dom(MetaState criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> GetBars(ConditionState criteria = null);
+    Task<PricesResponse> GetBars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> GetTicks(ConditionState criteria = null);
+    Task<PricesResponse> GetTicks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentsResponse> GetOptions(ConditionState criteria = null);
+    Task<InstrumentsResponse> GetOptions(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetPositions(ConditionState criteria = null);
+    Task<OrdersResponse> GetPositions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetOrders(ConditionState criteria = null);
+    Task<OrdersResponse> GetOrders(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetTransactions(ConditionState criteria = null);
+    Task<OrdersResponse> GetTransactions(MetaState criteria);
 
     /// <summary>
     /// Send new orders
@@ -195,43 +195,43 @@ namespace Core.Common.Implementations
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<DomResponse> GetDom(ConditionState criteria = null);
+    public abstract Task<DomResponse> Dom(MetaState criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetBars(ConditionState criteria = null);
+    public abstract Task<PricesResponse> GetBars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetTicks(ConditionState criteria = null);
+    public abstract Task<PricesResponse> GetTicks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<InstrumentsResponse> GetOptions(ConditionState criteria = null);
+    public abstract Task<InstrumentsResponse> GetOptions(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetPositions(ConditionState criteria = null);
+    public abstract Task<OrdersResponse> GetPositions(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetTransactions(ConditionState criteria = null);
+    public abstract Task<OrdersResponse> GetTransactions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetOrders(ConditionState criteria = null);
+    public abstract Task<OrdersResponse> GetOrders(MetaState criteria);
 
     /// <summary>
     /// Send new orders
@@ -349,7 +349,7 @@ namespace Core.Common.Implementations
         Type = order.Type ?? group.Type ?? OrderTypeEnum.Market,
         TimeSpan = order.TimeSpan ?? group.TimeSpan ?? OrderTimeSpanEnum.Gtc,
         Instruction = order.Instruction ?? InstructionEnum.Side,
-        Operation = order.Operation with { Time = order?.Operation?.Instrument?.Point?.Time },
+        Operation = order.Operation with { Time = order?.Operation?.Instrument?.Price?.Time },
         Orders = [.. groupOrders]
       };
 

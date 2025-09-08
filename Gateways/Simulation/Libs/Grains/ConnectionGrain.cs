@@ -196,19 +196,19 @@ namespace Simulation.Grains
 
         var next = summaries.First();
 
-        summaries.ForEach(o => next = o.Value.Instrument.Point.Time <= next.Value.Instrument.Point.Time ? o : next);
+        summaries.ForEach(o => next = o.Value.Instrument.Price.Time <= next.Value.Instrument.Price.Time ? o : next);
 
         if (Equals(next.Key, instrument.Name))
         {
-          var point = next.Value.Instrument.Point with
+          var point = next.Value.Instrument.Price with
           {
             Bar = null,
             Name = next.Key,
             TimeFrame = instrument.TimeFrame
           };
 
-          await domGrain.StoreDom(next.Value.Dom);
-          await optionsGrain.StoreOptions(next.Value.Options);
+          await domGrain.Store(next.Value.Dom);
+          await optionsGrain.Store(next.Value.Options);
           await priceGrain.Store(point);
 
           summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Pause };

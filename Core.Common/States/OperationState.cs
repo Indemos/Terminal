@@ -28,7 +28,7 @@ namespace Core.Common.States
     /// <summary>
     /// Time stamp
     /// </summary>
-    public DateTime? Time { get; init; }
+    public long? Time { get; init; }
 
     /// <summary>
     /// Status of the order, e.g. Pending
