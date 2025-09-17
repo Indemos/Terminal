@@ -13,7 +13,7 @@ namespace Core.Common.Grains
   public interface IPositionGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Get order state
+    /// Get position
     /// </summary>
     Task<OrderState> Position();
 
@@ -21,13 +21,13 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    Task Tap(PriceState price);
+    Task<StatusResponse> Tap(PriceState price);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task Store(OrderState order);
+    Task<DescriptorResponse> Store(OrderState order);
 
     /// <summary>
     /// Match positions
@@ -41,7 +41,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected Descriptor descriptor;
+    protected DescriptorState descriptor;
 
     /// <summary>
     /// Activation
@@ -51,28 +51,28 @@ namespace Core.Common.Grains
     {
       descriptor = InstanceService<ConversionService>
         .Instance
-        .Decompose<Descriptor>(this.GetPrimaryKeyString());
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
       await base.OnActivateAsync(cancellation);
     }
 
     /// <summary>
-    /// Get order state
+    /// Get position
     /// </summary>
-    public virtual Task<OrderState> Position()
-    {
-      return Task.FromResult(State);
-    }
+    public virtual Task<OrderState> Position() => Task.FromResult(State);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task Store(OrderState order)
+    public virtual async Task<DescriptorResponse> Store(OrderState order)
     {
-      State = order;
+      await SendBraces(State = order);
 
-      await SendBraces(order);
+      return new DescriptorResponse
+      {
+        Data = order.Id
+      };
     }
 
     /// <summary>
@@ -151,7 +151,6 @@ namespace Core.Common.Grains
     /// Reverse position
     /// </summary>
     /// <param name="order"></param>
-    /// <returns></returns>
     protected virtual OrderState Inverse(OrderState order)
     {
       var amount = order.Amount - State.Operation.Amount;
@@ -170,7 +169,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    public virtual Task Tap(PriceState price)
+    public virtual Task<StatusResponse> Tap(PriceState price)
     {
       if (Equals(price.Name, State.Operation.Instrument.Name))
       {
@@ -187,7 +186,10 @@ namespace Core.Common.Grains
         };
       }
 
-      return Task.CompletedTask;
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Active
+      });
     }
 
     /// <summary>

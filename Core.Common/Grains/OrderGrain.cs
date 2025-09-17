@@ -13,15 +13,15 @@ namespace Core.Common.Grains
     Task<OrderState> Order();
 
     /// <summary>
-    /// Send order
-    /// </summary>
-    Task Store(OrderState order);
-
-    /// <summary>
     /// Get position
     /// </summary>
     /// <param name="price"></param>
     Task<OrderState> Position(PriceState price);
+
+    /// <summary>
+    /// Send order
+    /// </summary>
+    Task<DescriptorResponse> Store(OrderState order);
 
     /// <summary>
     /// Check if pending order can be executed
@@ -35,16 +35,13 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order 
     /// </summary>
-    public virtual Task<OrderState> Order()
-    {
-      return Task.FromResult(State);
-    }
+    public virtual Task<OrderState> Order() => Task.FromResult(State);
 
     /// <summary>
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task Store(OrderState order)
+    public virtual Task<DescriptorResponse> Store(OrderState order)
     {
       State = order with
       {
@@ -54,7 +51,10 @@ namespace Core.Common.Grains
         }
       };
 
-      return Task.CompletedTask;
+      return Task.FromResult(new DescriptorResponse
+      {
+        Data = order.Id
+      });
     }
 
     /// <summary>
@@ -63,7 +63,7 @@ namespace Core.Common.Grains
     /// <param name="price"></param>
     public virtual Task<OrderState> Position(PriceState price)
     {
-      return Task.FromResult(State with
+      var position = State with
       {
         Price = price.Last,
         Operation = State.Operation with
@@ -77,7 +77,9 @@ namespace Core.Common.Grains
             Price = price
           }
         }
-      });
+      };
+
+      return Task.FromResult(position);
     }
 
     /// <summary>

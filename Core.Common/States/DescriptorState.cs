@@ -1,7 +1,17 @@
 namespace Core.Common.States
 {
-  public record InstrumentDescriptor : IDescriptor
+  public record DescriptorState
   {
+    /// <summary>
+    /// Namespace
+    /// </summary>
+    public string Space { get; init; }
+
+    /// <summary>
+    /// Order descriptor
+    /// </summary>
+    public string Order { get; init; }
+
     /// <summary>
     /// Account descriptor
     /// </summary>

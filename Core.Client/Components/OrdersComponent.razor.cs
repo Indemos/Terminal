@@ -1,5 +1,6 @@
 using Core.Client.Services;
 using Core.Common.Enums;
+using Core.Common.Grains;
 using Core.Common.Implementations;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -62,9 +63,9 @@ namespace Core.Client.Components
     /// <param name="adapters"></param>
     public virtual async Task UpdateItems(params IGateway[] adapters)
     {
-      if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
+      if (Update.IsCompleted)
       {
-        var queries = adapters.Select(o => o.GetOrders(default));
+        var queries = adapters.Select(o => o.Orders(default));
         var responses = await Task.WhenAll(queries);
         var orders = responses
           .SelectMany(o => o.Data)
@@ -75,7 +76,7 @@ namespace Core.Client.Components
         {
           Name = o?.Operation?.Instrument?.Name,
           Type = o.Type,
-          //Time = new DateTime(o.Operation.Time.Value),
+          Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
           Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
           Side = o.Side,
           Size = o.Amount ?? 0,

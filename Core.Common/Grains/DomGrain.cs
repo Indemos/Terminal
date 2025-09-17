@@ -1,3 +1,4 @@
+using Core.Common.Enums;
 using Core.Common.States;
 using Orleans;
 using System.Threading.Tasks;
@@ -16,7 +17,7 @@ namespace Core.Common.Grains
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    Task Store(DomState dom);
+    Task<StatusResponse> Store(DomState dom);
   }
 
   public class DomGrain : Grain<DomState>, IDomGrain
@@ -34,18 +35,21 @@ namespace Core.Common.Grains
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    public virtual Task Store(DomState dom)
+    public virtual Task<StatusResponse> Store(DomState dom)
     {
       if (dom is not null)
       {
         State = State with
         {
           Bids = dom.Bids,
-          Asks = dom.Asks
+          Asks = dom.Asks,
         };
       }
 
-      return Task.CompletedTask;
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Active
+      });
     }
   }
 }

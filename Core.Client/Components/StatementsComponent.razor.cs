@@ -1,5 +1,6 @@
 using Core.Client.Services;
 using Core.Common.Enums;
+using Core.Common.Grains;
 using Core.Common.Implementations;
 using Estimator.Models;
 using Microsoft.AspNetCore.Components;
@@ -57,7 +58,7 @@ namespace Core.Client.Components
     {
       var values = new List<InputData>();
       var balance = adapters.Sum(o => o.Account.Balance).Value;
-      var queries = adapters.Select(o => o.GetTransactions(default));
+      var queries = adapters.Select(o => o.Transactions(default));
       var responses = await Task.WhenAll(queries);
       var actions = responses
         .SelectMany(o => o.Data)
@@ -79,9 +80,9 @@ namespace Core.Client.Components
       {
         values.Add(new InputData
         {
-          Min = o.Balance.Min.Value,
-          Max = o.Balance.Max.Value,
-          Value = o.Balance.Current.Value,
+          Min = o.Balance.Min ?? 0,
+          Max = o.Balance.Max ?? 0,
+          Value = o.Balance.Current ?? 0,
           Time = new DateTime(o.Operation.Time.Value),
           Direction = o.Side is OrderSideEnum.Long ? 1 : -1,
           Commission = o.Operation.Instrument.Commission.Value * 2

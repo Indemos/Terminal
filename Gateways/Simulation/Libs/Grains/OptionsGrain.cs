@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace Core.Common.Grains
 {
-  public interface IOptionsGrainAdapter : IOptionsGrain
+  public interface ISimOptionsGrain : IOptionsGrain
   {
   }
 
-  public class OptionsGrainAdapter : OptionsGrain, IOptionsGrainAdapter
+  public class SimOptionsGrain : OptionsGrain, ISimOptionsGrain
   {
     /// <summary>
     /// Option chain
@@ -30,7 +30,6 @@ namespace Core.Common.Grains
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
-        //.Select(UpdateInstrument)
         .ToArray();
 
       var response = new InstrumentsResponse

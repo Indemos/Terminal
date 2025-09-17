@@ -81,7 +81,7 @@ namespace Core.Client.Components
     {
       UpSide = new ComponentModel { Color = SKColors.DeepSkyBlue };
       DownSide = new ComponentModel { Color = SKColors.OrangeRed };
-      View.Item = new Shape { Groups = areas.ToDictionary(o => o, o => new Shape() as IShape) };
+      View.Item = new Shape { Groups = areas.ToDictionary(o => o, o => new Shape() as IShape).Concurrent() };
 
       Composers = await View.CreateViews<CanvasEngine>();
     }
@@ -127,11 +127,6 @@ namespace Core.Client.Components
     /// <param name="inputs"></param>
     public virtual async Task UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
-      if (Observer.State.Next is SubscriptionEnum.None or SubscriptionEnum.Pause)
-      {
-        return;
-      }
-
       foreach (var input in inputs)
       {
         if (Indices.TryGetValue(index, out IShape currentPoint) is false)

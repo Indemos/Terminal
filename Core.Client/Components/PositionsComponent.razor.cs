@@ -1,5 +1,6 @@
 using Core.Client.Services;
 using Core.Common.Enums;
+using Core.Common.Grains;
 using Core.Common.Implementations;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -63,9 +64,9 @@ namespace Core.Client.Components
     /// <param name="account"></param>
     public virtual async Task UpdateItems(params IGateway[] adapters)
     {
-      if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
+      if (Update.IsCompleted)
       {
-        var queries = adapters.Select(o => o.GetPositions(default));
+        var queries = adapters.Select(o => o.Positions(default));
         var responses = await Task.WhenAll(queries);
         var positions = responses
           .SelectMany(o => o.Data)

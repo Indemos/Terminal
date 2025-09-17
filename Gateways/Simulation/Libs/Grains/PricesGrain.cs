@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace Simulation.Grains
 {
-  public interface IPricesGrainAdapter : IPricesGrain
+  public interface ISimPricesGrain : IPricesGrain
   {
   }
 
-  public class PricesGrainAdapter : PricesGrain, IPricesGrainAdapter
+  public class SimPricesGrain : PricesGrain, ISimPricesGrain
   {
     /// <summary>
     /// List of prices by criteria

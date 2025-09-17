@@ -1,9 +1,11 @@
 using Core.Common.Enums;
+using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,7 +29,7 @@ namespace Core.Common.Grains
     /// Add price to the list
     /// </summary>
     /// <param name="price"></param>
-    Task<DescriptorResponse> Add(PriceState price);
+    Task<PriceState> Store(PriceState price);
   }
 
   public class PricesGrain : Grain<PricesState>, IPricesGrain
@@ -35,12 +37,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected InstrumentDescriptor descriptor;
-
-    /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
+    protected DescriptorState descriptor;
 
     /// <summary>
     /// Activation
@@ -50,29 +47,9 @@ namespace Core.Common.Grains
     {
       descriptor = InstanceService<ConversionService>
         .Instance
-        .Decompose<InstrumentDescriptor>(this.GetPrimaryKeyString());
-
-      var dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
-
-      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
       await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
-
-      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
@@ -99,32 +76,53 @@ namespace Core.Common.Grains
     /// <summary>
     /// Add price to the list
     /// </summary>
-    /// <param name="price"></param>
-    public virtual Task<DescriptorResponse> Add(PriceState price)
+    /// <param name="nextPrice"></param>
+    public virtual Task<PriceState> Store(PriceState nextPrice)
     {
-      var response = new DescriptorResponse { Data = price.Name };
+      var currentPrice = State.PriceGroups.LastOrDefault() ?? new();
+      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame) ?? DateTime.MinValue.Ticks;
+      var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
+      var price = Combine(currentPrice, nextPrice);
 
       State.Prices.Add(price);
 
-      if (price.Bar is not null || price.TimeFrame is not null)
+      if (nextTime > currentTime)
       {
         State.PriceGroups.Add(price);
       }
 
-      return Task.FromResult(response);
+      return Task.FromResult(price);
     }
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
+    /// Aggregate points
     /// </summary>
-    /// <param name="price"></param>
-    /// <param name="token"></param>
-    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
+    /// <param name="currentPrice"></param>
+    /// <param name="nextPrice"></param>
+    protected virtual PriceState Combine(PriceState currentPrice, PriceState nextPrice)
     {
-      if (Equals(price.Name, descriptor.Instrument))
+      var price = (nextPrice.Last ?? currentPrice.Last).Value;
+      var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
+      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame);
+
+      return currentPrice with
       {
-        await Add(price);
-      }
+        Name = nextPrice.Name,
+        Ask = nextPrice?.Ask ?? price,
+        Bid = nextPrice?.Bid ?? price,
+        AskSize = nextPrice?.AskSize ?? 0.0,
+        BidSize = nextPrice?.BidSize ?? 0.0,
+        Time = nextPrice?.Time,
+        Last = price,
+        Bar = new BarState() with
+        {
+          Close = price,
+          Low = Math.Min(nextPrice.Bar?.Low ?? price, currentPrice?.Bar?.Low ?? price),
+          High = Math.Max(nextPrice.Bar?.High ?? price, currentPrice?.Bar?.High ?? price),
+          Open = nextTime > currentTime ? price : currentPrice?.Bar?.Open ?? price,
+          Time = nextTime
+        }
+      };
     }
   }
 }

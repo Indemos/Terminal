@@ -41,6 +41,9 @@ namespace Core.Client.Components
       }
     }
 
+    /// <summary>
+    /// Connect
+    /// </summary>
     public virtual async Task Connect()
     {
       try
@@ -68,6 +71,9 @@ namespace Core.Client.Components
       }
     }
 
+    /// <summary>
+    /// Disconnect
+    /// </summary>
     public virtual async Task Disconnect()
     {
       try
@@ -95,6 +101,9 @@ namespace Core.Client.Components
       }
     }
 
+    /// <summary>
+    /// Subscribe
+    /// </summary>
     public virtual async Task Subscribe()
     {
       try
@@ -122,6 +131,9 @@ namespace Core.Client.Components
       }
     }
 
+    /// <summary>
+    /// Unsubscribe
+    /// </summary>
     public virtual async Task Unsubscribe()
     {
       try

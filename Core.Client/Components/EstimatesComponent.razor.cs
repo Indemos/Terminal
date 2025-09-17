@@ -1,11 +1,13 @@
 using Canvas.Core.Shapes;
 using Core.Client.Services;
 using Core.Common.Enums;
+using Core.Common.Grains;
 using Core.Common.Implementations;
 using Core.Common.States;
 using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
@@ -73,11 +75,6 @@ namespace Core.Client.Components
     /// <param name="positions"></param>
     public virtual void UpdateItems(IGateway adapter, PriceState point, IEnumerable<OrderState> positions)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
-      {
-        return;
-      }
-
       var sums = new Dictionary<double, double>();
 
       foreach (var pos in positions)
@@ -104,9 +101,9 @@ namespace Core.Client.Components
           sums[o] = sums.TryGetValue(o, out var s) ? s + sum : sum;
 
           shape.X = step;
-          shape.Groups = new Dictionary<string, IShape>();
+          shape.Groups = new ConcurrentDictionary<string, IShape>();
           shape.Groups["Estimates"] = new Shape();
-          shape.Groups["Estimates"].Groups = new Dictionary<string, IShape>();
+          shape.Groups["Estimates"].Groups = new ConcurrentDictionary<string, IShape>();
           shape.Groups["Estimates"].Groups["Value"] = new LineShape { Name = "Value", Y = sums[o] };
 
           return shape as IShape;

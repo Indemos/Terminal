@@ -17,13 +17,19 @@ namespace Core.Common.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrderState[]> Positions(MetaState criteria);
+    Task<OrdersResponse> Positions(MetaState criteria);
 
     /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    Task Send(OrderState order);
+    Task<DescriptorResponse> Send(OrderState order);
+
+    /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="price"></param>
+    Task<StatusResponse> Tap(PriceState price);
   }
 
   public class PositionsGrain : Grain<PositionsState>, IPositionsGrain
@@ -31,7 +37,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected Descriptor descriptor;
+    protected DescriptorState descriptor;
 
     /// <summary>
     /// Data subscription
@@ -46,13 +52,13 @@ namespace Core.Common.Grains
     {
       descriptor = InstanceService<ConversionService>
         .Instance
-        .Decompose<Descriptor>(this.GetPrimaryKeyString());
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
       var dataStream = this
         .GetStreamProvider(nameof(StreamEnum.Price))
         .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
+      dataSubscription = await dataStream.SubscribeAsync((o, x) => Tap(o));
 
       await base.OnActivateAsync(cancellation);
     }
@@ -72,27 +78,50 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="price"></param>
+    public virtual async Task<StatusResponse> Tap(PriceState price)
+    {
+      foreach (var grain in State.Grains.Values)
+      {
+        await grain.Tap(price);
+      }
+
+      return new StatusResponse
+      {
+        Data = Enums.StatusEnum.Active
+      };
+    }
+
+    /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrderState[]> Positions(MetaState criteria)
+    public virtual async Task<OrdersResponse> Positions(MetaState criteria) => new OrdersResponse
     {
-      return await Task.WhenAll(State.Grains.Values.Select(o => o.Position()));
-    }
+      Data = await Task.WhenAll(State.Grains.Values.Select(o => o.Position()))
+    };
 
     /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task Send(OrderState order)
+    public virtual async Task<DescriptorResponse> Send(OrderState order)
     {
+      var response = new DescriptorResponse
+      {
+        Data = order.Id
+      };
+
       if (State.Grains.ContainsKey(order.Operation.Instrument.Name))
       {
         await Combine(order);
-        return;
+        return response;
       }
 
       await Store(order);
+      return response;
     }
 
     /// <summary>
@@ -114,7 +143,7 @@ namespace Core.Common.Grains
 
         await GrainFactory
           .Get<ITransactionsGrain>(descriptor)
-          .Send(response.Data);
+          .Store(response.Data);
       }
     }
 
@@ -124,28 +153,11 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     protected virtual async Task Store(OrderState order)
     {
-      var nextGrain = GrainFactory.Get<IPositionGrain>(new OrderDescriptor
-      {
-        Account = descriptor.Account,
-        Order = order.Id
-      });
+      var nextGrain = GrainFactory.Get<IPositionGrain>(descriptor with { Order = order.Id });
 
       await nextGrain.Store(order);
 
       State.Grains[order.Operation.Instrument.Name] = nextGrain;
-    }
-
-    /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="price"></param>
-    /// <param name="token"></param>
-    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
-    {
-      foreach (var grain in State.Grains.Values)
-      {
-        await grain.Tap(price);
-      }
     }
   }
 }

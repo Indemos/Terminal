@@ -12,7 +12,6 @@ using Orleans.Streams;
 using Simulation;
 using SkiaSharp;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -39,6 +38,10 @@ namespace Core.Client.Pages.Shares
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
 
+    /// <summary>
+    /// Setup
+    /// </summary>
+    /// <param name="setup"></param>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
@@ -50,10 +53,8 @@ namespace Core.Client.Pages.Shares
         {
           switch (true)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
+            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: await CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
-
-              var account = View.Adapters["Prime"].Account;
 
               await TransactionsView.UpdateItems([.. View.Adapters.Values]);
               await OrdersView.UpdateItems([.. View.Adapters.Values]);
@@ -67,51 +68,54 @@ namespace Core.Client.Pages.Shares
       await base.OnAfterRenderAsync(setup);
     }
 
-    protected virtual void CreateAccounts()
+    /// <summary>
+    /// Accounts
+    /// </summary>
+    protected virtual async Task CreateAccounts()
     {
-      var account = new AccountState
-      {
-        Balance = 25000,
-        Descriptor = "Demo",
-        Instruments = new Dictionary<string, InstrumentState>
-        {
-          [assetX] = new InstrumentState { Name = assetX },
-          [assetY] = new InstrumentState { Name = assetY }
-        },
-      };
-
-      View.Adapters["Prime"] = new Adapter
-      {
-        Speed = 1,
-        Account = account,
-        Connector = Connector,
-        Source = Configuration["Simulation:Source"]
-      };
-
       Performance = new PerformanceIndicator { Name = "Balance" };
 
-      View
-        .Adapters
-        .Values
-        .ForEach(adapter => adapter.Stream.SubscribeAsync(OnData));
+      var adapter = View.Adapters["Prime"] = new SimGateway
+      {
+        Speed = 1,
+        Connector = Connector,
+        Space = $"{Guid.NewGuid()}",
+        Source = Configuration["Simulation:Source"],
+        Account = new AccountState
+        {
+          Descriptor = "Demo",
+          Balance = 25000,
+          Instruments = new()
+          {
+            [assetX] = new InstrumentState { Name = assetX },
+            [assetY] = new InstrumentState { Name = assetY }
+          }
+        }
+      };
+
+      await adapter.Stream.SubscribeAsync((o, x) => OnPrice(o));
     }
 
-    protected async Task OnData(PriceState point, StreamSequenceToken token)
+    /// <summary>
+    /// Stream
+    /// </summary>
+    /// <param name="price"></param>
+    public virtual async Task OnPrice(PriceState price)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await adapter.GetTicks(new MetaState { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await adapter.GetTicks(new MetaState { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = (await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = (await adapter.GetOrders(default)).Data;
-      var positions = (await adapter.GetPositions(default)).Data;
+      var orders = (await adapter.Orders(default)).Data;
+      var positions = (await adapter.Positions(default)).Data;
       var performance = await Performance.Update([adapter]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
@@ -156,9 +160,9 @@ namespace Core.Client.Pages.Shares
       await TransactionsView.UpdateItems([.. View.Adapters.Values]);
       await OrdersView.UpdateItems([.. View.Adapters.Values]);
       await PositionsView.UpdateItems([.. View.Adapters.Values]);
-      await ChartsView.UpdateItems(point.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
-      await PerformanceView.UpdateItems(point.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      await PerformanceView.UpdateItems(point.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      await ChartsView.UpdateItems(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
+      await PerformanceView.UpdateItems(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      await PerformanceView.UpdateItems(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -196,7 +200,7 @@ namespace Core.Client.Pages.Shares
     public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = (await adapter.GetPositions(default)).Data;
+      var positions = (await adapter.Positions(default)).Data;
       var account = adapter.Account;
 
       foreach (var position in positions)

@@ -17,19 +17,25 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrderState[]> Orders(MetaState criteria);
+    Task<OrdersResponse> Orders(MetaState criteria);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    Task Send(OrderState order);
+    Task<DescriptorResponse> Send(OrderState order);
 
     /// <summary>
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
     Task<DescriptorResponse> Remove(OrderState order);
+
+    /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="price"></param>
+    Task<StatusResponse> Tap(PriceState price);
   }
 
   public class OrdersGrain : Grain<OrdersState>, IOrdersGrain
@@ -37,7 +43,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected Descriptor descriptor;
+    protected DescriptorState descriptor;
 
     /// <summary>
     /// Data subscription
@@ -52,13 +58,13 @@ namespace Core.Common.Grains
     {
       descriptor = InstanceService<ConversionService>
         .Instance
-        .Decompose<Descriptor>(this.GetPrimaryKeyString());
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
       var dataStream = this
         .GetStreamProvider(nameof(StreamEnum.Price))
         .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      dataSubscription = await dataStream.SubscribeAsync(OnPrice);
+      dataSubscription = await dataStream.SubscribeAsync((o, x) => Tap(o));
 
       await base.OnActivateAsync(cancellation);
     }
@@ -81,10 +87,10 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrderState[]> Orders(MetaState criteria)
+    public virtual async Task<OrdersResponse> Orders(MetaState criteria) => new()
     {
-      return await Task.WhenAll(State.Grains.Values.Select(o => o.Order()));
-    }
+      Data = await Task.WhenAll(State.Grains.Values.Select(o => o.Order()))
+    };
 
     /// <summary>
     /// <summary>
@@ -108,25 +114,20 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task Send(OrderState order)
+    public virtual async Task<DescriptorResponse> Send(OrderState order)
     {
-      var orderGrain = GrainFactory.Get<IOrderGrain>(new OrderDescriptor
-      {
-        Account = descriptor.Account,
-        Order = order.Id
-      });
-
-      await orderGrain.Store(order);
+      var orderGrain = GrainFactory.Get<IOrderGrain>(descriptor with { Order = order.Id });
 
       State.Grains[order.Id] = orderGrain;
+
+      return await orderGrain.Store(order);
     }
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    /// <param name="token"></param>
-    protected virtual async Task OnPrice(PriceState price, StreamSequenceToken token)
+    public virtual async Task<StatusResponse> Tap(PriceState price)
     {
       var positionsGrain = GrainFactory.Get<IPositionsGrain>(descriptor);
       var grains = State.Grains.ToArray();
@@ -139,6 +140,11 @@ namespace Core.Common.Grains
           await positionsGrain.Send(await grain.Value.Position(price));
         }
       }
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
     }
   }
 }

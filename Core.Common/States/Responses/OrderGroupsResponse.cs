@@ -7,6 +7,6 @@ namespace Core.Common.States
     /// <summary>
     /// Data
     /// </summary>
-    public IList<OrderResponse> Data { get; init; } = [];
+    public IList<DescriptorResponse> Data { get; init; } = [];
   }
 }

@@ -17,13 +17,13 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrderState[]> Transactions(MetaState criteria);
+    Task<OrdersResponse> Transactions(MetaState criteria);
 
     /// <summary>
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    Task Send(OrderState order);
+    Task<DescriptorResponse> Store(OrderState order);
   }
 
   public class TransactionsGrain : Grain<TransactionsState>, ITransactionsGrain
@@ -31,7 +31,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected Descriptor descriptor;
+    protected DescriptorState descriptor;
 
     /// <summary>
     /// Order stream
@@ -46,7 +46,7 @@ namespace Core.Common.Grains
     {
       descriptor = InstanceService<ConversionService>
         .Instance
-        .Decompose<Descriptor>(this.GetPrimaryKeyString());
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
       orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
@@ -59,29 +59,28 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrderState[]> Transactions(MetaState criteria)
+    public virtual async Task<OrdersResponse> Transactions(MetaState criteria) => new OrdersResponse
     {
-      return await Task.WhenAll(State.Grains.Select(o => o.Transaction()));
-    }
+      Data = await Task.WhenAll(State.Grains.Select(o => o.Transaction()))
+    };
 
     /// <summary>
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task Send(OrderState order)
+    public virtual async Task<DescriptorResponse> Store(OrderState order)
     {
-      var orderDescriptor = new OrderDescriptor
-      {
-        Account = descriptor.Account,
-        Order = order.Id
-      };
+      var orderGrain = GrainFactory.Get<ITransactionGrain>(descriptor with { Order = order.Id });
 
-      var orderGrain = GrainFactory.Get<ITransactionGrain>(orderDescriptor);
+      State.Grains.Add(orderGrain);
 
       await orderGrain.Store(order);
       await orderStream.OnNextAsync(order);
 
-      State.Grains.Add(orderGrain);
+      return new DescriptorResponse
+      {
+        Data = order.Id
+      };
     }
   }
 }

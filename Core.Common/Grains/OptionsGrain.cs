@@ -17,7 +17,7 @@ namespace Core.Common.Grains
     /// Update options
     /// </summary>
     /// <param name="options"></param>
-    Task Store(List<InstrumentState> options);
+    Task<StatusResponse> Store(List<InstrumentState> options);
   }
 
   public class OptionsGrain : Grain<OptionsState>, IOptionsGrain
@@ -35,7 +35,7 @@ namespace Core.Common.Grains
     /// Update options
     /// </summary>
     /// <param name="options"></param>
-    public virtual Task Store(List<InstrumentState> options)
+    public virtual Task<StatusResponse> Store(List<InstrumentState> options)
     {
       if (options is not null)
       {
@@ -45,7 +45,10 @@ namespace Core.Common.Grains
         };
       }
 
-      return Task.CompletedTask;
+      return Task.FromResult(new StatusResponse
+      {
+        Data = Enums.StatusEnum.Active
+      });
     }
   }
 }

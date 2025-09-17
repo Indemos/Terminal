@@ -17,10 +17,11 @@ namespace Core.Common.Indicators
 
       foreach (var adapter in adapters)
       {
-        var positions = await adapter.GetPositions(default);
-        var adapterSum = positions.Data.Sum(o => o.Balance.Current);
+        var positions = await adapter.Positions(default);
+        var positionsSum = positions.Data.Sum(o => o.Balance.Current);
+        var account = adapter.Account;
 
-        sum += adapter.Account.Balance + adapter.Account.Performance + adapterSum;
+        sum += account.Balance + account.Performance + positionsSum;
       }
 
       Response = Response with { Last = sum };

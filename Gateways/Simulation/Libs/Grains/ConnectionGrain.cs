@@ -6,6 +6,7 @@ using Core.Common.States;
 using MessagePack;
 using MessagePack.Resolvers;
 using Orleans;
+using Orleans.Streams;
 using Simulation.States;
 using System;
 using System.Collections.Concurrent;
@@ -14,6 +15,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Simulation.Grains
@@ -23,9 +25,8 @@ namespace Simulation.Grains
     /// <summary>
     /// Connect
     /// </summary>
-    /// <param name="source"></param>
-    /// <param name="speed"></param>
-    Task<StatusResponse> Connect(string source, int speed);
+    /// <param name="state"></param>
+    Task<StatusResponse> Connect(ConnectionState state);
 
     /// <summary>
     /// Save state and dispose
@@ -43,25 +44,39 @@ namespace Simulation.Grains
     /// </summary>
     /// <param name="instrument"></param>
     Task<StatusResponse> Unsubscribe(InstrumentState instrument);
-
-    /// <summary>
-    /// Set state
-    /// </summary>
-    /// <param name="instruments"></param>
-    Task StoreInstruments(Dictionary<string, InstrumentState> instruments);
   }
 
   public class ConnectionGrain : Grain<ConnectionState>, IConnectionGrain
   {
     /// <summary>
-    /// Timer broadcasting quotes
+    /// Published price
     /// </summary>
-    protected IDisposable interval;
+    protected PriceState pubPrice;
+
+    /// <summary>
+    /// Subscribed price
+    /// </summary>
+    protected PriceState subPrice;
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected DescriptorState descriptor;
+
+    /// <summary>
+    /// Data stream
+    /// </summary>
+    protected IAsyncStream<PriceState> dataStream;
+
+    /// <summary>
+    /// Data subscription
+    /// </summary>
+    protected StreamSubscriptionHandle<PriceState> dataSubscription;
 
     /// <summary>
     /// HTTP service
     /// </summary>
-    protected ConversionService sender = new();
+    protected ConversionService converter = new();
 
     /// <summary>
     /// Disposable connections
@@ -71,7 +86,7 @@ namespace Simulation.Grains
     /// <summary>
     /// Subscription states
     /// </summary>
-    protected ConcurrentDictionary<string, RecordState> summaries = new();
+    protected ConcurrentDictionary<string, SummaryState> summaries = new();
 
     /// <summary>
     /// Subscriptions
@@ -84,6 +99,11 @@ namespace Simulation.Grains
     protected ConcurrentDictionary<string, IEnumerator<string>> streams = new();
 
     /// <summary>
+    /// Instruments
+    /// </summary>
+    protected ConcurrentDictionary<string, InstrumentState> instruments = new();
+
+    /// <summary>
     /// Message pack options
     /// </summary>
     protected MessagePackSerializerOptions messageOptions = MessagePackSerializerOptions
@@ -91,42 +111,57 @@ namespace Simulation.Grains
       .WithResolver(ContractlessStandardResolver.Instance);
 
     /// <summary>
-    /// Set state
+    /// Activation
     /// </summary>
-    /// <param name="instruments"></param>
-    public Task StoreInstruments(Dictionary<string, InstrumentState> instruments)
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      State = State with
-      {
-        Instruments = instruments
-      };
+      descriptor = InstanceService<ConversionService>
+        .Instance
+        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
-      return Task.CompletedTask;
+      dataStream = this
+        .GetStreamProvider(nameof(StreamEnum.Price))
+        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
+
+      dataSubscription = await dataStream.SubscribeAsync((o, x) => Task.FromResult(subPrice = o));
+
+      await base.OnActivateAsync(cancellation);
+    }
+
+    /// <summary>
+    /// Deactivation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
+    {
+      await Disconnect();
+      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
     /// Connect
     /// </summary>
-    /// <param name="source"></param>
-    /// <param name="speed"></param>
-    public async Task<StatusResponse> Connect(string source, int speed)
+    /// <param name="state"></param>
+    public virtual async Task<StatusResponse> Connect(ConnectionState state)
     {
-      await Disconnect();
+      State = state;
+      streams = (instruments = State.Instruments.Concurrent()).ToDictionary(
+        o => o.Value.Name,
+        o => Directory
+          .EnumerateFiles(Path.Combine(State.Source, o.Value.Name), "*", SearchOption.AllDirectories)
+          .GetEnumerator())
+          .Concurrent();
 
-      streams = State
-        .Instruments
-        .ToDictionary(
-          o => o.Value.Name,
-          o => Directory
-            .EnumerateFiles(Path.Combine(source, o.Value.Name), "*", SearchOption.AllDirectories)
-            .GetEnumerator())
-            .Concurrent();
+      await Task.WhenAll(instruments.Values.Select(Subscribe));
 
-      streams.ForEach(o => connections.Add(o.Value));
+      var counter = this.RegisterGrainTimer(
+        o => Task.WhenAll(subscriptions.Values.Select(sub => sub())),
+        TimeSpan.FromMicroseconds(0),
+        TimeSpan.FromMicroseconds(State.Speed));
 
-      Run(speed);
-
-      await Task.WhenAll(State.Instruments.Values.Select(Subscribe));
+      connections.AddRange(streams.Values);
+      connections.Add(counter);
 
       return new StatusResponse
       {
@@ -137,14 +172,22 @@ namespace Simulation.Grains
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public async Task<StatusResponse> Disconnect()
+    public virtual async Task<StatusResponse> Disconnect()
     {
-      Stop();
-
-      await Task.WhenAll(State.Instruments.Values.Select(Unsubscribe));
+      await Task.WhenAll(instruments.Values.Select(Unsubscribe));
 
       connections?.ForEach(o => o?.Dispose());
+
+      streams?.Clear();
+      summaries?.Clear();
+      instruments?.Clear();
       connections?.Clear();
+      subscriptions?.Clear();
+
+      if (dataSubscription is not null)
+      {
+        await dataSubscription.UnsubscribeAsync();
+      }
 
       return new StatusResponse
       {
@@ -156,62 +199,52 @@ namespace Simulation.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public async Task<StatusResponse> Subscribe(InstrumentState instrument)
+    public virtual async Task<StatusResponse> Subscribe(InstrumentState instrument)
     {
-      var converter = InstanceService<ConversionService>.Instance;
-      var baseDescriptor = converter.Decompose<Descriptor>(this.GetPrimaryKeyString());
-      var instrumentDescriptor = new InstrumentDescriptor
-      {
-        Account = baseDescriptor.Account,
-        Instrument = instrument.Name
-      };
-
-      var domGrain = GrainFactory.Get<IDomGrain>(instrumentDescriptor);
-      var priceGrain = GrainFactory.Get<IPriceGrain>(instrumentDescriptor);
-      var optionsGrain = GrainFactory.Get<IOptionsGrain>(instrumentDescriptor);
-
       await Unsubscribe(instrument);
+
+      var instrumentDescriptor = descriptor with { Instrument = instrument.Name };
+      var domGrain = GrainFactory.Get<IDomGrain>(instrumentDescriptor);
+      var pricesGrain = GrainFactory.Get<ISimPricesGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.Get<IOptionsGrain>(instrumentDescriptor);
 
       subscriptions[instrument.Name] = async () =>
       {
-        streams.TryGetValue(instrument.Name, out var stream);
-        summaries.TryGetValue(instrument.Name, out var state);
-
-        if (stream is not null && (state is null || state.Status is StatusEnum.Pause))
+        if (pubPrice is null || Equals(pubPrice, subPrice))
         {
-          stream.MoveNext();
+          var stream = streams.Get(instrument.Name);
+          var state = summaries.Get(instrument.Name);
 
-          switch (string.IsNullOrEmpty(stream.Current))
+          if (state is null && stream is not null)
           {
-            case true:
-              summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Inactive };
-              break;
+            if (stream.MoveNext() is false)
+            {
+              streams.TryRemove(instrument.Name, out _);
+              return;
+            }
 
-            case false:
-              summaries[instrument.Name] = GetSummary(instrument.Name, stream.Current);
-              summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Active };
-              break;
+            summaries[instrument.Name] = GetSummary(instrument.Name, stream.Current);
           }
-        }
 
-        var next = summaries.First();
+          var min = summaries.MinBy(o => o.Value?.Instrument?.Price?.Time);
+          var empties = summaries.Any(o => o.Value is null);
 
-        summaries.ForEach(o => next = o.Value.Instrument.Price.Time <= next.Value.Instrument.Price.Time ? o : next);
-
-        if (Equals(next.Key, instrument.Name))
-        {
-          var point = next.Value.Instrument.Price with
+          if (Equals(min.Key, instrument.Name) && empties is false)
           {
-            Bar = null,
-            Name = next.Key,
-            TimeFrame = instrument.TimeFrame
-          };
+            var price = await pricesGrain.Store(min.Value.Instrument.Price with
+            {
+              Bar = null,
+              Name = min.Key,
+              TimeFrame = instrument.TimeFrame
+            });
 
-          await domGrain.Store(next.Value.Dom);
-          await optionsGrain.Store(next.Value.Options);
-          await priceGrain.Store(point);
+            await domGrain.Store(min.Value.Dom);
+            await optionsGrain.Store(min.Value.Options);
+            await dataStream.OnNextAsync(price);
 
-          summaries[instrument.Name] = summaries[instrument.Name] with { Status = StatusEnum.Pause };
+            summaries[instrument.Name] = null;
+            pubPrice = price;
+          }
         }
       };
 
@@ -225,7 +258,7 @@ namespace Simulation.Grains
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public Task<StatusResponse> Unsubscribe(InstrumentState instrument)
+    public virtual Task<StatusResponse> Unsubscribe(InstrumentState instrument)
     {
       subscriptions.TryRemove(instrument.Name, out var subscription);
 
@@ -236,31 +269,11 @@ namespace Simulation.Grains
     }
 
     /// <summary>
-    /// Start timer
-    /// </summary>
-    /// <param name="speed"></param>
-    protected void Run(int speed)
-    {
-      interval = this.RegisterGrainTimer(
-        async cancellation => await Task.WhenAll(subscriptions.Values.Select(o => o())),
-        TimeSpan.FromMicroseconds(0),
-        TimeSpan.FromMicroseconds(speed));
-    }
-
-    /// <summary>
-    /// Stop timer
-    /// </summary>
-    protected void Stop()
-    {
-      interval?.Dispose();
-    }
-
-    /// <summary>
     /// Parse snapshot document to get current symbol and options state
     /// </summary>
     /// <param name="name"></param>
     /// <param name="source"></param>
-    protected RecordState GetSummary(string name, string source)
+    protected virtual SummaryState GetSummary(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -268,7 +281,7 @@ namespace Simulation.Grains
       {
         var content = File.ReadAllBytes(source);
 
-        return MessagePackSerializer.Deserialize<RecordState>(content, messageOptions);
+        return MessagePackSerializer.Deserialize<SummaryState>(content, messageOptions);
       }
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
@@ -277,13 +290,13 @@ namespace Simulation.Grains
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          return JsonSerializer.Deserialize<RecordState>(content, sender.Options);
+          return JsonSerializer.Deserialize<SummaryState>(content, converter.Options);
         }
       }
 
       var inputMessage = File.ReadAllText(source);
 
-      return JsonSerializer.Deserialize<RecordState>(inputMessage, sender.Options);
+      return JsonSerializer.Deserialize<SummaryState>(inputMessage, converter.Options);
     }
   }
 }

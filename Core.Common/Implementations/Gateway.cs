@@ -1,5 +1,5 @@
 using Core.Common.Enums;
-using Core.Common.Services;
+using Core.Common.Extensions;
 using Core.Common.States;
 using Core.Common.Validators;
 using Orleans;
@@ -11,8 +11,13 @@ using System.Threading.Tasks;
 
 namespace Core.Common.Implementations
 {
-  public interface IGateway
+  public interface IGateway : IDisposable
   {
+    /// <summary>
+    /// Namespace
+    /// </summary>
+    string Space { get; set; }
+
     /// <summary>
     /// Account
     /// </summary>
@@ -66,11 +71,6 @@ namespace Core.Common.Implementations
     Task<StatusResponse> Unsubscribe();
 
     /// <summary>
-    /// Get account state
-    /// </summary>
-    Task<AccountResponse> GetAccount();
-
-    /// <summary>
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
@@ -80,37 +80,37 @@ namespace Core.Common.Implementations
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> GetBars(MetaState criteria);
+    Task<PricesResponse> Bars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> GetTicks(MetaState criteria);
+    Task<PricesResponse> Ticks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentsResponse> GetOptions(MetaState criteria);
+    Task<InstrumentsResponse> Options(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetPositions(MetaState criteria);
+    Task<OrdersResponse> Positions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetOrders(MetaState criteria);
+    Task<OrdersResponse> Orders(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> GetTransactions(MetaState criteria);
+    Task<OrdersResponse> Transactions(MetaState criteria);
 
     /// <summary>
     /// Send new orders
@@ -138,7 +138,12 @@ namespace Core.Common.Implementations
     /// <summary>
     /// Order validator
     /// </summary>
-    protected OrderValidator orderValidator = InstanceService<OrderValidator>.Instance;
+    protected OrderValidator orderValidator = new();
+
+    /// <summary>
+    /// Namespace
+    /// </summary>
+    public virtual string Space { get; set; }
 
     /// <summary>
     /// Account
@@ -187,11 +192,6 @@ namespace Core.Common.Implementations
     public abstract Task<StatusResponse> Unsubscribe(InstrumentState instrument);
 
     /// <summary>
-    /// Get account state
-    /// </summary>
-    public abstract Task<AccountResponse> GetAccount();
-
-    /// <summary>
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
@@ -201,37 +201,37 @@ namespace Core.Common.Implementations
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetBars(MetaState criteria);
+    public abstract Task<PricesResponse> Bars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetTicks(MetaState criteria);
+    public abstract Task<PricesResponse> Ticks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<InstrumentsResponse> GetOptions(MetaState criteria);
+    public abstract Task<InstrumentsResponse> Options(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetPositions(MetaState criteria);
+    public abstract Task<OrdersResponse> Positions(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetTransactions(MetaState criteria);
+    public abstract Task<OrdersResponse> Transactions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetOrders(MetaState criteria);
+    public abstract Task<OrdersResponse> Orders(MetaState criteria);
 
     /// <summary>
     /// Send new orders
@@ -377,5 +377,15 @@ namespace Core.Common.Implementations
 
       return response;
     }
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.Get<T>(new()
+    {
+      Space = Space,
+      Account = Account.Descriptor,
+      Instrument = instrument,
+    });
   }
 }

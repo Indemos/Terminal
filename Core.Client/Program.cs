@@ -31,7 +31,6 @@ namespace Core.Client
         orleans.AddMemoryGrainStorage("PubSubStore");
         orleans.UseDashboard(options =>
         {
-          options.HostSelf = true;
           options.Port = 8080;
           options.Host = "*";
         });

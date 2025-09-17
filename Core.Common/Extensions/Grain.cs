@@ -14,7 +14,7 @@ namespace Core.Common.Extensions
     /// <summary>
     /// Gets a grain using compound key
     /// </summary>
-    public static T Get<T>(this IGrainFactory connector, IDescriptor descriptor) where T : IGrainWithStringKey
+    public static T Get<T>(this IGrainFactory connector, DescriptorState descriptor) where T : IGrainWithStringKey
     {
       return connector.GetGrain<T>(converter.Compose(descriptor));
     }
