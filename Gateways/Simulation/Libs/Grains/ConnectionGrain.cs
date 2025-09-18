@@ -69,11 +69,6 @@ namespace Simulation.Grains
     protected IAsyncStream<PriceState> dataStream;
 
     /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
-
-    /// <summary>
     /// HTTP service
     /// </summary>
     protected ConversionService converter = new();
@@ -124,19 +119,8 @@ namespace Simulation.Grains
         .GetStreamProvider(nameof(StreamEnum.Price))
         .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      dataSubscription = await dataStream.SubscribeAsync((o, x) => Task.FromResult(subPrice = o));
-
+      await dataStream.SubscribeAsync((o, x) => Task.FromResult(subPrice = o));
       await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      await Disconnect();
-      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>
@@ -183,11 +167,6 @@ namespace Simulation.Grains
       instruments?.Clear();
       connections?.Clear();
       subscriptions?.Clear();
-
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
 
       return new StatusResponse
       {

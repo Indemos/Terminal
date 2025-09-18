@@ -1,16 +1,10 @@
 using Core.Common.States;
-using System;
 using System.Collections.Generic;
 
 namespace Simulation.States
 {
   public record SummaryState
   {
-    /// <summary>
-    /// Aggregation period for the quotes
-    /// </summary>
-    public TimeSpan? TimeFrame { get; init; }
-
     /// <summary>
     /// Depth of market
     /// </summary>

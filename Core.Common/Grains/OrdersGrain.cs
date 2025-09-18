@@ -46,11 +46,6 @@ namespace Core.Common.Grains
     protected DescriptorState descriptor;
 
     /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceState> dataSubscription;
-
-    /// <summary>
     /// Activation
     /// </summary>
     /// <param name="cancellation"></param>
@@ -64,23 +59,8 @@ namespace Core.Common.Grains
         .GetStreamProvider(nameof(StreamEnum.Price))
         .GetStream<PriceState>(descriptor.Account, Guid.Empty);
 
-      dataSubscription = await dataStream.SubscribeAsync((o, x) => Tap(o));
-
+      await dataStream.SubscribeAsync((o, x) => Tap(o));
       await base.OnActivateAsync(cancellation);
-    }
-
-    /// <summary>
-    /// Deactivation
-    /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cancellation)
-    {
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
-
-      await base.OnDeactivateAsync(reason, cancellation);
     }
 
     /// <summary>

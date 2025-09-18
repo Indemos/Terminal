@@ -1,1 +1,1 @@
-{"Instrument":{"Name":"SPY","Point":{"Bid":"601.11","Ask":"601.12","BidSize":"15","AskSize":"9","Last":"601.12","Time":"6/17/2025 11:45:00 AM"}}}
+{"Instrument":{"Name":"SPY","Price":{"Bid":"601.11","Ask":"601.12","BidSize":"15","AskSize":"9","Last":"601.12","Time":"638857575000000000"}}}
