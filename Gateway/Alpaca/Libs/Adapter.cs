@@ -1,6 +1,5 @@
 using Alpaca.Mappers;
 using Alpaca.Markets;
-using Distribution.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +8,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Alpaca
 {
@@ -399,51 +399,56 @@ namespace Alpaca
     /// Process quote from the stream
     /// </summary>
     /// <param name="streamPoint"></param>
-    protected virtual void OnPoint(IQuote streamPoint) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
+    protected virtual void OnPoint(IQuote streamPoint) => InstanceService<SchedulerService>.Instance.Send(() =>
     {
-      var summary = Account.States.Get(streamPoint.Symbol);
-      var point = Downstream.GetPrice(streamPoint, summary.Instrument);
+      Observe(() =>
+      {
+        var summary = Account.States.Get(streamPoint.Symbol);
+        var point = Downstream.GetPrice(streamPoint, summary.Instrument);
 
-      summary.Points.Add(point);
-      summary.PointGroups.Add(point, summary.TimeFrame);
-      summary.Instrument.Point = summary.PointGroups.Last();
-      summary.Instrument.Point.TimeFrame = summary.TimeFrame;
-      summary.Instrument.Point.Instrument = summary.Instrument;
-      summary.Instrument.Point.Time = DateTime.Now;
+        summary.Points.Add(point);
+        summary.PointGroups.Add(point, summary.TimeFrame);
+        summary.Instrument.Point = summary.PointGroups.Last();
+        summary.Instrument.Point.TimeFrame = summary.TimeFrame;
+        summary.Instrument.Point.Instrument = summary.Instrument;
+        summary.Instrument.Point.Time = DateTime.Now;
 
-      UpdateInstrument(summary.Instrument);
+        UpdateInstrument(summary.Instrument);
 
-      Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
-    }));
+        Stream(summary.Instrument.Point);
+      });
+
+      return Task.FromResult(true);
+    });
 
     /// <summary>
     /// Process quote from the stream
     /// </summary>
     /// <param name="streamOrder"></param>
-    protected virtual void OnTrade(ITrade streamOrder) => InstanceService<ScheduleService>.Instance.Send(() => Observe(() =>
+    protected virtual void OnTrade(ITrade streamOrder) => InstanceService<SchedulerService>.Instance.Send(() =>
     {
-      var action = new TransactionModel
+      Observe(() =>
       {
-        Id = $"{streamOrder.TradeId}",
-        Time = streamOrder.TimestampUtc,
-        Amount = (double)streamOrder.Size,
-        AveragePrice = (double)streamOrder.Price,
-        Instrument = new InstrumentModel { Name = streamOrder.Symbol }
-      };
+        var action = new TransactionModel
+        {
+          Id = $"{streamOrder.TradeId}",
+          Time = streamOrder.TimestampUtc,
+          Amount = (double)streamOrder.Size,
+          AveragePrice = (double)streamOrder.Price,
+          Instrument = new InstrumentModel { Name = streamOrder.Symbol }
+        };
 
-      var order = new OrderModel
-      {
-        Transaction = action,
-        Side = Downstream.GetTakerSide(streamOrder.TakerSide)
-      };
+        var order = new OrderModel
+        {
+          Transaction = action,
+          Side = Downstream.GetTakerSide(streamOrder.TakerSide)
+        };
 
-      var message = new MessageModel<OrderModel>
-      {
-        Next = order
-      };
+        OrderStream(order);
+      });
 
-      OrderStream(message);
-    }));
+      return Task.FromResult(true);
+    });
 
     /// <summary>
     /// Get options

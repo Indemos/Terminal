@@ -1,5 +1,3 @@
-using Distribution.Services;
-using Distribution.Stream;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Schwab;
@@ -26,7 +24,7 @@ namespace Terminal.Pages.Utils
     [Inject] IConfiguration Configuration { get; set; }
 
     protected virtual ControlsComponent View { get; set; }
-    protected virtual Service Srv { get; set; } = new Service();
+    protected virtual ConversionService Srv { get; set; } = new();
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel { Name = "SPY" };
 
     protected override async Task OnAfterRenderAsync(bool setup)

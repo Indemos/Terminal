@@ -1,4 +1,3 @@
-using Distribution.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -21,12 +20,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    Action<MessageModel<PointModel>> Stream { get; set; }
+    Action<PointModel> Stream { get; set; }
 
     /// <summary>
     /// Order stream
     /// </summary>
-    Action<MessageModel<OrderModel>> OrderStream { get; set; }
+    Action<OrderModel> OrderStream { get; set; }
 
     /// <summary>
     /// Connect
@@ -127,12 +126,12 @@ namespace Terminal.Core.Domains
     /// <summary>
     /// Point stream
     /// </summary>
-    public virtual Action<MessageModel<PointModel>> Stream { get; set; }
+    public virtual Action<PointModel> Stream { get; set; }
 
     /// <summary>
     /// Order stream
     /// </summary>
-    public virtual Action<MessageModel<OrderModel>> OrderStream { get; set; }
+    public virtual Action<OrderModel> OrderStream { get; set; }
 
     /// <summary>
     /// Constructor

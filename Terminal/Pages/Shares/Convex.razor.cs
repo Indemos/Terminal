@@ -89,7 +89,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message));
     }
 
     protected async void OnData(PointModel point)

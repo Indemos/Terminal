@@ -2,11 +2,8 @@ using Distribution.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
-using Orleans.Hosting;
-using Orleans.Providers;
 using Terminal.Services;
 
 namespace Terminal
@@ -21,6 +18,7 @@ namespace Terminal
 
       InstanceService<ConfigurationService>.Instance.Setup = builder.Configuration;
 
+      builder.Services.AddSingleton<SubscriptionService>();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
       builder.Services.AddMudServices(o =>

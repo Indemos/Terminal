@@ -1,6 +1,5 @@
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
-using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Simulation;
@@ -21,6 +20,7 @@ namespace Terminal.Pages.Shares
   public partial class Pairs
   {
     [Inject] IConfiguration Configuration { get; set; }
+    [Inject] SubscriptionService Observer { get; set; }
 
     /// <summary>
     /// Strategy
@@ -41,10 +41,7 @@ namespace Terminal.Pages.Shares
     {
       if (setup)
       {
-        await ChartsView.Create("Prices");
-        await PerformanceView.Create("Performance");
-
-        InstanceService<SubscriptionService>.Instance.Update += state =>
+        Observer.Update += state =>
         {
           switch (true)
           {
@@ -60,6 +57,9 @@ namespace Terminal.Pages.Shares
               break;
           }
         };
+
+        await ChartsView.Create("Prices");
+        await PerformanceView.Create("Performance");
       }
 
       await base.OnAfterRenderAsync(setup);
@@ -89,7 +89,7 @@ namespace Terminal.Pages.Shares
       View
         .Adapters
         .Values
-        .ForEach(adapter => adapter.Stream += message => OnData(message.Next));
+        .ForEach(adapter => adapter.Stream += message => OnData(message));
     }
 
     protected async void OnData(PointModel point)

@@ -1,13 +1,9 @@
 using Flurl;
-using Microsoft.AspNetCore.Mvc.RazorPages;
-using Microsoft.VisualBasic;
 using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Terminal.Core.Extensions;
 using Tradier.Messages.MarketData;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Tradier
 {

@@ -88,9 +88,9 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Instrument.Name, Instrument.Name))
+          if (Equals(message.Instrument.Name, Instrument.Name))
           {
-            await OnData(message.Next);
+            await OnData(message);
           }
         });
     }

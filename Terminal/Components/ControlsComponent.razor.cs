@@ -1,4 +1,3 @@
-using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -14,13 +13,15 @@ namespace Terminal.Components
 {
   public partial class ControlsComponent
   {
+    [Inject] SubscriptionService Observer { get; set; }
+
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
 
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
     public virtual MessageModel<SubscriptionEnum> SubscriptionState
     {
-      get => InstanceService<SubscriptionService>.Instance.State ?? new MessageModel<SubscriptionEnum> { Next = SubscriptionEnum.None };
-      set => InstanceService<SubscriptionService>.Instance.State = value;
+      get => Observer.State ?? new MessageModel<SubscriptionEnum> { Next = SubscriptionEnum.None };
+      set => Observer.State = value;
     }
 
     /// <summary>

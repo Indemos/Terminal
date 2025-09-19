@@ -1,5 +1,3 @@
-using Distribution.Services;
-using Distribution.Stream;
 using MessagePack;
 using MessagePack.Resolvers;
 using System;
@@ -29,7 +27,7 @@ namespace Simulation
     /// <summary>
     /// HTTP service
     /// </summary>
-    protected Service sender;
+    protected ConversionService sender;
 
     /// <summary>
     /// Disposable connections
@@ -77,7 +75,7 @@ namespace Simulation
       streams = new();
       subscriptions = new();
       connections = [];
-      sender = new Service();
+      sender = new ConversionService();
       messageOptions = MessagePackSerializerOptions.Standard.WithResolver(ContractlessStandardResolver.Instance);
     }
 
@@ -106,12 +104,16 @@ namespace Simulation
         await Task.WhenAll(Account.States.Values.Select(o => Subscribe(o.Instrument)));
 
         var span = TimeSpan.FromMicroseconds(Speed);
-        var scheduler = new ScheduleService();
+        var scheduler = new SchedulerService();
 
         interval = new Timer(span);
         interval.Enabled = true;
         interval.AutoReset = true;
-        interval.Elapsed += (sender, e) => scheduler.Send(() => subscriptions.Values.ForEach(o => o()), false);
+        interval.Elapsed += (sender, e) => scheduler.Send(() =>
+        {
+          subscriptions.Values.ForEach(o => o());
+          return Task.FromResult(true);
+        });
 
         connections.Add(interval);
         connections.Add(scheduler);
@@ -183,7 +185,7 @@ namespace Simulation
           summary.Points.Add(summary.Instrument.Point);
           summary.PointGroups.Add(summary.Instrument.Point, summary.TimeFrame);
 
-          Stream(new MessageModel<PointModel> { Next = summary.PointGroups.Last() });
+          Stream(summary.PointGroups.Last());
 
           states[instrument.Name].Status = StatusEnum.Pause;
         }
@@ -469,7 +471,7 @@ namespace Simulation
     /// Process pending orders on each quote
     /// </summary>
     /// <param name="message"></param>
-    protected virtual void OnPoint(MessageModel<PointModel> message)
+    protected virtual void OnPoint(PointModel message)
     {
       var estimates = Account
         .Positions

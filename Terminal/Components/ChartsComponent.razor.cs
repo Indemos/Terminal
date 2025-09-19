@@ -20,6 +20,8 @@ namespace Terminal.Components
 {
   public partial class ChartsComponent : IDisposable
   {
+    [Inject] SubscriptionService Observer { get; set; }
+
     [Parameter] public virtual string Name { get; set; }
 
     /// <summary>
@@ -31,11 +33,6 @@ namespace Terminal.Components
     /// Downside style
     /// </summary>
     protected virtual ComponentModel DownSide { get; set; }
-
-    /// <summary>
-    /// Subscription state
-    /// </summary>
-    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
 
     /// <summary>
     /// Indices
@@ -67,7 +64,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        Subscription.Update += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -134,7 +131,7 @@ namespace Terminal.Components
     /// <param name="count"></param>
     public virtual void UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
-      if (Subscription.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }
@@ -168,7 +165,7 @@ namespace Terminal.Components
     /// <param name="inputs"></param>
     public virtual void UpdateOrdinals(IList<IShape> shapes)
     {
-      if (Subscription.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }

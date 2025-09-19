@@ -356,7 +356,7 @@ namespace InteractiveBrokers
     {
       client.OpenOrder += o => Observe(() =>
       {
-        OrderStream(new MessageModel<OrderModel> { Next = Downstream.GetOrder(o) });
+        OrderStream(Downstream.GetOrder(o));
       });
 
       client.ClientSocket.reqAutoOpenOrders(true);
@@ -533,7 +533,7 @@ namespace InteractiveBrokers
 
           UpdateInstrument(summary.Instrument);
 
-          Stream(new MessageModel<PointModel> { Next = instrument.Point });
+          Stream(instrument.Point);
         }
       });
 

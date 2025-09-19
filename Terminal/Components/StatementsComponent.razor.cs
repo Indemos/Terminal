@@ -13,14 +13,11 @@ namespace Terminal.Components
 {
   public partial class StatementsComponent
   {
+    [Inject] SubscriptionService Observer { get; set; }
+
     [Parameter] public virtual string Name { get; set; }
 
     [Parameter] public virtual IDictionary<string, IGateway> Adapters { get; set; }
-
-    /// <summary>
-    /// Subscription state
-    /// </summary>
-    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
 
     /// <summary>
     /// Common performance statistics
@@ -37,7 +34,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        Subscription.Update += state =>
+        Observer.Update += state =>
         {
           switch (true)
           {

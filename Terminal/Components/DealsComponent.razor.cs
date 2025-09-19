@@ -1,4 +1,3 @@
-using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -12,6 +11,8 @@ namespace Terminal.Components
 {
   public partial class DealsComponent
   {
+    [Inject] SubscriptionService Observer { get; set; }
+
     [Parameter] public virtual string Name { get; set; }
 
     public struct Row
@@ -32,11 +33,6 @@ namespace Terminal.Components
     protected Task Update { get; set; } = Task.CompletedTask;
 
     /// <summary>
-    /// Subscription state
-    /// </summary>
-    protected virtual SubscriptionService Subscription { get => InstanceService<SubscriptionService>.Instance; }
-
-    /// <summary>
     /// Table records
     /// </summary>
     protected virtual IList<Row> Items { get; set; } = [];
@@ -51,7 +47,7 @@ namespace Terminal.Components
 
       if (setup)
       {
-        Subscription.Update += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -67,7 +63,7 @@ namespace Terminal.Components
     /// <param name="account"></param>
     public virtual void UpdateItems(params IGateway[] adapters)
     {
-      if (Update.IsCompleted && Subscription.State.Next is not SubscriptionEnum.None)
+      if (Update.IsCompleted && Observer.State.Next is not SubscriptionEnum.None)
       {
         Items = adapters.SelectMany(adapter =>
         {

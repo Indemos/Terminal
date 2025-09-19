@@ -1,11 +1,9 @@
-using Distribution.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using Terminal.Core.Domains;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
-using Terminal.Core.Services;
 
 namespace Terminal.Core.Indicators
 {

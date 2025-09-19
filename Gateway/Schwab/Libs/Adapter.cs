@@ -1,5 +1,3 @@
-using Distribution.Services;
-using Distribution.Stream;
 using Flurl;
 using Flurl.Http;
 using Schwab.Enums;
@@ -20,6 +18,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 
 namespace Schwab
 {
@@ -102,7 +101,7 @@ namespace Schwab
         await Disconnect();
 
         var streamer = new ClientWebSocket();
-        var scheduler = new ScheduleService();
+        var scheduler = new SchedulerService();
         var interval = new System.Timers.Timer(TimeSpan.FromMinutes(1));
 
         this.streamer = streamer;
@@ -457,7 +456,7 @@ namespace Schwab
     /// <returns></returns>
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
       var content = JsonSerializer.Serialize(data, sender.Options);
       var message = Encoding.UTF8.GetBytes(content);
 
@@ -481,7 +480,7 @@ namespace Schwab
       var data = new byte[short.MaxValue];
       var response = await streamer.ReceiveAsync(data, cancellation);
       var message = Encoding.UTF8.GetString(data, 0, response.Count);
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
 
       return JsonSerializer.Deserialize<T>(message, sender.Options);
     }
@@ -492,7 +491,7 @@ namespace Schwab
     /// <param name="streamer"></param>
     /// <param name="scheduler"></param>
     /// <returns></returns>
-    protected virtual async Task<ClientWebSocket> GetConnection(ClientWebSocket streamer, ScheduleService scheduler)
+    protected virtual async Task<ClientWebSocket> GetConnection(ClientWebSocket streamer, SchedulerService scheduler)
     {
       var source = new UriBuilder(StreamUri);
       var cancellation = new CancellationTokenSource();
@@ -555,6 +554,8 @@ namespace Schwab
             }
           });
         }
+
+        return Task.FromResult(true);
       });
 
       return streamer;
@@ -601,7 +602,7 @@ namespace Schwab
 
           UpdateInstrument(summary.Instrument);
 
-          Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+          Stream(summary.Instrument.Point);
         }
       }
     }
@@ -670,7 +671,7 @@ namespace Schwab
         .WithHeader("Authorization", $"Bearer {AccessToken}");
 
       var data = null as StringContent;
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
 
       if (content is not null)
       {
@@ -722,7 +723,7 @@ namespace Schwab
         throw new HttpRequestException(response.ResponseMessage.ReasonPhrase, null, response.ResponseMessage.StatusCode);
       }
 
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
       var responseContent = await response
         .ResponseMessage
         .Content

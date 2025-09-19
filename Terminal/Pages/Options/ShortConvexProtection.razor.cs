@@ -185,8 +185,8 @@ namespace Terminal.Pages.Options
       {
         if (DateTime.Now >= stamp + TimeSpan.FromSeconds(5))
         {
-          Options = await GetOptions(message.Next, OptionDate(message.Next));
-          ProtectionOptions = await GetOptions(message.Next, ProtectionDate(message.Next));
+          Options = await GetOptions(message, OptionDate(message));
+          ProtectionOptions = await GetOptions(message, ProtectionDate(message));
           stamp = DateTime.Now;
         }
       };
@@ -195,9 +195,9 @@ namespace Terminal.Pages.Options
 
       Prime.Stream += message =>
       {
-        if (Equals(message.Next.Instrument.Name, Instrument.Name))
+        if (Equals(message.Instrument.Name, Instrument.Name))
         {
-          var point = message.Next;
+          var point = message;
           var performance = Performance.Update([account]);
           var (basisDelta, optionDelta, sigma) = GetIndicators(point);
           var com = new ComponentModel { Color = SKColors.LimeGreen };
@@ -223,9 +223,9 @@ namespace Terminal.Pages.Options
         var hasOptions = Options?.Count is not 0;
         var hasProtections = ProtectionOptions?.Count is not 0;
 
-        if (hasOptions && hasProtections && Equals(message.Next.Instrument.Name, Instrument.Name))
+        if (hasOptions && hasProtections && Equals(message.Instrument.Name, Instrument.Name))
         {
-          await OnTrade(message.Next);
+          await OnTrade(message);
         }
       };
     }

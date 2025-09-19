@@ -1,5 +1,3 @@
-using Distribution.Services;
-using Distribution.Stream;
 using Flurl.Http;
 using System;
 using System.Collections.Generic;
@@ -15,6 +13,7 @@ using Terminal.Core.Domains;
 using Terminal.Core.Enums;
 using Terminal.Core.Extensions;
 using Terminal.Core.Models;
+using Terminal.Core.Services;
 using Tradier.Messages.Account;
 using Tradier.Messages.Stream;
 using Tradier.Messages.Trading;
@@ -93,10 +92,10 @@ namespace Tradier
     {
       return await Response(async () =>
       {
-        var scheduler = new ScheduleService();
+        var scheduler = new SchedulerService();
         var dataStreamer = new ClientWebSocket();
         var accountStreamer = new ClientWebSocket();
-        var sender = InstanceService<Service>.Instance;
+        var sender = InstanceService<ConversionService>.Instance;
 
         await Disconnect();
 
@@ -127,7 +126,7 @@ namespace Tradier
 
               UpdateInstrument(summary.Instrument);
 
-              Stream(new MessageModel<PointModel> { Next = summary.Instrument.Point });
+              Stream(summary.Instrument.Point);
 
               break;
 
@@ -140,10 +139,7 @@ namespace Tradier
 
         await GetConnection("/accounts/events", accountStreamer, scheduler, message =>
         {
-          var order = Downstream.GetStreamOrder(message.Deserialize<OrderMessage>(sender.Options));
-          var container = new MessageModel<OrderModel> { Next = order };
-
-          OrderStream(container);
+          OrderStream(Downstream.GetStreamOrder(message.Deserialize<OrderMessage>(sender.Options)));
         });
 
         connections.Add(dataStreamer);
@@ -363,7 +359,7 @@ namespace Tradier
         .WithHeader("Authorization", $"Bearer {token ?? Token}");
 
       var data = null as StringContent;
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
 
       if (content is not null)
       {
@@ -451,7 +447,7 @@ namespace Tradier
     /// <returns></returns>
     protected virtual Task SendStream(ClientWebSocket streamer, object data, CancellationTokenSource cancellation = null)
     {
-      var sender = InstanceService<Service>.Instance;
+      var sender = InstanceService<ConversionService>.Instance;
       var content = JsonSerializer.Serialize(data, sender.Options);
       var message = Encoding.UTF8.GetBytes(content);
 
@@ -470,7 +466,7 @@ namespace Tradier
     /// <param name="scheduler"></param>
     /// <param name="action"></param>
     /// <returns></returns>
-    protected virtual async Task GetConnection(string uri, ClientWebSocket streamer, ScheduleService scheduler, Action<JsonNode> action)
+    protected virtual async Task GetConnection(string uri, ClientWebSocket streamer, SchedulerService scheduler, Action<JsonNode> action)
     {
       var data = new byte[short.MaxValue];
       var source = new UriBuilder($"{StreamUri}{uri}");
@@ -489,6 +485,8 @@ namespace Tradier
             action(JsonNode.Parse(content));
           });
         }
+
+        return Task.FromResult(true);
       });
     }
   }

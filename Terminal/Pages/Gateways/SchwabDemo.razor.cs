@@ -122,9 +122,9 @@ namespace Terminal.Pages.Gateways
         .Values
         .ForEach(adapter => adapter.Stream += async message =>
         {
-          if (Equals(message.Next.Instrument.Name, "/ESM25"))
+          if (Equals(message.Instrument.Name, "/ESM25"))
           {
-            await OnData(message.Next);
+            await OnData(message);
           }
         });
     }

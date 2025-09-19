@@ -1,16 +1,16 @@
-using Distribution.Services;
 using IBApi;
 using InteractiveBrokers.Messages;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Terminal.Core.Services;
 
 namespace InteractiveBrokers
 {
   public class IBClient : EWrapper, IDisposable
   {
-    public ScheduleService Scheduler { get; protected set; }
+    public SchedulerService Scheduler { get; protected set; }
 
     public Task<Contract> ResolveContractAsync(int conId, string refExch)
     {
@@ -114,7 +114,7 @@ namespace InteractiveBrokers
     public IBClient(EReaderSignal signal)
     {
       ClientSocket = new EClientSocket(this, signal);
-      Scheduler = new ScheduleService();
+      Scheduler = new SchedulerService();
     }
 
     public EClientSocket ClientSocket { get; private set; }
@@ -1027,8 +1027,15 @@ namespace InteractiveBrokers
         Run(() => cb(whiteBrandingId), null);
     }
 
-    protected void Run(Action cb, object state) => Scheduler.Send(cb, false);
-    
+    protected void Run(Action cb, object state)
+    {
+      Scheduler.Send(() =>
+      {
+        cb();
+        return Task.FromResult(true);
+      });
+    }
+
     public void Dispose() => Scheduler.Dispose();
   }
 }
