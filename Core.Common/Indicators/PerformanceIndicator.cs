@@ -18,7 +18,7 @@ namespace Core.Common.Indicators
       foreach (var adapter in adapters)
       {
         var positions = await adapter.Positions(default);
-        var positionsSum = positions.Data.Sum(o => o.Balance.Current);
+        var positionsSum = positions.Sum(o => o.Balance.Current);
         var account = adapter.Account;
 
         sum += account.Balance + account.Performance + positionsSum;

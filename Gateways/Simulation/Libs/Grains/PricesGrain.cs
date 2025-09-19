@@ -1,5 +1,6 @@
 using Core.Common.Grains;
 using Core.Common.States;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,33 +15,29 @@ namespace Simulation.Grains
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<PricesResponse> Prices(MetaState criteria)
+    public override Task<IList<PriceState>> Prices(MetaState criteria)
     {
-      var response = new PricesResponse
-      {
-        Data = [.. State.Prices
+      var prices = State.Prices
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
           .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
-          .TakeLast(criteria?.Count ?? State.Prices.Count)]
-      };
+          .TakeLast(criteria?.Count ?? State.Prices.Count)
+          .ToArray();
 
-      return Task.FromResult(response);
+      return Task.FromResult<IList<PriceState>>(prices);
     }
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<PricesResponse> PriceGroups(MetaState criteria)
+    public override Task<IList<PriceState>> PriceGroups(MetaState criteria)
     {
-      var response = new PricesResponse
-      {
-        Data = [.. State.PriceGroups
+      var prices = State.PriceGroups
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
           .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
-          .TakeLast(criteria?.Count ?? State.PriceGroups.Count)]
-      };
+          .TakeLast(criteria?.Count ?? State.PriceGroups.Count)
+          .ToArray();
 
-      return Task.FromResult(response);
+      return Task.FromResult<IList<PriceState>>(prices);
     }
   }
 }

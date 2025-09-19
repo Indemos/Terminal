@@ -61,14 +61,19 @@ namespace Core.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual async Task UpdateItems(params IGateway[] adapters)
+    public virtual async void UpdateItems(params IGateway[] adapters)
     {
+      if (Observer.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       if (Update.IsCompleted)
       {
         var queries = adapters.Select(o => o.Orders(default));
         var responses = await Task.WhenAll(queries);
         var orders = responses
-          .SelectMany(o => o.Data)
+          .SelectMany(o => o)
           .OrderBy(o => o.Operation.Time)
           .ToList();
 
@@ -84,7 +89,7 @@ namespace Core.Client.Components
 
         })];
 
-        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+        Update = Task.WhenAll([InvokeAsync(StateHasChanged)]);
       }
     }
 

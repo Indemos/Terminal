@@ -56,9 +56,9 @@ namespace Core.Client.Pages.Shares
             case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: await CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
-              await TransactionsView.UpdateItems([.. View.Adapters.Values]);
-              await OrdersView.UpdateItems([.. View.Adapters.Values]);
-              await PositionsView.UpdateItems([.. View.Adapters.Values]);
+              TransactionsView.UpdateItems([.. View.Adapters.Values]);
+              OrdersView.UpdateItems([.. View.Adapters.Values]);
+              PositionsView.UpdateItems([.. View.Adapters.Values]);
 
               break;
           }
@@ -106,16 +106,16 @@ namespace Core.Client.Pages.Shares
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentX });
+      var seriesY = await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = (await adapter.Orders(default)).Data;
-      var positions = (await adapter.Positions(default)).Data;
+      var orders = await adapter.Orders(default);
+      var positions = await adapter.Positions(default);
       var performance = await Performance.Update([adapter]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
@@ -157,12 +157,12 @@ namespace Core.Client.Pages.Shares
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
 
-      await TransactionsView.UpdateItems([.. View.Adapters.Values]);
-      await OrdersView.UpdateItems([.. View.Adapters.Values]);
-      await PositionsView.UpdateItems([.. View.Adapters.Values]);
-      await ChartsView.UpdateItems(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
-      await PerformanceView.UpdateItems(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      await PerformanceView.UpdateItems(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      TransactionsView.UpdateItems([.. View.Adapters.Values]);
+      OrdersView.UpdateItems([.. View.Adapters.Values]);
+      PositionsView.UpdateItems([.. View.Adapters.Values]);
+      ChartsView.UpdateItems(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
+      PerformanceView.UpdateItems(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      PerformanceView.UpdateItems(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -200,7 +200,7 @@ namespace Core.Client.Pages.Shares
     public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = (await adapter.Positions(default)).Data;
+      var positions = await adapter.Positions(default);
       var account = adapter.Account;
 
       foreach (var position in positions)

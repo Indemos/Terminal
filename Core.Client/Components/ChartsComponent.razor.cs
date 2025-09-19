@@ -125,14 +125,18 @@ namespace Core.Client.Components
     /// </summary>
     /// <param name="index"></param>
     /// <param name="inputs"></param>
-    public virtual async Task UpdateItems(long index, string area, string series, params IShape[] inputs)
+    public virtual async void UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
+      if (Observer.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       foreach (var input in inputs)
       {
         if (Indices.TryGetValue(index, out IShape currentPoint) is false)
         {
-          currentPoint = (Shapes.LastOrDefault()?.Clone() ?? new Shape()) as IShape;
-          currentPoint.X = index;
+          currentPoint = new Shape { X = index };
 
           Shapes.Add(currentPoint);
           Indices[index] = currentPoint;

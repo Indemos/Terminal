@@ -62,14 +62,14 @@ namespace Core.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="account"></param>
-    public virtual async Task UpdateItems(params IGateway[] adapters)
+    public virtual async void UpdateItems(params IGateway[] adapters)
     {
       if (Update.IsCompleted)
       {
         var queries = adapters.Select(o => o.Transactions(default));
         var responses = await Task.WhenAll(queries);
         var actions = responses
-          .SelectMany(o => o.Data)
+          .SelectMany(o => o)
           .OrderBy(o => o.Operation.Time)
           .ToList();
 

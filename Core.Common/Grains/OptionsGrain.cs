@@ -11,7 +11,7 @@ namespace Core.Common.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentsResponse> Options(MetaState criteria);
+    Task<IList<InstrumentState>> Options(MetaState criteria);
 
     /// <summary>
     /// Update options
@@ -26,10 +26,7 @@ namespace Core.Common.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<InstrumentsResponse> Options(MetaState criteria) => Task.FromResult(new InstrumentsResponse
-    {
-      Data = State.Options
-    });
+    public virtual Task<IList<InstrumentState>> Options(MetaState criteria) => Task.FromResult(State.Options);
 
     /// <summary>
     /// Update options

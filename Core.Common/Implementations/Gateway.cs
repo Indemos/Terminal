@@ -74,43 +74,43 @@ namespace Core.Common.Implementations
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomResponse> Dom(MetaState criteria);
+    Task<DomState> Dom(MetaState criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> Bars(MetaState criteria);
+    Task<IList<PriceState>> Bars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> Ticks(MetaState criteria);
+    Task<IList<PriceState>> Ticks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentsResponse> Options(MetaState criteria);
+    Task<IList<InstrumentState>> Options(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Positions(MetaState criteria);
+    Task<IList<OrderState>> Positions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Orders(MetaState criteria);
+    Task<IList<OrderState>> Orders(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Transactions(MetaState criteria);
+    Task<IList<OrderState>> Transactions(MetaState criteria);
 
     /// <summary>
     /// Send new orders
@@ -195,43 +195,43 @@ namespace Core.Common.Implementations
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<DomResponse> Dom(MetaState criteria);
+    public abstract Task<DomState> Dom(MetaState criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> Bars(MetaState criteria);
+    public abstract Task<IList<PriceState>> Bars(MetaState criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> Ticks(MetaState criteria);
+    public abstract Task<IList<PriceState>> Ticks(MetaState criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<InstrumentsResponse> Options(MetaState criteria);
+    public abstract Task<IList<InstrumentState>> Options(MetaState criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> Positions(MetaState criteria);
+    public abstract Task<IList<OrderState>> Positions(MetaState criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> Transactions(MetaState criteria);
+    public abstract Task<IList<OrderState>> Transactions(MetaState criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> Orders(MetaState criteria);
+    public abstract Task<IList<OrderState>> Orders(MetaState criteria);
 
     /// <summary>
     /// Send new orders

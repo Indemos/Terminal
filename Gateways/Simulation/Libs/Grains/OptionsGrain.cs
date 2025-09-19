@@ -1,5 +1,6 @@
 using Core.Common.States;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,7 +16,7 @@ namespace Core.Common.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<InstrumentsResponse> Options(MetaState criteria)
+    public override Task<IList<InstrumentState>> Options(MetaState criteria)
     {
       var minDate = criteria?.MinDate is long mnd ? new DateTime(mnd) : null as DateTime?;
       var maxDate = criteria?.MaxDate is long mxd ? new DateTime(mxd) : null as DateTime?;
@@ -32,12 +33,7 @@ namespace Core.Common.Grains
         .ThenBy(o => o.Derivative.Side)
         .ToArray();
 
-      var response = new InstrumentsResponse
-      {
-        Data = options
-      };
-
-      return Task.FromResult(response);
+      return Task.FromResult<IList<InstrumentState>>(options);
     }
   }
 }

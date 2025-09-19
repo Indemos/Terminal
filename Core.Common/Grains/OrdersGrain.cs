@@ -5,6 +5,7 @@ using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Orders(MetaState criteria);
+    Task<IList<OrderState>> Orders(MetaState criteria);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -67,10 +68,10 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Orders(MetaState criteria) => new()
-    {
-      Data = await Task.WhenAll(State.Grains.Values.Select(o => o.Order()))
-    };
+    public virtual async Task<IList<OrderState>> Orders(MetaState criteria) => await Task.WhenAll(State
+      .Grains
+      .Values
+      .Select(o => o.Order()));
 
     /// <summary>
     /// <summary>

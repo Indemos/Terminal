@@ -4,6 +4,7 @@ using Core.Common.Implementations;
 using Core.Common.States;
 using Simulation.Grains;
 using Simulation.States;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -102,7 +103,7 @@ namespace Simulation
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomResponse> Dom(MetaState criteria)
+    public override async Task<DomState> Dom(MetaState criteria)
     {
       return await Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
@@ -111,7 +112,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> Bars(MetaState criteria)
+    public override async Task<IList<PriceState>> Bars(MetaState criteria)
     {
       return await Component<ISimPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
@@ -120,7 +121,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> Ticks(MetaState criteria)
+    public override async Task<IList<PriceState>> Ticks(MetaState criteria)
     {
       return await Component<ISimPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
@@ -129,7 +130,7 @@ namespace Simulation
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<InstrumentsResponse> Options(MetaState criteria)
+    public override async Task<IList<InstrumentState>> Options(MetaState criteria)
     {
       return await Component<ISimOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
@@ -138,7 +139,7 @@ namespace Simulation
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> Orders(MetaState criteria)
+    public override async Task<IList<OrderState>> Orders(MetaState criteria)
     {
       return await Component<IOrdersGrain>().Orders(criteria);
     }
@@ -147,7 +148,7 @@ namespace Simulation
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> Positions(MetaState criteria)
+    public override async Task<IList<OrderState>> Positions(MetaState criteria)
     {
       return await Component<IPositionsGrain>().Positions(criteria);
     }
@@ -156,7 +157,7 @@ namespace Simulation
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<OrdersResponse> Transactions(MetaState criteria)
+    public override async Task<IList<OrderState>> Transactions(MetaState criteria)
     {
       return await Component<ITransactionsGrain>().Transactions(criteria);
     }

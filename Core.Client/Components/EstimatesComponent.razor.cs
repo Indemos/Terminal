@@ -1,7 +1,6 @@
 using Canvas.Core.Shapes;
 using Core.Client.Services;
 using Core.Common.Enums;
-using Core.Common.Grains;
 using Core.Common.Implementations;
 using Core.Common.States;
 using Estimator.Services;
@@ -75,6 +74,11 @@ namespace Core.Client.Components
     /// <param name="positions"></param>
     public virtual void UpdateItems(IGateway adapter, PriceState point, IEnumerable<OrderState> positions)
     {
+      if (Observer.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       var sums = new Dictionary<double, double>();
 
       foreach (var pos in positions)

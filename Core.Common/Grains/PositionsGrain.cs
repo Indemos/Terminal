@@ -5,6 +5,7 @@ using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Core.Common.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Positions(MetaState criteria);
+    Task<IList<OrderState>> Positions(MetaState criteria);
 
     /// <summary>
     /// Process order to position conversion
@@ -78,10 +79,10 @@ namespace Core.Common.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Positions(MetaState criteria) => new OrdersResponse
-    {
-      Data = await Task.WhenAll(State.Grains.Values.Select(o => o.Position()))
-    };
+    public virtual async Task<IList<OrderState>> Positions(MetaState criteria) => await Task.WhenAll(State
+      .Grains
+      .Values
+      .Select(o => o.Position()));
 
     /// <summary>
     /// Process order to position conversion

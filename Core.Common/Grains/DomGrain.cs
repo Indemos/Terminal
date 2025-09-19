@@ -11,7 +11,7 @@ namespace Core.Common.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomResponse> Dom(MetaState criteria);
+    Task<DomState> Dom(MetaState criteria);
 
     /// <summary>
     /// Update DOM
@@ -26,10 +26,7 @@ namespace Core.Common.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<DomResponse> Dom(MetaState criteria) => Task.FromResult(new DomResponse
-    {
-      Data = State
-    });
+    public virtual Task<DomState> Dom(MetaState criteria) => Task.FromResult(State);
 
     /// <summary>
     /// Update DOM

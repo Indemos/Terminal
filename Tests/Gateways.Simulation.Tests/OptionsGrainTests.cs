@@ -74,8 +74,8 @@ namespace Simulation.Options.Tests
 
       // Assert
       Assert.NotNull(result);
-      Assert.Single(result.Data);
-      Assert.Equal(150, result.Data.First().Derivative.Strike);
+      Assert.Single(result);
+      Assert.Equal(150, result.First().Derivative.Strike);
     }
   }
 }

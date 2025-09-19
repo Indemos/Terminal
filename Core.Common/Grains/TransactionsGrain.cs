@@ -5,6 +5,7 @@ using Core.Common.States;
 using Orleans;
 using Orleans.Streams;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +18,7 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<OrdersResponse> Transactions(MetaState criteria);
+    Task<IList<OrderState>> Transactions(MetaState criteria);
 
     /// <summary>
     /// Add to the list
@@ -59,10 +60,9 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Transactions(MetaState criteria) => new OrdersResponse
-    {
-      Data = await Task.WhenAll(State.Grains.Select(o => o.Transaction()))
-    };
+    public virtual async Task<IList<OrderState>> Transactions(MetaState criteria) => await Task.WhenAll(State
+      .Grains
+      .Select(o => o.Transaction()));
 
     /// <summary>
     /// Add to the list

@@ -1,6 +1,5 @@
 using Core.Client.Services;
 using Core.Common.Enums;
-using Core.Common.Grains;
 using Core.Common.Implementations;
 using Estimator.Models;
 using Microsoft.AspNetCore.Components;
@@ -34,7 +33,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += async state =>
+        Observer.OnMessage += state =>
         {
           switch (true)
           {
@@ -43,7 +42,7 @@ namespace Core.Client.Components
               break;
 
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Pause:
-              await UpdateItems([.. Adapters.Values]);
+              UpdateItems([.. Adapters.Values]);
               break;
           }
         };
@@ -54,14 +53,19 @@ namespace Core.Client.Components
     /// Update UI
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual async Task UpdateItems(params IGateway[] adapters)
+    public virtual async void UpdateItems(params IGateway[] adapters)
     {
+      if (Observer.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       var values = new List<InputData>();
       var balance = adapters.Sum(o => o.Account.Balance).Value;
       var queries = adapters.Select(o => o.Transactions(default));
       var responses = await Task.WhenAll(queries);
       var actions = responses
-        .SelectMany(o => o.Data)
+        .SelectMany(o => o)
         .OrderBy(o => o.Operation.Time)
         .ToList();
 
@@ -97,7 +101,7 @@ namespace Core.Client.Components
     /// <summary>
     /// Clear records
     /// </summary>
-    public virtual async void Clear() => await UpdateItems([]);
+    public virtual void Clear() => UpdateItems([]);
 
     /// <summary>
     /// Format double

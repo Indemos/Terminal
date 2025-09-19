@@ -1,10 +1,9 @@
-using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using Orleans.Streams;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,13 +16,13 @@ namespace Core.Common.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> Prices(MetaState criteria);
+    Task<IList<PriceState>> Prices(MetaState criteria);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<PricesResponse> PriceGroups(MetaState criteria);
+    Task<IList<PriceState>> PriceGroups(MetaState criteria);
 
     /// <summary>
     /// Add price to the list
@@ -38,6 +37,11 @@ namespace Core.Common.Grains
     /// Descriptor
     /// </summary>
     protected DescriptorState descriptor;
+
+    /// <summary>
+    /// Price map
+    /// </summary>
+    protected Dictionary<long, int> map = new();
 
     /// <summary>
     /// Activation
@@ -56,22 +60,13 @@ namespace Core.Common.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<PricesResponse> Prices(MetaState criteria) => Task.FromResult(new PricesResponse
-    {
-      Data = State.Prices
-    });
+    public virtual Task<IList<PriceState>> Prices(MetaState criteria) => Task.FromResult(State.Prices);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<PricesResponse> PriceGroups(MetaState criteria)
-    {
-      return Task.FromResult(new PricesResponse
-      {
-        Data = State.PriceGroups
-      });
-    }
+    public virtual Task<IList<PriceState>> PriceGroups(MetaState criteria) => Task.FromResult(State.PriceGroups);
 
     /// <summary>
     /// Add price to the list
@@ -79,16 +74,27 @@ namespace Core.Common.Grains
     /// <param name="nextPrice"></param>
     public virtual Task<PriceState> Store(PriceState nextPrice)
     {
-      var currentPrice = State.PriceGroups.LastOrDefault() ?? new();
-      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame) ?? DateTime.MinValue.Ticks;
-      var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
+      var currentPrice = new PriceState();
+      var roundTime = nextPrice.Time.Round(nextPrice.TimeFrame);
+
+      if (map.TryGetValue(roundTime.Value, out var index))
+      {
+        currentPrice = State.PriceGroups[index];
+      }
+
+      var currentTime = currentPrice.Time ?? DateTime.MinValue.Ticks;
       var price = Combine(currentPrice, nextPrice);
 
       State.Prices.Add(price);
 
-      if (nextTime > currentTime)
+      if (roundTime > currentTime)
       {
         State.PriceGroups.Add(price);
+        map[roundTime.Value] = State.PriceGroups.Count - 1;
+      }
+      else
+      {
+        State.PriceGroups[index] = price;
       }
 
       return Task.FromResult(price);

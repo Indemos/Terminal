@@ -1,6 +1,5 @@
 using Core.Client.Services;
 using Core.Common.Enums;
-using Core.Common.Grains;
 using Core.Common.Implementations;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -62,14 +61,19 @@ namespace Core.Client.Components
     /// Update table records 
     /// </summary>
     /// <param name="account"></param>
-    public virtual async Task UpdateItems(params IGateway[] adapters)
+    public virtual async void UpdateItems(params IGateway[] adapters)
     {
+      if (Observer.State.Next is SubscriptionEnum.None)
+      {
+        return;
+      }
+
       if (Update.IsCompleted)
       {
         var queries = adapters.Select(o => o.Positions(default));
         var responses = await Task.WhenAll(queries);
         var positions = responses
-          .SelectMany(o => o.Data)
+          .SelectMany(o => o)
           .OrderBy(o => o.Operation.Time)
           .ToList();
 
@@ -86,7 +90,7 @@ namespace Core.Client.Components
 
         })];
 
-        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+        Update = Task.WhenAll([InvokeAsync(StateHasChanged)]);
       }
     }
 
