@@ -18,13 +18,6 @@ namespace Terminal
       var builder = WebApplication.CreateBuilder(args);
 
       builder.WebHost.UseStaticWebAssets();
-      builder.Host.UseOrleans((ctx, silo) =>
-      {
-        silo.UseLocalhostClustering();
-        silo.AddMemoryGrainStorageAsDefault();
-        silo.AddMemoryStreams<DefaultMemoryMessageBodySerializer>("MemoryStreams");
-        silo.AddMemoryGrainStorage("PubSubStore");
-      });
 
       InstanceService<ConfigurationService>.Instance.Setup = builder.Configuration;
 

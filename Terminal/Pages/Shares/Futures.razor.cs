@@ -114,7 +114,7 @@ namespace Terminal.Pages.Shares
       {
         Speed = 1,
         Account = account,
-        Source = "D:/Code/Options/FUTS/2025-06-17" // Configuration["Simulation:Source"]
+        Source = "D:/Code/NET/Terminal/Data/FUTS/2025-06-17" // Configuration["Simulation:Source"]
       };
 
       Performance = new PerformanceIndicator { Name = "Balance" };
