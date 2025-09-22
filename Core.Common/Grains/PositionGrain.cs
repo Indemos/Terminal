@@ -27,7 +27,7 @@ namespace Core.Common.Grains
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
 
     /// <summary>
     /// Match positions
@@ -46,14 +46,14 @@ namespace Core.Common.Grains
     /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = InstanceService<ConversionService>
         .Instance
         .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
-      await base.OnActivateAsync(cancellation);
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>
@@ -65,13 +65,13 @@ namespace Core.Common.Grains
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> Store(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderState order)
     {
       await SendBraces(State = order);
 
-      return new DescriptorResponse
+      return new()
       {
-        Data = order.Id
+        Data = order
       };
     }
 
@@ -106,6 +106,33 @@ namespace Core.Common.Grains
       }
 
       return response;
+    }
+
+    /// <summary>
+    /// Update instruments assigned to positions and other models
+    /// </summary>
+    /// <param name="price"></param>
+    public virtual Task<StatusResponse> Tap(PriceState price)
+    {
+      if (Equals(price.Name, State.Operation.Instrument.Name))
+      {
+        State = State with
+        {
+          Balance = Balance(),
+          Operation = State.Operation with
+          {
+            Instrument = State.Operation.Instrument with
+            {
+              Price = price
+            }
+          }
+        };
+      }
+
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Active
+      });
     }
 
     /// <summary>
@@ -166,33 +193,6 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="price"></param>
-    public virtual Task<StatusResponse> Tap(PriceState price)
-    {
-      if (Equals(price.Name, State.Operation.Instrument.Name))
-      {
-        State = State with
-        {
-          Balance = Balance(),
-          Operation = State.Operation with
-          {
-            Instrument = State.Operation.Instrument with
-            {
-              Price = price
-            }
-          }
-        };
-      }
-
-      return Task.FromResult(new StatusResponse
-      {
-        Data = StatusEnum.Active
-      });
-    }
-
-    /// <summary>
     /// Update SL and TP orders
     /// </summary>
     /// <param name="order"></param>
@@ -205,7 +205,7 @@ namespace Core.Common.Grains
       {
         switch (action)
         {
-          case ActionEnum.Create: await ordersGrain.Send(brace); break;
+          case ActionEnum.Create: await ordersGrain.Store(brace); break;
           case ActionEnum.Delete: await ordersGrain.Remove(brace); break;
         }
       }

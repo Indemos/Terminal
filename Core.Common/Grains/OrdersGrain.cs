@@ -3,9 +3,9 @@ using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using Orleans.Streams;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -24,7 +24,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Send(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
 
     /// <summary>
     /// Remove order from the list
@@ -47,6 +47,11 @@ namespace Core.Common.Grains
     protected DescriptorState descriptor;
 
     /// <summary>
+    /// Transactions
+    /// </summary>
+    protected IPositionsGrain positions;
+
+    /// <summary>
     /// Activation
     /// </summary>
     /// <param name="cancellation"></param>
@@ -56,11 +61,8 @@ namespace Core.Common.Grains
         .Instance
         .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
-      var dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
+      positions = GrainFactory.Get<IPositionsGrain>(descriptor);
 
-      await dataStream.SubscribeAsync((o, x) => Tap(o));
       await base.OnActivateAsync(cancellation);
     }
 
@@ -95,13 +97,16 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> Send(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderState order)
     {
-      var orderGrain = GrainFactory.Get<IOrderGrain>(descriptor with { Order = order.Id });
+      File.AppendAllText("D:/Code/NET/Terminal/demo", $"Grain - Send: {order.Id} {order.Operation.Instrument.Name} {DateTime.Now.Ticks} {Environment.NewLine}");
 
-      State.Grains[order.Id] = orderGrain;
+      var grain = GrainFactory.Get<IOrderGrain>(descriptor with { Order = order.Id });
+      var response = await grain.Store(order);
 
-      return await orderGrain.Store(order);
+      State.Grains[order.Id] = grain;
+
+      return response;
     }
 
     /// <summary>
@@ -110,15 +115,12 @@ namespace Core.Common.Grains
     /// <param name="price"></param>
     public virtual async Task<StatusResponse> Tap(PriceState price)
     {
-      var positionsGrain = GrainFactory.Get<IPositionsGrain>(descriptor);
-      var grains = State.Grains.ToArray();
-
-      foreach (var grain in grains)
+      foreach (var grain in State.Grains)
       {
         if (await grain.Value.IsExecutable(price))
         {
           State.Grains.Remove(grain.Key);
-          await positionsGrain.Send(await grain.Value.Position(price));
+          await positions.Store(await grain.Value.Position(price));
         }
       }
 

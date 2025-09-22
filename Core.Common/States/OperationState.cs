@@ -1,5 +1,4 @@
 using Core.Common.Enums;
-using System;
 
 namespace Core.Common.States
 {

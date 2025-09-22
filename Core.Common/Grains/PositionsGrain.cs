@@ -1,10 +1,7 @@
-using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using Orleans.Streams;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -24,7 +21,7 @@ namespace Core.Common.Grains
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Send(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -41,6 +38,11 @@ namespace Core.Common.Grains
     protected DescriptorState descriptor;
 
     /// <summary>
+    /// Transactions
+    /// </summary>
+    protected ITransactionsGrain actions;
+
+    /// <summary>
     /// Activation
     /// </summary>
     /// <param name="cancellation"></param>
@@ -50,11 +52,8 @@ namespace Core.Common.Grains
         .Instance
         .Decompose<DescriptorState>(this.GetPrimaryKeyString());
 
-      var dataStream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceState>(descriptor.Account, Guid.Empty);
+      actions = GrainFactory.Get<ITransactionsGrain>(descriptor);
 
-      await dataStream.SubscribeAsync((o, x) => Tap(o));
       await base.OnActivateAsync(cancellation);
     }
 
@@ -88,20 +87,18 @@ namespace Core.Common.Grains
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> Send(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderState order)
     {
-      var response = new DescriptorResponse
-      {
-        Data = order.Id
-      };
-
       if (State.Grains.ContainsKey(order.Operation.Instrument.Name))
       {
-        await Combine(order);
-        return response;
+        return await Combine(order);
       }
 
-      await Store(order);
+      var grain = GrainFactory.Get<IPositionGrain>(descriptor with { Order = order.Id });
+      var response = await grain.Store(order);
+
+      State.Grains[order.Operation.Instrument.Name] = grain;
+
       return response;
     }
 
@@ -109,11 +106,11 @@ namespace Core.Common.Grains
     /// Update
     /// </summary>
     /// <param name="order"></param>
-    protected virtual async Task Combine(OrderState order)
+    protected virtual async Task<OrderResponse> Combine(OrderState order)
     {
       var name = order.Operation.Instrument.Name;
-      var currentGrain = State.Grains.Get(name);
-      var response = await currentGrain.Combine(order);
+      var grain = State.Grains.Get(name);
+      var response = await grain.Combine(order);
 
       if (response.Data is not null)
       {
@@ -122,23 +119,10 @@ namespace Core.Common.Grains
           State.Grains.Remove(name);
         }
 
-        await GrainFactory
-          .Get<ITransactionsGrain>(descriptor)
-          .Store(response.Data);
+        await actions.Store(response.Data);
       }
-    }
 
-    /// <summary>
-    /// Create
-    /// </summary>
-    /// <param name="order"></param>
-    protected virtual async Task Store(OrderState order)
-    {
-      var nextGrain = GrainFactory.Get<IPositionGrain>(descriptor with { Order = order.Id });
-
-      await nextGrain.Store(order);
-
-      State.Grains[order.Operation.Instrument.Name] = nextGrain;
+      return response;
     }
   }
 }

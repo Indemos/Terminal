@@ -26,7 +26,7 @@ namespace Core.Common.Services
     public SchedulerService(int count, CancellationTokenSource cancellation)
     {
       cleaner = cancellation;
-      queue = Channel.CreateBounded<Action>(new BoundedChannelOptions(Environment.ProcessorCount * count)
+      queue = Channel.CreateBounded<Action>(new BoundedChannelOptions(count)
       {
         SingleReader = false,
         SingleWriter = false,
@@ -56,7 +56,31 @@ namespace Core.Common.Services
     /// Task delegate processor
     /// </summary>
     /// <param name="action"></param>
-    public virtual TaskCompletionSource<T> Send<T>(Func<Task<T>> action)
+    public virtual Task Send(Action action)
+    {
+      var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+      Enqueue(() =>
+      {
+        try
+        {
+          action();
+          completion.TrySetResult();
+        }
+        catch (Exception e)
+        {
+          completion.TrySetException(e);
+        }
+      });
+
+      return completion.Task;
+    }
+
+    /// <summary>
+    /// Task delegate processor
+    /// </summary>
+    /// <param name="action"></param>
+    public virtual Task<T> Send<T>(Func<Task<T>> action)
     {
       var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -72,7 +96,7 @@ namespace Core.Common.Services
         }
       });
 
-      return completion;
+      return completion.Task;
     }
 
     /// <summary>

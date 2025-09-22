@@ -8,8 +8,6 @@ using Core.Common.States;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
-using Orleans.Streams;
-using Simulation;
 using SkiaSharp;
 using System;
 using System.Linq;
@@ -49,11 +47,11 @@ namespace Core.Client.Pages.Shares
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Observer.OnMessageAsync += async state =>
+        Observer.OnMessage += state =>
         {
           switch (true)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: await CreateAccounts(); break;
+            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
               TransactionsView.UpdateItems([.. View.Adapters.Values]);
@@ -71,11 +69,11 @@ namespace Core.Client.Pages.Shares
     /// <summary>
     /// Accounts
     /// </summary>
-    protected virtual async Task CreateAccounts()
+    protected virtual void CreateAccounts()
     {
       Performance = new PerformanceIndicator { Name = "Balance" };
 
-      var adapter = View.Adapters["Prime"] = new SimGateway
+      var adapter = View.Adapters["Prime"] = new Simulation.Gateway
       {
         Speed = 1,
         Connector = Connector,
@@ -93,7 +91,7 @@ namespace Core.Client.Pages.Shares
         }
       };
 
-      await adapter.Stream.SubscribeAsync((o, x) => OnPrice(o));
+      adapter.Subscription += OnPrice;
     }
 
     /// <summary>

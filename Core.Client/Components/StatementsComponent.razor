@@ -13,20 +13,22 @@
         <div class="statements">
           @foreach (var group in Stats)
           {
-            <div class="card mb-3">
-              <div class="blue-grey darken-4 text-light pa-4">
-                @group.Key
-              </div>
-              <div class="card-body ma-4">
+            <MudCard Class="card">
+              <MudCardHeader>
+                <CardHeaderContent>
+                  <MudAlert Severity="Severity.Info" NoIcon="true" Dense="true">@group.Key</MudAlert>
+                </CardHeaderContent>
+              </MudCardHeader>
+              <MudCardContent>
                 @foreach (var data in group.Value)
                 {
                   <div class="card-row py-2">
-                    <div class="cell-name pr-4 text-right">@data.Name</div>
-                    <div class="cell-value mr-3">@ShowDouble(data.Value)</div>
+                    <div class="cell-name pr-4">@data.Name</div>
+                    <div class="cell-value">@ShowDouble(data.Value)</div>
                   </div>
                 }
-              </div>
-            </div>
+              </MudCardContent>
+            </MudCard>
           }
         </div>
       }

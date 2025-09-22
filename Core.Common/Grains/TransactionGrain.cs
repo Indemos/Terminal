@@ -15,7 +15,7 @@ namespace Core.Common.Grains
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
   }
 
   public class TransactionGrain : Grain<OrderState>, ITransactionGrain
@@ -29,9 +29,9 @@ namespace Core.Common.Grains
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Store(OrderState order) => Task.FromResult(new DescriptorResponse
+    public virtual Task<OrderResponse> Store(OrderState order) => Task.FromResult(new OrderResponse
     {
-      Data = (State = order).Id
+      Data = State = order
     });
   }
 }

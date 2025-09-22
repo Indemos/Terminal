@@ -5,12 +5,9 @@ using Core.Client.Services;
 using Core.Common.Enums;
 using Core.Common.Indicators;
 using Core.Common.States;
-using Distribution.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
-using Orleans.Streams;
-using Simulation;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
@@ -56,11 +53,11 @@ namespace Core.Client.Pages.Shares
         IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
         PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
 
-        Observer.OnMessage += async state =>
+        Observer.OnMessage += state =>
         {
           switch (true)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: await CreateAccounts(); break;
+            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
             case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
 
               var account = View.Adapters["Prime"].Account;
@@ -91,9 +88,9 @@ namespace Core.Client.Pages.Shares
       return $"{new DateTime(stamp):HH:mm}";
     }
 
-    protected virtual async Task CreateAccounts()
+    protected virtual void CreateAccounts()
     {
-      var adapter = View.Adapters["Prime"] = new SimGateway
+      var adapter = View.Adapters["Prime"] = new Simulation.Gateway
       {
         Speed = 1,
         Connector = Connector,
@@ -114,10 +111,10 @@ namespace Core.Client.Pages.Shares
       Performance = new PerformanceIndicator { Name = "Balance" };
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, o => new ScaleIndicator { Name = o, Min = -1, Max = 1 });
 
-      await adapter.Stream.SubscribeAsync((o, x) => InstanceService<ScheduleService>.Instance.Send(() => OnPrice(o)).Task);
+      //adapter.Stream += o => OnPrice(o);
     }
 
-    public virtual async Task OnPrice(PriceState price)
+    public virtual async void OnPrice(PriceState price)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;

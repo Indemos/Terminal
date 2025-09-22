@@ -24,7 +24,7 @@ namespace Core.Common.Grains
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
   }
 
   public class TransactionsGrain : Grain<TransactionsState>, ITransactionsGrain
@@ -68,19 +68,16 @@ namespace Core.Common.Grains
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> Store(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderState order)
     {
       var orderGrain = GrainFactory.Get<ITransactionGrain>(descriptor with { Order = order.Id });
+      var response = await orderGrain.Store(order);
 
       State.Grains.Add(orderGrain);
 
-      await orderGrain.Store(order);
       await orderStream.OnNextAsync(order);
 
-      return new DescriptorResponse
-      {
-        Data = order.Id
-      };
+      return response;
     }
   }
 }

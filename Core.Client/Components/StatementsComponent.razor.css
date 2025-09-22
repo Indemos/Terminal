@@ -4,7 +4,8 @@
 
 .card-row {
   display: flex;
-  border-bottom: 1px dashed #EEE;
+  justify-content: space-between;
+  border-bottom: 1px dashed #555;
 }
 
 .card-row:last-child {
@@ -13,8 +14,11 @@
 
 .cell-name {
   white-space: nowrap;
-  text-align: right;
   width: 70%;
+}
+
+.statements {
+  gap: 15px;
 }
 
 @media (min-width: 600px) {

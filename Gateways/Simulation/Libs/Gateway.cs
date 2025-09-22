@@ -1,52 +1,54 @@
 using Core.Common.Enums;
 using Core.Common.Grains;
-using Core.Common.Implementations;
 using Core.Common.States;
 using Simulation.Grains;
-using Simulation.States;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Simulation
 {
-  public class SimGateway : Gateway
+  public class Gateway : Core.Common.Conventions.Gateway
   {
     /// <summary>
     /// Speed in microsecons
     /// </summary>
-    public int Speed { get; init; }
+    public int Speed { get; set; }
 
     /// <summary>
     /// Data source
     /// </summary>
-    public string Source { get; init; }
+    public string Source { get; set; }
+
+    /// <summary>
+    /// Data source
+    /// </summary>
+    public Reader Reader { get; set; }
 
     /// <summary>
     /// Connect
     /// </summary>
-    public override async Task<StatusResponse> Connect()
+    public override Task<StatusResponse> Connect()
     {
-      var state = new ConnectionState
+      Reader = new Reader
       {
-        Speed = Speed,
-        Source = Source,
-        Instruments = Account.Instruments
+        Adapter = this,
+        Descriptor = Descriptor()
       };
 
-      await ConnectOrders();
+      ConnectOrders();
 
-      return await Component<IConnectionGrain>().Connect(state);
+      return Task.FromResult(Reader.Connect());
     }
 
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public override async Task<StatusResponse> Disconnect()
+    public override Task<StatusResponse> Disconnect()
     {
-      await DisconnectOrders();
+      DisconnectOrders();
 
-      return await Component<IConnectionGrain>().Disconnect();
+      return Task.FromResult(Reader.Disconnect());
     }
 
     /// <summary>
@@ -85,18 +87,18 @@ namespace Simulation
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Subscribe(InstrumentState instrument)
+    public override Task<StatusResponse> Subscribe(InstrumentState instrument)
     {
-      return await Component<IConnectionGrain>().Subscribe(instrument);
+      return Task.FromResult(Reader.Subscribe(instrument));
     }
 
     /// <summary>
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Unsubscribe(InstrumentState instrument)
+    public override Task<StatusResponse> Unsubscribe(InstrumentState instrument)
     {
-      return await Component<IConnectionGrain>().Unsubscribe(instrument);
+      return Task.FromResult(Reader.Unsubscribe(instrument));
     }
 
     /// <summary>
@@ -173,14 +175,14 @@ namespace Simulation
 
       foreach (var nextOrder in Compose(order))
       {
-        var orderResponse = new DescriptorResponse
+        var orderResponse = new OrderResponse
         {
           Errors = [.. GetErrors(nextOrder).Select(e => e.Message)]
         };
 
         if (orderResponse.Errors.Count is 0)
         {
-          orderResponse = await Component<IOrdersGrain>().Send(nextOrder);
+          orderResponse = await Component<IOrdersGrain>().Store(nextOrder);
         }
 
         response.Data.Add(orderResponse);

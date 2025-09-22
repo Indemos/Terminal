@@ -2,7 +2,7 @@ using Core.Common.States;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace Core.Common.Implementations
+namespace Core.Common.Conventions
 {
   public interface IIndicator
   {

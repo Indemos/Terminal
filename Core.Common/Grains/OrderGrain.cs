@@ -21,7 +21,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Send order
     /// </summary>
-    Task<DescriptorResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderState order);
 
     /// <summary>
     /// Check if pending order can be executed
@@ -41,7 +41,7 @@ namespace Core.Common.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Store(OrderState order)
+    public virtual Task<OrderResponse> Store(OrderState order)
     {
       State = order with
       {
@@ -51,9 +51,9 @@ namespace Core.Common.Grains
         }
       };
 
-      return Task.FromResult(new DescriptorResponse
+      return Task.FromResult(new OrderResponse
       {
-        Data = order.Id
+        Data = order
       });
     }
 

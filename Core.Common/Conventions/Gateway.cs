@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace Core.Common.Implementations
+namespace Core.Common.Conventions
 {
   public interface IGateway : IDisposable
   {
@@ -27,6 +27,11 @@ namespace Core.Common.Implementations
     /// Cluster client
     /// </summary>
     IClusterClient Connector { get; set; }
+
+    /// <summary>
+    /// Data stream
+    /// </summary>
+    Func<PriceState, Task> Subscription { get; set; }
 
     /// <summary>
     /// Data stream
@@ -158,6 +163,11 @@ namespace Core.Common.Implementations
     /// <summary>
     /// Data stream
     /// </summary>
+    public virtual Func<PriceState, Task> Subscription { get; set; }
+
+    /// <summary>
+    /// Data stream
+    /// </summary>
     public virtual IAsyncStream<PriceState> Stream => Connector
       .GetStreamProvider(nameof(StreamEnum.Price))
       .GetStream<PriceState>(Account.Descriptor, Guid.Empty);
@@ -285,7 +295,7 @@ namespace Core.Common.Implementations
     /// <summary>
     /// Subscribe to order updates
     /// </summary>
-    protected virtual async Task ConnectOrders()
+    protected virtual async void ConnectOrders()
     {
       orderSubscription = await OrderStream.SubscribeAsync((o, v) =>
       {
@@ -304,7 +314,7 @@ namespace Core.Common.Implementations
     /// <summary>
     /// Unsubscribe from order updates
     /// </summary>
-    protected virtual async Task DisconnectOrders()
+    protected virtual async void DisconnectOrders()
     {
       if (orderSubscription is not null)
       {
@@ -379,13 +389,19 @@ namespace Core.Common.Implementations
     }
 
     /// <summary>
-    /// Descriptor
+    /// Generate descriptor
     /// </summary>
-    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.Get<T>(new()
+    /// <param name="instrument"></param>
+    protected virtual DescriptorState Descriptor(string instrument = null) => new()
     {
       Space = Space,
       Account = Account.Descriptor,
-      Instrument = instrument,
-    });
+      Instrument = instrument
+    };
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.Get<T>(Descriptor(instrument));
   }
 }
