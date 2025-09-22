@@ -99,8 +99,6 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderState order)
     {
-      File.AppendAllText("D:/Code/NET/Terminal/demo", $"Grain - Send: {order.Id} {order.Operation.Instrument.Name} {DateTime.Now.Ticks} {Environment.NewLine}");
-
       var grain = GrainFactory.Get<IOrderGrain>(descriptor with { Order = order.Id });
       var response = await grain.Store(order);
 

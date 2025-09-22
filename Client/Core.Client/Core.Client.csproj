@@ -21,8 +21,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Gateways\Simulation\Libs\Simulation.csproj" />
-    <ProjectReference Include="..\Core.Common\Core.Common.csproj" />
+    <ProjectReference Include="..\..\Gateways\Simulation\Libs\Simulation.csproj" />
   </ItemGroup>
 
 </Project>

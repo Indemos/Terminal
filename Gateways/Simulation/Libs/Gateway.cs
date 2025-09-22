@@ -1,4 +1,3 @@
-using Core.Common.Enums;
 using Core.Common.Grains;
 using Core.Common.States;
 using Simulation.Grains;
@@ -11,7 +10,7 @@ namespace Simulation
   public class Gateway : Core.Common.Conventions.Gateway
   {
     /// <summary>
-    /// Speed in microsecons
+    /// Speed in microseconds
     /// </summary>
     public int Speed { get; set; }
 
@@ -49,38 +48,6 @@ namespace Simulation
       DisconnectOrders();
 
       return Task.FromResult(Reader.Disconnect());
-    }
-
-    /// <summary>
-    /// Subscribe
-    /// </summary>
-    public override async Task<StatusResponse> Subscribe()
-    {
-      await Task.WhenAll(Account
-        .Instruments
-        .Values
-        .Select(Subscribe));
-
-      return new StatusResponse
-      {
-        Data = StatusEnum.Active
-      };
-    }
-
-    /// <summary>
-    /// Unsubscribe
-    /// </summary>
-    public override async Task<StatusResponse> Unsubscribe()
-    {
-      await Task.WhenAll(Account
-        .Instruments
-        .Values
-        .Select(Unsubscribe));
-
-      return new StatusResponse
-      {
-        Data = StatusEnum.Pause
-      };
     }
 
     /// <summary>

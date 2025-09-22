@@ -17,8 +17,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Gateways\Simulation\Libs\Simulation.csproj" />
-    <ProjectReference Include="..\Core.Common.Tests\Core.Common.Tests.csproj" />
+    <ProjectReference Include="..\Libs\Simulation.csproj" />
   </ItemGroup>
 
   <ItemGroup>
