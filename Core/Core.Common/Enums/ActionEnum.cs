@@ -4,7 +4,7 @@ namespace Core.Common.Enums
   {
     Create,
     Update,
-    Delete,
+    Remove,
     Connect,
     Disconnect,
   }

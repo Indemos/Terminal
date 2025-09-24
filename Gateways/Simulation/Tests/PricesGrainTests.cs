@@ -2,23 +2,25 @@ using Core.Common.States;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
+using Simulation.Grains;
 using Simulation.Tests;
 using System;
 using System.Text.Json;
+using System.Threading.Tasks;
 
 namespace Simulation.Prices.Tests
 {
-  public class PricesGrainTests : IDisposable
+  public class Prices : IDisposable
   {
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
     private string Descriptor => JsonSerializer.Serialize(new DescriptorState
     {
-      Account = "Demo"
+      Account = $"{Guid.NewGuid()}"
     });
 
-    public PricesGrainTests()
+    public Prices()
     {
       _mockConnector = new Mock<IClusterClient>();
 
@@ -36,84 +38,134 @@ namespace Simulation.Prices.Tests
       _cluster.StopAllSilos();
     }
 
-    //[Fact]
-    //public async Task GetBars_WithDateFilters_ShouldReturnFilteredPrices()
-    //{
-    //  // Arrange
-    //  var minDate = new DateTime(2023, 1, 1).Ticks;
-    //  var maxDate = new DateTime(2023, 12, 31).Ticks;
-    //  var criteria = new MetaState
-    //  {
-    //    Instrument = new InstrumentState { Name = "AAPL" },
-    //    MinDate = minDate,
-    //    MaxDate = maxDate,
-    //    Count = 10
-    //  };
+    [Fact]
+    public async Task StoreUsesCurrentPrice()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimPricesGrain>(Descriptor);
 
-    //  var priceData = new List<PriceState>
-    //  {
-    //    new() { Time = new DateTime(2022, 12, 31).Ticks, Last = 100, Bar = new() {} }, // Before range
-    //    new() { Time = new DateTime(2023, 6, 15).Ticks, Last = 150, Bar = new() {} },  // In range
-    //    new() { Time = new DateTime(2023, 8, 15).Ticks, Last = 160, Bar = new() {} },  // In range
-    //    new() { Time = new DateTime(2024, 1, 1).Ticks, Last = 200, Bar = new() {} }    // After range
-    //  };
+      var response = await grain.Store(new PriceState
+      {
+        Last = 100.0
+      });
 
-    //  var grain = _cluster
-    //    .GrainFactory
-    //    .GetGrain<IPricesGrainAdapter>(Descriptor);
+      Assert.Null(response.Time);
+      Assert.Null(response.TimeFrame);
+      Assert.Null(response.Bar.Time);
+      Assert.Equal(100.0, response.Last);
+      Assert.Equal(100.0, response.Ask);
+      Assert.Equal(100.0, response.Bid);
+      Assert.Equal(0.0, response.AskSize);
+      Assert.Equal(0.0, response.BidSize);
+      Assert.Equal(100.0, response.Bar.Low);
+      Assert.Equal(100.0, response.Bar.High);
+      Assert.Equal(100.0, response.Bar.Open);
+      Assert.Equal(100.0, response.Bar.Close);
+    }
 
-    //  foreach (var price in priceData)
-    //  {
-    //    await grain.Send(price);
-    //  }
+    [Fact]
+    public async Task StoreUsesPreviousPrice()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimPricesGrain>(Descriptor);
 
-    //  _mockConnector
-    //    .Setup(x => x.GetGrain<IPricesGrainAdapter>(It.IsAny<string>(), It.IsAny<string>()))
-    //    .Returns(grain);
+      await grain.Store(new PriceState { Last = 100.0, Time = 1 });
 
-    //  // Act
-    //  var result = await grain.PriceGroups(criteria);
+      var response = await grain.Store(new PriceState { Time = 1 });
 
-    //  // Assert
-    //  Assert.NotNull(result);
-    //  Assert.Equal(2, result.Data.Count);
-    //  Assert.All(result.Data, price => Assert.True(price.Time >= minDate && price.Time <= maxDate));
-    //}
+      Assert.Null(response.TimeFrame);
+      Assert.Equal(1, response.Time);
+      Assert.Equal(1, response.Bar.Time);
+      Assert.Equal(100.0, response.Last);
+      Assert.Equal(100.0, response.Ask);
+      Assert.Equal(100.0, response.Bid);
+      Assert.Equal(0.0, response.AskSize);
+      Assert.Equal(0.0, response.BidSize);
+      Assert.Equal(100.0, response.Bar.Low);
+      Assert.Equal(100.0, response.Bar.High);
+      Assert.Equal(100.0, response.Bar.Open);
+      Assert.Equal(100.0, response.Bar.Close);
+    }
 
-    //[Fact]
-    //public async Task GetTicks_WithCountLimit_ShouldReturnLimitedData()
-    //{
-    //  // Arrange
-    //  var criteria = new MetaState
-    //  {
-    //    Instrument = new InstrumentState { Name = "AAPL" },
-    //    Count = 2
-    //  };
+    [Fact]
+    public async Task StorePreservesPreviousValues()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimPricesGrain>(Descriptor);
 
-    //  var priceData = Enumerable.Range(1, 5)
-    //    .Select(i => new PriceState { Time = DateTime.Now.AddMinutes(i).Ticks, Last = 100 + i })
-    //    .ToList();
+      await grain.Store(new PriceState
+      {
+        Last = 100.0,
+        Bid = 90,
+        Ask = 110,
+        BidSize = 5,
+        AskSize = 10,
+        Time = 1
+      });
 
-    //  var grain = _cluster
-    //    .GrainFactory
-    //    .GetGrain<IPricesGrainAdapter>(Descriptor);
+      await grain.Store(new PriceState { Time = 1, Last = 50 });
+      await grain.Store(new PriceState { Time = 1, Last = 200 });
+      await grain.Store(new PriceState { Time = 1, Last = 150 });
 
-    //  foreach (var price in priceData)
-    //  {
-    //    await grain.Send(price);
-    //  }
+      var response = await grain.Store(new PriceState { Time = 1, Last = 50 });
 
-    //  _mockConnector
-    //    .Setup(x => x.GetGrain<IPricesGrainAdapter>(It.IsAny<string>(), It.IsAny<string>()))
-    //    .Returns(grain);
+      Assert.Null(response.TimeFrame);
+      Assert.Equal(1, response.Time);
+      Assert.Equal(1, response.Bar.Time);
+      Assert.Equal(50.0, response.Last);
+      Assert.Equal(90.0, response.Bid);
+      Assert.Equal(110.0, response.Ask);
+      Assert.Equal(5.0, response.BidSize);
+      Assert.Equal(10.0, response.AskSize);
+      Assert.Equal(50.0, response.Bar.Low);
+      Assert.Equal(200.0, response.Bar.High);
+      Assert.Equal(100.0, response.Bar.Open);
+      Assert.Equal(50.0, response.Bar.Close);
+    }
 
-    //  // Act
-    //  var result = await grain.Prices(criteria);
+    [Fact]
+    public async Task StoreUpdatesPreviousValues()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimPricesGrain>(Descriptor);
 
-    //  // Assert
-    //  Assert.NotNull(result);
-    //  Assert.Equal(2, result.Data.Count);
-    //  Assert.Equal(priceData.TakeLast(2), result.Data);
-    //}
+      await grain.Store(new PriceState
+      {
+        Last = 100.0,
+        Bid = 90,
+        Ask = 110,
+        BidSize = 5,
+        AskSize = 10,
+        Time = 1
+      });
+
+      await grain.Store(new PriceState { Time = 1, Last = 50 });
+      await grain.Store(new PriceState { Time = 1, Last = 200 });
+      await grain.Store(new PriceState { Time = 1, Last = 150 });
+
+      Assert.Equal(10.0, (await grain.Store(new PriceState { Time = 1, Last = 10 })).Bar.Low);
+      Assert.Equal(250.0, (await grain.Store(new PriceState { Time = 1, Last = 250 })).Bar.High);
+      Assert.Equal(15.0, (await grain.Store(new PriceState { Time = 1, Bid = 15 })).Bid);
+      Assert.Equal(25.0, (await grain.Store(new PriceState { Time = 1, Ask = 25 })).Ask);
+      Assert.Equal(15.0, (await grain.Store(new PriceState { Time = 1, BidSize = 15 })).BidSize);
+      Assert.Equal(25.0, (await grain.Store(new PriceState { Time = 1, AskSize = 25 })).AskSize);
+      Assert.Equal(2, (await grain.Store(new PriceState { Time = 2, Last = 15 })).Bar.Time);
+      Assert.Equal(35, (await grain.Store(new PriceState { Time = 3, Last = 35 })).Bar.Open);
+    }
+
+    [Fact]
+    public void StoreException()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimPricesGrain>(Descriptor);
+
+      Assert.Throws<AggregateException>(() => grain.Store(null).Result);
+      Assert.Throws<AggregateException>(() => grain.Store(new PriceState()).Result);
+    }
   }
 }

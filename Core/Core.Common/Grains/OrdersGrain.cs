@@ -3,9 +3,7 @@ using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -27,16 +25,16 @@ namespace Core.Common.Grains
     Task<OrderResponse> Store(OrderState order);
 
     /// <summary>
-    /// Remove order from the list
-    /// </summary>
-    /// <param name="order"></param>
-    Task<DescriptorResponse> Remove(OrderState order);
-
-    /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
     Task<StatusResponse> Tap(PriceState price);
+
+    /// <summary>
+    /// Remove order from the list
+    /// </summary>
+    /// <param name="order"></param>
+    Task<DescriptorResponse> Remove(OrderState order);
   }
 
   public class OrdersGrain : Grain<OrdersState>, IOrdersGrain
@@ -76,35 +74,17 @@ namespace Core.Common.Grains
       .Select(o => o.Order()));
 
     /// <summary>
-    /// <summary>
-    /// Remove order from the list
-    /// </summary>
-    /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Remove(OrderState order)
-    {
-      if (State.Grains.ContainsKey(order.Id))
-      {
-        State.Grains.Remove(order.Id);
-      }
-
-      return Task.FromResult(new DescriptorResponse
-      {
-        Data = order.Id
-      });
-    }
-
-    /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderState order)
     {
-      var grain = GrainFactory.Get<IOrderGrain>(descriptor with { Order = order.Id });
-      var response = await grain.Store(order);
+      var grain = State.Grains[order.Id] = GrainFactory.Get<IOrderGrain>(descriptor with
+      {
+        Order = order.Id
+      });
 
-      State.Grains[order.Id] = grain;
-
-      return response;
+      return await grain.Store(order);
     }
 
     /// <summary>
@@ -126,6 +106,21 @@ namespace Core.Common.Grains
       {
         Data = StatusEnum.Active
       };
+    }
+
+    /// <summary>
+    /// <summary>
+    /// Remove order from the list
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual Task<DescriptorResponse> Remove(OrderState order)
+    {
+      State.Grains.Remove(order.Id);
+
+      return Task.FromResult(new DescriptorResponse
+      {
+        Data = order.Id
+      });
     }
   }
 }

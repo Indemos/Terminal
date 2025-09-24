@@ -58,23 +58,6 @@ namespace Core.Common.Grains
     }
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="price"></param>
-    public virtual async Task<StatusResponse> Tap(PriceState price)
-    {
-      foreach (var grain in State.Grains.Values)
-      {
-        await grain.Tap(price);
-      }
-
-      return new StatusResponse
-      {
-        Data = Enums.StatusEnum.Active
-      };
-    }
-
-    /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
@@ -89,40 +72,46 @@ namespace Core.Common.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderState order)
     {
-      if (State.Grains.ContainsKey(order.Operation.Instrument.Name))
+      var name = order.Operation.Instrument.Name;
+      var grain = State.Grains.Get(name);
+
+      if (grain is null)
       {
-        return await Combine(order);
+        grain = State.Grains[name] = GrainFactory.Get<IPositionGrain>(descriptor with
+        {
+          Order = order.Id
+        });
+
+        return await grain.Store(order);
       }
 
-      var grain = GrainFactory.Get<IPositionGrain>(descriptor with { Order = order.Id });
-      var response = await grain.Store(order);
+      var response = await grain.Combine(order);
 
-      State.Grains[order.Operation.Instrument.Name] = grain;
+      if (response.Data is null)
+      {
+        State.Grains.Remove(name);
+      }
+
+      if (response.Transaction is not null)
+      {
+        await actions.Store(response.Transaction);
+      }
 
       return response;
     }
 
     /// <summary>
-    /// Update
+    /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="order"></param>
-    protected virtual async Task<OrderResponse> Combine(OrderState order)
+    /// <param name="price"></param>
+    public virtual async Task<StatusResponse> Tap(PriceState price)
     {
-      var name = order.Operation.Instrument.Name;
-      var grain = State.Grains.Get(name);
-      var response = await grain.Combine(order);
+      await Task.WhenAll(State.Grains.Values.Select(o => o.Tap(price)));
 
-      if (response.Data is not null)
+      return new StatusResponse
       {
-        if (order.Amount.Is(response.Data.Amount))
-        {
-          State.Grains.Remove(name);
-        }
-
-        await actions.Store(response.Data);
-      }
-
-      return response;
+        Data = Enums.StatusEnum.Active
+      };
     }
   }
 }

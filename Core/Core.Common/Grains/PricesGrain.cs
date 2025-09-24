@@ -40,7 +40,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Price map
     /// </summary>
-    protected Dictionary<long, int> map = new();
+    protected Dictionary<long?, int?> map = new();
 
     /// <summary>
     /// Activation
@@ -73,14 +73,9 @@ namespace Core.Common.Grains
     /// <param name="nextPrice"></param>
     public virtual Task<PriceState> Store(PriceState nextPrice)
     {
-      var currentPrice = new PriceState();
       var roundTime = nextPrice.Time.Round(nextPrice.TimeFrame);
-
-      if (map.TryGetValue(roundTime.Value, out var index))
-      {
-        currentPrice = State.PriceGroups[index];
-      }
-
+      var index = map.Get(roundTime);
+      var currentPrice = index is null ? new PriceState() : State.PriceGroups[index.Value];
       var currentTime = currentPrice.Time ?? DateTime.MinValue.Ticks;
       var price = Combine(currentPrice, nextPrice);
 
@@ -91,9 +86,9 @@ namespace Core.Common.Grains
         State.PriceGroups.Add(price);
         map[roundTime.Value] = State.PriceGroups.Count - 1;
       }
-      else
+      else if (index is not null)
       {
-        State.PriceGroups[index] = price;
+        State.PriceGroups[index.Value] = price;
       }
 
       return Task.FromResult(price);
@@ -112,18 +107,18 @@ namespace Core.Common.Grains
 
       return currentPrice with
       {
-        Name = nextPrice.Name,
-        Ask = nextPrice?.Ask ?? price,
-        Bid = nextPrice?.Bid ?? price,
-        AskSize = nextPrice?.AskSize ?? 0.0,
-        BidSize = nextPrice?.BidSize ?? 0.0,
-        Time = nextPrice?.Time,
         Last = price,
+        Time = nextPrice.Time,
+        Name = nextPrice.Name,
+        Ask = nextPrice.Ask ?? currentPrice?.Ask ?? price,
+        Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
+        AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
+        BidSize = nextPrice.BidSize ?? currentPrice?.BidSize ?? 0.0,
         Bar = new BarState() with
         {
           Close = price,
-          Low = Math.Min(nextPrice.Bar?.Low ?? price, currentPrice?.Bar?.Low ?? price),
-          High = Math.Max(nextPrice.Bar?.High ?? price, currentPrice?.Bar?.High ?? price),
+          Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),
+          High = Math.Max(price, currentPrice?.Bar?.High ?? price),
           Open = nextTime > currentTime ? price : currentPrice?.Bar?.Open ?? price,
           Time = nextTime
         }

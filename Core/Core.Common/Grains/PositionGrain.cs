@@ -3,6 +3,7 @@ using Core.Common.Extensions;
 using Core.Common.Services;
 using Core.Common.States;
 using Orleans;
+using Orleans.Serialization.Invocation;
 using System;
 using System.Linq;
 using System.Threading;
@@ -85,23 +86,20 @@ namespace Core.Common.Grains
 
       if (Equals(State.Side, order.Side))
       {
-        State = Increase(order);
+        response = response with { Data = State = Increase(order) };
       }
       else
       {
-        var state = Decrease(order);
+        response = order.Amount.IsGt(State.Operation.Amount) ?
+          Inverse(order) : 
+          Decrease(order);
 
-        if (order.Amount.IsGt(State.Operation.Amount))
-        {
-          state = Inverse(order);
-        }
-
-        response = response with { Data = State = state };
+        State = response.Data;
       }
 
-      if (response.Data is not null)
+      if (order.Orders.Count is not 0)
       {
-        await SendBraces(State, ActionEnum.Delete);
+        await SendBraces(State, ActionEnum.Remove);
         await SendBraces(order);
       }
 
@@ -158,19 +156,32 @@ namespace Core.Common.Grains
     /// Decrease position by amount or close 
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderState Decrease(OrderState order)
+    protected virtual OrderResponse Decrease(OrderState order)
     {
-      var amount = Math.Min(order.Amount.Value, State.Operation.Amount.Value);
-
-      return State with
+      var action = State with
       {
-        Amount = amount,
+        Amount = order.Amount,
         Operation = State.Operation with
         {
-          Amount = amount,
           Price = order.Price,
+          Amount = order.Amount,
           Status = OrderStatusEnum.Transaction
         }
+      };
+
+      var state = order.Amount.Is(State.Operation.Amount) ? null : State with
+      {
+        Amount = State.Amount - order.Amount,
+        Operation = State.Operation with
+        {
+          Amount = State.Operation.Amount - order.Amount
+        }
+      };
+
+      return new()
+      {
+        Data = state,
+        Transaction = action
       };
     }
 
@@ -178,17 +189,31 @@ namespace Core.Common.Grains
     /// Reverse position
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderState Inverse(OrderState order)
+    protected virtual OrderResponse Inverse(OrderState order)
     {
-      var amount = order.Amount - State.Operation.Amount;
-
-      return order with
+      var action = State with
       {
-        Amount = amount,
         Operation = State.Operation with
         {
-          Amount = amount
+          Price = order.Price,
+          Status = OrderStatusEnum.Transaction
         }
+      };
+
+      var state = order with
+      {
+        Amount = order.Amount - State.Operation.Amount,
+        Operation = State.Operation with
+        {
+          AveragePrice = order.Price,
+          Amount = order.Amount - State.Operation.Amount
+        }
+      };
+
+      return new()
+      {
+        Data = state,
+        Transaction = action
       };
     }
 
@@ -206,7 +231,7 @@ namespace Core.Common.Grains
         switch (action)
         {
           case ActionEnum.Create: await ordersGrain.Store(brace); break;
-          case ActionEnum.Delete: await ordersGrain.Remove(brace); break;
+          case ActionEnum.Remove: await ordersGrain.Remove(brace); break;
         }
       }
     }
