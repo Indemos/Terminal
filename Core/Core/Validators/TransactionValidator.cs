@@ -1,0 +1,21 @@
+using Core.Models;
+using FluentValidation;
+
+namespace Core.Validators
+{
+  /// <summary>
+  /// Validation rules
+  /// </summary>
+  public class TransactionValidator : AbstractValidator<OperationModel>
+  {
+    public TransactionValidator()
+    {
+      RuleFor(o => o.Id).Empty();
+      RuleFor(o => o.Price).Empty();
+      RuleFor(o => o.Amount).Empty();
+      RuleFor(o => o.Status).Empty();
+      RuleFor(o => o.AveragePrice).Empty();
+      RuleFor(o => o.Instrument).NotEmpty().SetValidator(new InstrumentValidator());
+    }
+  }
+}

@@ -1,4 +1,4 @@
-using Core.Common.Enums;
+using Core.Enums;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.Extensions.Configuration;

@@ -1,0 +1,16 @@
+namespace Core.Enums
+{
+  public enum InstrumentEnum : byte
+  {
+    Group,
+    Bonds,
+    Coins,
+    Shares,
+    Indices,
+    Options,
+    Futures,
+    Contracts,
+    Currencies,
+    FutureOptions,
+  }
+}

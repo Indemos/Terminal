@@ -1,6 +1,6 @@
-using Core.Common.Enums;
-using Core.Common.Grains;
-using Core.Common.Models;
+using Core.Enums;
+using Core.Grains;
+using Core.Models;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;

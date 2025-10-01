@@ -1,8 +1,8 @@
-using Core.Common.Enums;
-using Core.Common.Extensions;
-using Core.Common.Grains;
-using Core.Common.Models;
-using Core.Common.Services;
+using Core.Enums;
+using Core.Extensions;
+using Core.Grains;
+using Core.Models;
+using Core.Services;
 using IBApi;
 using InteractiveBrokers.Enums;
 using InteractiveBrokers.Mappers;

@@ -1,5 +1,5 @@
-using Core.Common.Grains;
-using Core.Common.Models;
+using Core.Grains;
+using Core.Models;
 using Simulation.Grains;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Simulation
 {
-  public class Gateway : Core.Common.Conventions.Gateway
+  public class Gateway : Core.Conventions.Gateway
   {
     /// <summary>
     /// Streamer

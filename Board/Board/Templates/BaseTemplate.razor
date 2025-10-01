@@ -1,0 +1,50 @@
+@using Core.Enums
+@using Core.Models
+@using Orleans.Streams
+
+@inject ISnackbar Popup
+@inject MessageService Messenger
+@inject IConfiguration Configuration
+
+@inherits LayoutComponentBase
+
+<PageTitle>Terminal</PageTitle>
+
+<MudThemeProvider Theme="theme" IsDarkMode="true" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge">
+  @Body
+</MudContainer>
+
+@code {
+
+  protected DashboardTheme theme = new();
+  protected override void OnAfterRender(bool setup)
+  {
+    if (setup)
+    {
+      StateHasChanged();
+
+      Messenger.Stream.SubscribeAsync((o, x) =>
+      {
+        try
+        {
+          InstanceService<RecordService>
+            .Instance
+            .Recorder
+            .Information("{@Message}", o);
+
+          if (o?.Content is not null)
+          {
+            Popup.Add(@<p>@(o.Content)</p>);
+          }
+        }
+        catch (Exception) { }
+        return Task.CompletedTask;
+      });
+    }
+  }
+}

@@ -1,4 +1,4 @@
-using Core.Common.Models;
+using Core.Models;
 using System;
 
 namespace InteractiveBrokers.Models

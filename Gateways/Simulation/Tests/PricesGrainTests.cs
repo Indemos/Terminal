@@ -1,4 +1,4 @@
-using Core.Common.Models;
+using Core.Models;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;

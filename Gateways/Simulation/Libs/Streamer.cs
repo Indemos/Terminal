@@ -1,8 +1,8 @@
-using Core.Common.Enums;
-using Core.Common.Extensions;
-using Core.Common.Grains;
-using Core.Common.Services;
-using Core.Common.Models;
+using Core.Enums;
+using Core.Extensions;
+using Core.Grains;
+using Core.Services;
+using Core.Models;
 using MessagePack;
 using MessagePack.Resolvers;
 using Simulation.Grains;

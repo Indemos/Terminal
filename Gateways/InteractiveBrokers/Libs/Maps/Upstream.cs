@@ -1,5 +1,5 @@
-using Core.Common.Enums;
-using Core.Common.Models;
+using Core.Enums;
+using Core.Models;
 using IBApi;
 using InteractiveBrokers.Messages;
 using System;
