@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using System.Collections.Generic;
 
 namespace Simulation.States
@@ -8,26 +8,26 @@ namespace Simulation.States
     /// <summary>
     /// Depth of market
     /// </summary>
-    public DomState Dom { get; init; }
+    public DomModel Dom { get; init; }
 
     /// <summary>
     /// Reference to the instrument
     /// </summary>
-    public InstrumentState Instrument { get; init; }
+    public InstrumentModel Instrument { get; init; }
 
     /// <summary>
     /// List of all ticks from the server
     /// </summary>
-    public List<PriceState> Points { get; init; } = [];
+    public List<PriceModel> Points { get; init; } = [];
 
     /// <summary>
     /// List of all ticks from the server aggregated into bars
     /// </summary>
-    public List<PriceState> PointGroups { get; init; } = [];
+    public List<PriceModel> PointGroups { get; init; } = [];
 
     /// <summary>
     /// List of option contracts for the current point
     /// </summary>
-    public List<InstrumentState> Options { get; init; } = [];
+    public List<InstrumentModel> Options { get; init; } = [];
   }
 }

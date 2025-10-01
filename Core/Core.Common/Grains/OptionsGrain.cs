@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,28 +11,28 @@ namespace Core.Common.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentState>> Options(MetaState criteria);
+    Task<IList<InstrumentModel>> Options(MetaModel criteria);
 
     /// <summary>
     /// Update options
     /// </summary>
     /// <param name="options"></param>
-    Task<StatusResponse> Store(List<InstrumentState> options);
+    Task<StatusResponse> Store(List<InstrumentModel> options);
   }
 
-  public class OptionsGrain : Grain<OptionsState>, IOptionsGrain
+  public class OptionsGrain : Grain<OptionsModel>, IOptionsGrain
   {
     /// <summary>
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<InstrumentState>> Options(MetaState criteria) => Task.FromResult(State.Options);
+    public virtual Task<IList<InstrumentModel>> Options(MetaModel criteria) => Task.FromResult(State.Options);
 
     /// <summary>
     /// Update options
     /// </summary>
     /// <param name="options"></param>
-    public virtual Task<StatusResponse> Store(List<InstrumentState> options)
+    public virtual Task<StatusResponse> Store(List<InstrumentModel> options)
     {
       if (options is not null)
       {

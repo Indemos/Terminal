@@ -1,7 +1,7 @@
 using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Services;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using Orleans.Streams;
 using System;
@@ -18,26 +18,31 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderState>> Transactions(MetaState criteria);
+    Task<IList<OrderModel>> Transactions(MetaModel criteria);
 
     /// <summary>
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderModel order);
   }
 
-  public class TransactionsGrain : Grain<TransactionsState>, ITransactionsGrain
+  public class TransactionsGrain : Grain<TransactionsModel>, ITransactionsGrain
   {
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected DescriptorState descriptor;
+    protected DescriptorModel descriptor;
+
+    /// <summary>
+    /// Converter
+    /// </summary>
+    protected ConversionService converter = new();
 
     /// <summary>
     /// Order stream
     /// </summary>
-    protected IAsyncStream<OrderState> orderStream;
+    protected IAsyncStream<OrderModel> orderStream;
 
     /// <summary>
     /// Activation
@@ -45,13 +50,10 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      descriptor = InstanceService<ConversionService>
-        .Instance
-        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
-
+      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
       orderStream = this
         .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderState>(descriptor.Account, Guid.Empty);
+        .GetStream<OrderModel>(descriptor.Account, Guid.Empty);
 
       await base.OnActivateAsync(cancellation);
     }
@@ -60,7 +62,7 @@ namespace Core.Common.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderState>> Transactions(MetaState criteria) => await Task.WhenAll(State
+    public virtual async Task<IList<OrderModel>> Transactions(MetaModel criteria) => await Task.WhenAll(State
       .Grains
       .Select(o => o.Transaction()));
 
@@ -68,7 +70,7 @@ namespace Core.Common.Grains
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderModel order)
     {
       var orderGrain = GrainFactory.Get<ITransactionGrain>(descriptor with { Order = order.Id });
       var response = await orderGrain.Store(order);

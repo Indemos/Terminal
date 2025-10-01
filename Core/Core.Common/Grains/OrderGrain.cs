@@ -1,5 +1,5 @@
 using Core.Common.Enums;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System.Threading.Tasks;
 
@@ -10,38 +10,38 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order
     /// </summary>
-    Task<OrderState> Order();
+    Task<OrderModel> Order();
 
     /// <summary>
     /// Get position
     /// </summary>
     /// <param name="price"></param>
-    Task<OrderState> Position(PriceState price);
+    Task<OrderModel> Position(PriceModel price);
 
     /// <summary>
     /// Send order
     /// </summary>
-    Task<OrderResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderModel order);
 
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="price"></param>
-    Task<bool> IsExecutable(PriceState price);
+    Task<bool> IsExecutable(PriceModel price);
   }
 
-  public class OrderGrain : Grain<OrderState>, IOrderGrain
+  public class OrderGrain : Grain<OrderModel>, IOrderGrain
   {
     /// <summary>
     /// Get order 
     /// </summary>
-    public virtual Task<OrderState> Order() => Task.FromResult(State);
+    public virtual Task<OrderModel> Order() => Task.FromResult(State);
 
     /// <summary>
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<OrderResponse> Store(OrderState order)
+    public virtual Task<OrderResponse> Store(OrderModel order)
     {
       State = order with
       {
@@ -61,7 +61,7 @@ namespace Core.Common.Grains
     /// Get position
     /// </summary>
     /// <param name="price"></param>
-    public virtual Task<OrderState> Position(PriceState price)
+    public virtual Task<OrderModel> Position(PriceModel price)
     {
       var position = State with
       {
@@ -86,7 +86,7 @@ namespace Core.Common.Grains
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="price"></param>
-    public virtual Task<bool> IsExecutable(PriceState price)
+    public virtual Task<bool> IsExecutable(PriceModel price)
     {
       var response = false;
 

@@ -1,5 +1,5 @@
 using Core.Common.Enums;
-using Core.Common.States;
+using Core.Common.Models;
 using FluentValidation;
 
 namespace Core.Common.Validators
@@ -7,7 +7,7 @@ namespace Core.Common.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class OrderValidator : AbstractValidator<OrderState>
+  public class OrderValidator : AbstractValidator<OrderModel>
   {
     public OrderValidator()
     {

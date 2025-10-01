@@ -1,4 +1,9 @@
-@inject ISnackbar Messenger
+@using Core.Common.Enums
+@using Core.Common.Models
+@using Orleans.Streams
+
+@inject ISnackbar Popup
+@inject MessageService Messenger
 @inject IConfiguration Configuration
 
 @inherits LayoutComponentBase
@@ -17,14 +22,13 @@
 @code {
 
   protected DashboardTheme theme = new();
-
   protected override void OnAfterRender(bool setup)
   {
     if (setup)
     {
       StateHasChanged();
 
-      InstanceService<MessageService>.Instance.Update += o =>
+      Messenger.Stream.SubscribeAsync((o, x) =>
       {
         try
         {
@@ -35,11 +39,12 @@
 
           if (o?.Content is not null)
           {
-            Messenger.Add(@<p>@(o.Content)</p>);
+            Popup.Add(@<p>@(o.Content)</p>);
           }
         }
         catch (Exception) { }
-      };
+        return Task.CompletedTask;
+      });
     }
   }
 }

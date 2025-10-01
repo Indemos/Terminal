@@ -6,7 +6,7 @@ using Canvas.Views.Web.Views;
 using Core.Client.Services;
 using Core.Common.Enums;
 using Core.Common.Extensions;
-using Core.Common.States;
+using Core.Common.Models;
 using Microsoft.AspNetCore.Components;
 using SkiaSharp;
 using System;
@@ -19,7 +19,7 @@ namespace Core.Client.Components
 {
   public partial class ChartsComponent : IDisposable
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -63,7 +63,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += state =>
+        Messenger.OnMessage = state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -92,14 +92,14 @@ namespace Core.Client.Components
     /// <param name="point"></param>
     public virtual IShape GetShape<T>(double? value, SKColor? color = null) where T : IShape, new()
     {
-      return GetShape<T>(new PriceState { Last = value }, color);
+      return GetShape<T>(new PriceModel { Last = value }, color);
     }
 
     /// <summary>
     /// Point to shape
     /// </summary>
     /// <param name="point"></param>
-    public virtual IShape GetShape<T>(PriceState point, SKColor? color = null) where T : IShape, new()
+    public virtual IShape GetShape<T>(PriceModel point, SKColor? color = null) where T : IShape, new()
     {
       if (typeof(T).Equals(typeof(CandleShape)))
       {
@@ -127,7 +127,7 @@ namespace Core.Client.Components
     /// <param name="inputs"></param>
     public virtual async void UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Messenger.State.Next is SubscriptionEnum.None)
       {
         return;
       }
@@ -160,7 +160,7 @@ namespace Core.Client.Components
     /// <param name="inputs"></param>
     public virtual void UpdateOrdinals(IList<IShape> shapes)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Messenger.State.Next is SubscriptionEnum.None)
       {
         return;
       }

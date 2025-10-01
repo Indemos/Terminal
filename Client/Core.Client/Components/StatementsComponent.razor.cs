@@ -12,7 +12,7 @@ namespace Core.Client.Components
 {
   public partial class StatementsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -33,7 +33,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           switch (true)
           {
@@ -55,7 +55,7 @@ namespace Core.Client.Components
     /// <param name="adapters"></param>
     public virtual async void UpdateItems(params IGateway[] adapters)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Messenger.State.Next is SubscriptionEnum.None)
       {
         return;
       }

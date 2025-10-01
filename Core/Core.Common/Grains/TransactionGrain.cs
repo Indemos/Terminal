@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System.Threading.Tasks;
 
@@ -9,27 +9,27 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get order state
     /// </summary>
-    Task<OrderState> Transaction();
+    Task<OrderModel> Transaction();
 
     /// <summary>
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderModel order);
   }
 
-  public class TransactionGrain : Grain<OrderState>, ITransactionGrain
+  public class TransactionGrain : Grain<OrderModel>, ITransactionGrain
   {
     /// <summary>
     /// Get order state
     /// </summary>
-    public virtual Task<OrderState> Transaction() => Task.FromResult(State);
+    public virtual Task<OrderModel> Transaction() => Task.FromResult(State);
 
     /// <summary>
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<OrderResponse> Store(OrderState order) => Task.FromResult(new OrderResponse
+    public virtual Task<OrderResponse> Store(OrderModel order) => Task.FromResult(new OrderResponse
     {
       Data = State = order
     });

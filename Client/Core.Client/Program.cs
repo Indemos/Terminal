@@ -28,6 +28,7 @@ namespace Core.Client
         orleans.AddMemoryGrainStorageAsDefault();
         orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Price));
         orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Order));
+        orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Message));
         orleans.AddMemoryGrainStorage("PubSubStore");
         orleans.UseDashboard(options =>
         {
@@ -57,7 +58,7 @@ namespace Core.Client
       builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
-      builder.Services.AddScoped<SubscriptionService>();
+      builder.Services.AddScoped<MessageService>();
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;

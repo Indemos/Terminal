@@ -1,6 +1,6 @@
 using Core.Common.Conventions;
 using Core.Common.Extensions;
-using Core.Common.States;
+using Core.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -34,7 +34,7 @@ namespace Core.Common.Indicators
     /// Calculate indicator value
     /// </summary>
     /// <param name="prices"></param>
-    public override Task<IIndicator> Update(IList<PriceState> prices)
+    public override Task<IIndicator> Update(IList<PriceModel> prices)
     {
       var response = Task.FromResult<IIndicator>(this);
       var currentPoint = prices.LastOrDefault();

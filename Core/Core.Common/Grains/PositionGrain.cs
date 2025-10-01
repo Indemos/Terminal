@@ -1,9 +1,8 @@
 using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Services;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
-using Orleans.Serialization.Invocation;
 using System;
 using System.Linq;
 using System.Threading;
@@ -16,33 +15,38 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get position
     /// </summary>
-    Task<OrderState> Position();
+    Task<OrderModel> Position();
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    Task<StatusResponse> Tap(PriceState price);
+    Task<StatusResponse> Tap(PriceModel price);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderModel order);
 
     /// <summary>
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Combine(OrderState order);
+    Task<OrderResponse> Combine(OrderModel order);
   }
 
-  public class PositionGrain : Grain<OrderState>, IPositionGrain
+  public class PositionGrain : Grain<OrderModel>, IPositionGrain
   {
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected DescriptorState descriptor;
+    protected DescriptorModel descriptor;
+
+    /// <summary>
+    /// Converter
+    /// </summary>
+    protected ConversionService converter = new();
 
     /// <summary>
     /// Activation
@@ -50,9 +54,7 @@ namespace Core.Common.Grains
     /// <param name="cleaner"></param>
     public override async Task OnActivateAsync(CancellationToken cleaner)
     {
-      descriptor = InstanceService<ConversionService>
-        .Instance
-        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
+      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
 
       await base.OnActivateAsync(cleaner);
     }
@@ -60,13 +62,13 @@ namespace Core.Common.Grains
     /// <summary>
     /// Get position
     /// </summary>
-    public virtual Task<OrderState> Position() => Task.FromResult(State);
+    public virtual Task<OrderModel> Position() => Task.FromResult(State);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderModel order)
     {
       await SendBraces(State = order);
 
@@ -80,7 +82,7 @@ namespace Core.Common.Grains
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Combine(OrderState order)
+    public virtual async Task<OrderResponse> Combine(OrderModel order)
     {
       var response = new OrderResponse();
 
@@ -110,7 +112,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    public virtual Task<StatusResponse> Tap(PriceState price)
+    public virtual Task<StatusResponse> Tap(PriceModel price)
     {
       if (Equals(price.Name, State.Operation.Instrument.Name))
       {
@@ -137,17 +139,19 @@ namespace Core.Common.Grains
     /// Increase position
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderState Increase(OrderState order)
+    protected virtual OrderModel Increase(OrderModel order)
     {
       var amount = State.Operation.Amount + order.Amount;
+      var price = GroupPrice(State, order);
 
       return State with
       {
+        Price = price,
         Amount = amount,
         Operation = State.Operation with
         {
           Amount = amount,
-          AveragePrice = GroupPrice(State, order)
+          AveragePrice = price
         }
       };
     }
@@ -156,7 +160,7 @@ namespace Core.Common.Grains
     /// Decrease position by amount or close 
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderResponse Decrease(OrderState order)
+    protected virtual OrderResponse Decrease(OrderModel order)
     {
       var action = State with
       {
@@ -189,7 +193,7 @@ namespace Core.Common.Grains
     /// Reverse position
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderResponse Inverse(OrderState order)
+    protected virtual OrderResponse Inverse(OrderModel order)
     {
       var action = State with
       {
@@ -222,7 +226,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <param name="action"></param>
-    protected virtual async Task SendBraces(OrderState order, ActionEnum action = ActionEnum.Create)
+    protected virtual async Task SendBraces(OrderModel order, ActionEnum action = ActionEnum.Create)
     {
       var ordersGrain = GrainFactory.Get<IOrdersGrain>(descriptor);
 
@@ -283,7 +287,7 @@ namespace Core.Common.Grains
     /// <summary>
     /// Estimated PnL in account's currency for the order
     /// </summary>
-    protected virtual BalanceState Balance()
+    protected virtual BalanceModel Balance()
     {
       var range = Range();
       var amount = State.Operation.Amount;
@@ -303,7 +307,7 @@ namespace Core.Common.Grains
     /// Compute aggregated position price
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual double? GroupPrice(params OrderState[] orders)
+    protected virtual double? GroupPrice(params OrderModel[] orders)
     {
       var numerator = 0.0 as double?;
       var denominator = 0.0 as double?;

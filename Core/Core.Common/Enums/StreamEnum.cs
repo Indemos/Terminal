@@ -4,5 +4,6 @@ namespace Core.Common.Enums
   {
     Price,
     Order,
+    Message,
   }
 }

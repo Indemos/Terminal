@@ -11,7 +11,7 @@ namespace Core.Client.Components
 {
   public partial class TransactionsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -47,7 +47,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {

@@ -4,7 +4,7 @@ using Core.Client.Components;
 using Core.Client.Services;
 using Core.Common.Enums;
 using Core.Common.Indicators;
-using Core.Common.States;
+using Core.Common.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -20,7 +20,7 @@ namespace Core.Client.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] SubscriptionService Observer { get; set; }
+    [Inject] MessageService Messenger { get; set; }
 
     /// <summary>
     /// Strategy
@@ -36,8 +36,8 @@ namespace Core.Client.Pages.Shares
     protected virtual StatementsComponent StatementsView { get; set; }
     protected virtual PerformanceIndicator Performance { get; set; }
     protected virtual IDictionary<string, ScaleIndicator> Scales { get; set; }
-    protected virtual PriceState PreviousLeader { get; set; }
-    protected virtual PriceState PreviousFollower { get; set; }
+    protected virtual PriceModel PreviousLeader { get; set; }
+    protected virtual PriceModel PreviousFollower { get; set; }
 
     protected override async Task OnAfterRenderAsync(bool setup)
     {
@@ -53,7 +53,7 @@ namespace Core.Client.Pages.Shares
         IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
         PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
 
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           switch (true)
           {
@@ -96,9 +96,9 @@ namespace Core.Client.Pages.Shares
         Connector = Connector,
         Space = $"{Guid.NewGuid()}",
         Source = "D:/Code/NET/Terminal/Data/FUTS/2025-06-17", // Configuration["Simulation:Source"]
-        Account = new AccountState
+        Account = new AccountModel
         {
-          Descriptor = "Demo",
+          Name = "Demo",
           Balance = 25000,
           Instruments = new()
           {
@@ -114,14 +114,14 @@ namespace Core.Client.Pages.Shares
       //adapter.Stream += o => OnPrice(o);
     }
 
-    public virtual async void OnPrice(PriceState price)
+    public virtual async void OnPrice(PriceModel price)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var assetX = account.Instruments["NQU25"];
       var assetY = account.Instruments["ESU25"];
-      var seriesX = await adapter.Ticks(new MetaState { Count = 1, Instrument = assetX });
-      var seriesY = await adapter.Ticks(new MetaState { Count = 1, Instrument = assetY });
+      var seriesX = await adapter.Ticks(new MetaModel { Count = 1, Instrument = assetX });
+      var seriesY = await adapter.Ticks(new MetaModel { Count = 1, Instrument = assetY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -184,10 +184,10 @@ namespace Core.Client.Pages.Shares
     /// </summary>
     /// <param name="assetBuy"></param>
     /// <param name="assetSell"></param>
-    protected async Task OpenPositions(InstrumentState asset, OrderSideEnum side)
+    protected async Task OpenPositions(InstrumentModel asset, OrderSideEnum side)
     {
       var adapter = View.Adapters["Prime"];
-      var order = new OrderState
+      var order = new OrderModel
       {
         Amount = 1,
         Side = side,
@@ -202,7 +202,7 @@ namespace Core.Client.Pages.Shares
     /// Close positions
     /// </summary>
     /// <param name="condition"></param>
-    public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
+    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
       var positions = await adapter.Positions(default);
@@ -212,7 +212,7 @@ namespace Core.Client.Pages.Shares
       {
         if (condition is null || condition(position))
         {
-          var order = new OrderState
+          var order = new OrderModel
           {
             Amount = position.Operation.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,

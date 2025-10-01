@@ -1,5 +1,5 @@
 using Core.Common.Grains;
-using Core.Common.States;
+using Core.Common.Models;
 using Simulation.Grains;
 using System.Collections.Generic;
 using System.Linq;
@@ -9,6 +9,11 @@ namespace Simulation
 {
   public class Gateway : Core.Common.Conventions.Gateway
   {
+    /// <summary>
+    /// Streamer
+    /// </summary>
+    protected Streamer streamer;
+
     /// <summary>
     /// Speed in microseconds
     /// </summary>
@@ -20,16 +25,11 @@ namespace Simulation
     public string Source { get; set; }
 
     /// <summary>
-    /// Data source
-    /// </summary>
-    public Reader Reader { get; set; }
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override Task<StatusResponse> Connect()
     {
-      Reader = new Reader
+      streamer = new Streamer
       {
         Adapter = this,
         Descriptor = Descriptor()
@@ -37,7 +37,7 @@ namespace Simulation
 
       ConnectOrders();
 
-      return Task.FromResult(Reader.Connect());
+      return Task.FromResult(streamer.Connect());
     }
 
     /// <summary>
@@ -47,32 +47,32 @@ namespace Simulation
     {
       DisconnectOrders();
 
-      return Task.FromResult(Reader.Disconnect());
+      return Task.FromResult(streamer.Disconnect());
     }
 
     /// <summary>
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(InstrumentState instrument)
+    public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
-      return Task.FromResult(Reader.Subscribe(instrument));
+      return Task.FromResult(streamer.Subscribe(instrument));
     }
 
     /// <summary>
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentState instrument)
+    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
-      return Task.FromResult(Reader.Unsubscribe(instrument));
+      return Task.FromResult(streamer.Unsubscribe(instrument));
     }
 
     /// <summary>
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomState> Dom(MetaState criteria)
+    public override async Task<DomModel> Dom(MetaModel criteria)
     {
       return await Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
@@ -81,34 +81,34 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceState>> Bars(MetaState criteria)
+    public override async Task<IList<PriceModel>> Ticks(MetaModel criteria)
     {
-      return await Component<ISimPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceState>> Ticks(MetaState criteria)
+    public override async Task<IList<PriceModel>> Bars(MetaModel criteria)
     {
-      return await Component<ISimPricesGrain>(criteria.Instrument.Name).Prices(criteria);
+      return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<InstrumentState>> Options(MetaState criteria)
+    public override async Task<IList<InstrumentModel>> Options(MetaModel criteria)
     {
-      return await Component<ISimOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      return await Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderState>> Orders(MetaState criteria)
+    public override async Task<IList<OrderModel>> Orders(MetaModel criteria)
     {
       return await Component<IOrdersGrain>().Orders(criteria);
     }
@@ -117,7 +117,7 @@ namespace Simulation
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderState>> Positions(MetaState criteria)
+    public override async Task<IList<OrderModel>> Positions(MetaModel criteria)
     {
       return await Component<IPositionsGrain>().Positions(criteria);
     }
@@ -126,7 +126,7 @@ namespace Simulation
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderState>> Transactions(MetaState criteria)
+    public override async Task<IList<OrderModel>> Transactions(MetaModel criteria)
     {
       return await Component<ITransactionsGrain>().Transactions(criteria);
     }
@@ -135,7 +135,7 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupsResponse> SendOrder(OrderState order)
+    public override async Task<OrderGroupsResponse> SendOrder(OrderModel order)
     {
       var response = new OrderGroupsResponse();
       var ordersGrain = Component<IOrdersGrain>();
@@ -162,7 +162,7 @@ namespace Simulation
     /// Clear order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<DescriptorResponse> ClearOrder(OrderState order)
+    public override Task<DescriptorResponse> ClearOrder(OrderModel order)
     {
       return Component<IOrdersGrain>().Remove(order);
     }

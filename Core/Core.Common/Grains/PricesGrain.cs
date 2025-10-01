@@ -1,6 +1,6 @@
 using Core.Common.Extensions;
 using Core.Common.Services;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System;
 using System.Collections.Generic;
@@ -15,27 +15,32 @@ namespace Core.Common.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceState>> Prices(MetaState criteria);
+    Task<IList<PriceModel>> Prices(MetaModel criteria);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceState>> PriceGroups(MetaState criteria);
+    Task<IList<PriceModel>> PriceGroups(MetaModel criteria);
 
     /// <summary>
     /// Add price to the list
     /// </summary>
     /// <param name="price"></param>
-    Task<PriceState> Store(PriceState price);
+    Task<PriceModel> Store(PriceModel price);
   }
 
-  public class PricesGrain : Grain<PricesState>, IPricesGrain
+  public class PricesGrain : Grain<PricesModel>, IPricesGrain
   {
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected DescriptorState descriptor;
+    protected DescriptorModel descriptor;
+
+    /// <summary>
+    /// Converter
+    /// </summary>
+    protected ConversionService converter = new();
 
     /// <summary>
     /// Price map
@@ -48,9 +53,7 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      descriptor = InstanceService<ConversionService>
-        .Instance
-        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
+      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
 
       await base.OnActivateAsync(cancellation);
     }
@@ -59,23 +62,23 @@ namespace Core.Common.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceState>> Prices(MetaState criteria) => Task.FromResult(State.Prices);
+    public virtual Task<IList<PriceModel>> Prices(MetaModel criteria) => Task.FromResult(State.Prices);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceState>> PriceGroups(MetaState criteria) => Task.FromResult(State.PriceGroups);
+    public virtual Task<IList<PriceModel>> PriceGroups(MetaModel criteria) => Task.FromResult(State.PriceGroups);
 
     /// <summary>
     /// Add price to the list
     /// </summary>
     /// <param name="nextPrice"></param>
-    public virtual Task<PriceState> Store(PriceState nextPrice)
+    public virtual Task<PriceModel> Store(PriceModel nextPrice)
     {
       var roundTime = nextPrice.Time.Round(nextPrice.TimeFrame);
       var index = map.Get(roundTime);
-      var currentPrice = index is null ? new PriceState() : State.PriceGroups[index.Value];
+      var currentPrice = index is null ? new PriceModel() : State.PriceGroups[index.Value];
       var currentTime = currentPrice.Time ?? DateTime.MinValue.Ticks;
       var price = Combine(currentPrice, nextPrice);
 
@@ -99,7 +102,7 @@ namespace Core.Common.Grains
     /// </summary>
     /// <param name="currentPrice"></param>
     /// <param name="nextPrice"></param>
-    protected virtual PriceState Combine(PriceState currentPrice, PriceState nextPrice)
+    protected virtual PriceModel Combine(PriceModel currentPrice, PriceModel nextPrice)
     {
       var price = (nextPrice.Last ?? currentPrice.Last).Value;
       var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
@@ -114,7 +117,7 @@ namespace Core.Common.Grains
         Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
         AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
         BidSize = nextPrice.BidSize ?? currentPrice?.BidSize ?? 0.0,
-        Bar = new BarState() with
+        Bar = new BarModel() with
         {
           Close = price,
           Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),

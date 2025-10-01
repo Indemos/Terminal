@@ -1,6 +1,6 @@
 using Core.Common.Enums;
 using Core.Common.Grains;
-using Core.Common.States;
+using Core.Common.Models;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
@@ -17,7 +17,7 @@ namespace Simulation.Prices.Tests
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
-    private string Descriptor => JsonSerializer.Serialize(new DescriptorState
+    private string Descriptor => JsonSerializer.Serialize(new DescriptorModel
     {
       Account = $"{Guid.NewGuid()}"
     });
@@ -47,7 +47,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<IOrdersGrain>(Descriptor);
 
-      var order = new OrderState();
+      var order = new OrderModel();
 
       Assert.Throws<AggregateException>(() => grain.Store(order).Result);
     }
@@ -57,14 +57,14 @@ namespace Simulation.Prices.Tests
     {
       var descriptor = Descriptor;
       var grain = _cluster.GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-      var order = new OrderState
+      var order = new OrderModel
       {
         Amount = 1.0,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Operation = new OperationState
+        Operation = new OperationModel
         {
-          Instrument = new InstrumentState
+          Instrument = new InstrumentModel
           {
             Name = "SPY"
           }

@@ -1,6 +1,6 @@
 using Core.Common.Enums;
 using Core.Common.Grains;
-using Core.Common.States;
+using Core.Common.Models;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
@@ -17,7 +17,7 @@ namespace Simulation.Prices.Tests
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
-    private string Descriptor => JsonSerializer.Serialize(new DescriptorState
+    private string Descriptor => JsonSerializer.Serialize(new DescriptorModel
     {
       Account = $"{Guid.NewGuid()}"
     });
@@ -47,7 +47,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<IPositionsGrain>(Descriptor);
 
-      var order = new OrderState();
+      var order = new OrderModel();
 
       Assert.Throws<AggregateException>(() => grain.Store(order).Result);
     }
@@ -57,18 +57,18 @@ namespace Simulation.Prices.Tests
     {
       var descriptor = Descriptor;
       var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-      var order = new OrderState
+      var order = new OrderModel
       {
         Amount = 1,
         Price = 20,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Operation = new OperationState
+        Operation = new OperationModel
         {
           Amount = 1,
           Time = DateTime.Now.Ticks,
           Status = OrderStatusEnum.Position,
-          Instrument = new InstrumentState
+          Instrument = new InstrumentModel
           {
             Name = "SPY"
           }
@@ -89,7 +89,7 @@ namespace Simulation.Prices.Tests
 
       var averageDownPosition = await grain.Store(order with { Price = 10 });
       var averageDownPositions = await grain.Positions(default);
-      var averageDownOrder = order with { Amount = 2, Operation = order.Operation with { Amount = 2, AveragePrice = 15 } };
+      var averageDownOrder = order with { Amount = 2, Price = 15, Operation = order.Operation with { Amount = 2, AveragePrice = 15 } };
 
       Assert.Single(averageDownPositions);
       Assert.Null(averageDownPosition.Transaction);
@@ -100,7 +100,7 @@ namespace Simulation.Prices.Tests
 
       var averageUpPosition = await grain.Store(order with { Price = 30 });
       var averageUpPositions = await grain.Positions(default);
-      var averageUpOrder = order with { Amount = 3, Operation = order.Operation with { Amount = 3, AveragePrice = 20 } };
+      var averageUpOrder = order with { Amount = 3, Price = 20, Operation = order.Operation with { Amount = 3, AveragePrice = 20 } };
 
       Assert.Single(averageUpPositions);
       Assert.Null(averageUpPosition.Transaction);
@@ -111,7 +111,7 @@ namespace Simulation.Prices.Tests
 
       var decreasePosition = await grain.Store(order with { Side = OrderSideEnum.Short, Price = 40 });
       var decreasePositions = await grain.Positions(default);
-      var decreaseOrder = order with { Amount = 2, Operation = order.Operation with { Amount = 2, AveragePrice = 20 } };
+      var decreaseOrder = order with { Amount = 2, Price = 20, Operation = order.Operation with { Amount = 2, AveragePrice = 20 } };
       var decreaseTransaction = order with
       {
         Amount = 1,
@@ -145,16 +145,32 @@ namespace Simulation.Prices.Tests
       Assert.Equal(JsonSerializer.Serialize(inverseOrder), JsonSerializer.Serialize(inversePosition.Data));
       Assert.Equal(JsonSerializer.Serialize(inverseTransaction), JsonSerializer.Serialize(inversePosition.Transaction));
 
+      // Average short
+
+      var averageShortPosition = await grain.Store(order with { Amount = 1, Side = OrderSideEnum.Short, Price = 40 });
+      var averageShortPositions = await grain.Positions(default);
+      var averageShortOrder = order with
+      {
+        Amount = 2,
+        Price = 45,
+        Side = OrderSideEnum.Short,
+        Operation = order.Operation with { Amount = 2, AveragePrice = 45 }
+      };
+
+      Assert.Single(averageShortPositions);
+      Assert.Equal(JsonSerializer.Serialize(averageShortOrder), JsonSerializer.Serialize(averageShortPositions.First()));
+      Assert.Equal(JsonSerializer.Serialize(averageShortOrder), JsonSerializer.Serialize(averageShortPosition.Data));
+
       // Close
 
-      var closePosition = await grain.Store(order with { Amount = 1, Price = 5 });
+      var closePosition = await grain.Store(order with { Amount = 2, Price = 5 });
       var closePositions = await grain.Positions(default);
       var closeTransaction = order with
       {
-        Amount = 1,
-        Price = 50,
+        Amount = 2,
+        Price = 45,
         Side = OrderSideEnum.Short,
-        Operation = order.Operation with { Status = OrderStatusEnum.Transaction, Amount = 1, AveragePrice = 50, Price = 5 }
+        Operation = order.Operation with { Status = OrderStatusEnum.Transaction, Amount = 2, AveragePrice = 45, Price = 5 }
       };
 
       Assert.Empty(closePositions);

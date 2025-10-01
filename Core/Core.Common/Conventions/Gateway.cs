@@ -1,6 +1,6 @@
 using Core.Common.Enums;
 using Core.Common.Extensions;
-using Core.Common.States;
+using Core.Common.Models;
 using Core.Common.Validators;
 using Orleans;
 using Orleans.Streams;
@@ -21,7 +21,7 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Account
     /// </summary>
-    AccountState Account { get; set; }
+    AccountModel Account { get; set; }
 
     /// <summary>
     /// Cluster client
@@ -31,17 +31,22 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    Func<PriceState, Task> Subscription { get; set; }
+    Func<PriceModel, Task> Subscription { get; set; }
 
     /// <summary>
     /// Data stream
     /// </summary>
-    IAsyncStream<PriceState> Stream { get; }
+    IAsyncStream<PriceModel> Stream { get; }
 
     /// <summary>
     /// Order stream
     /// </summary>
-    IAsyncStream<OrderState> OrderStream { get; }
+    IAsyncStream<OrderModel> OrderStream { get; }
+
+    /// <summary>
+    /// Message stream
+    /// </summary>
+    IAsyncStream<MessageModel> MessageStream { get; }
 
     /// <summary>
     /// Connect
@@ -57,13 +62,13 @@ namespace Core.Common.Conventions
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentState instrument);
+    Task<StatusResponse> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Unsubscribe(InstrumentState instrument);
+    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Subscribe
@@ -79,55 +84,55 @@ namespace Core.Common.Conventions
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomState> Dom(MetaState criteria);
+    Task<DomModel> Dom(MetaModel criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceState>> Bars(MetaState criteria);
+    Task<IList<PriceModel>> Bars(MetaModel criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceState>> Ticks(MetaState criteria);
+    Task<IList<PriceModel>> Ticks(MetaModel criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentState>> Options(MetaState criteria);
+    Task<IList<InstrumentModel>> Options(MetaModel criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderState>> Positions(MetaState criteria);
+    Task<IList<OrderModel>> Positions(MetaModel criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderState>> Orders(MetaState criteria);
+    Task<IList<OrderModel>> Orders(MetaModel criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderState>> Transactions(MetaState criteria);
+    Task<IList<OrderModel>> Transactions(MetaModel criteria);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupsResponse> SendOrder(OrderState order);
+    Task<OrderGroupsResponse> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> ClearOrder(OrderState order);
+    Task<DescriptorResponse> ClearOrder(OrderModel order);
   }
 
   /// <summary>
@@ -136,14 +141,19 @@ namespace Core.Common.Conventions
   public abstract class Gateway : IGateway
   {
     /// <summary>
-    /// Order subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<OrderState> orderSubscription;
-
-    /// <summary>
     /// Order validator
     /// </summary>
     protected OrderValidator orderValidator = new();
+
+    /// <summary>
+    /// Data subscription
+    /// </summary>
+    protected StreamSubscriptionHandle<PriceModel> dataSubscription;
+
+    /// <summary>
+    /// Order subscription
+    /// </summary>
+    protected StreamSubscriptionHandle<OrderModel> orderSubscription;
 
     /// <summary>
     /// Namespace
@@ -153,7 +163,7 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Account
     /// </summary>
-    public virtual AccountState Account { get; set; }
+    public virtual AccountModel Account { get; set; }
 
     /// <summary>
     /// Cluster client
@@ -163,21 +173,28 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual Func<PriceState, Task> Subscription { get; set; }
+    public virtual Func<PriceModel, Task> Subscription { get; set; }
 
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual IAsyncStream<PriceState> Stream => Connector
+    public virtual IAsyncStream<PriceModel> Stream => Connector
       .GetStreamProvider(nameof(StreamEnum.Price))
-      .GetStream<PriceState>(Account.Descriptor, Guid.Empty);
+      .GetStream<PriceModel>(Account.Name, Guid.Empty);
 
     /// <summary>
     /// Order stream
     /// </summary>
-    public virtual IAsyncStream<OrderState> OrderStream => Connector
+    public virtual IAsyncStream<OrderModel> OrderStream => Connector
       .GetStreamProvider(nameof(StreamEnum.Order))
-      .GetStream<OrderState>(Account.Descriptor, Guid.Empty);
+      .GetStream<OrderModel>(Account.Name, Guid.Empty);
+
+    /// <summary>
+    /// Message stream
+    /// </summary>
+    public virtual IAsyncStream<MessageModel> MessageStream => Connector
+      .GetStreamProvider(nameof(StreamEnum.Message))
+      .GetStream<MessageModel>(string.Empty, Guid.Empty);
 
     /// <summary>
     /// Connect
@@ -193,67 +210,67 @@ namespace Core.Common.Conventions
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
-    public abstract Task<StatusResponse> Subscribe(InstrumentState instrument);
+    public abstract Task<StatusResponse> Subscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
-    public abstract Task<StatusResponse> Unsubscribe(InstrumentState instrument);
+    public abstract Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<DomState> Dom(MetaState criteria);
+    public abstract Task<DomModel> Dom(MetaModel criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceState>> Bars(MetaState criteria);
+    public abstract Task<IList<PriceModel>> Bars(MetaModel criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceState>> Ticks(MetaState criteria);
+    public abstract Task<IList<PriceModel>> Ticks(MetaModel criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<InstrumentState>> Options(MetaState criteria);
+    public abstract Task<IList<InstrumentModel>> Options(MetaModel criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderState>> Positions(MetaState criteria);
+    public abstract Task<IList<OrderModel>> Positions(MetaModel criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderState>> Transactions(MetaState criteria);
+    public abstract Task<IList<OrderModel>> Transactions(MetaModel criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderState>> Orders(MetaState criteria);
+    public abstract Task<IList<OrderModel>> Orders(MetaModel criteria);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    public abstract Task<OrderGroupsResponse> SendOrder(OrderState order);
+    public abstract Task<OrderGroupsResponse> SendOrder(OrderModel order);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="order"></param>
-    public abstract Task<DescriptorResponse> ClearOrder(OrderState order);
+    public abstract Task<DescriptorResponse> ClearOrder(OrderModel order);
 
     /// <summary>
     /// Dispose
@@ -293,6 +310,25 @@ namespace Core.Common.Conventions
     }
 
     /// <summary>
+    /// Subscribe to price updates
+    /// </summary>
+    protected virtual async void ConnectPrices()
+    {
+      dataSubscription = await Stream.SubscribeAsync((o, v) => Subscription(o));
+    }
+
+    /// <summary>
+    /// Unsubscribe from price updates
+    /// </summary>
+    protected virtual async void DisconnectPrices()
+    {
+      if (dataSubscription is not null)
+      {
+        await dataSubscription.UnsubscribeAsync();
+      }
+    }
+
+    /// <summary>
     /// Subscribe to order updates
     /// </summary>
     protected virtual async void ConnectOrders()
@@ -325,7 +361,7 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Convert hierarchy of orders into a plain list
     /// </summary>
-    protected virtual List<OrderState> Compose(OrderState order)
+    protected virtual List<OrderModel> Compose(OrderModel order)
     {
       var nextOrders = order
         .Orders
@@ -346,7 +382,7 @@ namespace Core.Common.Conventions
     /// </summary>
     /// <param name="group"></param>
     /// <param name="order"></param>
-    protected virtual OrderState Merge(OrderState group, OrderState order)
+    protected virtual OrderModel Merge(OrderModel group, OrderModel order)
     {
       var groupOrders = order
         ?.Orders
@@ -370,9 +406,9 @@ namespace Core.Common.Conventions
     /// Preprocess order
     /// </summary>
     /// <param name="order"></param>
-    protected virtual List<ErrorState> GetErrors(OrderState order)
+    protected virtual List<ErrorModel> GetErrors(OrderModel order)
     {
-      var response = new List<ErrorState>();
+      var response = new List<ErrorModel>();
       var orders = order.Orders.Append(order);
 
       foreach (var subOrder in orders)
@@ -380,7 +416,7 @@ namespace Core.Common.Conventions
         var errors = orderValidator
           .Validate(subOrder)
           .Errors
-          .Select(error => new ErrorState { Message = error.ErrorMessage });
+          .Select(error => new ErrorModel { Message = error.ErrorMessage });
 
         response.AddRange(errors);
       }
@@ -392,10 +428,10 @@ namespace Core.Common.Conventions
     /// Generate descriptor
     /// </summary>
     /// <param name="instrument"></param>
-    protected virtual DescriptorState Descriptor(string instrument = null) => new()
+    protected virtual DescriptorModel Descriptor(string instrument = null) => new()
     {
       Space = Space,
-      Account = Account.Descriptor,
+      Account = Account.Name,
       Instrument = instrument
     };
 

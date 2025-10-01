@@ -11,7 +11,7 @@ namespace Core.Client.Components
 {
   public partial class PositionsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -47,7 +47,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -63,7 +63,7 @@ namespace Core.Client.Components
     /// <param name="account"></param>
     public virtual async void UpdateItems(params IGateway[] adapters)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Messenger.State.Next is SubscriptionEnum.None)
       {
         return;
       }

@@ -1,7 +1,7 @@
 using Core.Common.Enums;
 using Core.Common.Extensions;
 using Core.Common.Services;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,33 +16,38 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderState>> Orders(MetaState criteria);
+    Task<IList<OrderModel>> Orders(MetaModel criteria);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderState order);
+    Task<OrderResponse> Store(OrderModel order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    Task<StatusResponse> Tap(PriceState price);
+    Task<StatusResponse> Tap(PriceModel price);
 
     /// <summary>
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Remove(OrderState order);
+    Task<DescriptorResponse> Remove(OrderModel order);
   }
 
-  public class OrdersGrain : Grain<OrdersState>, IOrdersGrain
+  public class OrdersGrain : Grain<OrdersModel>, IOrdersGrain
   {
     /// <summary>
     /// Descriptor
     /// </summary>
-    protected DescriptorState descriptor;
+    protected DescriptorModel descriptor;
+
+    /// <summary>
+    /// Converter
+    /// </summary>
+    protected ConversionService converter = new();
 
     /// <summary>
     /// Transactions
@@ -55,10 +60,7 @@ namespace Core.Common.Grains
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
-      descriptor = InstanceService<ConversionService>
-        .Instance
-        .Decompose<DescriptorState>(this.GetPrimaryKeyString());
-
+      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
       positions = GrainFactory.Get<IPositionsGrain>(descriptor);
 
       await base.OnActivateAsync(cancellation);
@@ -68,7 +70,7 @@ namespace Core.Common.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderState>> Orders(MetaState criteria) => await Task.WhenAll(State
+    public virtual async Task<IList<OrderModel>> Orders(MetaModel criteria) => await Task.WhenAll(State
       .Grains
       .Values
       .Select(o => o.Order()));
@@ -77,7 +79,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderState order)
+    public virtual async Task<OrderResponse> Store(OrderModel order)
     {
       var grain = State.Grains[order.Id] = GrainFactory.Get<IOrderGrain>(descriptor with
       {
@@ -91,7 +93,7 @@ namespace Core.Common.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="price"></param>
-    public virtual async Task<StatusResponse> Tap(PriceState price)
+    public virtual async Task<StatusResponse> Tap(PriceModel price)
     {
       foreach (var grain in State.Grains)
       {
@@ -113,7 +115,7 @@ namespace Core.Common.Grains
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Remove(OrderState order)
+    public virtual Task<DescriptorResponse> Remove(OrderModel order)
     {
       State.Grains.Remove(order.Id);
 

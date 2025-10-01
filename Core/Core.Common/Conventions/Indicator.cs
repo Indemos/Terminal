@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -14,13 +14,13 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Point
     /// </summary>
-    PriceState Response { get; }
+    PriceModel Response { get; }
 
     /// <summary>
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    Task<IIndicator> Update(IList<PriceState> collection);
+    Task<IIndicator> Update(IList<PriceModel> collection);
   }
 
   public class Indicator : IIndicator
@@ -33,7 +33,7 @@ namespace Core.Common.Conventions
     /// <summary>
     /// Point
     /// </summary>
-    public virtual PriceState Response { get; protected set; }
+    public virtual PriceModel Response { get; protected set; }
 
     /// <summary>
     /// Constructor
@@ -44,6 +44,6 @@ namespace Core.Common.Conventions
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    public virtual Task<IIndicator> Update(IList<PriceState> collection) => default;
+    public virtual Task<IIndicator> Update(IList<PriceModel> collection) => default;
   }
 }

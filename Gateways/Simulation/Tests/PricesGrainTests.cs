@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
@@ -15,7 +15,7 @@ namespace Simulation.Prices.Tests
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
-    private string Descriptor => JsonSerializer.Serialize(new DescriptorState
+    private string Descriptor => JsonSerializer.Serialize(new DescriptorModel
     {
       Account = $"{Guid.NewGuid()}"
     });
@@ -43,9 +43,9 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimPricesGrain>(Descriptor);
+        .GetGrain<IGatewayPricesGrain>(Descriptor);
 
-      var response = await grain.Store(new PriceState
+      var response = await grain.Store(new PriceModel
       {
         Last = 100.0
       });
@@ -69,11 +69,11 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimPricesGrain>(Descriptor);
+        .GetGrain<IGatewayPricesGrain>(Descriptor);
 
-      await grain.Store(new PriceState { Last = 100.0, Time = 1 });
+      await grain.Store(new PriceModel { Last = 100.0, Time = 1 });
 
-      var response = await grain.Store(new PriceState { Time = 1 });
+      var response = await grain.Store(new PriceModel { Time = 1 });
 
       Assert.Null(response.TimeFrame);
       Assert.Equal(1, response.Time);
@@ -94,9 +94,9 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimPricesGrain>(Descriptor);
+        .GetGrain<IGatewayPricesGrain>(Descriptor);
 
-      await grain.Store(new PriceState
+      await grain.Store(new PriceModel
       {
         Last = 100.0,
         Bid = 90,
@@ -106,11 +106,11 @@ namespace Simulation.Prices.Tests
         Time = 1
       });
 
-      await grain.Store(new PriceState { Time = 1, Last = 50 });
-      await grain.Store(new PriceState { Time = 1, Last = 200 });
-      await grain.Store(new PriceState { Time = 1, Last = 150 });
+      await grain.Store(new PriceModel { Time = 1, Last = 50 });
+      await grain.Store(new PriceModel { Time = 1, Last = 200 });
+      await grain.Store(new PriceModel { Time = 1, Last = 150 });
 
-      var response = await grain.Store(new PriceState { Time = 1, Last = 50 });
+      var response = await grain.Store(new PriceModel { Time = 1, Last = 50 });
 
       Assert.Null(response.TimeFrame);
       Assert.Equal(1, response.Time);
@@ -131,9 +131,9 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimPricesGrain>(Descriptor);
+        .GetGrain<IGatewayPricesGrain>(Descriptor);
 
-      await grain.Store(new PriceState
+      await grain.Store(new PriceModel
       {
         Last = 100.0,
         Bid = 90,
@@ -143,18 +143,18 @@ namespace Simulation.Prices.Tests
         Time = 1
       });
 
-      await grain.Store(new PriceState { Time = 1, Last = 50 });
-      await grain.Store(new PriceState { Time = 1, Last = 200 });
-      await grain.Store(new PriceState { Time = 1, Last = 150 });
+      await grain.Store(new PriceModel { Time = 1, Last = 50 });
+      await grain.Store(new PriceModel { Time = 1, Last = 200 });
+      await grain.Store(new PriceModel { Time = 1, Last = 150 });
 
-      Assert.Equal(10.0, (await grain.Store(new PriceState { Time = 1, Last = 10 })).Bar.Low);
-      Assert.Equal(250.0, (await grain.Store(new PriceState { Time = 1, Last = 250 })).Bar.High);
-      Assert.Equal(15.0, (await grain.Store(new PriceState { Time = 1, Bid = 15 })).Bid);
-      Assert.Equal(25.0, (await grain.Store(new PriceState { Time = 1, Ask = 25 })).Ask);
-      Assert.Equal(15.0, (await grain.Store(new PriceState { Time = 1, BidSize = 15 })).BidSize);
-      Assert.Equal(25.0, (await grain.Store(new PriceState { Time = 1, AskSize = 25 })).AskSize);
-      Assert.Equal(2, (await grain.Store(new PriceState { Time = 2, Last = 15 })).Bar.Time);
-      Assert.Equal(35, (await grain.Store(new PriceState { Time = 3, Last = 35 })).Bar.Open);
+      Assert.Equal(10.0, (await grain.Store(new PriceModel { Time = 1, Last = 10 })).Bar.Low);
+      Assert.Equal(250.0, (await grain.Store(new PriceModel { Time = 1, Last = 250 })).Bar.High);
+      Assert.Equal(15.0, (await grain.Store(new PriceModel { Time = 1, Bid = 15 })).Bid);
+      Assert.Equal(25.0, (await grain.Store(new PriceModel { Time = 1, Ask = 25 })).Ask);
+      Assert.Equal(15.0, (await grain.Store(new PriceModel { Time = 1, BidSize = 15 })).BidSize);
+      Assert.Equal(25.0, (await grain.Store(new PriceModel { Time = 1, AskSize = 25 })).AskSize);
+      Assert.Equal(2, (await grain.Store(new PriceModel { Time = 2, Last = 15 })).Bar.Time);
+      Assert.Equal(35, (await grain.Store(new PriceModel { Time = 3, Last = 35 })).Bar.Open);
     }
 
     [Fact]
@@ -162,10 +162,10 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimPricesGrain>(Descriptor);
+        .GetGrain<IGatewayPricesGrain>(Descriptor);
 
       Assert.Throws<AggregateException>(() => grain.Store(null).Result);
-      Assert.Throws<AggregateException>(() => grain.Store(new PriceState()).Result);
+      Assert.Throws<AggregateException>(() => grain.Store(new PriceModel()).Result);
     }
   }
 }

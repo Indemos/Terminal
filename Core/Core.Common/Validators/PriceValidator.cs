@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using FluentValidation;
 
 namespace Core.Common.Validators
@@ -6,7 +6,7 @@ namespace Core.Common.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class PriceValidator : AbstractValidator<PriceState>
+  public class PriceValidator : AbstractValidator<PriceModel>
   {
     public PriceValidator()
     {

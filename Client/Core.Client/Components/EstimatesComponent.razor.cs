@@ -2,7 +2,7 @@ using Canvas.Core.Shapes;
 using Core.Client.Services;
 using Core.Common.Conventions;
 using Core.Common.Enums;
-using Core.Common.States;
+using Core.Common.Models;
 using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -16,7 +16,7 @@ namespace Core.Client.Components
 {
   public partial class EstimatesComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -56,7 +56,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -72,9 +72,9 @@ namespace Core.Client.Components
     /// <param name="adapter"></param>
     /// <param name="point"></param>
     /// <param name="positions"></param>
-    public virtual void UpdateItems(IGateway adapter, PriceState point, IEnumerable<OrderState> positions)
+    public virtual void UpdateItems(IGateway adapter, PriceModel point, IEnumerable<OrderModel> positions)
     {
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Messenger.State.Next is SubscriptionEnum.None)
       {
         return;
       }

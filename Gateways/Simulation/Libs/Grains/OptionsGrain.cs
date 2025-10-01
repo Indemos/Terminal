@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -6,17 +6,17 @@ using System.Threading.Tasks;
 
 namespace Core.Common.Grains
 {
-  public interface ISimOptionsGrain : IOptionsGrain
+  public interface IGatewayOptionsGrain : IOptionsGrain
   {
   }
 
-  public class SimOptionsGrain : OptionsGrain, ISimOptionsGrain
+  public class GatewayOptionsGrain : OptionsGrain, IGatewayOptionsGrain
   {
     /// <summary>
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<InstrumentState>> Options(MetaState criteria)
+    public override Task<IList<InstrumentModel>> Options(MetaModel criteria)
     {
       var minDate = criteria?.MinDate is long mnd ? new DateTime(mnd) : null as DateTime?;
       var maxDate = criteria?.MaxDate is long mxd ? new DateTime(mxd) : null as DateTime?;
@@ -33,7 +33,7 @@ namespace Core.Common.Grains
         .ThenBy(o => o.Derivative.Side)
         .ToArray();
 
-      return Task.FromResult<IList<InstrumentState>>(options);
+      return Task.FromResult<IList<InstrumentModel>>(options);
     }
   }
 }

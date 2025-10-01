@@ -4,7 +4,7 @@ using Core.Client.Components;
 using Core.Client.Services;
 using Core.Common.Enums;
 using Core.Common.Indicators;
-using Core.Common.States;
+using Core.Common.Models;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -19,7 +19,7 @@ namespace Core.Client.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] SubscriptionService Observer { get; set; }
+    [Inject] MessageService Messenger { get; set; }
 
     /// <summary>
     /// Strategy
@@ -47,7 +47,7 @@ namespace Core.Client.Pages.Shares
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Observer.OnMessage += state =>
+        Messenger.OnMessage += state =>
         {
           switch (true)
           {
@@ -79,14 +79,14 @@ namespace Core.Client.Pages.Shares
         Connector = Connector,
         Space = $"{Guid.NewGuid()}",
         Source = Configuration["Simulation:Source"],
-        Account = new AccountState
+        Account = new AccountModel
         {
-          Descriptor = "Demo",
+          Name = "Demo",
           Balance = 25000,
           Instruments = new()
           {
-            [assetX] = new InstrumentState { Name = assetX },
-            [assetY] = new InstrumentState { Name = assetY }
+            [assetX] = new InstrumentModel { Name = assetX },
+            [assetY] = new InstrumentModel { Name = assetY }
           }
         }
       };
@@ -98,14 +98,14 @@ namespace Core.Client.Pages.Shares
     /// Stream
     /// </summary>
     /// <param name="price"></param>
-    public virtual async Task OnPrice(PriceState price)
+    public virtual async Task OnPrice(PriceModel price)
     {
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentX });
-      var seriesY = await adapter.Ticks(new MetaState { Count = 1, Instrument = instrumentY });
+      var seriesX = await adapter.Ticks(new MetaModel { Count = 1, Instrument = instrumentX });
+      var seriesY = await adapter.Ticks(new MetaModel { Count = 1, Instrument = instrumentY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -168,10 +168,10 @@ namespace Core.Client.Pages.Shares
     /// </summary>
     /// <param name="assetBuy"></param>
     /// <param name="assetSell"></param>
-    protected async Task OpenPositions(InstrumentState assetBuy, InstrumentState assetSell)
+    protected async Task OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
       var adapter = View.Adapters["Prime"];
-      var orderSell = new OrderState
+      var orderSell = new OrderModel
       {
         Amount = 1,
         Side = OrderSideEnum.Short,
@@ -179,7 +179,7 @@ namespace Core.Client.Pages.Shares
         Operation = new() { Instrument = assetSell }
       };
 
-      var orderBuy = new OrderState
+      var orderBuy = new OrderModel
       {
         Amount = 1,
         Side = OrderSideEnum.Long,
@@ -195,7 +195,7 @@ namespace Core.Client.Pages.Shares
     /// Close positions
     /// </summary>
     /// <param name="condition"></param>
-    public virtual async Task ClosePositions(Func<OrderState, bool> condition = null)
+    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
       var positions = await adapter.Positions(default);
@@ -205,7 +205,7 @@ namespace Core.Client.Pages.Shares
       {
         if (condition is null || condition(position))
         {
-          var order = new OrderState
+          var order = new OrderModel
           {
             Amount = position.Operation.Amount,
             Side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,

@@ -1,21 +1,21 @@
 using Core.Common.Grains;
-using Core.Common.States;
+using Core.Common.Models;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Simulation.Grains
 {
-  public interface ISimPricesGrain : IPricesGrain
+  public interface IGatewayPricesGrain : IPricesGrain
   {
   }
 
-  public class SimPricesGrain : PricesGrain, ISimPricesGrain
+  public class GatewayPricesGrain : PricesGrain, IGatewayPricesGrain
   {
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceState>> Prices(MetaState criteria)
+    public override Task<IList<PriceModel>> Prices(MetaModel criteria)
     {
       var prices = State.Prices
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
@@ -23,13 +23,13 @@ namespace Simulation.Grains
           .TakeLast(criteria?.Count ?? State.Prices.Count)
           .ToArray();
 
-      return Task.FromResult<IList<PriceState>>(prices);
+      return Task.FromResult<IList<PriceModel>>(prices);
     }
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceState>> PriceGroups(MetaState criteria)
+    public override Task<IList<PriceModel>> PriceGroups(MetaModel criteria)
     {
       var prices = State.PriceGroups
           .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
@@ -37,7 +37,7 @@ namespace Simulation.Grains
           .TakeLast(criteria?.Count ?? State.PriceGroups.Count)
           .ToArray();
 
-      return Task.FromResult<IList<PriceState>>(prices);
+      return Task.FromResult<IList<PriceModel>>(prices);
     }
   }
 }

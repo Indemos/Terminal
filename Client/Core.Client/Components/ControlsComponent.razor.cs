@@ -1,8 +1,6 @@
-using Core.Client.Models;
 using Core.Client.Services;
 using Core.Common.Conventions;
 using Core.Common.Enums;
-using Core.Common.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -13,14 +11,10 @@ namespace Core.Client.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual MessageService Messenger { get; set; }
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
 
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
-    public virtual MessageModel<SubscriptionEnum> SubscriptionState => Observer.State ?? new MessageModel<SubscriptionEnum>
-    {
-      Next = SubscriptionEnum.None
-    };
 
     /// <summary>
     /// Setup views
@@ -32,10 +26,7 @@ namespace Core.Client.Components
 
       if (setup)
       {
-        await Observer.Send(new MessageModel<SubscriptionEnum>
-        {
-          Next = SubscriptionEnum.None
-        });
+        Messenger.State = new() { Next = SubscriptionEnum.None };
 
         StateHasChanged();
       }
@@ -48,26 +39,23 @@ namespace Core.Client.Components
     {
       try
       {
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.None,
-          Next = SubscriptionEnum.Progress,
-        });
+          Next = SubscriptionEnum.Progress
+        };
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Connect()));
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Progress,
-          Next = SubscriptionEnum.Stream,
-        });
+          Next = SubscriptionEnum.Stream
+        };
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
-        {
-          Error = e,
-          Content = e.Message,
-        });
+        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
       }
     }
 
@@ -78,26 +66,23 @@ namespace Core.Client.Components
     {
       try
       {
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
-        });
+        };
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Disconnect()));
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.None,
-        });
+        };
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
-        {
-          Error = e,
-          Content = e.Message,
-        });
+        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
       }
     }
 
@@ -108,26 +93,23 @@ namespace Core.Client.Components
     {
       try
       {
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Pause,
           Next = SubscriptionEnum.Progress,
-        });
+        };
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Subscribe()));
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Stream,
-        });
+        };
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
-        {
-          Error = e,
-          Content = e.Message,
-        });
+        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
       }
     }
 
@@ -138,26 +120,23 @@ namespace Core.Client.Components
     {
       try
       {
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
-        });
+        };
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Unsubscribe()));
-        await Observer.Send(new MessageModel<SubscriptionEnum>
+
+        Messenger.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Pause,
-        });
+        };
       }
       catch (Exception e)
       {
-        InstanceService<MessageService>.Instance.Update(new MessageModel<string>
-        {
-          Error = e,
-          Content = e.Message,
-        });
+        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
       }
     }
   }

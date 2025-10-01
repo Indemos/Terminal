@@ -1,5 +1,5 @@
 using Core.Common.Enums;
-using Core.Common.States;
+using Core.Common.Models;
 using Orleans;
 using System.Threading.Tasks;
 
@@ -11,28 +11,28 @@ namespace Core.Common.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomState> Dom(MetaState criteria);
+    Task<DomModel> Dom(MetaModel criteria);
 
     /// <summary>
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    Task<StatusResponse> Store(DomState dom);
+    Task<StatusResponse> Store(DomModel dom);
   }
 
-  public class DomGrain : Grain<DomState>, IDomGrain
+  public class DomGrain : Grain<DomModel>, IDomGrain
   {
     /// <summary>
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<DomState> Dom(MetaState criteria) => Task.FromResult(State);
+    public virtual Task<DomModel> Dom(MetaModel criteria) => Task.FromResult(State);
 
     /// <summary>
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    public virtual Task<StatusResponse> Store(DomState dom)
+    public virtual Task<StatusResponse> Store(DomModel dom)
     {
       if (dom is not null)
       {

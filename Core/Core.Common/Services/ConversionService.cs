@@ -1,4 +1,4 @@
-using Core.Common.States;
+using Core.Common.Models;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -81,7 +81,7 @@ namespace Core.Common.Services
     /// <summary>
     /// Get compound key for grains
     /// </summary>
-    public virtual string Compose(DescriptorState descriptor) => JsonSerializer.Serialize(descriptor, Options);
+    public virtual string Compose(DescriptorModel descriptor) => JsonSerializer.Serialize(descriptor, Options);
 
     /// <summary>
     /// Read compound key for grains
