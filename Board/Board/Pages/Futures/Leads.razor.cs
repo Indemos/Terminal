@@ -1,10 +1,10 @@
 using Board.Components;
-using Board.Services;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -20,7 +20,7 @@ namespace Board.Pages.Futures
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] SubscriptionService Observer { get; set; }
 
     /// <summary>
     /// Strategy
@@ -53,7 +53,7 @@ namespace Board.Pages.Futures
         IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
         PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
 
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           switch (true)
           {

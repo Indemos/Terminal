@@ -1,17 +1,19 @@
 using Board.Services;
-using Core.Enums;
+using Core.Messengers;
+using Core.Messengers.Hubs;
+using Core.Messengers.Streams;
 using Core.Services;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
 using Orleans;
 using Orleans.Hosting;
-using Orleans.Providers;
 using Orleans.Serialization;
 
 namespace Board
@@ -21,19 +23,18 @@ namespace Board
     public static void Main(string[] args)
     {
       var builder = WebApplication.CreateBuilder(args);
+      var setup = builder.Configuration;
 
+      builder.WebHost.UseUrls(setup.GetValue<string>("Apps:Address"));
       builder.Host.UseOrleans((o, orleans) =>
       {
         orleans.UseLocalhostClustering();
         orleans.AddMemoryGrainStorageAsDefault();
-        orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Price));
-        orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Order));
-        orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(StreamEnum.Message));
         orleans.AddMemoryGrainStorage("PubSubStore");
         orleans.UseDashboard(options =>
         {
-          options.Port = 8080;
-          options.Host = "*";
+          options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
+          options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
         });
 
         orleans.ConfigureServices(services =>
@@ -43,22 +44,22 @@ namespace Board
             .WithResolver(ContractlessStandardResolver.Instance);
 
           services.AddSingleton(messageOptions);
-          services.AddSerializer(serBuilder =>
-          {
-            serBuilder.AddMessagePackSerializer(
-              o => true,
-              o => true,
-              o => o.Configure(options => options.SerializerOptions = messageOptions));
-          });
+          services.AddSerializer(serBuilder => serBuilder.AddMessagePackSerializer(
+            o => true,
+            o => true,
+            o => o.Configure(options => options.SerializerOptions = messageOptions)));
         });
       });
-
-      InstanceService<ConfigurationService>.Instance.Setup = builder.Configuration;
 
       builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
-      builder.Services.AddScoped<MessageService>();
+      builder.Services.AddScoped<Messenger>();
+      builder.Services.AddScoped<LogService>();
+      builder.Services.AddScoped<SubscriptionService>();
+      builder.Services.AddScoped(o => new PriceStream($"{setup["Apps:Address"]}/prices"));
+      builder.Services.AddScoped(o => new OrderStream($"{setup["Apps:Address"]}/orders"));
+      builder.Services.AddScoped(o => new MessageStream($"{setup["Apps:Address"]}/messages"));
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
@@ -68,6 +69,11 @@ namespace Board
         o.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.TopRight;
       });
 
+      builder.Services.AddSignalR()
+        .AddMessagePackProtocol(o => o.SerializerOptions = MessagePackSerializerOptions
+          .Standard
+          .WithResolver(ContractlessStandardResolver.Instance));
+
       var app = builder.Build();
 
       app.UseAntiforgery();
@@ -75,6 +81,9 @@ namespace Board
       app.UseRouting();
       app.MapBlazorHub();
       app.MapFallbackToPage("/Host");
+      app.MapHub<MessageHub>("/messages");
+      app.MapHub<PriceHub>("/prices");
+      app.MapHub<OrderHub>("/orders");
       app.Run();
     }
   }

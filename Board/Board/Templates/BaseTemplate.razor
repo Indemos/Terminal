@@ -1,10 +1,11 @@
 @using Core.Enums
+@using Core.Messengers
 @using Core.Models
-@using Orleans.Streams
 
 @inject ISnackbar Popup
-@inject MessageService Messenger
 @inject IConfiguration Configuration
+@inject LogService Recorder
+@inject Messenger Streamer
 
 @inherits LayoutComponentBase
 
@@ -28,13 +29,12 @@
     {
       StateHasChanged();
 
-      Messenger.Stream.SubscribeAsync((o, x) =>
+      Streamer.Messages.Subscribe(nameof(StreamEnum.Message), o =>
       {
         try
         {
-          InstanceService<RecordService>
-            .Instance
-            .Recorder
+            Recorder
+            .Data
             .Information("{@Message}", o);
 
           if (o?.Content is not null)
@@ -43,7 +43,6 @@
           }
         }
         catch (Exception) { }
-        return Task.CompletedTask;
       });
     }
   }

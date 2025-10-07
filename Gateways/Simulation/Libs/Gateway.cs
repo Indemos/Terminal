@@ -2,7 +2,6 @@ using Core.Grains;
 using Core.Models;
 using Simulation.Grains;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 
 namespace Simulation
@@ -45,8 +44,6 @@ namespace Simulation
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      DisconnectOrders();
-
       return Task.FromResult(streamer.Disconnect());
     }
 
@@ -135,27 +132,9 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupsResponse> SendOrder(OrderModel order)
+    public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
     {
-      var response = new OrderGroupsResponse();
-      var ordersGrain = Component<IOrdersGrain>();
-
-      foreach (var nextOrder in Compose(order))
-      {
-        var orderResponse = new OrderResponse
-        {
-          Errors = [.. GetErrors(nextOrder).Select(e => e.Message)]
-        };
-
-        if (orderResponse.Errors.Count is 0)
-        {
-          orderResponse = await Component<IOrdersGrain>().Store(nextOrder);
-        }
-
-        response.Data.Add(orderResponse);
-      }
-
-      return response;
+      return Component<IOrdersGrain>().Send(order);
     }
 
     /// <summary>

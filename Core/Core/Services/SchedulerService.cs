@@ -22,10 +22,10 @@ namespace Core.Services
     /// Constructor
     /// </summary>
     /// <param name="count"></param>
-    /// <param name="cancellation"></param>
-    public SchedulerService(int count, CancellationTokenSource cancellation)
+    /// <param name="cleaner"></param>
+    public SchedulerService(int count, CancellationTokenSource cleaner)
     {
-      cleaner = cancellation;
+      this.cleaner = cleaner;
       queue = Channel.CreateBounded<Action>(new BoundedChannelOptions(count)
       {
         SingleReader = false,
@@ -37,7 +37,7 @@ namespace Core.Services
       {
         try
         {
-          foreach (var action in queue.Reader.ReadAllAsync(cancellation.Token).ToBlockingEnumerable())
+          foreach (var action in queue.Reader.ReadAllAsync(cleaner.Token).ToBlockingEnumerable())
           {
             action();
           }

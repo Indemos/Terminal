@@ -30,11 +30,6 @@ namespace Core.Validators
         RuleFor(o => o.Derivative.TradeDate).NotEmpty();
         RuleFor(o => o.Derivative.ExpirationDate).NotEmpty();
       });
-
-      When(o => o.Type is InstrumentEnum.Futures, () =>
-      {
-        RuleFor(o => o.Derivative.ExpirationDate).NotEmpty();
-      });
     }
   }
 }

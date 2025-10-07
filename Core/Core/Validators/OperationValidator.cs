@@ -6,9 +6,9 @@ namespace Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class TransactionValidator : AbstractValidator<OperationModel>
+  public class OperationValidator : AbstractValidator<OperationModel>
   {
-    public TransactionValidator()
+    public OperationValidator()
     {
       RuleFor(o => o.Id).Empty();
       RuleFor(o => o.Price).Empty();

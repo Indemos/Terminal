@@ -49,7 +49,7 @@ namespace Simulation.Prices.Tests
 
       var order = new OrderModel();
 
-      Assert.Throws<AggregateException>(() => grain.Store(order).Result);
+      Assert.Throws<AggregateException>(() => grain.Send(order).Result);
     }
 
     [Fact]
@@ -73,8 +73,8 @@ namespace Simulation.Prices.Tests
 
       var copyId = $"{Guid.NewGuid()}";
 
-      await grain.Store(order);
-      await grain.Store(order with { Id = copyId });
+      await grain.Send(order);
+      await grain.Send(order with { Id = copyId });
       await grain.Remove(order with { Id = copyId });
 
       var orders = await grain.Orders(default);

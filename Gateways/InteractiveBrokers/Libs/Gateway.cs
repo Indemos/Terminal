@@ -12,11 +12,6 @@ namespace InteractiveBrokers
   public class Gateway : Core.Conventions.Gateway
   {
     /// <summary>
-    /// Streamer
-    /// </summary>
-    protected ConnectionGrain streamer;
-
-    /// <summary>
     /// Port
     /// </summary>
     public virtual int Port { get; set; } = 7497;
@@ -37,6 +32,12 @@ namespace InteractiveBrokers
     public virtual TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
+    /// Price update
+    /// </summary>
+    /// <param name="price"></param>
+    public virtual Task OnPrice(PriceModel price) => Subscription(price);
+
+    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<StatusResponse> Connect()
@@ -52,8 +53,7 @@ namespace InteractiveBrokers
         Account = Account,
       });
 
-      ConnectPrices();
-      ConnectOrders();
+      //ConnectPrices();
 
       return await grain.Connect();
     }
@@ -63,8 +63,7 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      DisconnectPrices();
-      DisconnectOrders();
+      //DisconnectPrices();
 
       return Component<IConnectionGrain>().Disconnect();
     }
@@ -164,26 +163,9 @@ namespace InteractiveBrokers
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupsResponse> SendOrder(OrderModel order)
+    public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
     {
-      var response = new OrderGroupsResponse();
-
-      foreach (var nextOrder in Compose(order))
-      {
-        var orderResponse = new OrderResponse
-        {
-          Errors = [.. GetErrors(nextOrder).Select(e => e.Message)]
-        };
-
-        if (orderResponse.Errors.Count is 0)
-        {
-          orderResponse = await Component<IOrdersGrain>().Store(nextOrder);
-        }
-
-        response.Data.Add(orderResponse);
-      }
-
-      return response;
+      return Component<IOrdersGrain>().Send(order);
     }
 
     /// <summary>

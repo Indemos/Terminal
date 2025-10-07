@@ -50,13 +50,13 @@ namespace Core.Grains
     /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
       actions = GrainFactory.Get<ITransactionsGrain>(descriptor);
 
-      await base.OnActivateAsync(cancellation);
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>

@@ -1,9 +1,8 @@
 using Core.Enums;
 using Core.Extensions;
+using Core.Messengers;
 using Core.Models;
-using Core.Validators;
 using Orleans;
-using Orleans.Streams;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +23,11 @@ namespace Core.Conventions
     AccountModel Account { get; set; }
 
     /// <summary>
+    /// Data stream
+    /// </summary>
+    Messenger Streamer { get; set; }
+
+    /// <summary>
     /// Cluster client
     /// </summary>
     IClusterClient Connector { get; set; }
@@ -32,21 +36,6 @@ namespace Core.Conventions
     /// Data stream
     /// </summary>
     Func<PriceModel, Task> Subscription { get; set; }
-
-    /// <summary>
-    /// Data stream
-    /// </summary>
-    IAsyncStream<PriceModel> Stream { get; }
-
-    /// <summary>
-    /// Order stream
-    /// </summary>
-    IAsyncStream<OrderModel> OrderStream { get; }
-
-    /// <summary>
-    /// Message stream
-    /// </summary>
-    IAsyncStream<MessageModel> MessageStream { get; }
 
     /// <summary>
     /// Connect
@@ -141,21 +130,6 @@ namespace Core.Conventions
   public abstract class Gateway : IGateway
   {
     /// <summary>
-    /// Order validator
-    /// </summary>
-    protected OrderValidator orderValidator = new();
-
-    /// <summary>
-    /// Data subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<PriceModel> dataSubscription;
-
-    /// <summary>
-    /// Order subscription
-    /// </summary>
-    protected StreamSubscriptionHandle<OrderModel> orderSubscription;
-
-    /// <summary>
     /// Namespace
     /// </summary>
     public virtual string Space { get; set; } = $"{Guid.NewGuid()}";
@@ -173,28 +147,12 @@ namespace Core.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual Func<PriceModel, Task> Subscription { get; set; }
+    public virtual Messenger Streamer { get; set; }
 
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual IAsyncStream<PriceModel> Stream => Connector
-      .GetStreamProvider(nameof(StreamEnum.Price))
-      .GetStream<PriceModel>(Account.Name, Guid.Empty);
-
-    /// <summary>
-    /// Order stream
-    /// </summary>
-    public virtual IAsyncStream<OrderModel> OrderStream => Connector
-      .GetStreamProvider(nameof(StreamEnum.Order))
-      .GetStream<OrderModel>(Account.Name, Guid.Empty);
-
-    /// <summary>
-    /// Message stream
-    /// </summary>
-    public virtual IAsyncStream<MessageModel> MessageStream => Connector
-      .GetStreamProvider(nameof(StreamEnum.Message))
-      .GetStream<MessageModel>(string.Empty, Guid.Empty);
+    public virtual Func<PriceModel, Task> Subscription { get; set; }
 
     /// <summary>
     /// Connect
@@ -312,28 +270,17 @@ namespace Core.Conventions
     /// <summary>
     /// Subscribe to price updates
     /// </summary>
-    protected virtual async void ConnectPrices()
+    protected virtual void ConnectPrices()
     {
-      dataSubscription = await Stream.SubscribeAsync((o, v) => Subscription(o));
-    }
-
-    /// <summary>
-    /// Unsubscribe from price updates
-    /// </summary>
-    protected virtual async void DisconnectPrices()
-    {
-      if (dataSubscription is not null)
-      {
-        await dataSubscription.UnsubscribeAsync();
-      }
+      Streamer.Prices.Subscribe(nameof(StreamEnum.Price), o => Subscription(o));
     }
 
     /// <summary>
     /// Subscribe to order updates
     /// </summary>
-    protected virtual async void ConnectOrders()
+    protected virtual void ConnectOrders()
     {
-      orderSubscription = await OrderStream.SubscribeAsync((o, v) =>
+      Streamer.Orders.Subscribe(nameof(StreamEnum.Order), o =>
       {
         if (o.Operation.Status is OrderStatusEnum.Transaction)
         {
@@ -342,86 +289,7 @@ namespace Core.Conventions
             Performance = Account.Performance + o.Balance.Current
           };
         }
-
-        return Task.CompletedTask;
       });
-    }
-
-    /// <summary>
-    /// Unsubscribe from order updates
-    /// </summary>
-    protected virtual async void DisconnectOrders()
-    {
-      if (orderSubscription is not null)
-      {
-        await orderSubscription.UnsubscribeAsync();
-      }
-    }
-
-    /// <summary>
-    /// Convert hierarchy of orders into a plain list
-    /// </summary>
-    protected virtual List<OrderModel> Compose(OrderModel order)
-    {
-      var nextOrders = order
-        .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side or null)
-        .Select(o => Merge(o, order))
-        .ToList();
-
-      if (order.Amount is not null)
-      {
-        nextOrders.Add(Merge(order, order));
-      }
-
-      return nextOrders;
-    }
-
-    /// <summary>
-    /// Update side order from group
-    /// </summary>
-    /// <param name="group"></param>
-    /// <param name="order"></param>
-    protected virtual OrderModel Merge(OrderModel group, OrderModel order)
-    {
-      var groupOrders = order
-        ?.Orders
-        ?.Where(o => o.Instruction is InstructionEnum.Brace)
-        ?.Select(o => Merge(group, o));
-
-      var nextOrder = order with
-      {
-        Descriptor = group.Descriptor,
-        Type = order.Type ?? group.Type ?? OrderTypeEnum.Market,
-        TimeSpan = order.TimeSpan ?? group.TimeSpan ?? OrderTimeSpanEnum.Gtc,
-        Instruction = order.Instruction ?? InstructionEnum.Side,
-        Operation = order.Operation with { Time = order?.Operation?.Instrument?.Price?.Time },
-        Orders = [.. groupOrders]
-      };
-
-      return nextOrder;
-    }
-
-    /// <summary>
-    /// Preprocess order
-    /// </summary>
-    /// <param name="order"></param>
-    protected virtual List<ErrorModel> GetErrors(OrderModel order)
-    {
-      var response = new List<ErrorModel>();
-      var orders = order.Orders.Append(order);
-
-      foreach (var subOrder in orders)
-      {
-        var errors = orderValidator
-          .Validate(subOrder)
-          .Errors
-          .Select(error => new ErrorModel { Message = error.ErrorMessage });
-
-        response.AddRange(errors);
-      }
-
-      return response;
     }
 
     /// <summary>

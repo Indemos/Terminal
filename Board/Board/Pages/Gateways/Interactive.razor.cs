@@ -4,7 +4,7 @@ using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
-using Distribution.Services;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -18,7 +18,7 @@ namespace Board.Pages.Gateways
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] SubscriptionService Observer { get; set; }
 
     protected ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
@@ -30,9 +30,10 @@ namespace Board.Pages.Gateways
     protected PerformanceIndicator Performance { get; set; }
     protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
-      Name = "ESH5",
+      Name = "ESZ5",
       Exchange = "CME",
       Type = InstrumentEnum.Futures,
+      TimeFrame = TimeSpan.FromMinutes(1),
       Basis = new InstrumentModel { Name = "ES" }
     };
 
@@ -43,7 +44,7 @@ namespace Board.Pages.Gateways
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           switch (true)
           {
@@ -97,8 +98,8 @@ namespace Board.Pages.Gateways
 
       if (orders.IsEmpty() && positions.IsEmpty())
       {
-        await OpenPositions(Instrument, 1);
-        await Done(async () =>
+        OpenPositions(Instrument, price, 1);
+        Done(async () =>
         {
           var position = positions
             .Where(o => Equals(o.Operation.Instrument.Name, name))
@@ -112,19 +113,15 @@ namespace Board.Pages.Gateways
         }, 10000);
       }
 
-      ChartsView.UpdateItems(price.Time.Value, "Prices", "Bars", ChartsView.GetShape<CandleShape>(price));
-      PerformanceView.UpdateItems(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance });
-      PerformanceView.UpdateItems(price.Time.Value, "Performance", "PnL", new LineShape { Y = performance.Response.Last });
+      ChartsView.UpdateItems(price.Bar.Time.Value, "Prices", "Bars", ChartsView.GetShape<CandleShape>(price));
+      PerformanceView.UpdateItems(price.Bar.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance });
+      PerformanceView.UpdateItems(price.Bar.Time.Value, "Performance", "PnL", new LineShape { Y = performance.Response.Last });
       TransactionsView.UpdateItems([.. View.Adapters.Values]);
       OrdersView.UpdateItems([.. View.Adapters.Values]);
       PositionsView.UpdateItems([.. View.Adapters.Values]);
     }
 
-    protected double? GetPrice(double direction) => direction > 0 ?
-      Instrument.Price.Ask :
-      Instrument.Price.Bid;
-
-    protected async Task OpenPositions(InstrumentModel instrument, double direction)
+    protected async void OpenPositions(InstrumentModel instrument, PriceModel price, double direction)
     {
       var adapter = View.Adapters["Prime"];
       var side = direction > 0 ? OrderSideEnum.Long : OrderSideEnum.Short;
@@ -136,7 +133,7 @@ namespace Board.Pages.Gateways
         Side = stopSide,
         Type = OrderTypeEnum.Limit,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(direction) + 15 * direction,
+        Price = price.Last + 15 * direction,
         Operation = new() { Instrument = instrument }
       };
 
@@ -146,7 +143,7 @@ namespace Board.Pages.Gateways
         Side = stopSide,
         Type = OrderTypeEnum.Stop,
         Instruction = InstructionEnum.Brace,
-        Price = GetPrice(-direction) - 15 * direction,
+        Price = price.Last - 15 * direction,
         Operation = new() { Instrument = instrument }
       };
 
@@ -154,7 +151,6 @@ namespace Board.Pages.Gateways
       {
         Amount = 1,
         Side = side,
-        Price = GetPrice(direction),
         Type = OrderTypeEnum.Market,
         Operation = new() { Instrument = instrument },
         Orders = [SL, TP]
@@ -192,7 +188,7 @@ namespace Board.Pages.Gateways
     /// <param name="action"></param>
     /// <param name="interval"></param>
     /// <returns></returns>
-    public static async Task Done(Action action, int interval)
+    public static async void Done(Action action, int interval)
     {
       await Task.Delay(interval);
       action();

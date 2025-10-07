@@ -1,6 +1,6 @@
-using Board.Services;
 using Core.Conventions;
 using Core.Enums;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace Board.Components
 {
   public partial class TransactionsComponent
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] public virtual SubscriptionService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -47,7 +47,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {

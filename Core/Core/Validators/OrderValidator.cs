@@ -28,7 +28,7 @@ namespace Core.Validators
 
       When(o => o?.Instruction is null or InstructionEnum.Side or InstructionEnum.Brace, () =>
       {
-        RuleFor(o => o.Operation).SetValidator(new TransactionValidator());
+        RuleFor(o => o.Operation).SetValidator(new OperationValidator());
       });
 
       When(o => o.Type is OrderTypeEnum.Market, () =>
@@ -37,49 +37,7 @@ namespace Core.Validators
         RuleFor(o => o.ActivationPrice).Empty();
       });
 
-      When(o => o.Side is OrderSideEnum.Long && o.Type is OrderTypeEnum.Stop, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Operation.Instrument.Price.Ask);
-        RuleFor(o => o.ActivationPrice).Empty();
-      });
-
-      When(o => o.Side is OrderSideEnum.Short && o.Type is OrderTypeEnum.Stop, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Operation.Instrument.Price.Bid);
-        RuleFor(o => o.ActivationPrice).Empty();
-      });
-
-      When(o => o.Side is OrderSideEnum.Long && o.Type is OrderTypeEnum.Limit, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.Operation.Instrument.Price.Ask);
-        RuleFor(o => o.ActivationPrice).Empty();
-      });
-
-      When(o => o.Side is OrderSideEnum.Short && o.Type is OrderTypeEnum.Limit, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.Operation.Instrument.Price.Bid);
-        RuleFor(o => o.ActivationPrice).Empty();
-      });
-
-      When(o => o.Side is OrderSideEnum.Long && o.Type is OrderTypeEnum.StopLimit, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).GreaterThanOrEqualTo(o => o.ActivationPrice);
-        RuleFor(o => o.ActivationPrice).NotEmpty();
-        RuleFor(o => o.ActivationPrice).GreaterThanOrEqualTo(o => o.Operation.Instrument.Price.Ask);
-      });
-
-      When(o => o.Side is OrderSideEnum.Short && o.Type is OrderTypeEnum.StopLimit, () =>
-      {
-        RuleFor(o => o.Price).NotEmpty();
-        RuleFor(o => o.Price).LessThanOrEqualTo(o => o.ActivationPrice);
-        RuleFor(o => o.ActivationPrice).NotEmpty();
-        RuleFor(o => o.ActivationPrice).LessThanOrEqualTo(o => o.Operation.Instrument.Price.Bid);
-      });
+      When(o => o.Operation.Instrument.Price is not null, () => RuleFor(o => o).SetValidator(new OrderPriceValidator()));
     }
   }
 }

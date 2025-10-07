@@ -1,10 +1,11 @@
 using Board.Components;
-using Board.Services;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
+using Core.Messengers;
 using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -19,7 +20,8 @@ namespace Board.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] Messenger Streamer { get; set; }
+    [Inject] SubscriptionService Observer { get; set; }
 
     /// <summary>
     /// Strategy
@@ -47,7 +49,7 @@ namespace Board.Pages.Shares
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           switch (true)
           {
@@ -76,8 +78,9 @@ namespace Board.Pages.Shares
       var adapter = View.Adapters["Prime"] = new Simulation.Gateway
       {
         Speed = 1,
+        Streamer = Streamer,
         Connector = Connector,
-        Source = Configuration["Simulation:Source"],
+        Source = Configuration["Documents:Resources"],
         Account = new AccountModel
         {
           Name = "Demo",

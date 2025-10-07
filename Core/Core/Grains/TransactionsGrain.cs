@@ -1,10 +1,8 @@
-using Core.Enums;
 using Core.Extensions;
-using Core.Services;
+using Core.Messengers;
 using Core.Models;
+using Core.Services;
 using Orleans;
-using Orleans.Streams;
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -42,20 +40,22 @@ namespace Core.Grains
     /// <summary>
     /// Order stream
     /// </summary>
-    protected IAsyncStream<OrderModel> orderStream;
+    protected Messenger streamer;
+
+    /// <summary>
+    /// Constructor
+    /// </summary>
+    /// <param name="streamService"></param>
+    public TransactionsGrain(Messenger streamService) => streamer = streamService;
 
     /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-      orderStream = this
-        .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderModel>(descriptor.Account, Guid.Empty);
-
-      await base.OnActivateAsync(cancellation);
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ namespace Core.Grains
 
       State.Grains.Add(orderGrain);
 
-      await orderStream.OnNextAsync(order);
+      await streamer.Orders.Send(order);
 
       return response;
     }

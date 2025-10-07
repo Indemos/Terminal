@@ -1,6 +1,6 @@
-using Board.Services;
 using Core.Conventions;
 using Core.Enums;
+using Core.Services;
 using Estimator.Models;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -12,7 +12,7 @@ namespace Board.Components
 {
   public partial class StatementsComponent
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] public virtual SubscriptionService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -33,7 +33,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           switch (true)
           {
@@ -55,7 +55,7 @@ namespace Board.Components
     /// <param name="adapters"></param>
     public virtual async void UpdateItems(params IGateway[] adapters)
     {
-      if (Messenger.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }
@@ -101,7 +101,7 @@ namespace Board.Components
     /// <summary>
     /// Clear records
     /// </summary>
-    public virtual void Clear() => UpdateItems([]);
+    public virtual void Clear() => Stats = new Dictionary<string, IList<ScoreData>>();
 
     /// <summary>
     /// Format double

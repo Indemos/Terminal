@@ -1,7 +1,8 @@
 using Core.Enums;
 using Core.Extensions;
-using Core.Services;
 using Core.Models;
+using Core.Services;
+using Core.Validators;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
@@ -22,7 +23,7 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderGroupsResponse> Send(OrderModel order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -50,20 +51,30 @@ namespace Core.Grains
     protected ConversionService converter = new();
 
     /// <summary>
+    /// Order validator
+    /// </summary>
+    protected OrderValidator orderValidator = new();
+
+    /// <summary>
     /// Transactions
     /// </summary>
     protected IPositionsGrain positions;
 
     /// <summary>
+    /// Instruments
+    /// </summary>
+    protected Dictionary<string, PriceModel> prices = new();
+
+    /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
       positions = GrainFactory.Get<IPositionsGrain>(descriptor);
 
-      await base.OnActivateAsync(cancellation);
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>
@@ -79,14 +90,30 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderModel order)
+    public virtual async Task<OrderGroupsResponse> Send(OrderModel order)
     {
-      var grain = State.Grains[order.Id] = GrainFactory.Get<IOrderGrain>(descriptor with
-      {
-        Order = order.Id
-      });
+      var orders = Compose(order);
+      var responses = orders
+        .Select(o => new OrderResponse { Data = o, Errors = [.. Errors(o).Select(error => error.Message)] })
+        .ToArray();
 
-      return await grain.Store(order);
+      if (responses.All(o => o.Errors.Count is 0))
+      {
+        foreach (var o in orders)
+        {
+          var name = descriptor with { Order = o.Id };
+          var grain = GrainFactory.Get<IOrderGrain>(name);
+
+          await grain.Store(o);
+
+          State.Grains[order.Id] = grain;
+        }
+      }
+
+      return new()
+      {
+        Data = responses
+      };
     }
 
     /// <summary>
@@ -95,6 +122,8 @@ namespace Core.Grains
     /// <param name="price"></param>
     public virtual async Task<StatusResponse> Tap(PriceModel price)
     {
+      prices[price.Name] = price;
+
       foreach (var grain in State.Grains)
       {
         if (await grain.Value.IsExecutable(price))
@@ -123,6 +152,80 @@ namespace Core.Grains
       {
         Data = order.Id
       });
+    }
+
+    /// <summary>
+    /// Convert hierarchy of orders into a plain list
+    /// </summary>
+    protected virtual List<OrderModel> Compose(OrderModel order)
+    {
+      var nextOrders = order
+        .Orders
+        .Where(o => o.Instruction is InstructionEnum.Side or null)
+        .Select(o => Merge(o, order))
+        .ToList();
+
+      if (order.Amount is not null)
+      {
+        nextOrders.Add(Merge(order, order));
+      }
+
+      return nextOrders;
+    }
+
+    /// <summary>
+    /// Update side order from group
+    /// </summary>
+    /// <param name="group"></param>
+    /// <param name="order"></param>
+    protected virtual OrderModel Merge(OrderModel group, OrderModel order)
+    {
+      var instrument =
+        order?.Operation?.Instrument ??
+        group?.Operation?.Instrument;
+
+      var groupOrders = order
+        ?.Orders
+        ?.Where(o => o.Instruction is InstructionEnum.Brace)
+        ?.Select(o => Merge(group, o));
+
+      var nextOrder = order with
+      {
+        Descriptor = group.Descriptor,
+        Type = order.Type ?? group.Type ?? OrderTypeEnum.Market,
+        TimeSpan = order.TimeSpan ?? group.TimeSpan ?? OrderTimeSpanEnum.Gtc,
+        Instruction = order.Instruction ?? InstructionEnum.Side,
+        Orders = [.. groupOrders],
+        Operation = order.Operation with
+        {
+          Time = instrument?.Price?.Time,
+          //Instrument = instrument with { Price = prices.Get(instrument.Name) },
+        }
+      };
+
+      return nextOrder;
+    }
+
+    /// <summary>
+    /// Preprocess order
+    /// </summary>
+    /// <param name="order"></param>
+    protected virtual List<ErrorModel> Errors(OrderModel order)
+    {
+      var response = new List<ErrorModel>();
+      var orders = order.Orders.Append(order);
+
+      foreach (var subOrder in orders)
+      {
+        var errors = orderValidator
+          .Validate(subOrder)
+          .Errors
+          .Select(error => new ErrorModel { Message = error.ErrorMessage });
+
+        response.AddRange(errors);
+      }
+
+      return response;
     }
   }
 }

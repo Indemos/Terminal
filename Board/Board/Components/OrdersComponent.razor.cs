@@ -1,6 +1,6 @@
-using Board.Services;
 using Core.Conventions;
 using Core.Enums;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -11,7 +11,7 @@ namespace Board.Components
 {
   public partial class OrdersComponent
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] public virtual SubscriptionService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -46,7 +46,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -62,7 +62,7 @@ namespace Board.Components
     /// <param name="adapters"></param>
     public virtual async void UpdateItems(params IGateway[] adapters)
     {
-      if (Messenger.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }

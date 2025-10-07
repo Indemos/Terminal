@@ -3,10 +3,10 @@ using Canvas.Core.Engines;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
-using Board.Services;
 using Core.Enums;
 using Core.Extensions;
 using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using SkiaSharp;
 using System;
@@ -19,8 +19,14 @@ namespace Board.Components
 {
   public partial class ChartsComponent : IDisposable
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    /// <summary>
+    /// Message service
+    /// </summary>
+    [Inject] public virtual SubscriptionService Observer { get; set; }
 
+    /// <summary>
+    /// Caption
+    /// </summary>
     [Parameter] public virtual string Name { get; set; }
 
     /// <summary>
@@ -63,7 +69,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Messenger.OnMessage += state =>
+        Observer.OnState += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
@@ -89,7 +95,7 @@ namespace Board.Components
     /// <summary>
     /// Value to shape
     /// </summary>
-    /// <param name="point"></param>
+    /// <param name="value"></param>
     public virtual IShape GetShape<T>(double? value, SKColor? color = null) where T : IShape, new()
     {
       return GetShape<T>(new PriceModel { Last = value }, color);
@@ -98,24 +104,24 @@ namespace Board.Components
     /// <summary>
     /// Point to shape
     /// </summary>
-    /// <param name="point"></param>
-    public virtual IShape GetShape<T>(PriceModel point, SKColor? color = null) where T : IShape, new()
+    /// <param name="price"></param>
+    public virtual IShape GetShape<T>(PriceModel price, SKColor? color = null) where T : IShape, new()
     {
       if (typeof(T).Equals(typeof(CandleShape)))
       {
         return new CandleShape
         {
-          L = point.Bar.Low,
-          H = point.Bar.High,
-          O = point.Bar.Open,
-          C = point.Bar.Close,
-          Component = point.Bar.Close > point.Bar.Open ? UpSide : DownSide
+          L = price.Bar.Low,
+          H = price.Bar.High,
+          O = price.Bar.Open,
+          C = price.Bar.Close,
+          Component = price.Bar.Close > price.Bar.Open ? UpSide : DownSide
         };
       }
 
       return new T
       {
-        Y = point.Last,
+        Y = price.Last,
         Component = new ComponentModel { Color = color ?? SKColors.LimeGreen }
       };
     }
@@ -127,28 +133,28 @@ namespace Board.Components
     /// <param name="inputs"></param>
     public virtual async void UpdateItems(long index, string area, string series, params IShape[] inputs)
     {
-      if (Messenger.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }
 
+      if (Indices.TryGetValue(index, out var currentPoint) is false)
+      {
+        currentPoint = new Shape { X = index };
+
+        Shapes.Add(currentPoint);
+        Indices[index] = currentPoint;
+      }
+
       foreach (var input in inputs)
       {
-        if (Indices.TryGetValue(index, out IShape currentPoint) is false)
-        {
-          currentPoint = new Shape { X = index };
-
-          Shapes.Add(currentPoint);
-          Indices[index] = currentPoint;
-        }
-
         currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
         currentPoint.Groups[area].Groups[series] = input;
       }
 
       var domain = new DimensionModel
       {
-        IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count), Shapes.Count]
+        IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
       };
 
       await View.Update(domain, Shapes);
@@ -160,7 +166,7 @@ namespace Board.Components
     /// <param name="inputs"></param>
     public virtual void UpdateOrdinals(IList<IShape> shapes)
     {
-      if (Messenger.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }

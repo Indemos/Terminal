@@ -1,6 +1,8 @@
-using Board.Services;
 using Core.Conventions;
 using Core.Enums;
+using Core.Messengers;
+using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using System;
 using System.Collections.Generic;
@@ -11,7 +13,9 @@ namespace Board.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] Messenger Streamer { get; set; }
+    [Inject] SubscriptionService Observer { get; set; }
+
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
 
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
@@ -26,7 +30,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Messenger.State = new() { Next = SubscriptionEnum.None };
+        Observer.State = new() { Next = SubscriptionEnum.None };
 
         StateHasChanged();
       }
@@ -39,7 +43,7 @@ namespace Board.Components
     {
       try
       {
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.None,
           Next = SubscriptionEnum.Progress
@@ -47,7 +51,7 @@ namespace Board.Components
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Connect()));
 
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Stream
@@ -55,7 +59,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
+        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -66,7 +70,7 @@ namespace Board.Components
     {
       try
       {
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
@@ -74,7 +78,7 @@ namespace Board.Components
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Disconnect()));
 
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.None,
@@ -82,7 +86,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
+        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -93,7 +97,7 @@ namespace Board.Components
     {
       try
       {
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Pause,
           Next = SubscriptionEnum.Progress,
@@ -101,7 +105,7 @@ namespace Board.Components
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Subscribe()));
 
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Stream,
@@ -109,7 +113,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
+        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -120,7 +124,7 @@ namespace Board.Components
     {
       try
       {
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
@@ -128,7 +132,7 @@ namespace Board.Components
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Unsubscribe()));
 
-        Messenger.State = new()
+        Observer.State = new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Pause,
@@ -136,7 +140,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Messenger.Stream.OnNextAsync(new() { Error = e, Content = e.Message });
+        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
   }

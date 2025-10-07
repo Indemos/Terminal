@@ -1,6 +1,7 @@
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
+using Core.Messengers;
 using Core.Models;
 using Core.Services;
 using IBApi;
@@ -9,7 +10,6 @@ using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Messages;
 using InteractiveBrokers.Models;
 using Orleans;
-using Orleans.Streams;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -113,41 +113,35 @@ namespace InteractiveBrokers
     protected ConcurrentDictionary<string, int> subscriptions = new();
 
     /// <summary>
-    /// Data stream
+    /// Stream
     /// </summary>
-    protected IAsyncStream<PriceModel> stream;
+    protected Messenger streamer;
 
     /// <summary>
-    /// Order stream
+    /// Constructor
     /// </summary>
-    protected IAsyncStream<OrderModel> orderStream;
-
-    /// <summary>
-    /// Message stream
-    /// </summary>
-    protected IAsyncStream<MessageModel> messageStream;
+    /// <param name="streamService"></param>
+    public ConnectionGrain(Messenger streamService) => streamer = streamService;
 
     /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
+      await base.OnActivateAsync(cleaner);
+    }
 
-      stream = this
-        .GetStreamProvider(nameof(StreamEnum.Price))
-        .GetStream<PriceModel>(descriptor.Account, Guid.Empty);
-
-      orderStream = this
-        .GetStreamProvider(nameof(StreamEnum.Order))
-        .GetStream<OrderModel>(descriptor.Account, Guid.Empty);
-
-      messageStream = this
-        .GetStreamProvider(nameof(StreamEnum.Message))
-        .GetStream<MessageModel>(string.Empty, Guid.Empty);
-
-      await base.OnActivateAsync(cancellation);
+    /// <summary>
+    /// Deactivation
+    /// </summary>
+    /// <param name="reason"></param>
+    /// <param name="cleaner"></param>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cleaner)
+    {
+      await Disconnect();
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>
@@ -285,7 +279,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToConnections()
     {
-      api.ConnectionClosed += () => messageStream.OnNextAsync(new()
+      api.ConnectionClosed += () => streamer.Messages.Send(new MessageModel()
       {
         Content = $"{ClientErrorEnum.NoConnection}",
         Action = ActionEnum.Disconnect
@@ -308,7 +302,7 @@ namespace InteractiveBrokers
             break;
         }
 
-        await messageStream.OnNextAsync(new()
+        await streamer.Messages.Send(new MessageModel()
         {
           Code = code,
           Content = message,
@@ -322,7 +316,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToOrders()
     {
-      api.OpenOrder += o => orderStream.OnNextAsync(Downstream.GetOrder(o));
+      api.OpenOrder += o => streamer.Orders.Send(Downstream.GetOrder(o));
       api.ClientSocket.reqAutoOpenOrders(true);
     }
 
@@ -580,17 +574,20 @@ namespace InteractiveBrokers
             case PropertyEnum.LastPrice: price = price with { Last = message.Data ?? price.Last }; break;
           }
 
-          price = price with
-          {
-            Name = instrument.Name,
-            Time = DateTime.Now.Ticks,
-            Last = price.Last is 0 or null ? price.Bid ?? price.Ask : price.Last
-          };
-
           if (price.Bid is null || price.Ask is null)
           {
             return;
           }
+
+          price = await pricesGrain.Store(price with
+          {
+            Name = instrument.Name,
+            Time = DateTime.Now.Ticks,
+            TimeFrame = instrument.TimeFrame,
+            Last = price.Last is 0 or null ? price.Bid ?? price.Ask : price.Last
+          });
+
+          Console.WriteLine("A: " + new DateTime(price.Time.Value));
 
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
