@@ -3,7 +3,6 @@ using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
-using Core.Messengers;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -20,7 +19,7 @@ namespace Board.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] Messenger Streamer { get; set; }
+    [Inject] StreamService Streamer { get; set; }
     [Inject] SubscriptionService Observer { get; set; }
 
     /// <summary>

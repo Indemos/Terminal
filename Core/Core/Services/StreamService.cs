@@ -1,8 +1,8 @@
 using Core.Messengers.Streams;
 
-namespace Core.Messengers
+namespace Core.Services
 {
-  public class Messenger(PriceStream priceStream, OrderStream orderStream, MessageStream messageStream)
+  public class StreamService(PriceStream priceStream, OrderStream orderStream, MessageStream messageStream)
   {
     /// <summary>
     /// Price stream

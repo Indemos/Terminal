@@ -1,11 +1,10 @@
 @using Core.Enums
-@using Core.Messengers
 @using Core.Models
 
 @inject ISnackbar Popup
 @inject IConfiguration Configuration
 @inject LogService Recorder
-@inject Messenger Streamer
+@inject StreamService Streamer
 
 @inherits LayoutComponentBase
 
@@ -29,7 +28,7 @@
     {
       StateHasChanged();
 
-      Streamer.Messages.Subscribe(nameof(StreamEnum.Message), o =>
+      Streamer.Messages.Subscribe(o =>
       {
         try
         {

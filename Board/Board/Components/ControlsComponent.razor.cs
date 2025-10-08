@@ -1,6 +1,5 @@
 using Core.Conventions;
 using Core.Enums;
-using Core.Messengers;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -13,7 +12,7 @@ namespace Board.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] Messenger Streamer { get; set; }
+    [Inject] StreamService Streamer { get; set; }
     [Inject] SubscriptionService Observer { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }

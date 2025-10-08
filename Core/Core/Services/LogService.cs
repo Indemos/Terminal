@@ -1,7 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using Serilog;
 
-namespace Board.Services
+namespace Core.Services
 {
   public class LogService
   {
@@ -13,10 +12,10 @@ namespace Board.Services
     /// <summary>
     /// Constructor
     /// </summary>
-    public LogService(IConfiguration setup) => Log.Logger = new LoggerConfiguration()
+    public LogService(string source) => Log.Logger = new LoggerConfiguration()
       .MinimumLevel.Debug()
       .Enrich.FromLogContext()
-      .WriteTo.File($"{setup["Logs:Source"]}")
+      .WriteTo.File(source)
       .CreateLogger();
   }
 }

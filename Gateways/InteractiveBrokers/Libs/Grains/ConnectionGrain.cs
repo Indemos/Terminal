@@ -115,13 +115,13 @@ namespace InteractiveBrokers
     /// <summary>
     /// Stream
     /// </summary>
-    protected Messenger streamer;
+    protected StreamService streamer;
 
     /// <summary>
     /// Constructor
     /// </summary>
     /// <param name="streamService"></param>
-    public ConnectionGrain(Messenger streamService) => streamer = streamService;
+    public ConnectionGrain(StreamService streamService) => streamer = streamService;
 
     /// <summary>
     /// Activation
@@ -586,8 +586,6 @@ namespace InteractiveBrokers
             TimeFrame = instrument.TimeFrame,
             Last = price.Last is 0 or null ? price.Bid ?? price.Ask : price.Last
           });
-
-          Console.WriteLine("A: " + new DateTime(price.Time.Value));
 
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);

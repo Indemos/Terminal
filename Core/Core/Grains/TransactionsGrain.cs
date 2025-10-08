@@ -40,13 +40,13 @@ namespace Core.Grains
     /// <summary>
     /// Order stream
     /// </summary>
-    protected Messenger streamer;
+    protected StreamService streamer;
 
     /// <summary>
     /// Constructor
     /// </summary>
     /// <param name="streamService"></param>
-    public TransactionsGrain(Messenger streamService) => streamer = streamService;
+    public TransactionsGrain(StreamService streamService) => streamer = streamService;
 
     /// <summary>
     /// Activation

@@ -54,12 +54,12 @@ namespace Board
       builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
-      builder.Services.AddScoped<Messenger>();
-      builder.Services.AddScoped<LogService>();
+      builder.Services.AddScoped<StreamService>();
       builder.Services.AddScoped<SubscriptionService>();
-      builder.Services.AddScoped(o => new PriceStream($"{setup["Apps:Address"]}/prices"));
-      builder.Services.AddScoped(o => new OrderStream($"{setup["Apps:Address"]}/orders"));
-      builder.Services.AddScoped(o => new MessageStream($"{setup["Apps:Address"]}/messages"));
+      builder.Services.AddScoped(o => new LogService(setup["Documents:Logs"]));
+      builder.Services.AddScoped(o => new PriceStream(setup["Apps:Address"] + "/prices"));
+      builder.Services.AddScoped(o => new OrderStream(setup["Apps:Address"] + "/orders"));
+      builder.Services.AddScoped(o => new MessageStream(setup["Apps:Address"] + "/messages"));
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
@@ -76,7 +76,6 @@ namespace Board
 
       var app = builder.Build();
 
-      app.UseAntiforgery();
       app.UseStaticFiles();
       app.UseRouting();
       app.MapBlazorHub();

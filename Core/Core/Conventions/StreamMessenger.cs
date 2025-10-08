@@ -45,10 +45,8 @@ namespace Core.Conventions
     /// <summary>
     /// Subscribe to messages
     /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="descriptor"></param>
     /// <param name="action"></param>
-    public virtual Task Subscribe(string descriptor, Action<T> action) => Connect().ContinueWith(o => connection.On(descriptor, action));
+    public virtual Task Subscribe(Action<T> action) => Connect().ContinueWith(o => connection.On(name, action));
 
     /// <summary>
     /// Dispose
