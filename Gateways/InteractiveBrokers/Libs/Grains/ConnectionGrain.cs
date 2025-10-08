@@ -595,6 +595,7 @@ namespace InteractiveBrokers
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
           await pricesGrain.Store(price);
+          await stream.OnNextAsync(price);
         }
       }
 

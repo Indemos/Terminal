@@ -3,10 +3,10 @@ using Canvas.Core.Engines;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Canvas.Views.Web.Views;
-using Board.Services;
 using Core.Enums;
 using Core.Extensions;
 using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using SkiaSharp;
 using System;
@@ -19,7 +19,7 @@ namespace Board.Components
 {
   public partial class ChartsComponent : IDisposable
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] public virtual CommunicationService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 

@@ -4,9 +4,9 @@ using Orleans;
 using Orleans.Streams;
 using System;
 
-namespace Board.Services
+namespace Core.Services
 {
-  public class MessageService
+  public class CommunicationService
   {
     protected SubscriptionModel state = new() { Next = SubscriptionEnum.None };
 
@@ -19,7 +19,7 @@ namespace Board.Services
     /// Connector
     /// </summary>
     /// <param name="connector"></param>
-    public MessageService(IClusterClient connector) => Connector = connector;
+    public CommunicationService(IClusterClient connector) => Connector = connector;
 
     /// <summary>
     /// Stream

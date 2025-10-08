@@ -5,6 +5,7 @@ using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using MudBlazor;
@@ -21,7 +22,9 @@ namespace Board
     public static void Main(string[] args)
     {
       var builder = WebApplication.CreateBuilder(args);
+      var setup = builder.Configuration;
 
+      builder.WebHost.UseUrls(setup.GetValue<string>("Apps:Address"));
       builder.Host.UseOrleans((o, orleans) =>
       {
         orleans.UseLocalhostClustering();
@@ -32,8 +35,8 @@ namespace Board
         orleans.AddMemoryGrainStorage("PubSubStore");
         orleans.UseDashboard(options =>
         {
-          options.Port = 8080;
-          options.Host = "*";
+          options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
+          options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
         });
 
         orleans.ConfigureServices(services =>
@@ -53,12 +56,11 @@ namespace Board
         });
       });
 
-      InstanceService<ConfigurationService>.Instance.Setup = builder.Configuration;
-
       builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
-      builder.Services.AddScoped<MessageService>();
+      builder.Services.AddScoped<CommunicationService>();
+      builder.Services.AddScoped(o => new RecordService(setup["Documents:Logs"]));
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
@@ -70,7 +72,6 @@ namespace Board
 
       var app = builder.Build();
 
-      app.UseAntiforgery();
       app.UseStaticFiles();
       app.UseRouting();
       app.MapBlazorHub();

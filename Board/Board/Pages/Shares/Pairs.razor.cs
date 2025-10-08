@@ -1,10 +1,10 @@
 using Board.Components;
-using Board.Services;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -19,7 +19,7 @@ namespace Board.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] CommunicationService Messenger { get; set; }
 
     /// <summary>
     /// Strategy
@@ -77,7 +77,7 @@ namespace Board.Pages.Shares
       {
         Speed = 1,
         Connector = Connector,
-        Source = Configuration["Simulation:Source"],
+        Source = Configuration["Documents:Resources"],
         Account = new AccountModel
         {
           Name = "Demo",

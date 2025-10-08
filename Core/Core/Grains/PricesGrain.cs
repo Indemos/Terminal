@@ -1,9 +1,13 @@
 using Core.Extensions;
-using Core.Services;
 using Core.Models;
+using Core.Services;
 using Orleans;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.ServiceModel.Channels;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -43,19 +47,14 @@ namespace Core.Grains
     protected ConversionService converter = new();
 
     /// <summary>
-    /// Price map
-    /// </summary>
-    protected Dictionary<long?, int?> map = new();
-
-    /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cancellation"></param>
-    public override async Task OnActivateAsync(CancellationToken cancellation)
+    /// <param name="cleaner"></param>
+    public override async Task OnActivateAsync(CancellationToken cleaner)
     {
       descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
 
-      await base.OnActivateAsync(cancellation);
+      await base.OnActivateAsync(cleaner);
     }
 
     /// <summary>
@@ -76,23 +75,20 @@ namespace Core.Grains
     /// <param name="nextPrice"></param>
     public virtual Task<PriceModel> Store(PriceModel nextPrice)
     {
-      var roundTime = nextPrice.Time.Round(nextPrice.TimeFrame);
-      var index = map.Get(roundTime);
-      var currentPrice = index is null ? new PriceModel() : State.PriceGroups[index.Value];
-      var currentTime = currentPrice.Time ?? DateTime.MinValue.Ticks;
-      var price = Combine(currentPrice, nextPrice);
+      var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
+      var currentPrice = State.PriceGroups.LastOrDefault() ?? new PriceModel();
+      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame) ?? DateTime.MinValue.Ticks;
+      var same = Equals(nextTime, currentTime);
+      var price = Combine(same ? currentPrice : nextPrice, nextPrice);
 
       State.Prices.Add(price);
 
-      if (roundTime > currentTime)
+      if (same is false)
       {
         State.PriceGroups.Add(price);
-        map[roundTime.Value] = State.PriceGroups.Count - 1;
       }
-      else if (index is not null)
-      {
-        State.PriceGroups[index.Value] = price;
-      }
+
+      State.PriceGroups[State.PriceGroups.Count - 1] = price;
 
       return Task.FromResult(price);
     }
@@ -105,14 +101,13 @@ namespace Core.Grains
     protected virtual PriceModel Combine(PriceModel currentPrice, PriceModel nextPrice)
     {
       var price = (nextPrice.Last ?? currentPrice.Last).Value;
-      var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
-      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame);
 
       return currentPrice with
       {
         Last = price,
-        Time = nextPrice.Time,
         Name = nextPrice.Name,
+        Time = nextPrice.Time,
+        TimeFrame = nextPrice.TimeFrame,
         Ask = nextPrice.Ask ?? currentPrice?.Ask ?? price,
         Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
         AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
@@ -122,8 +117,8 @@ namespace Core.Grains
           Close = price,
           Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),
           High = Math.Max(price, currentPrice?.Bar?.High ?? price),
-          Open = nextTime > currentTime ? price : currentPrice?.Bar?.Open ?? price,
-          Time = nextTime
+          Open = currentPrice?.Bar?.Open ?? price,
+          Time = nextPrice.Time.Round(nextPrice.TimeFrame)
         }
       };
     }

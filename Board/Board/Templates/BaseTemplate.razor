@@ -3,8 +3,9 @@
 @using Orleans.Streams
 
 @inject ISnackbar Popup
-@inject MessageService Messenger
 @inject IConfiguration Configuration
+@inject CommunicationService Messenger
+@inject RecordService Recorder
 
 @inherits LayoutComponentBase
 
@@ -32,10 +33,7 @@
       {
         try
         {
-          InstanceService<RecordService>
-            .Instance
-            .Recorder
-            .Information("{@Message}", o);
+          Recorder.Service.Information("{@Message}", o);
 
           if (o?.Content is not null)
           {

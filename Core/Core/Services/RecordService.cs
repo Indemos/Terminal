@@ -1,26 +1,23 @@
-using Core.Services;
 using Serilog;
 
-namespace Board.Services
+namespace Core.Services
 {
   public class RecordService
   {
     /// <summary>
     /// Logger instance
     /// </summary>
-    public virtual ILogger Recorder => Log.Logger;
+    public virtual ILogger Service => Log.Logger;
 
     /// <summary>
     /// Constructor
     /// </summary>
-    public RecordService()
+    public RecordService(string source)
     {
-      var setup = InstanceService<ConfigurationService>.Instance.Setup;
-
       Log.Logger = new LoggerConfiguration()
         .MinimumLevel.Debug()
         .Enrich.FromLogContext()
-        .WriteTo.File($"{setup["Logs:Source"]}")
+        .WriteTo.File(source)
         .CreateLogger();
     }
   }

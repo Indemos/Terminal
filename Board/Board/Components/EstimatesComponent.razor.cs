@@ -1,8 +1,8 @@
 using Canvas.Core.Shapes;
-using Board.Services;
 using Core.Conventions;
 using Core.Enums;
 using Core.Models;
+using Core.Services;
 using Estimator.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -16,7 +16,7 @@ namespace Board.Components
 {
   public partial class EstimatesComponent
   {
-    [Inject] public virtual MessageService Messenger { get; set; }
+    [Inject] public virtual CommunicationService Messenger { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 

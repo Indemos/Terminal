@@ -1,10 +1,9 @@
 using Board.Components;
-using Board.Services;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
-using Distribution.Services;
+using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
@@ -18,7 +17,7 @@ namespace Board.Pages.Gateways
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] CommunicationService Messenger { get; set; }
 
     protected ControlsComponent View { get; set; }
     protected virtual ChartsComponent ChartsView { get; set; }
