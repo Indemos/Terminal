@@ -23,24 +23,6 @@ namespace Core.Extensions
     }
 
     /// <summary>
-    /// Round by interval
-    /// </summary>
-    /// <param name="input"></param>
-    /// <param name="span"></param>
-    public static DateTime? Round(this DateTime? input, TimeSpan? span)
-    {
-      if (input is null)
-      {
-        return null;
-      }
-
-      var date = input.Value.Ticks;
-      var excess = Math.Max(span?.Ticks ?? 1, 1);
-
-      return new DateTime(date - (date % excess), input.Value.Kind);
-    }
-
-    /// <summary>
     /// Date without time
     /// </summary>
     /// <param name="input"></param>
@@ -52,6 +34,34 @@ namespace Core.Extensions
       }
 
       return DateOnly.FromDateTime(input.Value);
+    }
+
+    /// <summary>
+    /// Round by interval
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="span"></param>
+    public static DateTime? Round(this DateTime? input, TimeSpan? span)
+    {
+      if (input is null)
+      {
+        return null;
+      }
+
+      return input.Value.Round(span);
+    }
+
+    /// <summary>
+    /// Round by interval
+    /// </summary>
+    /// <param name="input"></param>
+    /// <param name="span"></param>
+    public static DateTime Round(this DateTime input, TimeSpan? span)
+    {
+      var date = input.Ticks;
+      var excess = Math.Max(span?.Ticks ?? 1, 1);
+
+      return new DateTime(date - (date % excess), input.Kind);
     }
   }
 }
