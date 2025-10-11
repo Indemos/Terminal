@@ -1,10 +1,10 @@
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
+using Core.Tests;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
-using Simulation.Tests;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -55,8 +55,7 @@ namespace Simulation.Prices.Tests
     [Fact]
     public async Task Store()
     {
-      var descriptor = Descriptor;
-      var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+      var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(Descriptor);
       var order = new OrderModel
       {
         Amount = 1,

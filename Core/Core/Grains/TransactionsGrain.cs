@@ -1,5 +1,4 @@
 using Core.Extensions;
-using Core.Messengers;
 using Core.Models;
 using Core.Services;
 using Orleans;
@@ -77,7 +76,7 @@ namespace Core.Grains
 
       State.Grains.Add(orderGrain);
 
-      await streamer.Orders.Send(order);
+      await streamer.Send(order);
 
       return response;
     }

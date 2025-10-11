@@ -1,8 +1,6 @@
 using Core.Enums;
 using Core.Extensions;
-using Core.Messengers;
 using Core.Models;
-using Core.Services;
 using Orleans;
 using System;
 using System.Collections.Generic;
@@ -26,7 +24,7 @@ namespace Core.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    StreamService Streamer { get; set; }
+    Services.StreamService Streamer { get; set; }
 
     /// <summary>
     /// Cluster client
@@ -148,7 +146,7 @@ namespace Core.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual StreamService Streamer { get; set; }
+    public virtual Services.StreamService Streamer { get; set; }
 
     /// <summary>
     /// Data stream
@@ -273,7 +271,7 @@ namespace Core.Conventions
     /// </summary>
     protected virtual void ConnectPrices()
     {
-      Streamer.Prices.Subscribe(o => Subscription(o));
+      Streamer.Subscribe<PriceModel>(o => Subscription(o));
     }
 
     /// <summary>
@@ -281,7 +279,7 @@ namespace Core.Conventions
     /// </summary>
     protected virtual void ConnectOrders()
     {
-      Streamer.Orders.Subscribe(o =>
+      Streamer.Subscribe<OrderModel>(o =>
       {
         if (o.Operation.Status is OrderStatusEnum.Transaction)
         {

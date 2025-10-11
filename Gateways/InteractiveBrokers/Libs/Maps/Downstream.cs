@@ -142,8 +142,8 @@ namespace InteractiveBrokers.Mappers
     {
       switch (span)
       {
-        case "DAY": return OrderTimeSpanEnum.Day;
-        case "GTC": return OrderTimeSpanEnum.Gtc;
+        case "DAY": return OrderTimeSpanEnum.DAY;
+        case "GTC": return OrderTimeSpanEnum.GTC;
       }
 
       return null;

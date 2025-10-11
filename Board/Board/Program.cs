@@ -1,7 +1,3 @@
-using Board.Services;
-using Core.Messengers;
-using Core.Messengers.Hubs;
-using Core.Messengers.Streams;
 using Core.Services;
 using MessagePack;
 using MessagePack.Resolvers;
@@ -57,9 +53,7 @@ namespace Board
       builder.Services.AddScoped<StreamService>();
       builder.Services.AddScoped<SubscriptionService>();
       builder.Services.AddScoped(o => new LogService(setup["Documents:Logs"]));
-      builder.Services.AddScoped(o => new PriceStream(setup["Apps:Address"] + "/prices"));
-      builder.Services.AddScoped(o => new OrderStream(setup["Apps:Address"] + "/orders"));
-      builder.Services.AddScoped(o => new MessageStream(setup["Apps:Address"] + "/messages"));
+      builder.Services.AddScoped(o => new StreamService(setup["Apps:Address"] + "/messages"));
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
@@ -80,9 +74,7 @@ namespace Board
       app.UseRouting();
       app.MapBlazorHub();
       app.MapFallbackToPage("/Host");
-      app.MapHub<MessageHub>("/messages");
-      app.MapHub<PriceHub>("/prices");
-      app.MapHub<OrderHub>("/orders");
+      app.MapHub<StreamHubService>("/messages");
       app.Run();
     }
   }

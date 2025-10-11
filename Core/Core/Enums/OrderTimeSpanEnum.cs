@@ -2,11 +2,11 @@ namespace Core.Enums
 {
   public enum OrderTimeSpanEnum : byte
   {
-    Am,
-    Pm,
-    Day,
-    Fok,
-    Gtc,
-    Ioc,
+    AM,
+    PM,
+    DAY,
+    FOK,
+    GTC,
+    IOC,
   }
 }

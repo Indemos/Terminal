@@ -53,7 +53,8 @@ namespace InteractiveBrokers
         Account = Account,
       });
 
-      //ConnectPrices();
+      ConnectPrices();
+      ConnectOrders();
 
       return await grain.Connect();
     }
@@ -63,8 +64,6 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      //DisconnectPrices();
-
       return Component<IConnectionGrain>().Disconnect();
     }
 

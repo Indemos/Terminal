@@ -1,22 +1,63 @@
-using Core.Messengers.Streams;
+using MessagePack;
+using MessagePack.Resolvers;
+using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Threading.Tasks;
 
 namespace Core.Services
 {
-  public class StreamService(PriceStream priceStream, OrderStream orderStream, MessageStream messageStream)
+  public class StreamService : IAsyncDisposable
   {
-    /// <summary>
-    /// Price stream
-    /// </summary>
-    public virtual PriceStream Prices { get; } = priceStream;
+    protected HubConnection connection;
 
     /// <summary>
-    /// Order stream
+    /// Constructor
     /// </summary>
-    public virtual OrderStream Orders { get; } = orderStream;
+    /// <param name="source"></param>
+    public StreamService(string source)
+    {
+      connection = new HubConnectionBuilder()
+        .WithUrl(source)
+        .WithAutomaticReconnect()
+        .ConfigureLogging(o =>
+        {
+          o.AddConsole();
+          o.SetMinimumLevel(LogLevel.Critical);
+        })
+        .AddMessagePackProtocol(o => o.SerializerOptions = MessagePackSerializerOptions
+          .Standard
+          .WithResolver(ContractlessStandardResolver.Instance))
+        .Build();
+    }
 
     /// <summary>
-    /// Message stream
+    /// Send message
     /// </summary>
-    public virtual MessageStream Messages { get; } = messageStream;
+    /// <param name="message"></param>
+    public virtual Task Send<T>(T message) => Connect().ContinueWith(o => connection.SendAsync(nameof(StreamHubService.Send), typeof(T).Name, message));
+
+    /// <summary>
+    /// Subscribe to messages
+    /// </summary>
+    /// <param name="action"></param>
+    public virtual Task Subscribe<T>(Action<T> action) => Connect().ContinueWith(o => connection.On(typeof(T).Name, action));
+
+    /// <summary>
+    /// Dispose
+    /// </summary>
+    public virtual ValueTask DisposeAsync() => connection.DisposeAsync();
+
+    /// <summary>
+    /// Connect
+    /// </summary>
+    public virtual async Task Connect()
+    {
+      if (connection.State is not HubConnectionState.Connected)
+      {
+        await connection.StartAsync().ConfigureAwait(false);
+      }
+    }
   }
 }

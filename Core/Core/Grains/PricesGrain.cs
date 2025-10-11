@@ -77,13 +77,12 @@ namespace Core.Grains
     {
       var nextTime = nextPrice.Time.Round(nextPrice.TimeFrame);
       var currentPrice = State.PriceGroups.LastOrDefault() ?? new PriceModel();
-      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame);
-      var same = Equals(nextTime, currentTime);
-      var price = Combine(same ? currentPrice : nextPrice, nextPrice);
+      var currentTime = currentPrice.Time.Round(nextPrice.TimeFrame) ?? DateTime.MinValue.Ticks;
+      var price = Combine(nextTime > currentTime ? nextPrice : currentPrice, nextPrice);
 
       State.Prices.Add(price);
 
-      if (same is false)
+      if (nextPrice.TimeFrame is null || nextTime - currentTime >= nextPrice.TimeFrame.Value.Ticks)
       {
         State.PriceGroups.Add(price);
       }

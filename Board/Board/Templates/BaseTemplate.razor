@@ -28,7 +28,7 @@
     {
       StateHasChanged();
 
-      Streamer.Messages.Subscribe(o =>
+      Streamer.Subscribe<MessageModel>(o =>
       {
         try
         {

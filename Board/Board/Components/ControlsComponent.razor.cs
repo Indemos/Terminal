@@ -12,7 +12,7 @@ namespace Board.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] StreamService Streamer { get; set; }
+    [Inject] Core.Services.StreamService Streamer { get; set; }
     [Inject] SubscriptionService Observer { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
@@ -58,7 +58,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -85,7 +85,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -112,7 +112,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -139,7 +139,7 @@ namespace Board.Components
       }
       catch (Exception e)
       {
-        await Streamer.Messages.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
   }

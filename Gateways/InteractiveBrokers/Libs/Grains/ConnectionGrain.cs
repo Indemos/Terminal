@@ -1,7 +1,6 @@
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
-using Core.Messengers;
 using Core.Models;
 using Core.Services;
 using IBApi;
@@ -206,7 +205,21 @@ namespace InteractiveBrokers
 
       var id = subscriptions[instrument.Name] = nextId;
       var contracts = await Contracts(instrument);
-      var contract = contracts.First();
+      var contract = contracts.FirstOrDefault();
+
+      if (contract is null)
+      {
+        await streamer.Send(new MessageModel()
+        {
+          Content = $"{ClientErrorEnum.NoConnection}",
+          Action = ActionEnum.Disconnect
+        });
+
+        return new()
+        {
+          Data = StatusEnum.Inactive
+        };
+      }
 
       await SubscribeToPrices(id, Downstream.GetInstrument(contract, instrument));
 
@@ -279,7 +292,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToConnections()
     {
-      api.ConnectionClosed += () => streamer.Messages.Send(new MessageModel()
+      api.ConnectionClosed += () => streamer.Send(new MessageModel()
       {
         Content = $"{ClientErrorEnum.NoConnection}",
         Action = ActionEnum.Disconnect
@@ -302,7 +315,7 @@ namespace InteractiveBrokers
             break;
         }
 
-        await streamer.Messages.Send(new MessageModel()
+        await streamer.Send(new MessageModel()
         {
           Code = code,
           Content = message,
@@ -316,7 +329,7 @@ namespace InteractiveBrokers
     /// </summary>
     protected virtual void SubscribeToOrders()
     {
-      api.OpenOrder += o => streamer.Orders.Send(Downstream.GetOrder(o));
+      api.OpenOrder += o => streamer.Send(Downstream.GetOrder(o));
       api.ClientSocket.reqAutoOpenOrders(true);
     }
 
@@ -590,6 +603,7 @@ namespace InteractiveBrokers
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
           await pricesGrain.Store(price);
+          await streamer.Send(price);
         }
       }
 

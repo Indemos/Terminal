@@ -1,5 +1,4 @@
 using Board.Components;
-using Board.Services;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
@@ -9,6 +8,7 @@ using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -18,17 +18,18 @@ namespace Board.Pages.Gateways
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
+    [Inject] StreamService Streamer { get; set; }
     [Inject] SubscriptionService Observer { get; set; }
 
     protected ControlsComponent View { get; set; }
-    protected virtual ChartsComponent ChartsView { get; set; }
-    protected virtual ChartsComponent PerformanceView { get; set; }
-    protected virtual TransactionsComponent TransactionsView { get; set; }
-    protected virtual OrdersComponent OrdersView { get; set; }
-    protected virtual PositionsComponent PositionsView { get; set; }
-    protected virtual StatementsComponent StatementsView { get; set; }
+    protected ChartsComponent ChartsView { get; set; }
+    protected ChartsComponent PerformanceView { get; set; }
+    protected TransactionsComponent TransactionsView { get; set; }
+    protected OrdersComponent OrdersView { get; set; }
+    protected PositionsComponent PositionsView { get; set; }
+    protected StatementsComponent StatementsView { get; set; }
     protected PerformanceIndicator Performance { get; set; }
-    protected virtual InstrumentModel Instrument { get; set; } = new InstrumentModel
+    protected InstrumentModel Instrument { get; set; } = new InstrumentModel
     {
       Name = "ESZ5",
       Exchange = "CME",
@@ -43,6 +44,9 @@ namespace Board.Pages.Gateways
       {
         await ChartsView.Create("Prices");
         await PerformanceView.Create("Performance");
+
+        ChartsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
+        PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
 
         Observer.OnState += state =>
         {
@@ -65,12 +69,27 @@ namespace Board.Pages.Gateways
       await base.OnAfterRenderAsync(setup);
     }
 
-    protected virtual void CreateAccounts()
+    /// <summary>
+    /// Time axis renderer
+    /// </summary>
+    /// <param name="items"></param>
+    /// <param name="index"></param>
+    /// <returns></returns>
+    protected string GetDateByIndex(IList<IShape> items, int index)
+    {
+      var empty = index <= 0 ? items.FirstOrDefault()?.X : items.LastOrDefault()?.X;
+      var stamp = (long)(items.ElementAtOrDefault(index)?.X ?? empty ?? DateTime.Now.Ticks);
+
+      return $"{new DateTime(stamp):HH:mm}";
+    }
+
+    protected void CreateAccounts()
     {
       Performance = new PerformanceIndicator { Name = "Balance" };
 
       var adapter = View.Adapters["Prime"] = new InteractiveBrokers.Gateway
       {
+        Streamer = Streamer,
         Connector = Connector,
         Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"]),
         Account = new AccountModel
@@ -86,7 +105,7 @@ namespace Board.Pages.Gateways
       adapter.Subscription += OnPrice;
     }
 
-    public virtual async Task OnPrice(PriceModel price)
+    protected async Task OnPrice(PriceModel price)
     {
       var name = Instrument.Name;
       var adapter = View.Adapters["Prime"];
@@ -188,7 +207,7 @@ namespace Board.Pages.Gateways
     /// <param name="action"></param>
     /// <param name="interval"></param>
     /// <returns></returns>
-    public static async void Done(Action action, int interval)
+    protected static async void Done(Action action, int interval)
     {
       await Task.Delay(interval);
       action();

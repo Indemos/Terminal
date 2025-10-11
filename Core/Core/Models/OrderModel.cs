@@ -44,7 +44,7 @@ namespace Core.Models
     /// <summary>
     /// Time in force
     /// </summary>
-    public OrderTimeSpanEnum? TimeSpan { get; init; } = OrderTimeSpanEnum.Gtc;
+    public OrderTimeSpanEnum? TimeSpan { get; init; } = OrderTimeSpanEnum.GTC;
 
     /// <summary>
     /// Custom order type

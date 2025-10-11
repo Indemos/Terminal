@@ -13,7 +13,7 @@ namespace Core.Validators
     {
       RuleFor(o => o.Id).NotEmpty();
 
-      When(o => o.Amount is not null, () =>
+      When(o => o.Orders.Count is 0, () =>
       {
         RuleFor(o => o.Type).NotEmpty();
         RuleFor(o => o.Side).NotEmpty();
@@ -21,12 +21,7 @@ namespace Core.Validators
         RuleFor(o => o.Operation).NotEmpty();
       });
 
-      When(o => o.Operation is not null, () =>
-      {
-        RuleFor(o => o.Operation.Amount).Empty();
-      });
-
-      When(o => o?.Instruction is null or InstructionEnum.Side or InstructionEnum.Brace, () =>
+      When(o => o?.Instruction is null or InstructionEnum.Brace, () =>
       {
         RuleFor(o => o.Operation).SetValidator(new OperationValidator());
       });

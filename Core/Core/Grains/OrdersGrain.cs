@@ -97,7 +97,7 @@ namespace Core.Grains
         .Select(o => new OrderResponse { Data = o, Errors = [.. Errors(o).Select(error => error.Message)] })
         .ToArray();
 
-      if (responses.All(o => o.Errors.Count is 0))
+      if (responses.Sum(o => o.Errors.Count) is 0)
       {
         foreach (var o in orders)
         {
@@ -161,11 +161,11 @@ namespace Core.Grains
     {
       var nextOrders = order
         .Orders
-        .Where(o => o.Instruction is InstructionEnum.Side or null)
+        .Where(o => o.Instruction is null)
         .Select(o => Merge(o, order))
         .ToList();
 
-      if (order.Amount is not null)
+      if (order.Amount is not null || order.Orders.Count is 0)
       {
         nextOrders.Add(Merge(order, order));
       }
@@ -192,14 +192,11 @@ namespace Core.Grains
       var nextOrder = order with
       {
         Descriptor = group.Descriptor,
-        Type = order.Type ?? group.Type ?? OrderTypeEnum.Market,
-        TimeSpan = order.TimeSpan ?? group.TimeSpan ?? OrderTimeSpanEnum.Gtc,
-        Instruction = order.Instruction ?? InstructionEnum.Side,
         Orders = [.. groupOrders],
         Operation = order.Operation with
         {
           Time = instrument?.Price?.Time,
-          //Instrument = instrument with { Price = prices.Get(instrument.Name) },
+          Instrument = instrument with { Price = prices.Get(instrument.Name) },
         }
       };
 
