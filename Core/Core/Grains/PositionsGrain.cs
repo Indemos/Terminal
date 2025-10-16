@@ -1,11 +1,9 @@
 using Core.Enums;
 using Core.Extensions;
 using Core.Models;
-using Core.Services;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -39,33 +37,6 @@ namespace Core.Grains
   public class PositionsGrain : Grain<PositionsModel>, IPositionsGrain
   {
     /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
-    /// Transactions
-    /// </summary>
-    protected ITransactionsGrain actions;
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-      actions = GrainFactory.Get<ITransactionsGrain>(descriptor);
-
-      await base.OnActivateAsync(cleaner);
-    }
-
-    /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
@@ -80,16 +51,13 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderModel order)
     {
-      var name = order.Operation.Instrument.Name;
-      var grain = State.Grains.Get(name);
+      var name = this.GetPrimaryKeyString();
+      var instrument = order.Operation.Instrument.Name;
+      var grain = State.Grains.Get(instrument);
 
       if (grain is null)
       {
-        grain = State.Grains[name] = GrainFactory.Get<IPositionGrain>(descriptor with
-        {
-          Order = order.Id
-        });
-
+        grain = State.Grains[instrument] = GrainFactory.GetGrain<IPositionGrain>($"{name}:{order.Id}");
         return await grain.Store(order);
       }
 
@@ -97,12 +65,14 @@ namespace Core.Grains
 
       if (response.Data is null)
       {
-        State.Grains.Remove(name);
+        State.Grains.Remove(instrument);
       }
 
       if (response.Transaction is not null)
       {
-        await actions.Store(response.Transaction);
+        await GrainFactory
+          .GetGrain<ITransactionsGrain>(name)
+          .Store(response.Transaction);
       }
 
       return response;

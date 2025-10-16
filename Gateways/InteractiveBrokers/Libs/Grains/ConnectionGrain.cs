@@ -102,16 +102,6 @@ namespace InteractiveBrokers
     protected StreamService streamer;
 
     /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
     /// Asset subscriptions
     /// </summary>
     protected ConcurrentDictionary<string, IDisposable> subscriptions = new();
@@ -121,16 +111,6 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="streamService"></param>
     public ConnectionGrain(StreamService streamService) => streamer = streamService;
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-      await base.OnActivateAsync(cleaner);
-    }
 
     /// <summary>
     /// Deactivation
@@ -223,10 +203,10 @@ namespace InteractiveBrokers
       var max = short.MaxValue;
       var price = new PriceModel();
       var id = wrapper.NextOrderId;
-      var instrumentDescriptor = descriptor with { Instrument = instrument.Name };
-      var pricesGrain = GrainFactory.Get<IPricesGrain>(instrumentDescriptor);
-      var ordersGrain = GrainFactory.Get<IOrdersGrain>(descriptor);
-      var positionsGrain = GrainFactory.Get<IPositionsGrain>(descriptor);
+      var name = this.GetPrimaryKeyString();
+      var pricesGrain = GrainFactory.GetGrain<IPricesGrain>($"{name}:{instrument.Name}");
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(name);
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(name);
 
       //void subscribeToComs(object e, MarketDataEventArgs<IBKRWrapper.Models.OptionGreeks> message)
       //{

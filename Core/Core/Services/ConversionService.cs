@@ -1,4 +1,3 @@
-using Core.Models;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -77,15 +76,5 @@ namespace Core.Services
         })
       }
     };
-
-    /// <summary>
-    /// Get compound key for grains
-    /// </summary>
-    public virtual string Compose(DescriptorModel descriptor) => JsonSerializer.Serialize(descriptor, Options);
-
-    /// <summary>
-    /// Read compound key for grains
-    /// </summary>
-    public virtual T Decompose<T>(string descriptor) => JsonSerializer.Deserialize<T>(descriptor, Options);
   }
 }

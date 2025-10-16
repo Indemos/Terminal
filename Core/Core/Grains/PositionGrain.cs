@@ -1,11 +1,9 @@
 using Core.Enums;
 using Core.Extensions;
-using Core.Services;
 using Core.Models;
 using Orleans;
 using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -38,27 +36,6 @@ namespace Core.Grains
 
   public class PositionGrain : Grain<OrderModel>, IPositionGrain
   {
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-
-      await base.OnActivateAsync(cleaner);
-    }
-
     /// <summary>
     /// Get position
     /// </summary>
@@ -93,7 +70,7 @@ namespace Core.Grains
       else
       {
         response = order.Amount.IsGt(State.Operation.Amount) ?
-          Inverse(order) : 
+          Inverse(order) :
           Decrease(order);
 
         State = response.Data;
@@ -228,7 +205,7 @@ namespace Core.Grains
     /// <param name="action"></param>
     protected virtual async Task SendBraces(OrderModel order, ActionEnum action = ActionEnum.Create)
     {
-      var ordersGrain = GrainFactory.Get<IOrdersGrain>(descriptor);
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(this.GetPrimaryKeyString());
 
       foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {

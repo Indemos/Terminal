@@ -1,10 +1,8 @@
-using Core.Extensions;
 using Core.Models;
 using Core.Services;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -27,16 +25,6 @@ namespace Core.Grains
   public class TransactionsGrain : Grain<TransactionsModel>, ITransactionsGrain
   {
     /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
     /// Order stream
     /// </summary>
     protected StreamService streamer;
@@ -46,16 +34,6 @@ namespace Core.Grains
     /// </summary>
     /// <param name="streamService"></param>
     public TransactionsGrain(StreamService streamService) => streamer = streamService;
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-      await base.OnActivateAsync(cleaner);
-    }
 
     /// <summary>
     /// Get transactions
@@ -71,7 +49,8 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderModel order)
     {
-      var orderGrain = GrainFactory.Get<ITransactionGrain>(descriptor with { Order = order.Id });
+      var name = $"{this.GetPrimaryKeyString()}:{order.Id}";
+      var orderGrain = GrainFactory.GetGrain<ITransactionGrain>(name);
       var response = await orderGrain.Store(order);
 
       State.Grains.Add(orderGrain);

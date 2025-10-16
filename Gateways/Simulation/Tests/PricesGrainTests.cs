@@ -5,7 +5,6 @@ using Orleans;
 using Orleans.TestingHost;
 using Simulation.Grains;
 using System;
-using System.Text.Json;
 using System.Threading.Tasks;
 
 namespace Simulation.Prices.Tests
@@ -15,10 +14,7 @@ namespace Simulation.Prices.Tests
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
-    private string Descriptor => JsonSerializer.Serialize(new DescriptorModel
-    {
-      Account = $"{Guid.NewGuid()}"
-    });
+    private string Descriptor => $"{Guid.NewGuid()}";
 
     public Prices()
     {

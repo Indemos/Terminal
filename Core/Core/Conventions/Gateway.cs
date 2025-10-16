@@ -1,6 +1,6 @@
 using Core.Enums;
-using Core.Extensions;
 using Core.Models;
+using Core.Services;
 using Orleans;
 using System;
 using System.Collections.Generic;
@@ -12,11 +12,6 @@ namespace Core.Conventions
   public interface IGateway : IDisposable
   {
     /// <summary>
-    /// Namespace
-    /// </summary>
-    string Space { get; set; }
-
-    /// <summary>
     /// Account
     /// </summary>
     AccountModel Account { get; set; }
@@ -24,7 +19,7 @@ namespace Core.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    Services.StreamService Streamer { get; set; }
+    StreamService Streamer { get; set; }
 
     /// <summary>
     /// Cluster client
@@ -35,6 +30,11 @@ namespace Core.Conventions
     /// Data stream
     /// </summary>
     Func<PriceModel, Task> Subscription { get; set; }
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    string Descriptor(string instrument = null);
 
     /// <summary>
     /// Connect
@@ -267,6 +267,13 @@ namespace Core.Conventions
     }
 
     /// <summary>
+    /// Descriptor
+    /// </summary>
+    public virtual string Descriptor(string instrument = null) => instrument is null ?
+      $"{Space}:{Account.Name}" :
+      $"{Space}:{Account.Name}:{instrument}";
+
+    /// <summary>
     /// Subscribe to price updates
     /// </summary>
     protected virtual void ConnectPrices()
@@ -292,19 +299,8 @@ namespace Core.Conventions
     }
 
     /// <summary>
-    /// Generate descriptor
+    /// Grain selector
     /// </summary>
-    /// <param name="instrument"></param>
-    protected virtual DescriptorModel Descriptor(string instrument = null) => new()
-    {
-      Space = Space,
-      Account = Account.Name,
-      Instrument = instrument
-    };
-
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.Get<T>(Descriptor(instrument));
+    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.GetGrain<T>(Descriptor(instrument));
   }
 }

@@ -1,12 +1,10 @@
 using Core.Enums;
 using Core.Extensions;
 using Core.Models;
-using Core.Services;
 using Core.Validators;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -46,41 +44,14 @@ namespace Core.Grains
   public class OrdersGrain : Grain<OrdersModel>, IOrdersGrain
   {
     /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
     /// Order validator
     /// </summary>
     protected OrderValidator orderValidator = new();
 
     /// <summary>
-    /// Transactions
-    /// </summary>
-    protected IPositionsGrain positions;
-
-    /// <summary>
     /// Instruments
     /// </summary>
     protected Dictionary<string, PriceModel> prices = new();
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-      positions = GrainFactory.Get<IPositionsGrain>(descriptor);
-
-      await base.OnActivateAsync(cleaner);
-    }
 
     /// <summary>
     /// Get orders
@@ -106,8 +77,8 @@ namespace Core.Grains
       {
         foreach (var o in orders)
         {
-          var name = descriptor with { Order = o.Id };
-          var grain = GrainFactory.Get<IOrderGrain>(name);
+          var name = $"{this.GetPrimaryKeyString()}:{o.Id}";
+          var grain = GrainFactory.GetGrain<IOrderGrain>(name);
 
           await grain.Store(o);
 
@@ -134,7 +105,10 @@ namespace Core.Grains
         if (await grain.Value.IsExecutable(price))
         {
           State.Grains.Remove(grain.Key);
-          await positions.Store(await grain.Value.Position(price));
+
+          await GrainFactory
+            .GetGrain<IPositionsGrain>(this.GetPrimaryKeyString())
+            .Store(await grain.Value.Position(price));
         }
       }
 

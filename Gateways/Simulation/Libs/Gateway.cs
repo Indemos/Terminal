@@ -30,8 +30,7 @@ namespace Simulation
     {
       streamer = new Streamer
       {
-        Adapter = this,
-        Descriptor = Descriptor()
+        Adapter = this
       };
 
       ConnectOrders();

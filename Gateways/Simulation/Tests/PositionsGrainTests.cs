@@ -17,10 +17,7 @@ namespace Simulation.Prices.Tests
     private readonly Mock<IClusterClient> _mockConnector;
     private readonly TestCluster _cluster;
 
-    private string Descriptor => JsonSerializer.Serialize(new DescriptorModel
-    {
-      Account = $"{Guid.NewGuid()}"
-    });
+    private string Descriptor => $"{Guid.NewGuid()}";
 
     public Positions()
     {

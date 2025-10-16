@@ -1,8 +1,8 @@
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
-using Core.Services;
 using Core.Models;
+using Core.Services;
 using MessagePack;
 using MessagePack.Resolvers;
 using Simulation.Grains;
@@ -61,7 +61,7 @@ namespace Simulation
     /// <summary>
     /// Descriptor
     /// </summary>
-    public virtual DescriptorModel Descriptor { get; set; }
+    public virtual string Descriptor { get; set; }
 
     /// <summary>
     /// Connect
@@ -132,12 +132,12 @@ namespace Simulation
     {
       Unsubscribe(instrument);
 
-      var instrumentDescriptor = Descriptor with { Instrument = instrument.Name };
-      var domGrain = Adapter.Connector.Get<IDomGrain>(instrumentDescriptor);
-      var pricesGrain = Adapter.Connector.Get<IGatewayPricesGrain>(instrumentDescriptor);
-      var optionsGrain = Adapter.Connector.Get<IOptionsGrain>(instrumentDescriptor);
-      var ordersGrain = Adapter.Connector.Get<IOrdersGrain>(Descriptor);
-      var positionsGrain = Adapter.Connector.Get<IPositionsGrain>(Descriptor);
+      var instrumentDescriptor = Adapter.Descriptor(instrument.Name);
+      var domGrain = Adapter.Connector.GetGrain<IDomGrain>(instrumentDescriptor);
+      var pricesGrain = Adapter.Connector.GetGrain<IGatewayPricesGrain>(instrumentDescriptor);
+      var optionsGrain = Adapter.Connector.GetGrain<IOptionsGrain>(instrumentDescriptor);
+      var ordersGrain = Adapter.Connector.GetGrain<IOrdersGrain>(Adapter.Descriptor());
+      var positionsGrain = Adapter.Connector.GetGrain<IPositionsGrain>(Adapter.Descriptor());
 
       subscriptions[instrument.Name] = async () =>
       {
