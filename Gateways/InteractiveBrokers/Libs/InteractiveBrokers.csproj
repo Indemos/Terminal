@@ -7,6 +7,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="InterReact" Version="0.6.0" />
+    <PackageReference Include="SimpleInteractiveBroker" Version="0.1.3" />
+  </ItemGroup>
+
+  <ItemGroup>
     <ProjectReference Include="..\..\..\Core\Core\Core.csproj" />
   </ItemGroup>
 

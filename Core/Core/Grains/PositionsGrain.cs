@@ -1,6 +1,7 @@
+using Core.Enums;
 using Core.Extensions;
-using Core.Services;
 using Core.Models;
+using Core.Services;
 using Orleans;
 using System.Collections.Generic;
 using System.Linq;
@@ -28,6 +29,11 @@ namespace Core.Grains
     /// </summary>
     /// <param name="price"></param>
     Task<StatusResponse> Tap(PriceModel price);
+
+    /// <summary>
+    /// Clear positions
+    /// </summary>
+    Task<StatusResponse> Clear();
   }
 
   public class PositionsGrain : Grain<PositionsModel>, IPositionsGrain
@@ -114,6 +120,19 @@ namespace Core.Grains
       {
         Data = Enums.StatusEnum.Active
       };
+    }
+
+    /// <summary>
+    /// Clear positions
+    /// </summary>
+    public virtual Task<StatusResponse> Clear()
+    {
+      State.Grains.Clear();
+
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Inactive
+      });
     }
   }
 }

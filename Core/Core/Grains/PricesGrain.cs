@@ -1,14 +1,9 @@
 using Core.Extensions;
 using Core.Models;
-using Core.Services;
 using Orleans;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
-using System.ServiceModel.Channels;
-using System.Text.Json;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -36,27 +31,6 @@ namespace Core.Grains
 
   public class PricesGrain : Grain<PricesModel>, IPricesGrain
   {
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    protected DescriptorModel descriptor;
-
-    /// <summary>
-    /// Converter
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
-    /// Activation
-    /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
-    {
-      descriptor = converter.Decompose<DescriptorModel>(this.GetPrimaryKeyString());
-
-      await base.OnActivateAsync(cleaner);
-    }
-
     /// <summary>
     /// List of prices by criteria
     /// </summary>

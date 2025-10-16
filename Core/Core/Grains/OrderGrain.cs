@@ -53,7 +53,7 @@ namespace Core.Grains
 
       return Task.FromResult(new OrderResponse
       {
-        Data = order
+        Data = State
       });
     }
 

@@ -157,7 +157,7 @@ namespace Board.Components
         IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
       };
 
-      await View.Update(default, Shapes);
+      await View.Update(domain, Shapes);
     }
 
     /// <summary>

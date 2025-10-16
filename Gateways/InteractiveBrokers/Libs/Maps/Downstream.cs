@@ -1,7 +1,6 @@
 using Core.Enums;
 using Core.Models;
-using IBApi;
-using InteractiveBrokers.Messages;
+using SimpleBroker;
 using System;
 using System.Globalization;
 
@@ -10,10 +9,11 @@ namespace InteractiveBrokers.Mappers
   public class Downstream
   {
     /// <summary>
-    /// Get order book
+    /// Get price
     /// </summary>
     /// <param name="message"></param>
-    public static PriceModel GetPrice(HistoricalTickBidAsk message, InstrumentModel instrument)
+    /// <param name="instrument"></param>
+    public static PriceModel Price(HistoricalTickBidAsk message, InstrumentModel instrument)
     {
       var point = new PriceModel
       {
@@ -22,8 +22,34 @@ namespace InteractiveBrokers.Mappers
         AskSize = (double)message.SizeAsk,
         BidSize = (double)message.SizeBid,
         Last = message.PriceBid,
-        Time = message.Time,
+        Time = message.Time.Ticks,
         Name = instrument.Name
+      };
+
+      return point;
+    }
+
+    /// <summary>
+    /// Get price
+    /// </summary>
+    /// <param name="message"></param>
+    public static PriceModel Price(Bar message)
+    {
+      var point = new PriceModel
+      {
+        Ask = message.Close,
+        Bid = message.Close,
+        Last = message.Close,
+        Time = message.Time.Ticks,
+        Name = message.Symbol,
+        Volume = (double)message.Volume,
+        Bar = new BarModel
+        {
+          Low = message.Low,
+          High = message.High,
+          Open = message.Open,
+          Close = message.Close,
+        }
       };
 
       return point;
@@ -33,9 +59,9 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    public static OrderModel GetOrder(OpenOrderMessage message)
+    public static OrderModel Order(Trade message)
     {
-      var instrument = GetInstrument(message.Contract);
+      var instrument = Instrument(message.Contract);
       var action = new OperationModel
       {
         Instrument = instrument,
@@ -50,8 +76,8 @@ namespace InteractiveBrokers.Mappers
         Operation = action,
         Id = $"{message.OrderId}",
         Type = OrderTypeEnum.Market,
-        Side = GetOrderSide(message.Order.Action),
-        TimeSpan = GetTimeSpan($"{message.Order.Tif}"),
+        Side = OrderSide(message.Order.Action),
+        TimeSpan = TimeFrame($"{message.Order.Tif}"),
         Amount = (double)message.Order.TotalQuantity
       };
 
@@ -96,10 +122,10 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    public static OrderModel GetPosition(PositionMultiMessage message)
+    /// <param name="instrument"></param>
+    public static OrderModel Position(Position message, InstrumentModel instrument)
     {
-      var volume = (double)Math.Abs(message.Position);
-      var instrument = GetInstrument(message.Contract);
+      var volume = (double)Math.Abs(message.Positions);
       var action = new OperationModel
       {
         Instrument = instrument,
@@ -111,9 +137,9 @@ namespace InteractiveBrokers.Mappers
         Amount = volume,
         Operation = action,
         Type = OrderTypeEnum.Market,
-        Descriptor = $"{message.Contract.ConId}",
-        Price = message.AverageCost / (volume * Math.Max(1, instrument.Leverage.Value)),
-        Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
+        Descriptor = $"{message.ConId}",
+        Price = message.AvgCost,
+        Side = message.Positions > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 
       return order;
@@ -123,7 +149,7 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote order side to local
     /// </summary>
     /// <param name="side"></param>
-    public static OrderSideEnum? GetOrderSide(string side)
+    public static OrderSideEnum? OrderSide(string side)
     {
       switch (side)
       {
@@ -138,7 +164,7 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote time in force to local
     /// </summary>
     /// <param name="span"></param>
-    public static OrderTimeSpanEnum? GetTimeSpan(string span)
+    public static OrderTimeSpanEnum? TimeFrame(string span)
     {
       switch (span)
       {
@@ -153,7 +179,7 @@ namespace InteractiveBrokers.Mappers
     /// Get external instrument type
     /// </summary>
     /// <param name="message"></param>
-    public static InstrumentEnum? GetInstrumentType(string message)
+    public static InstrumentEnum? InstrumentType(string message)
     {
       switch (message)
       {
@@ -174,16 +200,15 @@ namespace InteractiveBrokers.Mappers
     /// Get instrument from contract
     /// </summary>
     /// <param name="contract"></param>
-    /// <param name="instrument"></param>
-    public static InstrumentModel GetInstrument(Contract contract, InstrumentModel instrument = null)
+    public static InstrumentModel Instrument(Contract contract)
     {
       var expiration = contract.LastTradeDateOrContractMonth;
-      var response = (instrument ?? new InstrumentModel()) with
+      var response = new InstrumentModel() with
       {
         Id = $"{contract.ConId}",
         Name = contract.LocalSymbol,
         Exchange = contract.Exchange,
-        Type = GetInstrumentType(contract.SecType),
+        Type = InstrumentType(contract.SecType),
         Currency = new CurrencyModel { Name = contract.Currency },
         Leverage = int.TryParse(contract.Multiplier, out var margin) ? Math.Max(1, margin) : 1
       };

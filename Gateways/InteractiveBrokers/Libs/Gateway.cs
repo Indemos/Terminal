@@ -118,35 +118,47 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override async Task<IList<InstrumentModel>> Options(MetaModel criteria)
     {
-      var instrument = criteria.Instrument;
-      var grain = Component<IConnectionGrain>(criteria.Instrument.Name);
-      var source = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-      var contracts = await grain.Contracts(instrument);
-
-      return contracts
-        .Select(o => Downstream.GetInstrument(o))
-        .OrderBy(o => o.Derivative.ExpirationDate)
-        .ThenBy(o => o.Derivative.Strike)
-        .ThenBy(o => o.Derivative.Side)
-        .ToArray();
+      return await Component<IConnectionGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> Orders(MetaModel criteria)
+    public override async Task<IList<OrderModel>> Orders(MetaModel criteria)
     {
-      return Component<IConnectionGrain>().Orders(criteria);
+      var ordersGrain = Component<IOrdersGrain>();
+      var connectionGrain = Component<IConnectionGrain>();
+      var response = await connectionGrain.Orders(criteria);
+
+      await ordersGrain.Clear();
+
+      foreach (var order in response)
+      {
+        await ordersGrain.Store(order);
+      }
+
+      return response;
     }
 
     /// <summary>
     /// Get positions 
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> Positions(MetaModel criteria)
+    public override async Task<IList<OrderModel>> Positions(MetaModel criteria)
     {
-      return Component<IConnectionGrain>().Positions(criteria);
+      var positionsGrain = Component<IPositionsGrain>();
+      var connectionGrain = Component<IConnectionGrain>();
+      var response = await positionsGrain.Positions(criteria);
+
+      await positionsGrain.Clear();
+
+      foreach (var order in response)
+      {
+        await positionsGrain.Store(order);
+      }
+
+      return response;
     }
 
     /// <summary>
@@ -164,7 +176,7 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
     {
-      return Component<IOrdersGrain>().Send(order);
+      return Component<IOrdersGrain>().Store(order);
     }
 
     /// <summary>
@@ -173,7 +185,7 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(OrderModel order)
     {
-      return Component<IOrdersGrain>().Remove(order);
+      return Component<IOrdersGrain>().Clear(order);
     }
   }
 }

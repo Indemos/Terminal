@@ -37,6 +37,6 @@ namespace Core.Models
     /// <summary>
     /// Criteria
     /// </summary>
-    public Dictionary<string, double> Criteria { get; set; } = [];
+    public Dictionary<string, string> Data { get; set; } = [];
   }
 }

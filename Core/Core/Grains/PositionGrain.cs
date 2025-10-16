@@ -74,7 +74,7 @@ namespace Core.Grains
 
       return new()
       {
-        Data = order
+        Data = State
       };
     }
 
@@ -234,8 +234,8 @@ namespace Core.Grains
       {
         switch (action)
         {
-          case ActionEnum.Create: await ordersGrain.Send(brace); break;
-          case ActionEnum.Remove: await ordersGrain.Remove(brace); break;
+          case ActionEnum.Create: await ordersGrain.Store(brace); break;
+          case ActionEnum.Remove: await ordersGrain.Clear(brace); break;
         }
       }
     }

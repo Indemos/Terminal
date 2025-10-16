@@ -23,7 +23,7 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupsResponse> Send(OrderModel order);
+    Task<OrderGroupsResponse> Store(OrderModel order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -35,7 +35,12 @@ namespace Core.Grains
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Remove(OrderModel order);
+    Task<DescriptorResponse> Clear(OrderModel order);
+
+    /// <summary>
+    /// Clear orders
+    /// </summary>
+    Task<StatusResponse> Clear();
   }
 
   public class OrdersGrain : Grain<OrdersModel>, IOrdersGrain
@@ -90,7 +95,7 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderGroupsResponse> Send(OrderModel order)
+    public virtual async Task<OrderGroupsResponse> Store(OrderModel order)
     {
       var orders = Compose(order);
       var responses = orders
@@ -140,17 +145,29 @@ namespace Core.Grains
     }
 
     /// <summary>
-    /// <summary>
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Remove(OrderModel order)
+    public virtual Task<DescriptorResponse> Clear(OrderModel order)
     {
       State.Grains.Remove(order.Id);
 
       return Task.FromResult(new DescriptorResponse
       {
         Data = order.Id
+      });
+    }
+
+    /// <summary>
+    /// Clear orders
+    /// </summary>
+    public virtual Task<StatusResponse> Clear()
+    {
+      State.Grains.Clear();
+
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Inactive
       });
     }
 

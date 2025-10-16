@@ -134,7 +134,7 @@ namespace Simulation
     /// <param name="order"></param>
     public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
     {
-      return Component<IOrdersGrain>().Send(order);
+      return Component<IOrdersGrain>().Store(order);
     }
 
     /// <summary>
@@ -143,7 +143,7 @@ namespace Simulation
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(OrderModel order)
     {
-      return Component<IOrdersGrain>().Remove(order);
+      return Component<IOrdersGrain>().Clear(order);
     }
   }
 }

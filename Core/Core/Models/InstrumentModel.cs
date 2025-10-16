@@ -1,5 +1,6 @@
 using Core.Enums;
 using System;
+using System.Collections.Generic;
 
 namespace Core.Models
 {
@@ -68,7 +69,7 @@ namespace Core.Models
     /// <summary>
     /// Base currency contract
     /// </summary>
-    public CurrencyModel Currency { get; init; }
+    public CurrencyModel Currency { get; init; } = new CurrencyModel { Name = nameof(CurrencyEnum.USD) };
 
     /// <summary>
     /// Options and futures specification
