@@ -1,6 +1,6 @@
 using Core.Enums;
 using Core.Models;
-using SimpleBroker;
+using IBApi;
 using System.Linq;
 
 namespace InteractiveBrokers.Mappers
@@ -15,12 +15,12 @@ namespace InteractiveBrokers.Mappers
     {
       var basis = instrument.Basis;
       var derivative = instrument.Derivative;
-      var contract = new Contract(
-        instrument.Name,
-        InstrumentType(instrument.Type),
-        instrument.Currency.Name,
-        instrument.Exchange)
-      {
+      var contract = new Contract
+      { 
+        Symbol = instrument.Name,
+        SecType = InstrumentType(instrument.Type),
+        Currency = instrument.Currency.Name,
+        Exchange = instrument.Exchange,
         ConId = int.TryParse(instrument.Id, out var id) ? id : 0
       };
 

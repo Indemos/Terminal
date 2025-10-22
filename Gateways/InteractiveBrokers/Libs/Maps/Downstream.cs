@@ -1,6 +1,7 @@
 using Core.Enums;
 using Core.Models;
-using SimpleBroker;
+using IBApi;
+using IBApi.Messages;
 using System;
 using System.Globalization;
 
@@ -13,16 +14,17 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <param name="instrument"></param>
-    public static PriceModel Price(HistoricalTickBidAsk message, InstrumentModel instrument)
+    public static PriceModel Price(PriceMessage message, InstrumentModel instrument)
     {
       var point = new PriceModel
       {
-        Ask = message.PriceAsk,
-        Bid = message.PriceBid,
-        AskSize = (double)message.SizeAsk,
-        BidSize = (double)message.SizeBid,
-        Last = message.PriceBid,
-        Time = message.Time.Ticks,
+        Ask = message.Ask,
+        Bid = message.Bid,
+        AskSize = message.AskSize,
+        BidSize = message.BidSize,
+        Last = message.Last,
+        Time = message.Time,
+        TimeFrame = instrument.TimeFrame,
         Name = instrument.Name
       };
 
@@ -33,16 +35,17 @@ namespace InteractiveBrokers.Mappers
     /// Get price
     /// </summary>
     /// <param name="message"></param>
-    public static PriceModel Price(Bar message)
+    /// <param name="instrument"></param>
+    public static PriceModel Price(HistoricalDataMessage message, InstrumentModel instrument)
     {
       var point = new PriceModel
       {
         Ask = message.Close,
         Bid = message.Close,
         Last = message.Close,
-        Time = message.Time.Ticks,
-        Name = message.Symbol,
-        Volume = (double)message.Volume,
+        Time = DateTime.Parse(message.Date).Ticks,
+        Name = instrument.Name,
+        Volume = (double?)message.Volume,
         Bar = new BarModel
         {
           Low = message.Low,
@@ -59,7 +62,7 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    public static OrderModel Order(Trade message)
+    public static OrderModel Order(OpenOrderMessage message)
     {
       var instrument = Instrument(message.Contract);
       var action = new OperationModel
@@ -123,9 +126,9 @@ namespace InteractiveBrokers.Mappers
     /// </summary>
     /// <param name="message"></param>
     /// <param name="instrument"></param>
-    public static OrderModel Position(Position message, InstrumentModel instrument)
+    public static OrderModel Position(PositionMultiMessage message, InstrumentModel instrument)
     {
-      var volume = (double)Math.Abs(message.Positions);
+      var volume = (double)Math.Abs(message.Position);
       var action = new OperationModel
       {
         Instrument = instrument,
@@ -137,9 +140,9 @@ namespace InteractiveBrokers.Mappers
         Amount = volume,
         Operation = action,
         Type = OrderTypeEnum.Market,
-        Descriptor = $"{message.ConId}",
-        Price = message.AvgCost,
-        Side = message.Positions > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
+        Descriptor = $"{message.Contract.ConId}",
+        Price = message.AverageCost,
+        Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 
       return order;

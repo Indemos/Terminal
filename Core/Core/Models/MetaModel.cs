@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 namespace Core.Models
@@ -22,12 +23,12 @@ namespace Core.Models
     /// <summary>
     /// Start date
     /// </summary>
-    public long? MinDate { get; init; }
+    public DateTime? MinDate { get; init; }
 
     /// <summary>
     /// End date
     /// </summary>
-    public long? MaxDate { get; init; }
+    public DateTime? MaxDate { get; init; }
 
     /// <summary>
     /// Asset

@@ -19,7 +19,7 @@ namespace Core.Extensions
       var date = input.Value;
       var excess = Math.Max(span?.Ticks ?? 1, 1);
 
-      return new DateTime(date - (date % excess)).Ticks;
+      return date - (date % excess);
     }
 
     /// <summary>

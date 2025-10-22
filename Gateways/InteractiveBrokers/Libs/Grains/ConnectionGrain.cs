@@ -3,16 +3,16 @@ using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using Core.Services;
-using IBKRWrapper;
+using IBApi;
+using IBApi.Messages;
 using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Models;
 using Orleans;
-using SimpleBroker;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -87,14 +87,9 @@ namespace InteractiveBrokers
   public class ConnectionGrain : Grain<ConnectionModel>, IConnectionGrain
   {
     /// <summary>
-    /// IB socket client
-    /// </summary>
-    protected Wrapper wrapper;
-
-    /// <summary>
     /// IB client
     /// </summary>
-    protected Broker connector;
+    protected InterBroker connector;
 
     /// <summary>
     /// Stream
@@ -104,7 +99,7 @@ namespace InteractiveBrokers
     /// <summary>
     /// Asset subscriptions
     /// </summary>
-    protected ConcurrentDictionary<string, IDisposable> subscriptions = new();
+    protected ConcurrentDictionary<string, int> subscriptions = new();
 
     /// <summary>
     /// Constructor
@@ -144,12 +139,8 @@ namespace InteractiveBrokers
     {
       await Disconnect();
 
-      connector = new Broker();
-      connector.Connect(State.Host, State.Port, 0);
-      wrapper = (Wrapper)connector
-        .GetType()
-        .GetField("_wrapper", BindingFlags.NonPublic | BindingFlags.Instance)?
-        .GetValue(connector);
+      connector = new InterBroker { Port = State.Port };
+      connector.Connect();
 
       foreach (var instrument in State.Account.Instruments.Values)
       {
@@ -183,10 +174,12 @@ namespace InteractiveBrokers
     {
       await Unsubscribe(instrument);
 
-      var contracts = await Contracts(instrument);
-      var contract = contracts.FirstOrDefault();
+      var contract = Upstream.Contract(instrument);
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var contracts = await connector.GetContracts(cleaner.Token, contract);
+      var contractMessage = contracts.FirstOrDefault();
 
-      if (contract is null)
+      if (contractMessage is null)
       {
         await streamer.Send(new MessageModel()
         {
@@ -200,50 +193,26 @@ namespace InteractiveBrokers
         };
       }
 
-      var max = short.MaxValue;
-      var price = new PriceModel();
-      var id = wrapper.NextOrderId;
       var name = this.GetPrimaryKeyString();
-      var pricesGrain = GrainFactory.GetGrain<IPricesGrain>($"{name}:{instrument.Name}");
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(name);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(name);
+      var pricesGrain = GrainFactory.GetGrain<IPricesGrain>($"{name}:{instrument.Name}");
+      var dataMessage = new DataStreamMessage
+      {
+        DataTypes = [IBApi.Enums.SubscriptionEnum.Price],
+        Contract = contract
+      };
 
-      //void subscribeToComs(object e, MarketDataEventArgs<IBKRWrapper.Models.OptionGreeks> message)
-      //{
-      //  if (Equals(id, message.Data.ReqId) && instrument.Type is InstrumentEnum.Options)
-      //  {
-      //    instrument.Derivative ??= new DerivativeModel();
-      //    instrument.Derivative.Volatility = value(message.ImpliedVolatility, 0, max, instrument.Derivative.Volatility);
+      subscriptions[instrument.Name] = connector.SubscribeToTicks(dataMessage, async priceMessage =>
+      {
+        var price = Downstream.Price(priceMessage, instrument);
+        var priceGroup = await pricesGrain.Store(price);
 
-      //    var variance = instrument.Derivative.Variance ??= new VarianceModel();
+        await ordersGrain.Tap(priceGroup);
+        await positionsGrain.Tap(priceGroup);
 
-      //    variance.Delta = value(message.Delta, -1, 1, variance.Delta);
-      //    variance.Gamma = value(message.Gamma, 0, max, variance.Gamma);
-      //    variance.Theta = value(message.Theta, 0, max, variance.Theta);
-      //    variance.Vega = value(message.Vega, 0, max, variance.Vega);
-      //  }
-      //}
-
-      //void subscribeToPrices(object e, TickBidAskEventArgs message)
-      //{
-      //  if (Equals(id, message.ReqId))
-      //  {
-      //    price = price with
-      //    {
-      //      Time = DateTime.Now.Ticks,
-      //    };
-
-      //    //summary.Points.Add(point);
-      //    //summary.PointGroups.Add(point, summary.TimeFrame);
-      //    //summary.Instrument = instrument;
-      //    //summary.Instrument.Point = summary.PointGroups.Last();
-      //    //summary.Instrument.Point.Instrument = instrument;
-      //  }
-      //}
-
-      //wrapper.TickBidAskEvent += subscribeToPrices;
-      //wrapper.OptionGreeksMarketDataEvent += subscribeToComs;
-      //wrapper.ClientSocket.reqMktData(id, contract, string.Empty, false, false, null);
+        await streamer.Send(priceGroup);
+      });
 
       return new()
       {
@@ -259,7 +228,7 @@ namespace InteractiveBrokers
     {
       if (subscriptions.TryRemove(instrument.Name, out var subscription))
       {
-        subscription.Dispose();
+        connector.Unsubscribe(subscription);
       }
 
       return Task.FromResult(new StatusResponse
@@ -274,7 +243,8 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<OrderModel>> Orders(MetaModel criteria)
     {
-      var sourceItems = await connector.GetOpenOrders();
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.Order).ToArray();
 
       await Task.Delay(State.Span);
@@ -288,7 +258,8 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<OrderModel>> Positions(MetaModel criteria)
     {
-      var sourceItems = await connector.GetPositions();
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var sourceItems = await connector.GetPositions(cleaner.Token, State.Account.Name);
       var items = sourceItems.Select(o => Downstream.Position(o, criteria.Instrument)).ToArray();
 
       await Task.Delay(State.Span);
@@ -303,9 +274,15 @@ namespace InteractiveBrokers
     public virtual async Task<IList<PriceModel>> Ticks(MetaModel criteria)
     {
       var contract = Upstream.Contract(criteria.Instrument);
-      var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
-      var maxDate = (criteria.MaxDate ?? DateTime.Now.Ticks).ToString($"yyyyMMdd-HH:mm:ss");
-      var sourceItems = await connector.GetHistoricalTicksBidAsk(contract, minDate, maxDate, criteria.Count ?? 1, false, true);
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var sourceItems = await connector.GetTicks(
+        cleaner.Token,
+        contract,
+        criteria.MinDate.Value,
+        criteria.MaxDate.Value,
+        "BID_ASK",
+        criteria.Count ?? 1);
+
       var items = sourceItems.Select(o => Downstream.Price(o, criteria.Instrument)).ToArray();
 
       await Task.Delay(State.Span);
@@ -319,17 +296,19 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<PriceModel>> Bars(MetaModel criteria)
     {
+      var cleaner = new CancellationTokenSource(State.Timeout);
       var contract = Upstream.Contract(criteria.Instrument);
-      var maxDate = (criteria.MaxDate ?? DateTime.Now.Ticks).ToString($"yyyyMMdd-HH:mm:ss");
-      var sourceItems = await connector.GetHistoricalBars(
+      var maxDate = criteria.MaxDate ?? DateTime.Now;
+      var sourceItems = await connector.GetBars(
+        cleaner.Token,
         contract,
+        maxDate,
         criteria.Data.Get("Duration"),
-        criteria.Data.Get("BarSize"),
         criteria.Data.Get("BarType"),
-        false,
-        maxDate);
+        criteria.Data.Get("DataType"),
+        0);
 
-      var items = sourceItems.Select(Downstream.Price).ToArray();
+      var items = sourceItems.Select(o => Downstream.Price(o, criteria.Instrument)).ToArray();
 
       await Task.Delay(State.Span);
 
@@ -344,42 +323,13 @@ namespace InteractiveBrokers
     {
       var instrument = criteria.Instrument;
       var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
-      var maxDate = (criteria.MaxDate ?? DateTime.Now.Ticks).ToString($"yyyyMMdd-HH:mm:ss");
+      var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
       var contract = Upstream.Contract(criteria.Instrument);
-      var sourceItems = await connector.GetFullyDefinedOptionContractsByDate(
-        instrument.Name,
-        Upstream.InstrumentType(instrument.Type),
-        instrument.Exchange,
-        instrument.Currency.Name);
-
-      var items = sourceItems.Select(Downstream.Instrument).ToArray();
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var sourceItems = await connector.GetContracts(cleaner.Token, contract);
+      var items = sourceItems.Select(o => Downstream.Instrument(o.Contract)).ToArray();
 
       await Task.Delay(State.Span);
-
-      return items;
-    }
-
-    /// <summary>
-    /// Get contract definition
-    /// </summary>
-    /// <param name="instrument"></param>
-    /// <returns></returns>
-    protected virtual async Task<List<Contract>> Contracts(InstrumentModel instrument)
-    {
-      var items = await connector.GetFullyDefinedContracts(
-        instrument?.Basis?.Name ?? instrument.Name,
-        Upstream.InstrumentType(instrument.Type),
-        instrument.Exchange,
-        instrument.Currency.Name);
-
-      if (instrument.Type is InstrumentEnum.Futures)
-      {
-        var expDate = instrument?.Derivative?.TradeDate ?? instrument?.Derivative?.ExpirationDate;
-
-        items = [.. items.Where(o =>
-          o.LocalSymbol.Equals(instrument.Name) ||
-          o.LastTradeDateOrContractMonth.Equals($"{expDate:yyyyMMdd}"))];
-      }
 
       return items;
     }
@@ -390,7 +340,8 @@ namespace InteractiveBrokers
     public virtual async Task<AccountModel> AccountSummary()
     {
       var account = new AccountModel();
-      var message = await connector.GetAccountValues(State.Account.Name);
+      var cleaner = new CancellationTokenSource(State.Timeout);
+      var message = await connector.GetAccountSummary(cleaner.Token);
 
       account = account with { Balance = double.Parse(message.Get("NetLiquidation")) };
 
