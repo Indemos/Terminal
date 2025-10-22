@@ -120,8 +120,8 @@ namespace Core.Services
     {
       try
       {
-        cleaner?.Cancel();
         queue?.Writer?.TryComplete();
+        cleaner?.Cancel();
         cleaner?.Dispose();
         processor?.Join();
       }
