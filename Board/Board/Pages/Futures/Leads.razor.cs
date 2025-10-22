@@ -119,16 +119,16 @@ namespace Board.Pages.Futures
       var account = adapter.Account;
       var assetX = account.Instruments["NQU25"];
       var assetY = account.Instruments["ESU25"];
-      var seriesX = await adapter.Ticks(new MetaModel { Count = 1, Instrument = assetX });
-      var seriesY = await adapter.Ticks(new MetaModel { Count = 1, Instrument = assetY });
+      var seriesX = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = assetX });
+      var seriesY = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = assetY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = await adapter.Orders(default);
-      var positions = await adapter.Positions(default);
+      var orders = await adapter.GetOrders(default);
+      var positions = await adapter.GetPositions(default);
       var performance = await Performance.Update([adapter]);
       var scaleX = await Scales["NQU25"].Update(seriesX);
       var scaleY = await Scales["ESU25"].Update(seriesY);
@@ -204,7 +204,7 @@ namespace Board.Pages.Futures
     public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = await adapter.Positions(default);
+      var positions = await adapter.GetPositions(default);
       var account = adapter.Account;
 
       foreach (var position in positions)

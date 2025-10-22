@@ -62,7 +62,7 @@ namespace Board.Components
 
       var values = new List<InputData>();
       var balance = adapters.Sum(o => o.Account.Balance).Value;
-      var queries = adapters.Select(o => o.Transactions(default));
+      var queries = adapters.Select(o => o.GetTransactions(default));
       var responses = await Task.WhenAll(queries);
       var actions = responses
         .SelectMany(o => o)

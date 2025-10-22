@@ -18,8 +18,8 @@ namespace Simulation.Grains
     public override Task<IList<PriceModel>> Prices(MetaModel criteria)
     {
       var prices = State.Prices
-        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
+        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
+        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
         .TakeLast(criteria?.Count ?? State.Prices.Count)
         .ToArray();
 
@@ -32,8 +32,8 @@ namespace Simulation.Grains
     public override Task<IList<PriceModel>> PriceGroups(MetaModel criteria)
     {
       var prices = State.PriceGroups
-        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate)
-        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate)
+        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
+        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
         .TakeLast(criteria?.Count ?? State.PriceGroups.Count)
         .ToArray();
 

@@ -70,7 +70,7 @@ namespace Board.Components
 
       if (Update.IsCompleted)
       {
-        var queries = adapters.Select(o => o.Positions(default));
+        var queries = adapters.Select(o => o.GetPositions(default));
         var responses = await Task.WhenAll(queries);
         var positions = responses
           .SelectMany(o => o)

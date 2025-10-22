@@ -68,7 +68,7 @@ namespace Simulation
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomModel> Dom(MetaModel criteria)
+    public override async Task<DomModel> GetDom(MetaModel criteria)
     {
       return await Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
@@ -77,7 +77,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> Ticks(MetaModel criteria)
+    public override async Task<IList<PriceModel>> GetTicks(MetaModel criteria)
     {
       return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
@@ -86,7 +86,7 @@ namespace Simulation
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> Bars(MetaModel criteria)
+    public override async Task<IList<PriceModel>> GetBars(MetaModel criteria)
     {
       return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
@@ -95,7 +95,7 @@ namespace Simulation
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<InstrumentModel>> Options(MetaModel criteria)
+    public override async Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
     {
       return await Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
@@ -104,7 +104,7 @@ namespace Simulation
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> Orders(MetaModel criteria)
+    public override async Task<IList<OrderModel>> GetOrders(MetaModel criteria)
     {
       return await Component<IOrdersGrain>().Orders(criteria);
     }
@@ -113,7 +113,7 @@ namespace Simulation
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> Positions(MetaModel criteria)
+    public override async Task<IList<OrderModel>> GetPositions(MetaModel criteria)
     {
       return await Component<IPositionsGrain>().Positions(criteria);
     }
@@ -122,7 +122,7 @@ namespace Simulation
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> Transactions(MetaModel criteria)
+    public override async Task<IList<OrderModel>> GetTransactions(MetaModel criteria)
     {
       return await Component<ITransactionsGrain>().Transactions(criteria);
     }

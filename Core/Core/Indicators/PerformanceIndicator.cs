@@ -17,7 +17,7 @@ namespace Core.Indicators
 
       foreach (var adapter in adapters)
       {
-        var positions = await adapter.Positions(default);
+        var positions = await adapter.GetPositions(default);
         var positionsSum = positions.Sum(o => o.Balance.Current);
         var account = adapter.Account;
 
@@ -25,6 +25,7 @@ namespace Core.Indicators
       }
 
       Response = Response with { Last = sum };
+
 
       return this;
     }

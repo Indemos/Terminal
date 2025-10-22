@@ -112,8 +112,8 @@ namespace Board.Pages.Gateways
       var account = adapter.Account;
       var instrument = Instrument;
       var performance = await Performance.Update([adapter]);
-      var orders = await adapter.Orders(default);
-      var positions = await adapter.Positions(default);
+      var orders = await adapter.GetOrders(default);
+      var positions = await adapter.GetPositions(default);
 
       if (orders.IsEmpty() && positions.IsEmpty())
       {
@@ -181,7 +181,7 @@ namespace Board.Pages.Gateways
     protected async Task ClosePositions(string name)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = await adapter.Positions(default);
+      var positions = await adapter.GetPositions(default);
 
       foreach (var position in positions.Where(o => Equals(name, o.Operation.Instrument.Name)))
       {

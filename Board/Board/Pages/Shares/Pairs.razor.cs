@@ -105,16 +105,16 @@ namespace Board.Pages.Shares
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = await adapter.Ticks(new MetaModel { Count = 1, Instrument = instrumentX });
-      var seriesY = await adapter.Ticks(new MetaModel { Count = 1, Instrument = instrumentY });
+      var seriesX = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentX });
+      var seriesY = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = await adapter.Orders(default);
-      var positions = await adapter.Positions(default);
+      var orders = await adapter.GetOrders(default);
+      var positions = await adapter.GetPositions(default);
       var performance = await Performance.Update([adapter]);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
@@ -199,7 +199,7 @@ namespace Board.Pages.Shares
     public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
       var adapter = View.Adapters["Prime"];
-      var positions = await adapter.Positions(default);
+      var positions = await adapter.GetPositions(default);
       var account = adapter.Account;
 
       foreach (var position in positions)

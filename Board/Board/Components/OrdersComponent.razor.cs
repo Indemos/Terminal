@@ -69,7 +69,7 @@ namespace Board.Components
 
       if (Update.IsCompleted)
       {
-        var queries = adapters.Select(o => o.Orders(default));
+        var queries = adapters.Select(o => o.GetOrders(default));
         var responses = await Task.WhenAll(queries);
         var orders = responses
           .SelectMany(o => o)
