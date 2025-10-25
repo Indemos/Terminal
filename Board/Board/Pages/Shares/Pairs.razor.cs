@@ -92,7 +92,7 @@ namespace Board.Pages.Shares
         }
       };
 
-      adapter.Subscription += OnPrice;
+      adapter.OnData += OnPrice;
     }
 
     /// <summary>

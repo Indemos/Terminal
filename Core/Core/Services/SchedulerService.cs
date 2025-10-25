@@ -12,6 +12,11 @@ namespace Core.Services
     protected CancellationTokenSource cleaner;
 
     /// <summary>
+    /// Queue count
+    /// </summary>
+    public int Count => queue?.Reader?.Count ?? 0;
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public SchedulerService() : this(1, new CancellationTokenSource())

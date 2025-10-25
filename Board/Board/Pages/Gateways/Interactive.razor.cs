@@ -102,7 +102,7 @@ namespace Board.Pages.Gateways
         }
       };
 
-      adapter.Subscription += OnPrice;
+      adapter.OnData += OnPrice;
     }
 
     protected async Task OnPrice(PriceModel price)

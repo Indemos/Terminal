@@ -22,19 +22,14 @@ namespace Core.Conventions
     StreamService Streamer { get; set; }
 
     /// <summary>
+    /// Data stream
+    /// </summary>
+    Func<PriceModel, Task> OnData { get; set; }
+
+    /// <summary>
     /// Cluster client
     /// </summary>
     IClusterClient Connector { get; set; }
-
-    /// <summary>
-    /// Data stream
-    /// </summary>
-    Func<PriceModel, Task> Subscription { get; set; }
-
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    string Descriptor(string instrument = null);
 
     /// <summary>
     /// Connect
@@ -93,16 +88,16 @@ namespace Core.Conventions
     Task<IList<InstrumentModel>> GetOptions(MetaModel criteria);
 
     /// <summary>
-    /// Get positions
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetPositions(MetaModel criteria);
-
-    /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
     Task<IList<OrderModel>> GetOrders(MetaModel criteria);
+
+    /// <summary>
+    /// Get positions
+    /// </summary>
+    /// <param name="criteria"></param>
+    Task<IList<OrderModel>> GetPositions(MetaModel criteria);
 
     /// <summary>
     /// Get all account transactions
@@ -129,6 +124,11 @@ namespace Core.Conventions
   public abstract class Gateway : IGateway
   {
     /// <summary>
+    /// Stream subscriptions
+    /// </summary>
+    protected List<IDisposable> streams = new();
+
+    /// <summary>
     /// Namespace
     /// </summary>
     public virtual string Space { get; set; } = $"{Guid.NewGuid()}";
@@ -146,12 +146,12 @@ namespace Core.Conventions
     /// <summary>
     /// Data stream
     /// </summary>
-    public virtual Services.StreamService Streamer { get; set; }
+    public virtual StreamService Streamer { get; set; }
 
     /// <summary>
-    /// Data stream
+    /// Trade stream
     /// </summary>
-    public virtual Func<PriceModel, Task> Subscription { get; set; }
+    public virtual Func<PriceModel, Task> OnData { get; set; } = o => Task.CompletedTask;
 
     /// <summary>
     /// Connect
@@ -200,6 +200,12 @@ namespace Core.Conventions
     public abstract Task<IList<InstrumentModel>> GetOptions(MetaModel criteria);
 
     /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="criteria"></param>
+    public abstract Task<IList<OrderModel>> GetOrders(MetaModel criteria);
+
+    /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
@@ -210,12 +216,6 @@ namespace Core.Conventions
     /// </summary>
     /// <param name="criteria"></param>
     public abstract Task<IList<OrderModel>> GetTransactions(MetaModel criteria);
-
-    /// <summary>
-    /// Get orders
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetOrders(MetaModel criteria);
 
     /// <summary>
     /// Send new orders
@@ -274,19 +274,12 @@ namespace Core.Conventions
       $"{Space}:{Account.Name}:{instrument}";
 
     /// <summary>
-    /// Subscribe to price updates
+    /// Subscribe to account updates
     /// </summary>
-    protected virtual void ConnectPrices()
+    protected virtual void SubscribeToUpdates()
     {
-      Streamer.Subscribe<PriceModel>(o => Subscription(o));
-    }
-
-    /// <summary>
-    /// Subscribe to order updates
-    /// </summary>
-    protected virtual void ConnectOrders()
-    {
-      Streamer.Subscribe<OrderModel>(o =>
+      streams.Add(Streamer.Subscribe<PriceModel>(o => OnData(o)));
+      streams.Add(Streamer.Subscribe<OrderModel>(o =>
       {
         if (o.Operation.Status is OrderStatusEnum.Transaction)
         {
@@ -295,7 +288,16 @@ namespace Core.Conventions
             Performance = Account.Performance + o.Balance.Current
           };
         }
-      });
+      }));
+    }
+
+    /// <summary>
+    /// Unsubscribe tofrom account updates
+    /// </summary>
+    protected virtual void UnsubscribeFromUpdates()
+    {
+      streams.ForEach(o => o.Dispose());
+      streams.Clear();
     }
 
     /// <summary>

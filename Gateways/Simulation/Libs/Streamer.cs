@@ -15,7 +15,6 @@ using System.IO.Compression;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace Simulation
 {
@@ -79,20 +78,13 @@ namespace Simulation
 
       Adapter.Account.Instruments.Values.ForEach(o => Subscribe(o));
 
-      var scheduler = new SchedulerService();
-      var counter = new Timer(TimeSpan.FromMicroseconds(Adapter.Speed));
-
-      counter.Enabled = true;
-      counter.AutoReset = false;
-      counter.Elapsed += (sender, e) => scheduler.Send(async () =>
+      Task.Factory.StartNew(async () =>
       {
-        await Task.WhenAll(subscriptions.Values.Select(o => o()));
-        counter.Enabled = true;
-      });
+        while (streams.Count > 0) await Task.WhenAll(subscriptions.Values.Select(o => o()));
+
+      }, TaskCreationOptions.LongRunning);
 
       connections.AddRange(streams.Values);
-      connections.Add(scheduler);
-      connections.Add(counter);
 
       return new StatusResponse
       {
@@ -170,7 +162,7 @@ namespace Simulation
           await optionsGrain.Store(min.Value.Options);
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
-          await Adapter.Subscription(price);
+          await Adapter.OnData(price);
 
           summaries[instrument.Name] = null;
         }

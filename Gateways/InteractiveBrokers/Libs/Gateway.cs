@@ -30,12 +30,6 @@ namespace InteractiveBrokers
     public virtual TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
 
     /// <summary>
-    /// Price update
-    /// </summary>
-    /// <param name="price"></param>
-    public virtual Task OnPrice(PriceModel price) => Subscription(price);
-
-    /// <summary>
     /// Connect
     /// </summary>
     public override async Task<StatusResponse> Connect()
@@ -51,8 +45,7 @@ namespace InteractiveBrokers
         Account = Account,
       });
 
-      ConnectPrices();
-      ConnectOrders();
+      SubscribeToUpdates();
 
       return await grain.Connect();
     }
@@ -62,6 +55,8 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
+      UnsubscribeFromUpdates();
+
       return Component<IConnectionGrain>().Disconnect();
     }
 
@@ -78,45 +73,45 @@ namespace InteractiveBrokers
     /// Unsubscribe from data streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
-      return await Component<IConnectionGrain>().Unsubscribe(instrument);
+      return Component<IConnectionGrain>().Unsubscribe(instrument);
     }
 
     /// <summary>
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomModel> GetDom(MetaModel criteria)
+    public override Task<DomModel> GetDom(MetaModel criteria)
     {
-      return await Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
+      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
 
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> GetTicks(MetaModel criteria)
+    public override Task<IList<PriceModel>> GetTicks(MetaModel criteria)
     {
-      return await Component<IPricesGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<IPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> GetBars(MetaModel criteria)
+    public override Task<IList<PriceModel>> GetBars(MetaModel criteria)
     {
-      return await Component<IPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<IPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
+    public override Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
     {
-      return await Component<IConnectionGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IConnectionGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>

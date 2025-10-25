@@ -33,7 +33,7 @@ namespace Simulation
         Adapter = this
       };
 
-      ConnectOrders();
+      SubscribeToUpdates();
 
       return Task.FromResult(streamer.Connect());
     }
@@ -43,6 +43,8 @@ namespace Simulation
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
+      UnsubscribeFromUpdates();
+
       return Task.FromResult(streamer.Disconnect());
     }
 
@@ -68,63 +70,63 @@ namespace Simulation
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<DomModel> GetDom(MetaModel criteria)
+    public override Task<DomModel> GetDom(MetaModel criteria)
     {
-      return await Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
+      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
 
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> GetTicks(MetaModel criteria)
+    public override Task<IList<PriceModel>> GetTicks(MetaModel criteria)
     {
-      return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
     /// List of points by criteria, e.g. for specified instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<PriceModel>> GetBars(MetaModel criteria)
+    public override Task<IList<PriceModel>> GetBars(MetaModel criteria)
     {
-      return await Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
+    public override Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
     {
-      return await Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetOrders(MetaModel criteria)
+    public override Task<IList<OrderModel>> GetOrders(MetaModel criteria)
     {
-      return await Component<IOrdersGrain>().Orders(criteria);
+      return Component<IOrdersGrain>().Orders(criteria);
     }
 
     /// <summary>
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetPositions(MetaModel criteria)
+    public override Task<IList<OrderModel>> GetPositions(MetaModel criteria)
     {
-      return await Component<IPositionsGrain>().Positions(criteria);
+      return Component<IPositionsGrain>().Positions(criteria);
     }
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetTransactions(MetaModel criteria)
+    public override Task<IList<OrderModel>> GetTransactions(MetaModel criteria)
     {
-      return await Component<ITransactionsGrain>().Transactions(criteria);
+      return Component<ITransactionsGrain>().Transactions(criteria);
     }
 
     /// <summary>

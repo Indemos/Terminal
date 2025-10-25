@@ -54,6 +54,7 @@ namespace Board
       builder.Services.AddScoped<SubscriptionService>();
       builder.Services.AddScoped(o => new LogService(setup["Documents:Logs"]));
       builder.Services.AddScoped(o => new StreamService(setup["Apps:Address"] + "/messages"));
+      builder.Services.AddSingleton<SchedulerService>();
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
