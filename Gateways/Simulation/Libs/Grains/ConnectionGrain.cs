@@ -5,8 +5,9 @@ using Core.Models;
 using Core.Services;
 using MessagePack;
 using MessagePack.Resolvers;
+using Orleans;
 using Simulation.Grains;
-using Simulation.States;
+using Simulation.Models;
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -18,8 +19,43 @@ using System.Threading.Tasks;
 
 namespace Simulation
 {
-  public class Streamer : IDisposable
+  public interface IConnectionGrain : IGrainWithStringKey
   {
+    /// <summary>
+    /// Connect
+    /// </summary>
+    /// <param name="connection"></param>
+    Task<StatusResponse> Connect(ConnectionModel connection);
+
+    /// <summary>
+    /// Disconnect
+    /// </summary>
+    Task<StatusResponse> Disconnect();
+
+    /// <summary>
+    /// Subscribe to streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Subscribe(InstrumentModel instrument);
+
+    /// <summary>
+    /// Unsubscribe from streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
+  }
+
+  /// <summary>
+  /// Constructor
+  /// </summary>
+  /// <param name="messenger"></param>
+  public class ConnectionGrain(MessageService messenger) : Grain<ConnectionModel>, IConnectionGrain
+  {
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    protected MessageService messenger = messenger;
+
     /// <summary>
     /// HTTP service
     /// </summary>
@@ -33,7 +69,7 @@ namespace Simulation
     /// <summary>
     /// Subscription states
     /// </summary>
-    protected ConcurrentDictionary<string, SummaryState> summaries = new();
+    protected ConcurrentDictionary<string, SummaryModel> summaries = new();
 
     /// <summary>
     /// Subscriptions
@@ -53,36 +89,30 @@ namespace Simulation
       .WithResolver(ContractlessStandardResolver.Instance);
 
     /// <summary>
-    /// State
-    /// </summary>
-    public virtual Gateway Adapter { get; set; }
-
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    public virtual string Descriptor { get; set; }
-
-    /// <summary>
     /// Connect
     /// </summary>
-    public virtual StatusResponse Connect()
+    /// <param name="connection"></param>
+    public virtual async Task<StatusResponse> Connect(ConnectionModel connection)
     {
-      Disconnect();
+      await Disconnect();
 
-      streams = Adapter.Account.Instruments.ToDictionary(
+      State = connection;
+
+      streams = State.Account.Instruments.ToDictionary(
         o => o.Value.Name,
         o => Directory
-          .EnumerateFiles(Path.Combine(Adapter.Source, o.Value.Name), "*", SearchOption.AllDirectories)
+          .EnumerateFiles(Path.Combine(State.Source, o.Value.Name), "*", SearchOption.AllDirectories)
           .GetEnumerator())
           .Concurrent();
 
-      Adapter.Account.Instruments.Values.ForEach(o => Subscribe(o));
+      await Task.WhenAll(State.Account.Instruments.Values.Select(Subscribe));
 
-      Task.Factory.StartNew(async () =>
-      {
-        while (streams.Count > 0) await Task.WhenAll(subscriptions.Values.Select(o => o()));
-
-      }, TaskCreationOptions.LongRunning);
+      var counter = this.RegisterGrainTimer(
+        o => Task.WhenAll(subscriptions.Values.Select(o => o())),
+        0,
+        TimeSpan.Zero,
+        TimeSpan.FromMicroseconds(1)
+        );
 
       connections.AddRange(streams.Values);
 
@@ -95,41 +125,37 @@ namespace Simulation
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public virtual StatusResponse Disconnect()
+    public virtual Task<StatusResponse> Disconnect()
     {
       connections?.ForEach(o => o.Dispose());
-      Adapter?.Account?.Instruments?.Values?.ForEach(o => Unsubscribe(o));
+      State?.Account?.Instruments?.Values?.ForEach(o => Unsubscribe(o));
 
       streams?.Clear();
       summaries?.Clear();
       connections?.Clear();
       subscriptions?.Clear();
 
-      return new StatusResponse
+      return Task.FromResult(new StatusResponse
       {
         Data = StatusEnum.Inactive
-      };
+      });
     }
-
-    /// <summary>
-    /// Dispose
-    /// </summary>
-    public void Dispose() => Disconnect();
 
     /// <summary>
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual StatusResponse Subscribe(InstrumentModel instrument)
+    public virtual async Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
-      Unsubscribe(instrument);
+      await Unsubscribe(instrument);
 
-      var instrumentDescriptor = Adapter.Descriptor(instrument.Name);
-      var domGrain = Adapter.Connector.GetGrain<IDomGrain>(instrumentDescriptor);
-      var pricesGrain = Adapter.Connector.GetGrain<IGatewayPricesGrain>(instrumentDescriptor);
-      var optionsGrain = Adapter.Connector.GetGrain<IOptionsGrain>(instrumentDescriptor);
-      var ordersGrain = Adapter.Connector.GetGrain<IOrdersGrain>(Adapter.Descriptor());
-      var positionsGrain = Adapter.Connector.GetGrain<IPositionsGrain>(Adapter.Descriptor());
+      var descriptor = this.GetPrimaryKeyString();
+      var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
+      var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
+      var pricesGrain = GrainFactory.GetGrain<IGatewayPricesGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.GetGrain<IOptionsGrain>(instrumentDescriptor);
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
       subscriptions[instrument.Name] = async () =>
       {
@@ -162,13 +188,13 @@ namespace Simulation
           await optionsGrain.Store(min.Value.Options);
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
-          await Adapter.OnData(price);
+          await messenger.Send(price);
 
           summaries[instrument.Name] = null;
         }
       };
 
-      return new StatusResponse
+      return new()
       {
         Data = StatusEnum.Active
       };
@@ -178,14 +204,14 @@ namespace Simulation
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual StatusResponse Unsubscribe(InstrumentModel instrument)
+    public virtual Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
       subscriptions.TryRemove(instrument.Name, out var subscription);
 
-      return new StatusResponse
+      return Task.FromResult(new StatusResponse
       {
-        Data = StatusEnum.Inactive
-      };
+        Data = StatusEnum.Pause
+      });
     }
 
     /// <summary>
@@ -193,7 +219,7 @@ namespace Simulation
     /// </summary>
     /// <param name="name"></param>
     /// <param name="source"></param>
-    protected virtual SummaryState GetSummary(string name, string source)
+    protected virtual SummaryModel GetSummary(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -201,7 +227,7 @@ namespace Simulation
       {
         var content = File.ReadAllBytes(source);
 
-        return MessagePackSerializer.Deserialize<SummaryState>(content, messageOptions);
+        return MessagePackSerializer.Deserialize<SummaryModel>(content, messageOptions);
       }
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
@@ -210,13 +236,13 @@ namespace Simulation
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          return JsonSerializer.Deserialize<SummaryState>(content, converter.Options);
+          return JsonSerializer.Deserialize<SummaryModel>(content, converter.Options);
         }
       }
 
       var inputMessage = File.ReadAllText(source);
 
-      return JsonSerializer.Deserialize<SummaryState>(inputMessage, converter.Options);
+      return JsonSerializer.Deserialize<SummaryModel>(inputMessage, converter.Options);
     }
   }
 }

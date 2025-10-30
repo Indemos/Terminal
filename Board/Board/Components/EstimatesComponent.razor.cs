@@ -1,6 +1,7 @@
 using Canvas.Core.Shapes;
 using Core.Conventions;
 using Core.Enums;
+using Core.Grains;
 using Core.Models;
 using Core.Services;
 using Estimator.Services;
@@ -16,7 +17,7 @@ namespace Board.Components
 {
   public partial class EstimatesComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual StateService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -56,12 +57,14 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.OnState += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
             Clear();
           }
+
+          return Task.CompletedTask;
         };
       }
     }

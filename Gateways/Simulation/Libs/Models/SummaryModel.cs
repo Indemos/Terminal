@@ -1,9 +1,9 @@
 using Core.Models;
 using System.Collections.Generic;
 
-namespace Simulation.States
+namespace Simulation.Models
 {
-  public record SummaryState
+  public record SummaryModel
   {
     /// <summary>
     /// Depth of market

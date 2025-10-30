@@ -9,27 +9,12 @@ using System.Threading.Tasks;
 
 namespace Core.Conventions
 {
-  public interface IGateway : IDisposable
+  public interface IGateway
   {
     /// <summary>
     /// Account
     /// </summary>
     AccountModel Account { get; set; }
-
-    /// <summary>
-    /// Data stream
-    /// </summary>
-    StreamService Streamer { get; set; }
-
-    /// <summary>
-    /// Data stream
-    /// </summary>
-    Func<PriceModel, Task> OnData { get; set; }
-
-    /// <summary>
-    /// Cluster client
-    /// </summary>
-    IClusterClient Connector { get; set; }
 
     /// <summary>
     /// Connect
@@ -116,22 +101,25 @@ namespace Core.Conventions
     /// </summary>
     /// <param name="order"></param>
     Task<DescriptorResponse> ClearOrder(OrderModel order);
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<string> Descriptor(string instrument = null);
   }
 
-  /// <summary>
-  /// Implementation
-  /// </summary>
   public abstract class Gateway : IGateway
   {
     /// <summary>
-    /// Stream subscriptions
+    /// Grain client
     /// </summary>
-    protected List<IDisposable> streams = new();
+    public virtual IClusterClient Connector { get; set; }
 
     /// <summary>
-    /// Namespace
+    /// Messenger
     /// </summary>
-    public virtual string Space { get; set; } = $"{Guid.NewGuid()}";
+    public virtual MessageService Messenger { get; set; }
 
     /// <summary>
     /// Account
@@ -139,19 +127,9 @@ namespace Core.Conventions
     public virtual AccountModel Account { get; set; }
 
     /// <summary>
-    /// Cluster client
+    /// Grain namespace
     /// </summary>
-    public virtual IClusterClient Connector { get; set; }
-
-    /// <summary>
-    /// Data stream
-    /// </summary>
-    public virtual StreamService Streamer { get; set; }
-
-    /// <summary>
-    /// Trade stream
-    /// </summary>
-    public virtual Func<PriceModel, Task> OnData { get; set; } = o => Task.CompletedTask;
+    public virtual string Space { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
     /// Connect
@@ -230,11 +208,6 @@ namespace Core.Conventions
     public abstract Task<DescriptorResponse> ClearOrder(OrderModel order);
 
     /// <summary>
-    /// Dispose
-    /// </summary>
-    public virtual void Dispose() => Disconnect();
-
-    /// <summary>
     /// Subscribe
     /// </summary>
     public virtual async Task<StatusResponse> Subscribe()
@@ -269,40 +242,40 @@ namespace Core.Conventions
     /// <summary>
     /// Descriptor
     /// </summary>
-    public virtual string Descriptor(string instrument = null) => instrument is null ?
+    /// <param name="instrument"></param>
+    public virtual Task<string> Descriptor(string instrument = null) => Task.FromResult(Name(instrument));
+
+    /// <summary>
+    /// Descriptor
+    /// </summary>
+    /// <param name="instrument"></param>
+    protected virtual string Name(string instrument = null) => instrument is null ?
       $"{Space}:{Account.Name}" :
       $"{Space}:{Account.Name}:{instrument}";
+
+    /// <summary>
+    /// Grain selector
+    /// </summary>
+    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.GetGrain<T>(Name(instrument));
 
     /// <summary>
     /// Subscribe to account updates
     /// </summary>
     protected virtual void SubscribeToUpdates()
     {
-      streams.Add(Streamer.Subscribe<PriceModel>(o => OnData(o)));
-      streams.Add(Streamer.Subscribe<OrderModel>(o =>
+      Messenger.Subscribe<OrderModel>(order =>
       {
-        if (o.Operation.Status is OrderStatusEnum.Transaction)
+        if (order.Operation.Status is OrderStatusEnum.Transaction)
         {
           Account = Account with
           {
-            Performance = Account.Performance + o.Balance.Current
+            Performance = Account.Performance + order.Balance.Current
           };
         }
-      }));
-    }
 
-    /// <summary>
-    /// Unsubscribe tofrom account updates
-    /// </summary>
-    protected virtual void UnsubscribeFromUpdates()
-    {
-      streams.ForEach(o => o.Dispose());
-      streams.Clear();
-    }
+        return Task.CompletedTask;
 
-    /// <summary>
-    /// Grain selector
-    /// </summary>
-    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.GetGrain<T>(Descriptor(instrument));
+      }, nameof(OrderModel));
+    }
   }
 }

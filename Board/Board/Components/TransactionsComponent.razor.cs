@@ -11,7 +11,7 @@ namespace Board.Components
 {
   public partial class TransactionsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual StateService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -30,7 +30,7 @@ namespace Board.Components
     /// <summary>
     /// Sync
     /// </summary>
-    protected Task Update { get; set; } = Task.CompletedTask;
+    protected Task Sync { get; set; } = Task.CompletedTask;
 
     /// <summary>
     /// Table records
@@ -47,12 +47,14 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.OnState += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
             Clear();
           }
+
+          return Task.CompletedTask;
         };
       }
     }
@@ -61,9 +63,9 @@ namespace Board.Components
     /// Update table records 
     /// </summary>
     /// <param name="account"></param>
-    public virtual async void UpdateItems(params IGateway[] adapters)
+    public virtual async void Update(IEnumerable<IGateway> adapters)
     {
-      if (Update.IsCompleted)
+      if (Sync.IsCompleted)
       {
         var queries = adapters.Select(o => o.GetTransactions(default));
         var responses = await Task.WhenAll(queries);
@@ -85,7 +87,7 @@ namespace Board.Components
 
         })];
 
-        Update = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+        Sync = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
       }
     }
 

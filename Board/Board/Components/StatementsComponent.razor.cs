@@ -12,7 +12,7 @@ namespace Board.Components
 {
   public partial class StatementsComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual StateService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -33,7 +33,7 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.OnState += state =>
+        Observer.Update += state =>
         {
           switch (true)
           {
@@ -45,6 +45,8 @@ namespace Board.Components
               UpdateItems([.. Adapters.Values]);
               break;
           }
+
+          return Task.CompletedTask;
         };
       }
     }
@@ -61,10 +63,9 @@ namespace Board.Components
       }
 
       var values = new List<InputData>();
-      var balance = adapters.Sum(o => o.Account.Balance).Value;
-      var queries = adapters.Select(o => o.GetTransactions(default));
-      var responses = await Task.WhenAll(queries);
-      var actions = responses
+      var actionResponses = await Task.WhenAll(adapters.Select(o => o.GetTransactions(default)));
+      var balance = adapters.Sum(o => o.Account.Balance ?? 0);
+      var actions = actionResponses
         .SelectMany(o => o)
         .OrderBy(o => o.Operation.Time)
         .ToList();

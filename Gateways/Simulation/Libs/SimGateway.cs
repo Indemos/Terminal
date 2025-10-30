@@ -1,53 +1,27 @@
+using Core.Conventions;
 using Core.Grains;
 using Core.Models;
-using InteractiveBrokers.Models;
-using System;
+using Simulation.Grains;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
-namespace InteractiveBrokers
+namespace Simulation
 {
-  public class Gateway : Core.Conventions.Gateway
+  public class SimGateway : Gateway
   {
     /// <summary>
-    /// Port
+    /// Source
     /// </summary>
-    public virtual int Port { get; set; } = 7497;
-
-    /// <summary>
-    /// Host
-    /// </summary>
-    public virtual string Host { get; set; } = "127.0.0.1";
-
-    /// <summary>
-    /// Timeout
-    /// </summary>
-    public virtual TimeSpan Span { get; set; } = TimeSpan.FromSeconds(1);
-
-    /// <summary>
-    /// Timeout
-    /// </summary>
-    public virtual TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
+    public virtual string Source { get; set; }
 
     /// <summary>
     /// Connect
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var grain = Component<IConnectionGrain>();
-
-      await grain.Store(new ConnectionModel
-      {
-        Host = Host,
-        Port = Port,
-        Span = Span,
-        Timeout = Timeout,
-        Account = Account,
-      });
-
       SubscribeToUpdates();
 
-      return await grain.Connect();
+      return await Component<IConnectionGrain>().Connect(new() { Account = Account, Source = Source });
     }
 
     /// <summary>
@@ -55,8 +29,6 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      UnsubscribeFromUpdates();
-
       return Component<IConnectionGrain>().Disconnect();
     }
 
@@ -70,7 +42,7 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Unsubscribe from data streams
+    /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
@@ -79,7 +51,7 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Get latest quote
+    /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
     public override Task<DomModel> GetDom(MetaModel criteria)
@@ -93,7 +65,7 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetTicks(MetaModel criteria)
     {
-      return Component<IPricesGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
@@ -102,56 +74,34 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetBars(MetaModel criteria)
     {
-      return Component<IPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
-    /// Get options
+    /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
     public override Task<IList<InstrumentModel>> GetOptions(MetaModel criteria)
     {
-      return Component<IConnectionGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
-    /// Get orders
+    /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetOrders(MetaModel criteria)
+    public override Task<IList<OrderModel>> GetOrders(MetaModel criteria)
     {
-      var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<IConnectionGrain>();
-      var response = await connectionGrain.Orders(criteria);
-
-      await ordersGrain.Clear();
-
-      foreach (var order in response)
-      {
-        await ordersGrain.Store(order);
-      }
-
-      return response;
+      return Component<IOrdersGrain>().Orders(criteria);
     }
 
     /// <summary>
-    /// Get positions 
+    /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetPositions(MetaModel criteria)
+    public override Task<IList<OrderModel>> GetPositions(MetaModel criteria)
     {
-      var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<IConnectionGrain>();
-      var response = await positionsGrain.Positions(criteria);
-
-      await positionsGrain.Clear();
-
-      foreach (var order in response)
-      {
-        await positionsGrain.Store(order);
-      }
-
-      return response;
+      return Component<IPositionsGrain>().Positions(criteria);
     }
 
     /// <summary>
@@ -164,7 +114,7 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Send order
+    /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
     public override Task<OrderGroupsResponse> SendOrder(OrderModel order)

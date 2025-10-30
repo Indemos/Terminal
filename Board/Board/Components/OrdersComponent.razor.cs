@@ -1,5 +1,6 @@
 using Core.Conventions;
 using Core.Enums;
+using Core.Grains;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -11,7 +12,7 @@ namespace Board.Components
 {
   public partial class OrdersComponent
   {
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual StateService Observer { get; set; }
 
     [Parameter] public virtual string Name { get; set; }
 
@@ -29,7 +30,7 @@ namespace Board.Components
     /// <summary>
     /// Sync
     /// </summary>
-    protected Task Update { get; set; } = Task.CompletedTask;
+    protected Task Sync { get; set; } = Task.CompletedTask;
 
     /// <summary>
     /// Table records
@@ -46,12 +47,14 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.OnState += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
             Clear();
           }
+
+          return Task.CompletedTask;
         };
       }
     }
@@ -60,14 +63,14 @@ namespace Board.Components
     /// Update table records 
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual async void UpdateItems(params IGateway[] adapters)
+    public virtual async void Update(IEnumerable<IGateway> adapters)
     {
       if (Observer.State.Next is SubscriptionEnum.None)
       {
         return;
       }
 
-      if (Update.IsCompleted)
+      if (Sync.IsCompleted)
       {
         var queries = adapters.Select(o => o.GetOrders(default));
         var responses = await Task.WhenAll(queries);
@@ -88,7 +91,7 @@ namespace Board.Components
 
         })];
 
-        Update = Task.WhenAll([InvokeAsync(StateHasChanged)]);
+        Sync = Task.WhenAll([InvokeAsync(StateHasChanged)]);
       }
     }
 

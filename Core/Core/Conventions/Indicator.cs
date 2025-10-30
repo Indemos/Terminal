@@ -33,17 +33,12 @@ namespace Core.Conventions
     /// <summary>
     /// Point
     /// </summary>
-    public virtual PriceModel Response { get; protected set; }
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    public Indicator() => Response = new();
+    public virtual PriceModel Response { get; protected set; } = new();
 
     /// <summary>
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    public virtual Task<IIndicator> Update(IList<PriceModel> collection) => default;
+    public virtual Task<IIndicator> Update(IList<PriceModel> collection) => Task.FromResult(this as IIndicator);
   }
 }

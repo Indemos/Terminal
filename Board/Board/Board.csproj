@@ -20,7 +20,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\Gateways\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
     <ProjectReference Include="..\..\Gateways\Simulation\Libs\Simulation.csproj" />
   </ItemGroup>
 

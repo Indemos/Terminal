@@ -1,7 +1,9 @@
 using Core.Models;
 using Core.Services;
 using Orleans;
+using System;
 using System.Collections.Generic;
+using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -24,16 +26,16 @@ namespace Core.Grains
 
   public class TransactionsGrain : Grain<TransactionsModel>, ITransactionsGrain
   {
-    /// <summary>
-    /// Order stream
-    /// </summary>
-    protected StreamService streamer;
+    protected MessageService messenger;
 
     /// <summary>
     /// Constructor
     /// </summary>
-    /// <param name="streamService"></param>
-    public TransactionsGrain(StreamService streamService) => streamer = streamService;
+    /// <param name="messenger"></param>
+    public TransactionsGrain(MessageService messenger)
+    {
+      this.messenger = messenger; 
+    }
 
     /// <summary>
     /// Get transactions
@@ -55,7 +57,7 @@ namespace Core.Grains
 
       State.Grains.Add(orderGrain);
 
-      await streamer.Send(order);
+      await messenger.Send(order);
 
       return response;
     }

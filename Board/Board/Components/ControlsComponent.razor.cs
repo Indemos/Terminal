@@ -12,8 +12,8 @@ namespace Board.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] Core.Services.StreamService Streamer { get; set; }
-    [Inject] SubscriptionService Observer { get; set; }
+    [Inject] MessageService Messenger { get; set; }
+    [Inject] StateService Subscription { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
 
@@ -29,7 +29,10 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.State = new() { Next = SubscriptionEnum.None };
+        Subscription.State = new()
+        {
+          Next = SubscriptionEnum.None
+        };
 
         StateHasChanged();
       }
@@ -42,23 +45,23 @@ namespace Board.Components
     {
       try
       {
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.None,
           Next = SubscriptionEnum.Progress
-        };
+        });
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Connect()));
 
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Stream
-        };
+        });
       }
       catch (Exception e)
       {
-        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -69,23 +72,23 @@ namespace Board.Components
     {
       try
       {
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
-        };
+        });
 
         await Task.WhenAll(Adapters.Values.Select(o => o.Disconnect()));
 
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.None,
-        };
+        });
       }
       catch (Exception e)
       {
-        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -96,23 +99,23 @@ namespace Board.Components
     {
       try
       {
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Pause,
           Next = SubscriptionEnum.Progress,
-        };
+        });
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Subscribe()));
 
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Stream,
-        };
+        });
       }
       catch (Exception e)
       {
-        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
 
@@ -123,23 +126,23 @@ namespace Board.Components
     {
       try
       {
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Stream,
           Next = SubscriptionEnum.Progress,
-        };
+        });
 
         await Task.WhenAll(Adapters.Values.Select(adapter => adapter.Unsubscribe()));
 
-        Observer.State = new()
+        await Subscription.Send(new()
         {
           Previous = SubscriptionEnum.Progress,
           Next = SubscriptionEnum.Pause,
-        };
+        });
       }
       catch (Exception e)
       {
-        await Streamer.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
       }
     }
   }

@@ -6,18 +6,18 @@
 
     @switch (true)
     {
-      @case true when Observer.State.Next is SubscriptionEnum.None:
+      @case true when Subscription.State.Next is SubscriptionEnum.None:
         <MudIconButton Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PlayCircle" @onclick="Connect"></MudIconButton>
         break;
-      @case true when Observer.State.Next is SubscriptionEnum.Progress:
+      @case true when Subscription.State.Next is SubscriptionEnum.Progress:
         <MudIconButton Color="Color.Primary" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.AccessTime"></MudIconButton>
         <MudProgressCircular Color="Color.Primary" Size="Size.Small" Indeterminate="true" />
         break;
-      @case true when Observer.State.Next is SubscriptionEnum.Stream:
+      @case true when Subscription.State.Next is SubscriptionEnum.Stream:
         <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" @onclick="Disconnect"></MudIconButton>
         <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.PauseCircle" @onclick="Unsubscribe"></MudIconButton>
         break;
-      @case true when Observer.State.Next is SubscriptionEnum.Pause:
+      @case true when Subscription.State.Next is SubscriptionEnum.Pause:
         <MudIconButton Color="Color.Error" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Cancel" @onclick="Disconnect"></MudIconButton>
         <MudIconButton Color="Color.Success" Variant="Variant.Outlined" Size="Size.Large" Icon="@Icons.Material.Filled.Loop" @onclick="Subscribe"></MudIconButton>
         break;

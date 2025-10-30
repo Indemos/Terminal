@@ -50,11 +50,10 @@ namespace Board
       builder.WebHost.UseStaticWebAssets();
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
-      builder.Services.AddScoped<StreamService>();
-      builder.Services.AddScoped<SubscriptionService>();
-      builder.Services.AddScoped(o => new LogService(setup["Documents:Logs"]));
-      builder.Services.AddScoped(o => new StreamService(setup["Apps:Address"] + "/messages"));
+      builder.Services.AddSingleton<StateService>();
+      builder.Services.AddSingleton(o => new LogService(setup["Documents:Logs"]));
       builder.Services.AddSingleton<SchedulerService>();
+      builder.Services.AddSingleton<MessageService>();
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;
@@ -64,18 +63,12 @@ namespace Board
         o.SnackbarConfiguration.PositionClass = Defaults.Classes.Position.TopRight;
       });
 
-      builder.Services.AddSignalR()
-        .AddMessagePackProtocol(o => o.SerializerOptions = MessagePackSerializerOptions
-          .Standard
-          .WithResolver(ContractlessStandardResolver.Instance));
-
       var app = builder.Build();
 
       app.UseStaticFiles();
       app.UseRouting();
       app.MapBlazorHub();
       app.MapFallbackToPage("/Host");
-      app.MapHub<StreamHubService>("/messages");
       app.Run();
     }
   }

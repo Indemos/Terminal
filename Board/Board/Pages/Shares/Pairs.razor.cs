@@ -1,6 +1,8 @@
 using Board.Components;
+using Canvas.Core.Extensions;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
+using Core.Conventions;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
@@ -8,6 +10,7 @@ using Core.Services;
 using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.Configuration;
 using Orleans;
+using Simulation;
 using SkiaSharp;
 using System;
 using System.Linq;
@@ -19,103 +22,83 @@ namespace Board.Pages.Shares
   {
     [Inject] IClusterClient Connector { get; set; }
     [Inject] IConfiguration Configuration { get; set; }
-    [Inject] StreamService Streamer { get; set; }
-    [Inject] SubscriptionService Observer { get; set; }
+    [Inject] MessageService Messenger { get; set; }
+    [Inject] StateService State { get; set; }
 
-    /// <summary>
-    /// Strategy
-    /// </summary>
+    ControlsComponent View { get; set; }
+    ChartsComponent DataView { get; set; }
+    ChartsComponent PerformanceView { get; set; }
+    OrdersComponent OrdersView { get; set; }
+    PositionsComponent PositionsView { get; set; }
+    StatementsComponent StatementsView { get; set; }
+    TransactionsComponent TransactionsView { get; set; }
+    PerformanceIndicator Performance { get; set; }
+
     const string assetX = "GOOG";
     const string assetY = "GOOGL";
 
-    protected virtual ControlsComponent View { get; set; }
-    protected virtual ChartsComponent ChartsView { get; set; }
-    protected virtual ChartsComponent PerformanceView { get; set; }
-    protected virtual TransactionsComponent TransactionsView { get; set; }
-    protected virtual OrdersComponent OrdersView { get; set; }
-    protected virtual PositionsComponent PositionsView { get; set; }
-    protected virtual StatementsComponent StatementsView { get; set; }
-    protected virtual PerformanceIndicator Performance { get; set; }
+    IGateway Adapter
+    {
+      get => View.Adapters.Get(string.Empty) as IGateway;
+      set => View.Adapters[string.Empty] = value;
+    }
 
-    /// <summary>
-    /// Setup
-    /// </summary>
-    /// <param name="setup"></param>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
-        await ChartsView.Create("Prices");
+        await DataView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Observer.OnState += state =>
+        Messenger.Subscribe<PriceModel>(Update);
+        State.Subscribe(state =>
         {
-          switch (true)
+          if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
           {
-            case true when state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress: CreateAccounts(); break;
-            case true when state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.Stream:
-
-              TransactionsView.UpdateItems([.. View.Adapters.Values]);
-              OrdersView.UpdateItems([.. View.Adapters.Values]);
-              PositionsView.UpdateItems([.. View.Adapters.Values]);
-
-              break;
+            Performance = new PerformanceIndicator();
+            Adapter = new SimGateway
+            {
+              Messenger = Messenger,
+              Connector = Connector,
+              Source = Configuration["Documents:Resources"],
+              Account = new AccountModel
+              {
+                Name = "Demo",
+                Balance = 25000,
+                Instruments = new()
+                {
+                  [assetX] = new InstrumentModel { Name = assetX },
+                  [assetY] = new InstrumentModel { Name = assetY }
+                }
+              }
+            };
           }
-        };
+
+          return Task.CompletedTask;
+        });
       }
-
-      await base.OnAfterRenderAsync(setup);
-    }
-
-    /// <summary>
-    /// Accounts
-    /// </summary>
-    protected virtual void CreateAccounts()
-    {
-      Performance = new PerformanceIndicator { Name = "Balance" };
-
-      var adapter = View.Adapters["Prime"] = new Simulation.Gateway
-      {
-        Speed = 1,
-        Streamer = Streamer,
-        Connector = Connector,
-        Source = Configuration["Documents:Resources"],
-        Account = new AccountModel
-        {
-          Name = "Demo",
-          Balance = 25000,
-          Instruments = new()
-          {
-            [assetX] = new InstrumentModel { Name = assetX },
-            [assetY] = new InstrumentModel { Name = assetY }
-          }
-        }
-      };
-
-      adapter.OnData += OnPrice;
     }
 
     /// <summary>
     /// Stream
     /// </summary>
     /// <param name="price"></param>
-    public virtual async Task OnPrice(PriceModel price)
+    async Task Update(PriceModel price)
     {
-      var adapter = View.Adapters["Prime"];
-      var account = adapter.Account;
+      var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentX });
-      var seriesY = await adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentY });
+      var seriesX = await Adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentX });
+      var seriesY = await Adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = await adapter.GetOrders(default);
-      var positions = await adapter.GetPositions(default);
-      var performance = await Performance.Update([adapter]);
+      var orders = await Adapter.GetOrders(default);
+      var positions = await Adapter.GetPositions(default);
+      var performance = await Performance.Update(View.Adapters.Values);
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var spread = (xPoint.Ask - xPoint.Bid) + (yPoint.Ask - yPoint.Bid);
@@ -156,12 +139,12 @@ namespace Board.Pages.Shares
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
 
-      TransactionsView.UpdateItems([.. View.Adapters.Values]);
-      OrdersView.UpdateItems([.. View.Adapters.Values]);
-      PositionsView.UpdateItems([.. View.Adapters.Values]);
-      ChartsView.UpdateItems(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
-      PerformanceView.UpdateItems(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.UpdateItems(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      TransactionsView.Update(View.Adapters.Values);
+      OrdersView.Update(View.Adapters.Values);
+      PositionsView.Update(View.Adapters.Values);
+      DataView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
+      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -169,9 +152,8 @@ namespace Board.Pages.Shares
     /// </summary>
     /// <param name="assetBuy"></param>
     /// <param name="assetSell"></param>
-    protected async Task OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
+    async Task OpenPositions(InstrumentModel assetBuy, InstrumentModel assetSell)
     {
-      var adapter = View.Adapters["Prime"];
       var orderSell = new OrderModel
       {
         Amount = 1,
@@ -188,19 +170,18 @@ namespace Board.Pages.Shares
         Operation = new() { Instrument = assetBuy }
       };
 
-      await adapter.SendOrder(orderBuy);
-      await adapter.SendOrder(orderSell);
+      await Adapter.SendOrder(orderBuy);
+      await Adapter.SendOrder(orderSell);
     }
 
     /// <summary>
     /// Close positions
     /// </summary>
     /// <param name="condition"></param>
-    public virtual async Task ClosePositions(Func<OrderModel, bool> condition = null)
+    async Task ClosePositions(Func<OrderModel, bool> condition = null)
     {
-      var adapter = View.Adapters["Prime"];
-      var positions = await adapter.GetPositions(default);
-      var account = adapter.Account;
+      var account = Adapter.Account;
+      var positions = await Adapter.GetPositions(default);
 
       foreach (var position in positions)
       {
@@ -217,7 +198,7 @@ namespace Board.Pages.Shares
             }
           };
 
-          await adapter.SendOrder(order);
+          await Adapter.SendOrder(order);
         }
       }
     }

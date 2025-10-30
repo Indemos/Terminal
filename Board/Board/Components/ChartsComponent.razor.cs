@@ -22,7 +22,7 @@ namespace Board.Components
     /// <summary>
     /// Message service
     /// </summary>
-    [Inject] public virtual SubscriptionService Observer { get; set; }
+    [Inject] public virtual StateService Observer { get; set; }
 
     /// <summary>
     /// Caption
@@ -69,12 +69,14 @@ namespace Board.Components
 
       if (setup)
       {
-        Observer.OnState += state =>
+        Observer.Update += state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
             Clear();
           }
+
+          return Task.CompletedTask;
         };
       }
     }
@@ -131,7 +133,7 @@ namespace Board.Components
     /// </summary>
     /// <param name="index"></param>
     /// <param name="inputs"></param>
-    public virtual async void UpdateItems(long index, string area, string series, params IShape[] inputs)
+    public virtual async void Update(long index, string area, string series, params IShape[] inputs)
     {
       if (Observer.State.Next is SubscriptionEnum.None)
       {

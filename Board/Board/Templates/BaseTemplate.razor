@@ -4,7 +4,7 @@
 @inject ISnackbar Popup
 @inject IConfiguration Configuration
 @inject LogService Recorder
-@inject StreamService Streamer
+@inject MessageService Messenger
 
 @inherits LayoutComponentBase
 
@@ -28,21 +28,24 @@
     {
       StateHasChanged();
 
-      Streamer.Subscribe<MessageModel>(o =>
+      Messenger.Subscribe<MessageModel>(message =>
       {
         try
         {
-            Recorder
-            .Data
-            .Information("{@Message}", o);
+          Recorder
+          .Data
+          .Information("{@Message}", message);
 
-          if (o?.Content is not null)
+          if (message.Content is not null)
           {
-            Popup.Add(@<p>@(o.Content)</p>);
+            Popup.Add(@<p>@(message.Content)</p>);
           }
         }
         catch (Exception) { }
-      });
+
+        return Task.CompletedTask;
+
+      }, nameof(MessageModel));
     }
   }
 }

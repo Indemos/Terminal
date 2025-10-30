@@ -54,7 +54,7 @@ namespace Core.Services
     /// <summary>
     /// Create more resolver with more permissive naming policy for better matching
     /// </summary>
-    public virtual DefaultJsonTypeInfoResolver GetResolver() => new()
+    protected virtual DefaultJsonTypeInfoResolver GetResolver() => new()
     {
       Modifiers =
       {
