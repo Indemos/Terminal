@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record MetaModel
+  public record CriteriaModel
   {
     /// <summary>
     /// Count

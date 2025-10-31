@@ -11,7 +11,7 @@ namespace Core.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentModel>> Options(MetaModel criteria);
+    Task<IList<InstrumentModel>> Options(CriteriaModel criteria);
 
     /// <summary>
     /// Update options
@@ -26,7 +26,7 @@ namespace Core.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<InstrumentModel>> Options(MetaModel criteria) => Task.FromResult(State.Options);
+    public virtual Task<IList<InstrumentModel>> Options(CriteriaModel criteria) => Task.FromResult(State.Options);
 
     /// <summary>
     /// Update options

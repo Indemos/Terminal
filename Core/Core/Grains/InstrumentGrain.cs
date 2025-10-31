@@ -11,7 +11,7 @@ namespace Core.Grains
     /// Get instrument
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentModel> Instrument(MetaModel criteria);
+    Task<InstrumentModel> Instrument(CriteriaModel criteria);
 
     /// <summary>
     /// Store instrument
@@ -26,7 +26,7 @@ namespace Core.Grains
     /// Get instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<InstrumentModel> Instrument(MetaModel criteria) => Task.FromResult(State);
+    public virtual Task<InstrumentModel> Instrument(CriteriaModel criteria) => Task.FromResult(State);
 
     /// <summary>
     /// Store instrument

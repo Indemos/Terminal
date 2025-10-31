@@ -14,13 +14,13 @@ namespace Core.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> Prices(MetaModel criteria);
+    Task<IList<PriceModel>> Prices(CriteriaModel criteria);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> PriceGroups(MetaModel criteria);
+    Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria);
 
     /// <summary>
     /// Add price to the list
@@ -35,13 +35,13 @@ namespace Core.Grains
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceModel>> Prices(MetaModel criteria) => Task.FromResult(State.Prices);
+    public virtual Task<IList<PriceModel>> Prices(CriteriaModel criteria) => Task.FromResult(State.Prices);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceModel>> PriceGroups(MetaModel criteria) => Task.FromResult(State.PriceGroups);
+    public virtual Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria) => Task.FromResult(State.PriceGroups);
 
     /// <summary>
     /// Add price to the list

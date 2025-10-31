@@ -1,9 +1,7 @@
 using Core.Models;
 using Core.Services;
 using Orleans;
-using System;
 using System.Collections.Generic;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -15,7 +13,7 @@ namespace Core.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Transactions(MetaModel criteria);
+    Task<IList<OrderModel>> Transactions(CriteriaModel criteria);
 
     /// <summary>
     /// Add to the list
@@ -34,14 +32,14 @@ namespace Core.Grains
     /// <param name="messenger"></param>
     public TransactionsGrain(MessageService messenger)
     {
-      this.messenger = messenger; 
+      this.messenger = messenger;
     }
 
     /// <summary>
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Transactions(MetaModel criteria) => await Task.WhenAll(State
+    public virtual async Task<IList<OrderModel>> Transactions(CriteriaModel criteria) => await Task.WhenAll(State
       .Grains
       .Select(o => o.Transaction()));
 
@@ -51,8 +49,8 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderModel order)
     {
-      var name = $"{this.GetPrimaryKeyString()}:{order.Id}";
-      var orderGrain = GrainFactory.GetGrain<ITransactionGrain>(name);
+      var descriptor = $"{this.GetPrimaryKeyString()}:{order.Id}";
+      var orderGrain = GrainFactory.GetGrain<ITransactionGrain>(descriptor);
       var response = await orderGrain.Store(order);
 
       State.Grains.Add(orderGrain);

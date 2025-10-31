@@ -52,43 +52,43 @@ namespace Core.Conventions
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomModel> GetDom(MetaModel criteria);
+    Task<DomModel> GetDom(CriteriaModel criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> GetBars(MetaModel criteria);
+    Task<IList<PriceModel>> GetBars(CriteriaModel criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> GetTicks(MetaModel criteria);
+    Task<IList<PriceModel>> GetTicks(CriteriaModel criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentModel>> GetOptions(MetaModel criteria);
+    Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetOrders(MetaModel criteria);
+    Task<IList<OrderModel>> GetOrders(CriteriaModel criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetPositions(MetaModel criteria);
+    Task<IList<OrderModel>> GetPositions(CriteriaModel criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetTransactions(MetaModel criteria);
+    Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria);
 
     /// <summary>
     /// Send new orders
@@ -157,43 +157,43 @@ namespace Core.Conventions
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<DomModel> GetDom(MetaModel criteria);
+    public abstract Task<DomModel> GetDom(CriteriaModel criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceModel>> GetBars(MetaModel criteria);
+    public abstract Task<IList<PriceModel>> GetBars(CriteriaModel criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceModel>> GetTicks(MetaModel criteria);
+    public abstract Task<IList<PriceModel>> GetTicks(CriteriaModel criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<InstrumentModel>> GetOptions(MetaModel criteria);
+    public abstract Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetOrders(MetaModel criteria);
+    public abstract Task<IList<OrderModel>> GetOrders(CriteriaModel criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetPositions(MetaModel criteria);
+    public abstract Task<IList<OrderModel>> GetPositions(CriteriaModel criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetTransactions(MetaModel criteria);
+    public abstract Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria);
 
     /// <summary>
     /// Send new orders

@@ -15,7 +15,7 @@ namespace Simulation.Grains
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceModel>> Prices(MetaModel criteria)
+    public override Task<IList<PriceModel>> Prices(CriteriaModel criteria)
     {
       var prices = State.Prices
         .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
@@ -29,7 +29,7 @@ namespace Simulation.Grains
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceModel>> PriceGroups(MetaModel criteria)
+    public override Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria)
     {
       var prices = State.PriceGroups
         .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)

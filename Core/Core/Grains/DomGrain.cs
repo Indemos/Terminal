@@ -11,7 +11,7 @@ namespace Core.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomModel> Dom(MetaModel criteria);
+    Task<DomModel> Dom(CriteriaModel criteria);
 
     /// <summary>
     /// Update DOM
@@ -26,7 +26,7 @@ namespace Core.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<DomModel> Dom(MetaModel criteria) => Task.FromResult(State);
+    public virtual Task<DomModel> Dom(CriteriaModel criteria) => Task.FromResult(State);
 
     /// <summary>
     /// Update DOM

@@ -14,7 +14,7 @@ namespace Core.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Positions(MetaModel criteria);
+    Task<IList<OrderModel>> Positions(CriteriaModel criteria);
 
     /// <summary>
     /// Process order to position conversion
@@ -40,7 +40,7 @@ namespace Core.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Positions(MetaModel criteria) => await Task.WhenAll(State
+    public virtual async Task<IList<OrderModel>> Positions(CriteriaModel criteria) => await Task.WhenAll(State
       .Grains
       .Values
       .Select(o => o.Position()));
@@ -51,14 +51,18 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderModel order)
     {
-      var name = this.GetPrimaryKeyString();
+      var descriptor = this.GetPrimaryKeyString();
       var instrument = order.Operation.Instrument.Name;
       var grain = State.Grains.Get(instrument);
 
       if (grain is null)
       {
-        grain = State.Grains[instrument] = GrainFactory.GetGrain<IPositionGrain>($"{name}:{order.Id}");
-        return await grain.Store(order);
+        var positionsGrain = GrainFactory.GetGrain<IPositionGrain>($"{descriptor}:{order.Id}");
+        var orderResponse = await positionsGrain.Store(order);
+
+        State.Grains[instrument] = positionsGrain;
+
+        return orderResponse;
       }
 
       var response = await grain.Combine(order);
@@ -71,7 +75,7 @@ namespace Core.Grains
       if (response.Transaction is not null)
       {
         await GrainFactory
-          .GetGrain<ITransactionsGrain>(name)
+          .GetGrain<ITransactionsGrain>(descriptor)
           .Store(response.Transaction);
       }
 

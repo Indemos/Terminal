@@ -15,7 +15,7 @@ namespace Core.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<InstrumentModel>> Options(MetaModel criteria)
+    public override Task<IList<InstrumentModel>> Options(CriteriaModel criteria)
     {
       var side = criteria?.Instrument?.Derivative?.Side;
       var options = State

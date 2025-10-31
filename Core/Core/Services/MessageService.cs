@@ -16,10 +16,15 @@ namespace Core.Services
     /// <summary>
     /// Subscribe to messages
     /// </summary>
-    public virtual void Subscribe<T>(Func<T, Task> action, string name = "")
+    public virtual string Subscribe<T>(Func<T, Task> action, string name = null)
     {
-      subscriptions[typeof(T)] = subscriptions.Get(typeof(T)) ?? new();
-      subscriptions[typeof(T)][name] = o => action((T)o);
+      var group = typeof(T);
+      var descriptor = name ?? $"{Guid.NewGuid()}";
+
+      subscriptions[group] = subscriptions.Get(group) ?? new();
+      subscriptions[group][descriptor] = o => action((T)o);
+
+      return descriptor;
     }
 
     /// <summary>
@@ -36,14 +41,12 @@ namespace Core.Services
     /// <summary>
     /// Send message without state change
     /// </summary>
-    public virtual Task Send<T>(T state)
+    public virtual async Task Send<T>(T state)
     {
       if (subscriptions.TryGetValue(typeof(T), out var actions))
       {
-        return Task.WhenAll(actions.Values.Select(o => o(state)));
+        await Task.WhenAll(actions.Values.Select(o => o(state)));
       }
-
-      return Task.CompletedTask;
     }
   }
 }

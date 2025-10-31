@@ -88,8 +88,8 @@ namespace Board.Pages.Shares
       var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = await Adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentX });
-      var seriesY = await Adapter.GetTicks(new MetaModel { Count = 1, Instrument = instrumentY });
+      var seriesX = await Adapter.GetTicks(new CriteriaModel { Count = 1, Instrument = instrumentX });
+      var seriesY = await Adapter.GetTicks(new CriteriaModel { Count = 1, Instrument = instrumentY });
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -139,9 +139,9 @@ namespace Board.Pages.Shares
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
 
-      TransactionsView.Update(View.Adapters.Values);
       OrdersView.Update(View.Adapters.Values);
       PositionsView.Update(View.Adapters.Values);
+      TransactionsView.Update(View.Adapters.Values);
       DataView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = com });
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));

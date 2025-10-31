@@ -1,5 +1,4 @@
 using Core.Enums;
-using Core.Extensions;
 using Core.Models;
 using Core.Validators;
 using Orleans;
@@ -15,7 +14,7 @@ namespace Core.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Orders(MetaModel criteria);
+    Task<IList<OrderModel>> Orders(CriteriaModel criteria);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -49,15 +48,10 @@ namespace Core.Grains
     protected OrderValidator orderValidator = new();
 
     /// <summary>
-    /// Instruments
-    /// </summary>
-    protected Dictionary<string, PriceModel> prices = new();
-
-    /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Orders(MetaModel criteria) => await Task.WhenAll(State
+    public virtual async Task<IList<OrderModel>> Orders(CriteriaModel criteria) => await Task.WhenAll(State
       .Grains
       .Values
       .Select(o => o.Order()));
@@ -69,6 +63,7 @@ namespace Core.Grains
     public virtual async Task<OrderGroupsResponse> Store(OrderModel order)
     {
       var orders = Compose(order);
+      var descriptor = this.GetPrimaryKeyString();
       var responses = orders
         .Select(o => new OrderResponse { Data = o, Errors = [.. Errors(o).Select(error => error.Message)] })
         .ToArray();
@@ -77,7 +72,7 @@ namespace Core.Grains
       {
         foreach (var o in orders)
         {
-          var name = $"{this.GetPrimaryKeyString()}:{o.Id}";
+          var name = $"{descriptor}:{o.Id}";
           var grain = GrainFactory.GetGrain<IOrderGrain>(name);
 
           await grain.Store(o);
@@ -98,17 +93,15 @@ namespace Core.Grains
     /// <param name="price"></param>
     public virtual async Task<StatusResponse> Tap(PriceModel price)
     {
-      prices[price.Name] = price;
+      var descriptor = this.GetPrimaryKeyString();
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
       foreach (var grain in State.Grains)
       {
         if (await grain.Value.IsExecutable(price))
         {
           State.Grains.Remove(grain.Key);
-
-          await GrainFactory
-            .GetGrain<IPositionsGrain>(this.GetPrimaryKeyString())
-            .Store(await grain.Value.Position(price));
+          await positionsGrain.Store(await grain.Value.Position(price));
         }
       }
 
@@ -186,8 +179,7 @@ namespace Core.Grains
         Orders = [.. groupOrders],
         Operation = order.Operation with
         {
-          Time = instrument?.Price?.Time,
-          Instrument = instrument with { Price = prices.Get(instrument.Name) },
+          Time = instrument?.Price?.Time
         }
       };
 
