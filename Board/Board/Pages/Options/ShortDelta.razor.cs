@@ -131,9 +131,9 @@ namespace Board.Pages.Options
       OrdersView.Update(View.Adapters.Values);
       PositionsView.Update(View.Adapters.Values);
       TransactionsView.Update(View.Adapters.Values);
-      DataView.Update(price.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
-      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance });
-      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
+      PerformanceView.Update(price.Bar.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance });
+      PerformanceView.Update(price.Bar.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -141,18 +141,17 @@ namespace Board.Pages.Options
     /// </summary>
     (double, double) UpdateIndicators(PriceModel point, IList<OrderModel> positions)
     {
-      var adapter = View.Adapters["Prime"];
-      var account = adapter.Account;
+      var account = Adapter.Account;
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
 
       var basisDelta = Math.Round(positions
         .Where(o => o.Operation.Instrument.Derivative is null)
-        .Sum(GetDelta), MidpointRounding.ToZero);
+        .Sum(o => GetDelta(o, 1)), MidpointRounding.ToZero);
 
       var optionDelta = Math.Round(positions
         .Where(o => o.Operation.Instrument.Derivative is not null)
-        .Sum(GetDelta), MidpointRounding.ToZero);
+        .Sum(o => GetDelta(o, 100)), MidpointRounding.ToZero);
 
       IndicatorsView.Update(point.Time.Value, "Indicators", "Stock Delta", new AreaShape { Y = basisDelta, Component = comUp });
       IndicatorsView.Update(point.Time.Value, "Indicators", "Option Delta", new AreaShape { Y = optionDelta, Component = comDown });
@@ -276,10 +275,11 @@ namespace Board.Pages.Options
     /// Get position delta
     /// </summary>
     /// <param name="order"></param>
-    static double GetDelta(OrderModel order)
+    /// <param name="leverage"></param>
+    static double GetDelta(OrderModel order, double? leverage = null)
     {
       var volume = order.Operation.Amount;
-      var units = order.Operation?.Instrument?.Leverage;
+      var units = leverage ?? order.Operation?.Instrument?.Leverage;
       var delta = order.Operation?.Instrument?.Derivative?.Variance?.Delta;
       var side = order.Side is OrderSideEnum.Long ? 1.0 : -1.0;
 

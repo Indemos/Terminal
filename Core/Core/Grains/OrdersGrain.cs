@@ -77,7 +77,7 @@ namespace Core.Grains
 
           await grain.Store(o);
 
-          State.Grains[order.Id] = grain;
+          State.Grains[o.Id] = grain;
         }
       }
 
@@ -146,7 +146,7 @@ namespace Core.Grains
       var nextOrders = order
         .Orders
         .Where(o => o.Instruction is null)
-        .Select(o => Merge(o, order))
+        .Select(o => Merge(order, o))
         .ToList();
 
       if (order.Amount is not null || order.Orders.Count is 0)

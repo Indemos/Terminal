@@ -153,7 +153,7 @@ namespace Simulation
       var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var pricesGrain = GrainFactory.GetGrain<IGatewayPricesGrain>(instrumentDescriptor);
-      var optionsGrain = GrainFactory.GetGrain<IOptionsGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.GetGrain<IGatewayOptionsGrain>(instrumentDescriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
@@ -177,6 +177,11 @@ namespace Simulation
 
         if (Equals(min.Key, instrument.Name) && summaries.All(o => o.Value is not null))
         {
+          var orders = await ordersGrain.Orders(default);
+          var positions = await positionsGrain.Positions(default);
+          var ordersMap = orders.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var positionsMap = positions.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var optionsMap = min.Value.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
           var price = await pricesGrain.Store(min.Value.Instrument.Price with
           {
             Bar = null,
@@ -189,6 +194,14 @@ namespace Simulation
           await ordersGrain.Tap(price);
           await positionsGrain.Tap(price);
           await messenger.Send(price);
+
+          foreach (var option in optionsMap)
+          {
+            var optionPrice = option.Price with { Name = option.Name };
+
+            await ordersGrain.Tap(optionPrice);
+            await positionsGrain.Tap(optionPrice);
+          }
 
           summaries[instrument.Name] = null;
         }
