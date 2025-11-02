@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace Simulation
 {
-  public interface IConnectionGrain : IGrainWithStringKey
+  public interface ISimConnectionGrain : IGrainWithStringKey
   {
     /// <summary>
     /// Connect
@@ -48,7 +48,7 @@ namespace Simulation
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class ConnectionGrain(MessageService messenger) : Grain<ConnectionModel>, IConnectionGrain
+  public class SimConnectionGrain(MessageService messenger) : Grain<ConnectionModel>, ISimConnectionGrain
   {
     /// <summary>
     /// Messenger
@@ -144,8 +144,8 @@ namespace Simulation
       var descriptor = this.GetPrimaryKeyString();
       var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
-      var instrumentGrain = GrainFactory.GetGrain<IGatewayInstrumentGrain>(instrumentDescriptor);
-      var optionsGrain = GrainFactory.GetGrain<IGatewayOptionsGrain>(instrumentDescriptor);
+      var instrumentGrain = GrainFactory.GetGrain<ISimInstrumentGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.GetGrain<ISimOptionsGrain>(instrumentDescriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 

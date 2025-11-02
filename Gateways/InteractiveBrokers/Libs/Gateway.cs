@@ -35,7 +35,7 @@ namespace InteractiveBrokers
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var grain = Component<IConnectionGrain>();
+      var grain = Component<IInterConnectionGrain>();
 
       await grain.Store(new ConnectionModel
       {
@@ -56,7 +56,7 @@ namespace InteractiveBrokers
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      return Component<IConnectionGrain>().Disconnect();
+      return Component<IInterConnectionGrain>().Disconnect();
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ namespace InteractiveBrokers
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
-      return Component<IConnectionGrain>().Subscribe(instrument);
+      return Component<IInterConnectionGrain>().Subscribe(instrument);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ namespace InteractiveBrokers
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
-      return Component<IConnectionGrain>().Unsubscribe(instrument);
+      return Component<IInterConnectionGrain>().Unsubscribe(instrument);
     }
 
     /// <summary>
@@ -110,7 +110,7 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria)
     {
-      return Component<IConnectionGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IInterConnectionGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
@@ -120,7 +120,7 @@ namespace InteractiveBrokers
     public override async Task<IList<OrderModel>> GetOrders(CriteriaModel criteria)
     {
       var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<IConnectionGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
       var response = await connectionGrain.Orders(criteria);
 
       await ordersGrain.Clear();
@@ -140,7 +140,7 @@ namespace InteractiveBrokers
     public override async Task<IList<OrderModel>> GetPositions(CriteriaModel criteria)
     {
       var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<IConnectionGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
       var response = await positionsGrain.Positions(criteria);
 
       await positionsGrain.Clear();

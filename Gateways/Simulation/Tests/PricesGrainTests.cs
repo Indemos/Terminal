@@ -40,7 +40,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IGatewayInstrumentGrain>(Descriptor);
+        .GetGrain<ISimInstrumentGrain>(Descriptor);
 
       var response = await grain.Store(Instrument with { Price = new() { Last = 100.0 } });
       var price = response.Price;
@@ -63,7 +63,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IGatewayInstrumentGrain>(Descriptor);
+        .GetGrain<ISimInstrumentGrain>(Descriptor);
 
       await grain.Store(Instrument with { Price = new() { Last = 100.0, Time = 1 } });
 
@@ -88,7 +88,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IGatewayInstrumentGrain>(Descriptor);
+        .GetGrain<ISimInstrumentGrain>(Descriptor);
 
       await grain.Store(Instrument with
       {
@@ -128,7 +128,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IGatewayInstrumentGrain>(Descriptor);
+        .GetGrain<ISimInstrumentGrain>(Descriptor);
 
       await grain.Store(Instrument with
       {
@@ -162,7 +162,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IGatewayInstrumentGrain>(Descriptor);
+        .GetGrain<ISimInstrumentGrain>(Descriptor);
 
       Assert.Throws<AggregateException>(() => grain.Store(null).Result);
       Assert.Throws<AggregateException>(() => grain.Store(new()).Result);

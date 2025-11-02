@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace Core.Grains
 {
-  public interface IGatewayOptionsGrain : IOptionsGrain
+  public interface ISimOptionsGrain : IOptionsGrain
   {
   }
 
-  public class GatewayOptionsGrain : OptionsGrain, IGatewayOptionsGrain
+  public class SimOptionsGrain : OptionsGrain, ISimOptionsGrain
   {
     /// <summary>
     /// Option chain

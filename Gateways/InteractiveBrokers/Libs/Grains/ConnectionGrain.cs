@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 
 namespace InteractiveBrokers
 {
-  public interface IConnectionGrain : IGrainWithStringKey
+  public interface IInterConnectionGrain : IGrainWithStringKey
   {
     /// <summary>
     /// Setup
@@ -84,7 +84,7 @@ namespace InteractiveBrokers
     Task<AccountModel> AccountSummary();
   }
 
-  public class ConnectionGrain : Grain<ConnectionModel>, IConnectionGrain
+  public class InterConnectionGrain : Grain<ConnectionModel>, IInterConnectionGrain
   {
     /// <summary>
     /// IB client
@@ -105,7 +105,7 @@ namespace InteractiveBrokers
     /// Constructor
     /// </summary>
     /// <param name="streamService"></param>
-    public ConnectionGrain(MessageService streamService) => messenger = streamService;
+    public InterConnectionGrain(MessageService streamService) => messenger = streamService;
 
     /// <summary>
     /// Deactivation

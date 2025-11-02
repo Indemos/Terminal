@@ -39,7 +39,7 @@ In order to create connector for preferred broker, implement interface `IGateway
 
 # Migration
 
-The application is being migrated to Orleans to simplify maintenance and tracking. 
+The application is being migrated to Orleans to simplify maintenance and tracking with extension to fully distributed framework. 
 Gateways below are still being migrated. 
 Previous implementation with already implemented gateways is available in the `gateways` branch.
 
@@ -55,5 +55,8 @@ Previous implementation with already implemented gateways is available in the `g
 
 ![](Screens/Preview.png)
 
-# Notes
+# Administration panel
 
+Orleans dashboard module is used as a simple administration panel to check server health, latency, and internal state of specific grains, e.g. orders and positions. 
+
+![](Screens/Dashboard.png)

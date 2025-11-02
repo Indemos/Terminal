@@ -6,11 +6,11 @@ using System.Threading.Tasks;
 
 namespace Simulation.Grains
 {
-  public interface IGatewayInstrumentGrain : IInstrumentGrain
+  public interface ISimInstrumentGrain : IInstrumentGrain
   {
   }
 
-  public class GatewayInstrumentGrain : InstrumentGrain, IGatewayInstrumentGrain
+  public class SimInstrumentGrain : InstrumentGrain, ISimInstrumentGrain
   {
     /// <summary>
     /// List of prices by criteria

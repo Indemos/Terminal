@@ -21,7 +21,7 @@ namespace Simulation
     {
       SubscribeToUpdates();
 
-      return await Component<IConnectionGrain>().Connect(new() { Account = Account, Source = Source });
+      return await Component<ISimConnectionGrain>().Connect(new() { Account = Account, Source = Source });
     }
 
     /// <summary>
@@ -29,7 +29,7 @@ namespace Simulation
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      return Component<IConnectionGrain>().Disconnect();
+      return Component<ISimConnectionGrain>().Disconnect();
     }
 
     /// <summary>
@@ -38,7 +38,7 @@ namespace Simulation
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
-      return Component<IConnectionGrain>().Subscribe(instrument);
+      return Component<ISimConnectionGrain>().Subscribe(instrument);
     }
 
     /// <summary>
@@ -47,7 +47,7 @@ namespace Simulation
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
-      return Component<IConnectionGrain>().Unsubscribe(instrument);
+      return Component<ISimConnectionGrain>().Unsubscribe(instrument);
     }
 
     /// <summary>
@@ -65,7 +65,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetTicks(CriteriaModel criteria)
     {
-      return Component<IGatewayInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<ISimInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetBars(CriteriaModel criteria)
     {
-      return Component<IGatewayInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<ISimInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
@@ -83,7 +83,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria)
     {
-      return Component<IGatewayOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<ISimOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
