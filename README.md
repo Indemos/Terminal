@@ -13,23 +13,27 @@ May contain references to other libraries in [this list](https://github.com/Inde
 
 # Structure
 
-* **Core** - cross-platform .NET Core class library with main functionality 
-* **Chart** - [canvas](https://github.com/Indemos/Canvas) visualization
-* **Estimator** - class [library](https://github.com/Indemos/Estimator) measuring performance metrics, options, cointegration
-* **Data** - quotes as CSV for stocks and JSON in ZIP for options, can write custom parser for other formats
-* **Gateway** - gateway implementations for brokers and exchanges, including historical and simulated data
-* **Terminal** - application that puts together orders, positions, performance metrics, and charts 
-* **Derivative** - application visualizing data option metrics, portfolio builder, etc
+* **Core** - cross-platform .NET Core library with main functionality 
+* **Data** - historical ticks for backtester in ZIP, JSON or Message Pack format + custom parsers
+* **Gateways** - gateway implementations for brokers and exchanges, including simulated data
+* **Dashboard** - UI for strategies visualizing orders, positions, and performance metrics 
 
 # Gateways 
 
 * Interactive Brokers
-* Tradier
-* Schwab
-* Alpaca
 * Simulation - virtual orders and market data 
 
 In order to create connector for preferred broker, implement interface `IGateway`.
+
+# Migration
+
+The application is being migrated to Orleans to simplify maintenance and tracking. 
+Gateways below are still being migrated. 
+Previous implementation with already implemented gateways is available in the `gateways` branch.
+
+* Tradier
+* Schwab
+* Alpaca
 
 # Trading Strategies
 
@@ -38,3 +42,6 @@ In order to create connector for preferred broker, implement interface `IGateway
 # Preview 
 
 ![](Screens/Preview.png)
+
+# Notes
+
