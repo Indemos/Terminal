@@ -55,7 +55,7 @@ Previous implementation with already implemented gateways is available in the `g
 
 ![](Screens/Preview.png)
 
-# Administration dashboard
+# Administration
 
 Orleans dashboard module is used as a simple administration panel to check server health, latency, and internal state of specific grains, e.g. orders and positions. 
 Dashboard is available at `http://localhost:8080`
