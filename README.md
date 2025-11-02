@@ -18,6 +18,18 @@ May contain references to other libraries in [this list](https://github.com/Inde
 * **Gateways** - gateway implementations for brokers and exchanges, including simulated data
 * **Dashboard** - UI for strategies visualizing orders, positions, and performance metrics 
 
+The core library already implements a set of Orleans grains and services that can be inherited and extended when integrating new gateways.
+
+* **DomGrain** - order book storage
+* **InstrumentGrain** - instrument storage and price aggregator
+* **OptionsGrain** - option chain storage
+* **OrderGrain** - storage for a single distributed order
+* **OrdersGrain** - order manager tracking active orders
+* **PositionGrain** - storage for a single distributed position
+* **PositionsGrain** - position manager tracking open positions
+* **TransactionGrain** - storage for a single distributed transaction
+* **TransactionsGrain** - transactions manager tracking closed positions
+
 # Gateways 
 
 * Interactive Brokers
