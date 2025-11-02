@@ -22,18 +22,16 @@ namespace Core.Grains
     Task<OrderResponse> Store(OrderModel order);
   }
 
-  public class TransactionsGrain : Grain<TransactionsModel>, ITransactionsGrain
+  /// <summary>
+  /// Constructor
+  /// </summary>
+  /// <param name="messenger"></param>
+  public class TransactionsGrain(MessageService messenger) : Grain<TransactionsModel>, ITransactionsGrain
   {
-    protected MessageService messenger;
-
     /// <summary>
-    /// Constructor
+    /// Messenger
     /// </summary>
-    /// <param name="messenger"></param>
-    public TransactionsGrain(MessageService messenger)
-    {
-      this.messenger = messenger;
-    }
+    protected MessageService messenger = messenger;
 
     /// <summary>
     /// Get transactions
@@ -49,11 +47,11 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(OrderModel order)
     {
-      var descriptor = $"{this.GetPrimaryKeyString()}:{order.Id}";
-      var orderGrain = GrainFactory.GetGrain<ITransactionGrain>(descriptor);
-      var response = await orderGrain.Store(order);
+      var descriptor = $"{this.GetPrimaryKeyString()}:{order.Operation.Id}";
+      var grain = GrainFactory.GetGrain<ITransactionGrain>(descriptor);
+      var response = await grain.Store(order);
 
-      State.Grains.Add(orderGrain);
+      State.Grains.Add(grain);
 
       await messenger.Send(order);
 

@@ -50,7 +50,7 @@ namespace Board.Pages.Shares
         await DataView.Create("Prices");
         await PerformanceView.Create("Performance");
 
-        Messenger.Subscribe<PriceModel>(Update);
+        Messenger.Subscribe<InstrumentModel>(Update);
         State.Subscribe(state =>
         {
           if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
@@ -82,9 +82,10 @@ namespace Board.Pages.Shares
     /// <summary>
     /// Stream
     /// </summary>
-    /// <param name="price"></param>
-    async Task Update(PriceModel price)
+    /// <param name="instrument"></param>
+    async Task Update(InstrumentModel instrument)
     {
+      var price = instrument.Price;
       var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];

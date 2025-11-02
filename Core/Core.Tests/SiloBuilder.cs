@@ -1,6 +1,8 @@
+using Core.Services;
 using MessagePack;
 using MessagePack.Resolvers;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Orleans.Hosting;
 using Orleans.Serialization;
 using Orleans.TestingHost;
@@ -13,31 +15,29 @@ namespace Core.Tests
     {
       orleans.AddMemoryGrainStorageAsDefault();
       orleans.AddMemoryGrainStorage("PubSubStore");
+      orleans.Services.AddSingleton<MessageService>();
       orleans.Services.AddSerializer(serializers =>
       {
-        var messageOptions = MessagePackSerializerOptions
-          .Standard
-          .WithResolver(ContractlessStandardResolver.Instance);
+        var converter = new ConversionService();
 
         serializers.AddMessagePackSerializer(
           o => true,
           o => true,
-          o => o.Configure(options => options.SerializerOptions = messageOptions));
+          o => o.Configure(options => options.SerializerOptions = converter.MessageOptions));
       });
     }
 
     public void Configure(IConfiguration configuration, IClientBuilder orleans)
     {
+      orleans.Services.AddSingleton<MessageService>();
       orleans.Services.AddSerializer(serializers =>
       {
-        var messageOptions = MessagePackSerializerOptions
-          .Standard
-          .WithResolver(ContractlessStandardResolver.Instance);
+        var converter = new ConversionService();
 
         serializers.AddMessagePackSerializer(
           o => true,
           o => true,
-          o => o.Configure(options => options.SerializerOptions = messageOptions));
+          o => o.Configure(options => options.SerializerOptions = converter.MessageOptions));
       });
     }
   }

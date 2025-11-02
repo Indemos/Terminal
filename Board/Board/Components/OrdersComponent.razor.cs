@@ -75,7 +75,7 @@ namespace Board.Components
         var responses = await Task.WhenAll(queries);
         var orders = responses
           .SelectMany(o => o)
-          .OrderBy(o => o.Operation.Time)
+          .OrderByDescending(o => o.Operation.Time)
           .ToList();
 
         Items = [.. orders.Select(o => new Row

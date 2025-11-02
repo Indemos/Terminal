@@ -82,13 +82,6 @@ namespace Simulation
     protected ConcurrentDictionary<string, IEnumerator<string>> streams = new();
 
     /// <summary>
-    /// Message pack options
-    /// </summary>
-    protected MessagePackSerializerOptions messageOptions = MessagePackSerializerOptions
-      .Standard
-      .WithResolver(ContractlessStandardResolver.Instance);
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
@@ -152,7 +145,7 @@ namespace Simulation
       var descriptor = this.GetPrimaryKeyString();
       var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
-      var pricesGrain = GrainFactory.GetGrain<IGatewayPricesGrain>(instrumentDescriptor);
+      var pricesGrain = GrainFactory.GetGrain<IGatewayInstrumentGrain>(instrumentDescriptor);
       var optionsGrain = GrainFactory.GetGrain<IGatewayOptionsGrain>(instrumentDescriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
@@ -182,25 +175,22 @@ namespace Simulation
           var ordersMap = orders.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var positionsMap = positions.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var optionsMap = min.Value.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-          var price = await pricesGrain.Store(min.Value.Instrument.Price with
+          var message = await pricesGrain.Store(min.Value.Instrument with
           {
-            Bar = null,
-            Name = min.Key,
+            Name = instrument.Name,
             TimeFrame = instrument.TimeFrame
           });
 
           await domGrain.Store(min.Value.Dom);
           await optionsGrain.Store(min.Value.Options);
-          await ordersGrain.Tap(price);
-          await positionsGrain.Tap(price);
-          await messenger.Send(price);
+          await ordersGrain.Tap(message);
+          await positionsGrain.Tap(message);
+          await messenger.Send(message);
 
           foreach (var option in optionsMap)
           {
-            var optionPrice = option.Price with { Name = option.Name };
-
-            await ordersGrain.Tap(optionPrice);
-            await positionsGrain.Tap(optionPrice);
+            await ordersGrain.Tap(option);
+            await positionsGrain.Tap(option);
           }
 
           summaries[instrument.Name] = null;
@@ -240,7 +230,7 @@ namespace Simulation
       {
         var content = File.ReadAllBytes(source);
 
-        return MessagePackSerializer.Deserialize<SummaryModel>(content, messageOptions);
+        return MessagePackSerializer.Deserialize<SummaryModel>(content, converter.MessageOptions);
       }
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))

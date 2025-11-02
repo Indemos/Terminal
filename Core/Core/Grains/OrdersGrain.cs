@@ -25,8 +25,8 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    Task<StatusResponse> Tap(PriceModel price);
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Tap(InstrumentModel instrument);
 
     /// <summary>
     /// Remove order from the list
@@ -90,18 +90,20 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    public virtual async Task<StatusResponse> Tap(PriceModel price)
+    /// <param name="instrument"></param>
+    public virtual async Task<StatusResponse> Tap(InstrumentModel instrument)
     {
       var descriptor = this.GetPrimaryKeyString();
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
       foreach (var grain in State.Grains)
       {
-        if (await grain.Value.IsExecutable(price))
+        var response = await grain.Value.Tap(instrument);
+
+        if (response.Data is not null)
         {
           State.Grains.Remove(grain.Key);
-          await positionsGrain.Store(await grain.Value.Position(price));
+          await positionsGrain.Store(response.Data);
         }
       }
 

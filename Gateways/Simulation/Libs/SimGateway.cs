@@ -65,7 +65,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetTicks(CriteriaModel criteria)
     {
-      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<IGatewayInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
@@ -74,7 +74,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<IList<PriceModel>> GetBars(CriteriaModel criteria)
     {
-      return Component<IGatewayPricesGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<IGatewayInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>

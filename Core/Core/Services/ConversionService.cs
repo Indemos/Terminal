@@ -1,3 +1,5 @@
+using MessagePack;
+using MessagePack.Resolvers;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -15,10 +17,19 @@ namespace Core.Services
     public virtual JsonSerializerOptions Options { get; set; }
 
     /// <summary>
+    /// Message options
+    /// </summary>
+    public virtual MessagePackSerializerOptions MessageOptions { get; set; }
+
+    /// <summary>
     /// Constructor
     /// </summary>
     public ConversionService()
     {
+      MessageOptions = MessagePackSerializerOptions
+        .Standard
+        .WithResolver(ContractlessStandardResolver.Instance);
+
       Options = new JsonSerializerOptions
       {
         WriteIndented = false,

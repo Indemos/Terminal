@@ -36,12 +36,12 @@ namespace Core.Models
     public double? Leverage { get; init; } = 1;
 
     /// <summary>
-    /// Tick size, i.e. minimum price change 
+    /// Minimum price change 
     /// </summary>
     public double? StepSize { get; init; } = 0.01;
 
     /// <summary>
-    /// Tick value, i.e. how much price change within one tick
+    /// Price change within one tick
     /// </summary>
     public double? StepValue { get; init; } = 0.01;
 

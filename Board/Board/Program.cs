@@ -35,15 +35,13 @@ namespace Board
 
         orleans.ConfigureServices(services =>
         {
-          var messageOptions = MessagePackSerializerOptions
-            .Standard
-            .WithResolver(ContractlessStandardResolver.Instance);
+          var converter = new ConversionService();
 
-          services.AddSingleton(messageOptions);
+          services.AddSingleton(converter.MessageOptions);
           services.AddSerializer(serBuilder => serBuilder.AddMessagePackSerializer(
             o => true,
             o => true,
-            o => o.Configure(options => options.SerializerOptions = messageOptions)));
+            o => o.Configure(options => options.SerializerOptions = converter.MessageOptions)));
         });
       });
 
@@ -51,9 +49,10 @@ namespace Board
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
       builder.Services.AddSingleton<StateService>();
-      builder.Services.AddSingleton(o => new LogService(setup["Documents:Logs"]));
-      builder.Services.AddSingleton<SchedulerService>();
       builder.Services.AddSingleton<MessageService>();
+      builder.Services.AddSingleton<SchedulerService>();
+      builder.Services.AddSingleton<ConversionService>();
+      builder.Services.AddSingleton(o => new LogService(setup["Documents:Logs"]));
       builder.Services.AddMudServices(o =>
       {
         o.SnackbarConfiguration.NewestOnTop = true;

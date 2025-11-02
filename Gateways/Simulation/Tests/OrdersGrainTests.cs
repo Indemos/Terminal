@@ -83,7 +83,7 @@ namespace Simulation.Prices.Tests
       Assert.Single(orders);
       Assert.Equal(orderExpectation, JsonSerializer.Serialize(orders.First()));
 
-      await grain.Tap(new() { Name = order.Operation.Instrument.Name });
+      await grain.Tap(order.Operation.Instrument with { Price = new() });
 
       Assert.Empty(await grain.Orders(default));
     }

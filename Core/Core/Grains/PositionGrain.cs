@@ -18,8 +18,8 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    Task<StatusResponse> Tap(PriceModel price);
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Tap(InstrumentModel instrument);
 
     /// <summary>
     /// Create position
@@ -88,23 +88,17 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    public virtual Task<StatusResponse> Tap(PriceModel price)
+    /// <param name="instrument"></param>
+    public virtual Task<StatusResponse> Tap(InstrumentModel instrument)
     {
-      if (Equals(price.Name, State.Operation.Instrument.Name))
+      State = State with
       {
-        State = State with
+        Balance = Balance(),
+        Operation = State.Operation with
         {
-          Balance = Balance(),
-          Operation = State.Operation with
-          {
-            Instrument = State.Operation.Instrument with
-            {
-              Price = price
-            }
-          }
-        };
-      }
+          Instrument = instrument with { Basis = State.Operation.Instrument.Basis }
+        }
+      };
 
       return Task.FromResult(new StatusResponse
       {
@@ -144,9 +138,11 @@ namespace Core.Grains
         Amount = order.Amount,
         Operation = State.Operation with
         {
+          Id = order.Id,
           Price = order.Price,
           Amount = order.Amount,
-          Status = OrderStatusEnum.Transaction
+          Status = OrderStatusEnum.Transaction,
+          Time = order.Operation.Instrument.Price.Time
         }
       };
 
@@ -176,8 +172,10 @@ namespace Core.Grains
       {
         Operation = State.Operation with
         {
+          Id = order.Id,
           Price = order.Price,
-          Status = OrderStatusEnum.Transaction
+          Status = OrderStatusEnum.Transaction,
+          Time = order.Operation.Instrument.Price.Time
         }
       };
 
@@ -205,7 +203,8 @@ namespace Core.Grains
     /// <param name="action"></param>
     protected virtual async Task SendBraces(OrderModel order, ActionEnum action = ActionEnum.Create)
     {
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(this.GetPrimaryKeyString());
+      var descriptor = this.GetPrimaryKeyString();
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {

@@ -13,12 +13,6 @@ namespace Core.Grains
     Task<OrderModel> Order();
 
     /// <summary>
-    /// Get position
-    /// </summary>
-    /// <param name="price"></param>
-    Task<OrderModel> Position(PriceModel price);
-
-    /// <summary>
     /// Send order
     /// </summary>
     Task<OrderResponse> Store(OrderModel order);
@@ -26,8 +20,8 @@ namespace Core.Grains
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
-    /// <param name="price"></param>
-    Task<bool> IsExecutable(PriceModel price);
+    /// <param name="instrument"></param>
+    Task<OrderResponse> Tap(InstrumentModel instrument);
   }
 
   public class OrderGrain : Grain<OrderModel>, IOrderGrain
@@ -58,39 +52,15 @@ namespace Core.Grains
     }
 
     /// <summary>
-    /// Get position
-    /// </summary>
-    /// <param name="price"></param>
-    public virtual Task<OrderModel> Position(PriceModel price)
-    {
-      var position = State with
-      {
-        Price = price.Last,
-        Operation = State.Operation with
-        {
-          Time = price.Time,
-          Amount = State.Amount,
-          AveragePrice = price.Last,
-          Status = OrderStatusEnum.Position,
-          Instrument = State.Operation.Instrument with
-          {
-            Price = price
-          }
-        }
-      };
-
-      return Task.FromResult(position);
-    }
-
-    /// <summary>
     /// Check if pending order can be executed
     /// </summary>
-    /// <param name="price"></param>
-    public virtual Task<bool> IsExecutable(PriceModel price)
+    /// <param name="instrument"></param>
+    public virtual Task<OrderResponse> Tap(InstrumentModel instrument)
     {
-      var response = false;
+      var price = instrument.Price;
+      var response = new OrderResponse();
 
-      if (Equals(price.Name, State.Operation.Instrument.Name) is false)
+      if (Equals(instrument.Name, State.Operation.Instrument.Name) is false)
       {
         return Task.FromResult(response);
       }
@@ -109,14 +79,47 @@ namespace Core.Grains
         }
       }
 
+      var status = false;
+
       switch (State.Type)
       {
-        case OrderTypeEnum.Market: response = true; break;
-        case OrderTypeEnum.Stop: response = isLong ? price.Ask >= State.Price : price.Bid <= State.Price; break;
-        case OrderTypeEnum.Limit: response = isLong ? price.Ask <= State.Price : price.Bid >= State.Price; break;
+        case OrderTypeEnum.Market: status = true; break;
+        case OrderTypeEnum.Stop: status = isLong ? price.Ask >= State.Price : price.Bid <= State.Price; break;
+        case OrderTypeEnum.Limit: status = isLong ? price.Ask <= State.Price : price.Bid >= State.Price; break;
+      }
+
+      if (status)
+      {
+        response = response with { Data = Position(price) };
       }
 
       return Task.FromResult(response);
+    }
+
+    /// <summary>
+    /// Get position
+    /// </summary>
+    /// <param name="price"></param>
+    protected virtual OrderModel Position(PriceModel price)
+    {
+      var position = State with
+      {
+        Price = price.Last,
+        Operation = State.Operation with
+        {
+          Id = State.Id,
+          Time = price.Time,
+          Amount = State.Amount,
+          AveragePrice = price.Last,
+          Status = OrderStatusEnum.Position,
+          Instrument = State.Operation.Instrument with
+          {
+            Price = price
+          }
+        }
+      };
+
+      return position;
     }
   }
 }

@@ -63,7 +63,7 @@ namespace Board.Pages.Options
 
       if (setup)
       {
-        Messenger.Subscribe<PriceModel>(Update);
+        Messenger.Subscribe<InstrumentModel>(Update);
         State.Subscribe(state =>
         {
           if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
@@ -106,9 +106,10 @@ namespace Board.Pages.Options
     /// <summary>
     /// Process tick data
     /// </summary>
-    /// <param name="price"></param>
-    async Task Update(PriceModel price)
+    /// <param name="instrument"></param>
+    async Task Update(InstrumentModel instrument)
     {
+      var price = instrument.Price;
       var account = Adapter.Account;
       var performance = await Performance.Update(View.Adapters.Values);
       var options = await GetOptions(price, new DateTime(price.Time.Value));
@@ -132,8 +133,8 @@ namespace Board.Pages.Options
       PositionsView.Update(View.Adapters.Values);
       TransactionsView.Update(View.Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
-      PerformanceView.Update(price.Bar.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance });
-      PerformanceView.Update(price.Bar.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     /// <summary>
@@ -153,8 +154,8 @@ namespace Board.Pages.Options
         .Where(o => o.Operation.Instrument.Derivative is not null)
         .Sum(o => GetDelta(o, 100)), MidpointRounding.ToZero);
 
-      IndicatorsView.Update(point.Time.Value, "Indicators", "Stock Delta", new AreaShape { Y = basisDelta, Component = comUp });
-      IndicatorsView.Update(point.Time.Value, "Indicators", "Option Delta", new AreaShape { Y = optionDelta, Component = comDown });
+      IndicatorsView.Update(point.Bar.Time.Value, "Indicators", "Stock Delta", new AreaShape { Y = basisDelta, Component = comUp });
+      IndicatorsView.Update(point.Bar.Time.Value, "Indicators", "Option Delta", new AreaShape { Y = optionDelta, Component = comDown });
 
       return (basisDelta, optionDelta);
     }
@@ -205,30 +206,30 @@ namespace Board.Pages.Options
     /// <summary>
     /// Create short condor strategy
     /// </summary>
-    /// <param name="point"></param>
+    /// <param name="price"></param>
     /// <param name="options"></param>
-    OrderModel GetOrder(PriceModel point, IList<InstrumentModel> options)
+    OrderModel GetOrder(PriceModel price, IList<InstrumentModel> options)
     {
-      var range = point.Last * 0.01;
+      var range = price.Last * 0.01;
       var shortPut = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-        ?.Where(o => o.Derivative.Strike <= point.Last)
-        ?.LastOrDefault();
+        ?.Where(o => o.Derivative.Strike <= price.Last)
+        ?.LastOrDefault() with { Basis = instruments.First().Value };
 
       var longPut = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
         ?.Where(o => o.Derivative.Strike < shortPut.Derivative.Strike - range)
-        ?.LastOrDefault();
+        ?.LastOrDefault() with { Basis = instruments.First().Value };
 
       var shortCall = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-        ?.Where(o => o.Derivative.Strike >= point.Last)
-        ?.FirstOrDefault();
+        ?.Where(o => o.Derivative.Strike >= price.Last)
+        ?.FirstOrDefault() with { Basis = instruments.First().Value };
 
       var longCall = options
         ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
         ?.Where(o => o.Derivative.Strike > shortCall.Derivative.Strike + range)
-        ?.FirstOrDefault();
+        ?.FirstOrDefault() with { Basis = instruments.First().Value };
 
       if (shortPut is null || shortCall is null || longPut is null || longCall is null)
       {
@@ -241,25 +242,25 @@ namespace Board.Pages.Options
         Instruction = InstructionEnum.Group,
         Orders =
         [
-          new OrderModel
+          new()
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Operation = new() { Instrument = longPut }
           },
-          new OrderModel
+          new()
           {
             Amount = 1,
             Side = OrderSideEnum.Long,
             Operation = new() { Instrument = longCall }
           },
-          new OrderModel
+          new()
           {
             Amount = 1,
             Side = OrderSideEnum.Short,
             Operation = new() { Instrument = shortPut }
           },
-          new OrderModel
+          new()
           {
             Amount = 1,
             Side = OrderSideEnum.Short,

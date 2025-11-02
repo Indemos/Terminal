@@ -25,8 +25,8 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    Task<StatusResponse> Tap(PriceModel price);
+    /// <param name="instrument"></param>
+    Task<StatusResponse> Tap(InstrumentModel instrument);
 
     /// <summary>
     /// Clear positions
@@ -57,10 +57,10 @@ namespace Core.Grains
 
       if (grain is null)
       {
-        var positionsGrain = GrainFactory.GetGrain<IPositionGrain>($"{descriptor}:{order.Id}");
-        var orderResponse = await positionsGrain.Store(order);
+        var positionGrain = GrainFactory.GetGrain<IPositionGrain>($"{descriptor}:{order.Id}");
+        var orderResponse = await positionGrain.Store(order);
 
-        State.Grains[instrument] = positionsGrain;
+        State.Grains[instrument] = positionGrain;
 
         return orderResponse;
       }
@@ -85,10 +85,16 @@ namespace Core.Grains
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
-    /// <param name="price"></param>
-    public virtual async Task<StatusResponse> Tap(PriceModel price)
+    /// <param name="instrument"></param>
+    public virtual async Task<StatusResponse> Tap(InstrumentModel instrument)
     {
-      await Task.WhenAll(State.Grains.Values.Select(o => o.Tap(price)));
+      foreach (var grain in State.Grains)
+      {
+        if (Equals(grain.Key, instrument.Name))
+        {
+          await grain.Value.Tap(instrument);
+        }
+      }
 
       return new StatusResponse
       {

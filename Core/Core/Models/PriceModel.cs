@@ -5,11 +5,6 @@ namespace Core.Models
   public record PriceModel
   {
     /// <summary>
-    /// Name
-    /// </summary>
-    public string Name { get; init; }
-
-    /// <summary>
     /// Bid
     /// </summary>
     public double? Bid { get; init; }
@@ -43,11 +38,6 @@ namespace Core.Models
     /// Time stamp
     /// </summary>
     public long? Time { get; init; }
-
-    /// <summary>
-    /// Aggregation period for the quotes
-    /// </summary>
-    public TimeSpan? TimeFrame { get; init; }
 
     /// <summary>
     /// Reference to the complex data point
