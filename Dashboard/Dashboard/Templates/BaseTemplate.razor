@@ -1,0 +1,56 @@
+@using Core.Enums
+@using Core.Models
+@using Dashboard
+@using Dashboard.Components
+@using Dashboard.Services
+@using Dashboard.Templates
+@using Dashboard.Themes
+
+@inject ISnackbar Popup
+@inject IConfiguration Configuration
+@inject LogService Recorder
+@inject MessageService Messenger
+
+@inherits LayoutComponentBase
+
+<PageTitle>Terminal</PageTitle>
+
+<MudThemeProvider Theme="theme" IsDarkMode="true" />
+<MudSnackbarProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge">
+  @Body
+</MudContainer>
+
+@code {
+
+  protected DashboardTheme theme = new();
+  protected override void OnAfterRender(bool setup)
+  {
+    if (setup)
+    {
+      StateHasChanged();
+
+      Messenger.Subscribe<MessageModel>(message =>
+      {
+        try
+        {
+          Recorder
+          .Data
+          .Information("{@Message}", message);
+
+          if (message.Content is not null)
+          {
+            Popup.Add(@<p>@(message.Content)</p>);
+          }
+        }
+        catch (Exception) { }
+
+        return Task.CompletedTask;
+
+      }, nameof(MessageModel));
+    }
+  }
+}

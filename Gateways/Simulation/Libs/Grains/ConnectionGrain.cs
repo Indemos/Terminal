@@ -4,7 +4,6 @@ using Core.Grains;
 using Core.Models;
 using Core.Services;
 using MessagePack;
-using MessagePack.Resolvers;
 using Orleans;
 using Simulation.Grains;
 using Simulation.Models;
@@ -145,7 +144,7 @@ namespace Simulation
       var descriptor = this.GetPrimaryKeyString();
       var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
-      var pricesGrain = GrainFactory.GetGrain<IGatewayInstrumentGrain>(instrumentDescriptor);
+      var instrumentGrain = GrainFactory.GetGrain<IGatewayInstrumentGrain>(instrumentDescriptor);
       var optionsGrain = GrainFactory.GetGrain<IGatewayOptionsGrain>(instrumentDescriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
@@ -175,7 +174,7 @@ namespace Simulation
           var ordersMap = orders.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var positionsMap = positions.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var optionsMap = min.Value.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-          var message = await pricesGrain.Store(min.Value.Instrument with
+          var message = await instrumentGrain.Store(min.Value.Instrument with
           {
             Name = instrument.Name,
             TimeFrame = instrument.TimeFrame
