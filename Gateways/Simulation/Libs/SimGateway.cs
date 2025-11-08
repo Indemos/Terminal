@@ -21,7 +21,7 @@ namespace Simulation
     {
       SubscribeToUpdates();
 
-      return await Component<ISimConnectionGrain>().Connect(new() { Account = Account, Source = Source });
+      return await Component<ISimConnectionGrain>().Setup(new() { Account = Account, Source = Source });
     }
 
     /// <summary>

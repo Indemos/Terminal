@@ -18,52 +18,25 @@ using System.Threading.Tasks;
 
 namespace Simulation.Grains
 {
-  public interface ISimConnectionGrain : IGrainWithStringKey
+  public interface ISimConnectionGrain : IConnectionGrain
   {
     /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Connect(ConnectionModel connection);
-
-    /// <summary>
-    /// Disconnect
-    /// </summary>
-    Task<StatusResponse> Disconnect();
-
-    /// <summary>
-    /// Subscribe to streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentModel instrument);
-
-    /// <summary>
-    /// Unsubscribe from streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
+    Task<StatusResponse> Setup(ConnectionModel connection);
   }
 
   /// <summary>
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class SimConnectionGrain(MessageService messenger) : Grain<ConnectionModel>, ISimConnectionGrain
+  public class SimConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), ISimConnectionGrain
   {
     /// <summary>
-    /// Messenger
+    /// State
     /// </summary>
-    protected MessageService messenger = messenger;
-
-    /// <summary>
-    /// HTTP service
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
-    /// Disposable connections
-    /// </summary>
-    protected List<IDisposable> connections = new();
+    protected ConnectionModel state;
 
     /// <summary>
     /// Subscription states
@@ -84,27 +57,25 @@ namespace Simulation.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Connect(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
     {
       await Disconnect();
 
-      State = connection;
-
-      streams = State.Account.Instruments.ToDictionary(
+      state = connection;
+      streams = state.Account.Instruments.ToDictionary(
         o => o.Value.Name,
         o => Directory
-          .EnumerateFiles(Path.Combine(State.Source, o.Value.Name), "*", SearchOption.AllDirectories)
+          .EnumerateFiles(Path.Combine(state.Source, o.Value.Name), "*", SearchOption.AllDirectories)
           .GetEnumerator())
           .Concurrent();
 
-      await Task.WhenAll(State.Account.Instruments.Values.Select(Subscribe));
+      await Task.WhenAll(state.Account.Instruments.Values.Select(Subscribe));
 
       var counter = this.RegisterGrainTimer(
         o => Task.WhenAll(subscriptions.Values.Select(o => o())),
         0,
         TimeSpan.Zero,
-        TimeSpan.FromMicroseconds(1)
-        );
+        TimeSpan.FromMicroseconds(1));
 
       connections.AddRange(streams.Values);
 
@@ -117,10 +88,10 @@ namespace Simulation.Grains
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public virtual Task<StatusResponse> Disconnect()
+    public override Task<StatusResponse> Disconnect()
     {
       connections?.ForEach(o => o.Dispose());
-      State?.Account?.Instruments?.Values?.ForEach(o => Unsubscribe(o));
+      state?.Account?.Instruments?.Values?.ForEach(o => Unsubscribe(o));
 
       streams?.Clear();
       summaries?.Clear();
@@ -137,7 +108,7 @@ namespace Simulation.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
       await Unsubscribe(instrument);
 
@@ -206,7 +177,7 @@ namespace Simulation.Grains
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
       subscriptions.TryRemove(instrument.Name, out var subscription);
 

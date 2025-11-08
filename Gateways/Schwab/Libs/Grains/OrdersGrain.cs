@@ -17,7 +17,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Connect(ConnectionModel connection);
+    Task<StatusResponse> Setup(ConnectionModel connection);
   }
 
   public class SchwabOrdersGrain : OrdersGrain, ISchwabOrdersGrain
@@ -31,7 +31,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Connect(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
     {
       broker = new()
       {

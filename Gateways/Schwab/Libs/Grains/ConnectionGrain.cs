@@ -6,38 +6,25 @@ using Orleans;
 using Schwab.Enums;
 using Schwab.Messages;
 using Schwab.Models;
-using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Schwab.Grains
 {
-  public interface ISchwabConnectionGrain : IGrainWithStringKey
+  public interface ISchwabConnectionGrain : IConnectionGrain
   {
     /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Connect(ConnectionModel connection);
-
-    /// <summary>
-    /// Disconnect
-    /// </summary>
-    Task<StatusResponse> Disconnect();
-
-    /// <summary>
-    /// Subscribe to streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentModel instrument);
+    Task<StatusResponse> Setup(ConnectionModel connection);
   }
 
   /// <summary>
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class SchwabConnectionGrain(MessageService messenger) : Grain<ConnectionModel>, ISchwabConnectionGrain
+  public class SchwabConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), ISchwabConnectionGrain
   {
     /// <summary>
     /// Messenger
@@ -45,29 +32,19 @@ namespace Schwab.Grains
     protected SchwabBroker broker;
 
     /// <summary>
-    /// Messenger
+    /// State
     /// </summary>
-    protected MessageService messenger = messenger;
-
-    /// <summary>
-    /// HTTP service
-    /// </summary>
-    protected ConversionService converter = new();
-
-    /// <summary>
-    /// Disposable connections
-    /// </summary>
-    protected List<IDisposable> connections = new();
+    protected ConnectionModel state;
 
     /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Connect(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
     {
       await Disconnect();
 
-      State = connection;
+      state = connection;
 
       broker = new()
       {
@@ -89,7 +66,7 @@ namespace Schwab.Grains
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public virtual Task<StatusResponse> Disconnect()
+    public override Task<StatusResponse> Disconnect()
     {
       connections?.ForEach(o => o.Dispose());
       connections?.Clear();
@@ -105,7 +82,7 @@ namespace Schwab.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
       var descriptor = this.GetPrimaryKeyString();
       var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
@@ -141,7 +118,7 @@ namespace Schwab.Grains
     /// Get price
     /// </summary>
     /// <param name="message"></param>
-    protected virtual PriceModel MapPrice(PriceMessage message) => new PriceModel
+    protected virtual PriceModel MapPrice(PriceMessage message) => new()
     {
       Ask = message.Ask,
       Bid = message.Bid,
@@ -155,7 +132,7 @@ namespace Schwab.Grains
     /// Get price
     /// </summary>
     /// <param name="message"></param>
-    protected virtual DomModel MapDom(DomMessage message) => new DomModel
+    protected virtual DomModel MapDom(DomMessage message) => new()
     {
       Bids = [.. message.Bids.Select(MapPrice)],
       Asks = [.. message.Asks.Select(MapPrice)]
@@ -182,7 +159,7 @@ namespace Schwab.Grains
     /// Get subscription type
     /// </summary>
     /// <param name="instrument"></param>
-    protected virtual Schwab.Enums.DomEnum MapDomSubType(InstrumentModel instrument)
+    protected virtual DomEnum MapDomSubType(InstrumentModel instrument)
     {
       return instrument.Type is InstrumentEnum.Options ?
         DomEnum.OPTIONS_BOOK : 

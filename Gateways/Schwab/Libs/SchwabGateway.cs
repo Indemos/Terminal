@@ -3,6 +3,7 @@ using Core.Enums;
 using Core.Grains;
 using Core.Models;
 using Schwab.Grains;
+using Schwab.Models;
 using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -36,9 +37,23 @@ namespace Schwab
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      var connection = new ConnectionModel()
+      {
+        Account = Account
+      };
+
       SubscribeToUpdates();
 
-      return await Component<ISchwabConnectionGrain>().Connect(new() { Account = Account });
+      await Component<ISchwabOrdersGrain>().Setup(connection);
+      await Component<ISchwabOptionsGrain>().Setup(connection);
+      await Component<ISchwabPositionsGrain>().Setup(connection);
+      await Component<ISchwabTransactionsGrain>().Setup(connection);
+      await Component<ISchwabConnectionGrain>().Setup(connection);
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
     }
 
     /// <summary>

@@ -12,41 +12,18 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace InteractiveBrokers
 {
-  public interface IInterConnectionGrain : IGrainWithStringKey
+  public interface IInterConnectionGrain : IConnectionGrain
   {
     /// <summary>
     /// Setup
     /// </summary>
     /// <param name="connection"></param>
     Task<StatusResponse> Store(ConnectionModel connection);
-
-    /// <summary>
-    /// Connect
-    /// </summary>
-    Task<StatusResponse> Connect();
-
-    /// <summary>
-    /// Save state and dispose
-    /// </summary>
-    Task<StatusResponse> Disconnect();
-
-    /// <summary>
-    /// Subscribe to streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentModel instrument);
-
-    /// <summary>
-    /// Unsubscribe from streams
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
 
     /// <summary>
     /// List of prices by criteria
@@ -84,28 +61,22 @@ namespace InteractiveBrokers
     Task<AccountModel> AccountSummary();
   }
 
-  public class InterConnectionGrain : Grain<ConnectionModel>, IInterConnectionGrain
+  public class InterConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), IInterConnectionGrain
   {
+    /// <summary>
+    /// State
+    /// </summary>
+    protected ConnectionModel state;
+
     /// <summary>
     /// IB client
     /// </summary>
     protected InterBroker connector;
 
     /// <summary>
-    /// Stream
-    /// </summary>
-    protected MessageService messenger;
-
-    /// <summary>
     /// Asset subscriptions
     /// </summary>
     protected ConcurrentDictionary<string, int> subscriptions = new();
-
-    /// <summary>
-    /// Constructor
-    /// </summary>
-    /// <param name="streamService"></param>
-    public InterConnectionGrain(MessageService streamService) => messenger = streamService;
 
     /// <summary>
     /// Deactivation
@@ -124,7 +95,7 @@ namespace InteractiveBrokers
     /// <param name="connection"></param>
     public virtual Task<StatusResponse> Store(ConnectionModel connection)
     {
-      State = connection;
+      state = connection;
 
       return Task.FromResult(new StatusResponse
       {
@@ -135,14 +106,14 @@ namespace InteractiveBrokers
     /// <summary>
     /// Connect
     /// </summary>
-    public virtual async Task<StatusResponse> Connect()
+    public override async Task<StatusResponse> Connect()
     {
       await Disconnect();
 
-      connector = new InterBroker { Port = State.Port };
+      connector = new InterBroker { Port = state.Port };
       connector.Connect();
 
-      foreach (var instrument in State.Account.Instruments.Values)
+      foreach (var instrument in state.Account.Instruments.Values)
       {
         await Subscribe(instrument);
       }
@@ -156,7 +127,7 @@ namespace InteractiveBrokers
     /// <summary>
     /// Save state and dispose
     /// </summary>
-    public virtual Task<StatusResponse> Disconnect()
+    public override Task<StatusResponse> Disconnect()
     {
       connector?.Disconnect();
 
@@ -170,12 +141,12 @@ namespace InteractiveBrokers
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
     {
       await Unsubscribe(instrument);
 
       var contract = Upstream.Contract(instrument);
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var contracts = await connector.GetContracts(cleaner.Token, contract);
       var contractMessage = contracts.FirstOrDefault();
 
@@ -224,7 +195,7 @@ namespace InteractiveBrokers
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
     {
       if (subscriptions.TryRemove(instrument.Name, out var subscription))
       {
@@ -243,11 +214,11 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<OrderModel>> Orders(CriteriaModel criteria)
     {
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.Order).ToArray();
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return items;
     }
@@ -258,11 +229,11 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<OrderModel>> Positions(CriteriaModel criteria)
     {
-      var cleaner = new CancellationTokenSource(State.Timeout);
-      var sourceItems = await connector.GetPositions(cleaner.Token, State.Account.Name);
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
       var items = sourceItems.Select(o => Downstream.Position(o, criteria.Instrument)).ToArray();
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return items;
     }
@@ -274,7 +245,7 @@ namespace InteractiveBrokers
     public virtual async Task<IList<PriceModel>> Ticks(CriteriaModel criteria)
     {
       var contract = Upstream.Contract(criteria.Instrument);
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetTicks(
         cleaner.Token,
         contract,
@@ -285,7 +256,7 @@ namespace InteractiveBrokers
 
       var items = sourceItems.Select(Downstream.Price).ToArray();
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return items;
     }
@@ -296,7 +267,7 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<IList<PriceModel>> Bars(CriteriaModel criteria)
     {
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var contract = Upstream.Contract(criteria.Instrument);
       var maxDate = criteria.MaxDate ?? DateTime.Now;
       var sourceItems = await connector.GetBars(
@@ -310,7 +281,7 @@ namespace InteractiveBrokers
 
       var items = sourceItems.Select(Downstream.Price).ToArray();
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return items;
     }
@@ -325,11 +296,11 @@ namespace InteractiveBrokers
       var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
       var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
       var contract = Upstream.Contract(criteria.Instrument);
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetContracts(cleaner.Token, contract);
       var items = sourceItems.Select(o => Downstream.Instrument(o.Contract)).ToArray();
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return items;
     }
@@ -340,12 +311,12 @@ namespace InteractiveBrokers
     public virtual async Task<AccountModel> AccountSummary()
     {
       var account = new AccountModel();
-      var cleaner = new CancellationTokenSource(State.Timeout);
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var message = await connector.GetAccountSummary(cleaner.Token);
 
       account = account with { Balance = double.Parse(message.Get("NetLiquidation")) };
 
-      await Task.Delay(State.Span);
+      await Task.Delay(state.Span);
 
       return account;
     }
