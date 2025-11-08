@@ -17,13 +17,13 @@ namespace Core.Grains
     Task<IList<OrderModel>> Orders(CriteriaModel criteria);
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
+    /// Send order
     /// </summary>
     /// <param name="order"></param>
     Task<OrderGroupsResponse> Store(OrderModel order);
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
+    /// Update order data
     /// </summary>
     /// <param name="instrument"></param>
     Task<StatusResponse> Tap(InstrumentModel instrument);
@@ -57,7 +57,7 @@ namespace Core.Grains
       .Select(o => o.Order()));
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
+    /// Send order
     /// </summary>
     /// <param name="order"></param>
     public virtual async Task<OrderGroupsResponse> Store(OrderModel order)
@@ -88,7 +88,7 @@ namespace Core.Grains
     }
 
     /// <summary>
-    /// Update instruments assigned to positions and other models
+    /// Update order data
     /// </summary>
     /// <param name="instrument"></param>
     public virtual async Task<StatusResponse> Tap(InstrumentModel instrument)

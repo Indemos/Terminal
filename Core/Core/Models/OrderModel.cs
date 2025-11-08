@@ -52,6 +52,11 @@ namespace Core.Models
     public InstructionEnum? Instruction { get; init; }
 
     /// <summary>
+    /// Account
+    /// </summary>
+    public AccountModel Account { get; init; }
+
+    /// <summary>
     /// Balance
     /// </summary>
     public BalanceModel Balance { get; init; } = new();

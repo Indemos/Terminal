@@ -31,7 +31,12 @@ namespace Core.Models
     public DateTime? MaxDate { get; init; }
 
     /// <summary>
-    /// Asset
+    /// Account
+    /// </summary>
+    public AccountModel Account { get; init; }
+
+    /// <summary>
+    /// Instrument
     /// </summary>
     public InstrumentModel Instrument { get; init; }
 

@@ -38,11 +38,6 @@ namespace Core.Grains
   public class InstrumentGrain : Grain<PricesModel>, IInstrumentGrain
   {
     /// <summary>
-    /// Instrument
-    /// </summary>
-    protected InstrumentModel instrument;
-
-    /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
@@ -58,7 +53,7 @@ namespace Core.Grains
     /// Get instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<InstrumentModel> Instrument(CriteriaModel criteria) => Task.FromResult(instrument);
+    public virtual Task<InstrumentModel> Instrument(CriteriaModel criteria) => Task.FromResult(State.Instrument);
 
     /// <summary>
     /// Add price to the list

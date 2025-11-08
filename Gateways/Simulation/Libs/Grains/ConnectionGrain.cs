@@ -16,7 +16,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Simulation
+namespace Simulation.Grains
 {
   public interface ISimConnectionGrain : IGrainWithStringKey
   {
@@ -108,7 +108,7 @@ namespace Simulation
 
       connections.AddRange(streams.Values);
 
-      return new StatusResponse
+      return new()
       {
         Data = StatusEnum.Active
       };
