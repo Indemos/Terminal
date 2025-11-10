@@ -55,6 +55,18 @@ namespace InteractiveBrokers
     Task<InstrumentsResponse> Options(Criteria criteria);
 
     /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    Task<OrderResponse> SendOrder(Core.Models.Order order);
+
+    /// <summary>
+    /// Clear order
+    /// </summary>
+    /// <param name="order"></param>
+    Task<DescriptorResponse> ClearOrder(Core.Models.Order order);
+
+    /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
     Task<Account> AccountSummary();
@@ -340,6 +352,48 @@ namespace InteractiveBrokers
       return new()
       {
         Data = items
+      };
+    }
+
+    /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual async Task<OrderResponse> SendOrder(Core.Models.Order order)
+    {
+      var descriptor = this.GetDescriptor();
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var contract = Upstream.MapContract(order.Operation.Instrument);
+      var (orderMessage, SL, TP) = Upstream.MapOrder(connector.Id, order, state.Account);
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+
+      await connector.SendOrder(cleaner.Token, contract, orderMessage, SL, TP);
+      await ordersGrain.Send(order);
+      await Task.Delay(state.Span);
+
+      return new()
+      {
+        Data = order
+      };
+    }
+
+    /// <summary>
+    /// Clear order
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual async Task<DescriptorResponse> ClearOrder(Core.Models.Order order)
+    {
+      var descriptor = this.GetDescriptor();
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+
+      await connector.ClearOrder(cleaner.Token, int.Parse(order.Id));
+      await ordersGrain.Clear(order);
+      await Task.Delay(state.Span);
+
+      return new()
+      {
+        Data = order.Id
       };
     }
   }

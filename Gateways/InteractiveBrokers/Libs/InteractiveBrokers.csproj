@@ -7,7 +7,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="InterBroker" Version="0.0.10" />
+    <PackageReference Include="InterBroker" Version="0.0.12" />
   </ItemGroup>
 
   <ItemGroup>

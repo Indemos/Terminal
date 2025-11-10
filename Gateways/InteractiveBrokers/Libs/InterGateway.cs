@@ -143,10 +143,10 @@ namespace InteractiveBrokers
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<OrderGroupResponse> SendOrder(Order order)
+    public override async Task<OrderGroupResponse> SendOrder(Order order) => new OrderGroupResponse
     {
-      return Component<IOrdersGrain>().Send(order);
-    }
+      Data = [await Component<IInterConnectionGrain>().SendOrder(order)]
+    };
 
     /// <summary>
     /// Clear order
@@ -154,7 +154,7 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(Order order)
     {
-      return Component<IOrdersGrain>().Clear(order);
+      return Component<IInterConnectionGrain>().ClearOrder(order);
     }
   }
 }

@@ -1,8 +1,6 @@
 using Core.Enums;
 using Core.Models;
 using IBApi;
-using IBApi.Messages;
-using System.Collections.Generic;
 using System.Linq;
 
 namespace InteractiveBrokers.Mappers
@@ -15,21 +13,18 @@ namespace InteractiveBrokers.Mappers
     /// <param name="orderId"></param>
     /// <param name="orderModel"></param>
     /// <param name="account"></param>
-    public static IList<OpenOrderMessage> MapOrder(int orderId, Core.Models.Order orderModel, Account account)
+    public static (IBApi.Order, double?, double?) MapOrder(int orderId, Core.Models.Order orderModel, Account account)
     {
-      var order = new IBApi.Order();
-      var action = orderModel.Operation;
-      var instrument = action.Instrument;
-      var contract = MapContract(action.Instrument);
-      var response = new List<OpenOrderMessage>();
-
-      order.OrderId = orderId;
-      order.Action = MapSide(orderModel.Side);
-      order.Tif = MapTimeSpan(orderModel.TimeSpan);
-      order.OrderType = MapOrderType(orderModel.Type);
-      order.TotalQuantity = (decimal)orderModel.Amount;
-      order.ExtOperator = orderModel.Descriptor;
-      order.Account = account.Name;
+      var order = new IBApi.Order
+      {
+        OrderId = orderId,
+        Action = MapSide(orderModel.Side),
+        Tif = MapTimeSpan(orderModel.TimeSpan),
+        OrderType = MapOrderType(orderModel.Type),
+        TotalQuantity = (decimal)orderModel.Amount,
+        ExtOperator = orderModel.Descriptor,
+        Account = account.Name
+      };
 
       switch (orderModel.Type)
       {
@@ -44,64 +39,7 @@ namespace InteractiveBrokers.Mappers
       var TP = MapBracePrice(orderModel, orderModel.Side is OrderSideEnum.Long ? 1 : -1);
       var SL = MapBracePrice(orderModel, orderModel.Side is OrderSideEnum.Long ? -1 : 1);
 
-      response = [.. MapBrace(order, SL, TP).Select(o => new OpenOrderMessage(orderId, contract, order, null)
-      {
-        Order = o,
-        Contract = contract
-      })];
-
-      return response;
-    }
-
-    /// <summary>
-    /// Bracket template
-    /// </summary>
-    /// <param name="order"></param>
-    /// <param name="stopPrice"></param>
-    /// <param name="takePrice"></param>
-    public static IList<IBApi.Order> MapBrace(IBApi.Order order, double? stopPrice, double? takePrice)
-    {
-      var orders = new List<IBApi.Order> { order };
-
-      if (takePrice is not null)
-      {
-        order.Transmit = false;
-
-        var TP = new IBApi.Order
-        {
-          OrderType = "LMT",
-          OrderId = order.OrderId + 1,
-          Action = order.Action.Equals("BUY") ? "SELL" : "BUY",
-          TotalQuantity = order.TotalQuantity,
-          LmtPrice = takePrice.Value,
-          ParentId = order.OrderId,
-          Transmit = false
-        };
-
-        orders.Add(TP);
-      }
-
-      if (stopPrice is not null)
-      {
-        order.Transmit = false;
-
-        var SL = new IBApi.Order
-        {
-          OrderType = "STP",
-          OrderId = order.OrderId + 2,
-          Action = order.Action.Equals("BUY") ? "SELL" : "BUY",
-          TotalQuantity = order.TotalQuantity,
-          AuxPrice = stopPrice.Value,
-          ParentId = order.OrderId,
-          Transmit = false
-        };
-
-        orders.Add(SL);
-      }
-
-      orders.Last().Transmit = true;
-
-      return orders;
+      return (order, TP, SL);
     }
 
     /// <summary>

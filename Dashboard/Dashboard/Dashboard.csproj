@@ -14,7 +14,7 @@
     <PackageReference Include="Microsoft.Orleans.Runtime.Abstractions" Version="3.8.0" />
     <PackageReference Include="MudBlazor" Version="8.6.0" />
     <PackageReference Include="OrleansDashboard" Version="8.2.0" />
-    <PackageReference Include="QuantLib" Version="1.39.0" />
+    <PackageReference Include="QuantLib" Version="1.40.0" />
     <PackageReference Include="Microsoft.Orleans.Server" Version="9.2.1" />
     <PackageReference Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
   </ItemGroup>
