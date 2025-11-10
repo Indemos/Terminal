@@ -10,21 +10,21 @@ namespace Core.Services
     /// <summary>
     /// State notification
     /// </summary>
-    public virtual Func<SubscriptionModel, Task> Update { get; set; } = o => Task.CompletedTask;
+    public virtual Func<Subscription, Task> Update { get; set; } = o => Task.CompletedTask;
 
     /// <summary>
     /// Subscription instance
     /// </summary>
-    public virtual SubscriptionModel State { get; set; } = new() { Next = SubscriptionEnum.None };
+    public virtual Subscription State { get; set; } = new() { Next = SubscriptionEnum.None };
 
     /// <summary>
     /// Trigger
     /// </summary>
-    public virtual void Subscribe(Func<SubscriptionModel, Task> action) => Update += action;
+    public virtual void Subscribe(Func<Subscription, Task> action) => Update += action;
 
     /// <summary>
     /// Trigger
     /// </summary>
-    public virtual Task Send(SubscriptionModel state) => Update(State = state);
+    public virtual Task Send(Subscription state) => Update(State = state);
   }
 }

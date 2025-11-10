@@ -44,7 +44,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<IPositionsGrain>(Descriptor);
 
-      var order = new OrderModel();
+      var order = new Order();
 
       Assert.Throws<AggregateException>(() => grain.Store(order).Result);
     }
@@ -54,21 +54,21 @@ namespace Simulation.Prices.Tests
     {
       var stamp = DateTime.Now.Ticks;
       var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(Descriptor);
-      var order = new OrderModel
+      var order = new Order
       {
         Amount = 1,
         Price = 20,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Operation = new OperationModel
+        Operation = new Operation
         {
           Amount = 1,
           Time = stamp,
           Status = OrderStatusEnum.Position,
-          Instrument = new InstrumentModel
+          Instrument = new Instrument
           {
             Name = "SPY",
-            Price = new PriceModel
+            Price = new Price
             {
               Time = stamp
             }
@@ -79,7 +79,7 @@ namespace Simulation.Prices.Tests
       // Open
 
       var openPosition = await grain.Store(order);
-      var openPositions = await grain.Positions(default);
+      var openPositions = (await grain.Positions(default)).Data;
 
       Assert.Single(openPositions);
       Assert.Null(openPosition.Transaction);
@@ -89,7 +89,7 @@ namespace Simulation.Prices.Tests
       // Average down
 
       var averageDownPosition = await grain.Store(order with { Price = 10 });
-      var averageDownPositions = await grain.Positions(default);
+      var averageDownPositions = (await grain.Positions(default)).Data;
       var averageDownOrder = order with
       {
         Amount = 2,
@@ -105,7 +105,7 @@ namespace Simulation.Prices.Tests
       // Average up
 
       var averageUpPosition = await grain.Store(order with { Price = 30 });
-      var averageUpPositions = await grain.Positions(default);
+      var averageUpPositions = (await grain.Positions(default)).Data;
       var averageUpOrder = order with
       {
         Amount = 3,
@@ -121,7 +121,7 @@ namespace Simulation.Prices.Tests
       // Decrease
 
       var decreasePosition = await grain.Store(order with { Side = OrderSideEnum.Short, Price = 40 });
-      var decreasePositions = await grain.Positions(default);
+      var decreasePositions = (await grain.Positions(default)).Data;
       var decreaseOrder = order with
       {
         Amount = 2,
@@ -149,7 +149,7 @@ namespace Simulation.Prices.Tests
       // Inverse
 
       var inversePosition = await grain.Store(order with { Amount = 3, Side = OrderSideEnum.Short, Price = 50 });
-      var inversePositions = await grain.Positions(default);
+      var inversePositions = (await grain.Positions(default)).Data;
       var inverseOrder = order with
       {
         Amount = 1,
@@ -178,7 +178,7 @@ namespace Simulation.Prices.Tests
       // Average short
 
       var averageShortPosition = await grain.Store(order with { Amount = 1, Side = OrderSideEnum.Short, Price = 40 });
-      var averageShortPositions = await grain.Positions(default);
+      var averageShortPositions = (await grain.Positions(default)).Data;
       var averageShortOrder = order with
       {
         Amount = 2,
@@ -194,7 +194,7 @@ namespace Simulation.Prices.Tests
       // Close
 
       var closePosition = await grain.Store(order with { Amount = 2, Price = 5 });
-      var closePositions = await grain.Positions(default);
+      var closePositions = (await grain.Positions(default)).Data;
       var closeTransaction = order with
       {
         Amount = 2,

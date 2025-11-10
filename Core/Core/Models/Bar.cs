@@ -1,6 +1,6 @@
 namespace Core.Models
 {
-  public record BarModel
+  public record Bar
   {
     /// <summary>
     /// Lowest price of the bar

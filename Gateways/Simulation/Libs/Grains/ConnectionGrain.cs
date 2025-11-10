@@ -5,7 +5,6 @@ using Core.Models;
 using Core.Services;
 using MessagePack;
 using Orleans;
-using Simulation.Grains;
 using Simulation.Models;
 using System;
 using System.Collections.Concurrent;
@@ -24,7 +23,7 @@ namespace Simulation.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
   }
 
   /// <summary>
@@ -36,12 +35,12 @@ namespace Simulation.Grains
     /// <summary>
     /// State
     /// </summary>
-    protected ConnectionModel state;
+    protected Connection state;
 
     /// <summary>
     /// Subscription states
     /// </summary>
-    protected ConcurrentDictionary<string, SummaryModel> summaries = new();
+    protected ConcurrentDictionary<string, Summary> summaries = new();
 
     /// <summary>
     /// Subscriptions
@@ -57,7 +56,7 @@ namespace Simulation.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       await Disconnect();
 
@@ -108,12 +107,12 @@ namespace Simulation.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
       await Unsubscribe(instrument);
 
-      var descriptor = this.GetPrimaryKeyString();
-      var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
+      var descriptor = this.GetDescriptor();
+      var instrumentDescriptor = this.GetDescriptor(instrument.Name);
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<ISimInstrumentGrain>(instrumentDescriptor);
       var optionsGrain = GrainFactory.GetGrain<ISimOptionsGrain>(instrumentDescriptor);
@@ -142,10 +141,10 @@ namespace Simulation.Grains
         {
           var orders = await ordersGrain.Orders(default);
           var positions = await positionsGrain.Positions(default);
-          var ordersMap = orders.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
-          var positionsMap = positions.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var optionsMap = min.Value.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-          var message = await instrumentGrain.Store(min.Value.Instrument with
+          var message = await instrumentGrain.Send(min.Value.Instrument with
           {
             Name = instrument.Name,
             TimeFrame = instrument.TimeFrame
@@ -177,7 +176,7 @@ namespace Simulation.Grains
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
       subscriptions.TryRemove(instrument.Name, out var subscription);
 
@@ -192,7 +191,7 @@ namespace Simulation.Grains
     /// </summary>
     /// <param name="name"></param>
     /// <param name="source"></param>
-    protected virtual SummaryModel GetSummary(string name, string source)
+    protected virtual Summary GetSummary(string name, string source)
     {
       var document = new FileInfo(source);
 
@@ -200,7 +199,7 @@ namespace Simulation.Grains
       {
         var content = File.ReadAllBytes(source);
 
-        return MessagePackSerializer.Deserialize<SummaryModel>(content, converter.MessageOptions);
+        return MessagePackSerializer.Deserialize<Summary>(content, converter.MessageOptions);
       }
 
       if (string.Equals(document.Extension, ".zip", StringComparison.InvariantCultureIgnoreCase))
@@ -209,13 +208,13 @@ namespace Simulation.Grains
         using (var archive = new ZipArchive(stream, ZipArchiveMode.Read))
         using (var content = archive.Entries.First().Open())
         {
-          return JsonSerializer.Deserialize<SummaryModel>(content, converter.Options);
+          return JsonSerializer.Deserialize<Summary>(content, converter.Options);
         }
       }
 
       var inputMessage = File.ReadAllText(source);
 
-      return JsonSerializer.Deserialize<SummaryModel>(inputMessage, converter.Options);
+      return JsonSerializer.Deserialize<Summary>(inputMessage, converter.Options);
     }
   }
 }

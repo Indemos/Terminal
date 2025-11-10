@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Models
 {
-  public record InstrumentModel
+  public record Instrument
   {
     /// <summary>
     /// ID
@@ -58,21 +58,21 @@ namespace Core.Models
     /// <summary>
     /// Current price data 
     /// </summary>
-    public PriceModel Price { get; init; }
+    public Price Price { get; init; }
 
     /// <summary>
     /// Undelying symbol
     /// </summary>
-    public InstrumentModel Basis { get; init; }
+    public Instrument Basis { get; init; }
 
     /// <summary>
     /// Base currency contract
     /// </summary>
-    public CurrencyModel Currency { get; init; } = new CurrencyModel { Name = nameof(CurrencyEnum.USD) };
+    public Currency Currency { get; init; } = new Currency { Name = nameof(CurrencyEnum.USD) };
 
     /// <summary>
     /// Options and futures specification
     /// </summary>
-    public DerivativeModel Derivative { get; init; }
+    public Derivative Derivative { get; init; }
   }
 }

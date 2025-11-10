@@ -13,39 +13,39 @@ namespace Core.Grains
     /// <summary>
     /// Get position
     /// </summary>
-    Task<OrderModel> Position();
+    Task<Order> Position();
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Tap(InstrumentModel instrument);
+    Task<StatusResponse> Tap(Instrument instrument);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderResponse> Store(Order order);
 
     /// <summary>
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Combine(OrderModel order);
+    Task<OrderResponse> Combine(Order order);
   }
 
-  public class PositionGrain : Grain<OrderModel>, IPositionGrain
+  public class PositionGrain : Grain<Order>, IPositionGrain
   {
     /// <summary>
     /// Get position
     /// </summary>
-    public virtual Task<OrderModel> Position() => Task.FromResult(State);
+    public virtual Task<Order> Position() => Task.FromResult(State);
 
     /// <summary>
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderModel order)
+    public virtual async Task<OrderResponse> Store(Order order)
     {
       await SendBraces(State = order);
 
@@ -59,7 +59,7 @@ namespace Core.Grains
     /// Match positions
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Combine(OrderModel order)
+    public virtual async Task<OrderResponse> Combine(Order order)
     {
       var response = new OrderResponse();
 
@@ -89,7 +89,7 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<StatusResponse> Tap(InstrumentModel instrument)
+    public virtual Task<StatusResponse> Tap(Instrument instrument)
     {
       State = State with
       {
@@ -110,7 +110,7 @@ namespace Core.Grains
     /// Increase position
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderModel Increase(OrderModel order)
+    protected virtual Order Increase(Order order)
     {
       var amount = State.Operation.Amount + order.Amount;
       var price = GroupPrice(State, order);
@@ -131,7 +131,7 @@ namespace Core.Grains
     /// Decrease position by amount or close 
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderResponse Decrease(OrderModel order)
+    protected virtual OrderResponse Decrease(Order order)
     {
       var action = State with
       {
@@ -166,7 +166,7 @@ namespace Core.Grains
     /// Reverse position
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderResponse Inverse(OrderModel order)
+    protected virtual OrderResponse Inverse(Order order)
     {
       var action = State with
       {
@@ -201,16 +201,16 @@ namespace Core.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <param name="action"></param>
-    protected virtual async Task SendBraces(OrderModel order, ActionEnum action = ActionEnum.Create)
+    protected virtual async Task SendBraces(Order order, ActionEnum action = ActionEnum.Create)
     {
-      var descriptor = this.GetPrimaryKeyString();
+      var descriptor = this.GetDescriptor();
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
       {
         switch (action)
         {
-          case ActionEnum.Create: await ordersGrain.Store(brace); break;
+          case ActionEnum.Create: await ordersGrain.Send(brace); break;
           case ActionEnum.Remove: await ordersGrain.Clear(brace); break;
         }
       }
@@ -263,7 +263,7 @@ namespace Core.Grains
     /// <summary>
     /// Estimated PnL in account's currency for the order
     /// </summary>
-    protected virtual BalanceModel Balance()
+    protected virtual Balance Balance()
     {
       var range = Range();
       var amount = State.Operation.Amount;
@@ -283,7 +283,7 @@ namespace Core.Grains
     /// Compute aggregated position price
     /// </summary>
     /// <param name="orders"></param>
-    protected virtual double? GroupPrice(params OrderModel[] orders)
+    protected virtual double? GroupPrice(params Order[] orders)
     {
       var numerator = 0.0 as double?;
       var denominator = 0.0 as double?;

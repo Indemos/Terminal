@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record OrderGroupsResponse
+  public record OrderGroupResponse
   {
     /// <summary>
     /// Data

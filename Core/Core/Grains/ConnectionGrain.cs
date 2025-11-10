@@ -24,13 +24,13 @@ namespace Core.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentModel instrument);
+    Task<StatusResponse> Subscribe(Instrument instrument);
 
     /// <summary>
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
+    Task<StatusResponse> Unsubscribe(Instrument instrument);
   }
 
   /// <summary>
@@ -80,7 +80,7 @@ namespace Core.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<StatusResponse> Subscribe(InstrumentModel instrument) => Task.FromResult(new StatusResponse()
+    public virtual Task<StatusResponse> Subscribe(Instrument instrument) => Task.FromResult(new StatusResponse()
     {
       Data = StatusEnum.Active
     });
@@ -89,7 +89,7 @@ namespace Core.Grains
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<StatusResponse> Unsubscribe(InstrumentModel instrument) => Task.FromResult(new StatusResponse
+    public virtual Task<StatusResponse> Unsubscribe(Instrument instrument) => Task.FromResult(new StatusResponse
     {
       Data = StatusEnum.Pause
     });

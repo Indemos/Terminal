@@ -7,12 +7,12 @@ namespace Core.Models
     /// <summary>
     /// Data
     /// </summary>
-    public OrderModel Data { get; init; }
+    public Order Data { get; init; }
 
     /// <summary>
     /// Transaction
     /// </summary>
-    public OrderModel Transaction { get; init; }
+    public Order Transaction { get; init; }
 
     /// <summary>
     /// Errors

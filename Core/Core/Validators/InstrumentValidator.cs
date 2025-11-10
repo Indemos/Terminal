@@ -7,7 +7,7 @@ namespace Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class InstrumentValidator : AbstractValidator<InstrumentModel>
+  public class InstrumentValidator : AbstractValidator<Instrument>
   {
     public InstrumentValidator()
     {

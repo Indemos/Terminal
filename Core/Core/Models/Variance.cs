@@ -1,6 +1,6 @@
 namespace Core.Models
 {
-  public record VarianceModel
+  public record Variance
   {
     /// <summary>
     /// Delta

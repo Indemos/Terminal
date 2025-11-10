@@ -4,8 +4,6 @@ using Core.Grains;
 using Core.Models;
 using Schwab.Grains;
 using Schwab.Models;
-using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Schwab
@@ -37,7 +35,7 @@ namespace Schwab
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var connection = new ConnectionModel()
+      var connection = new Connection()
       {
         Account = Account
       };
@@ -47,8 +45,9 @@ namespace Schwab
       await Component<ISchwabOrdersGrain>().Setup(connection);
       await Component<ISchwabOptionsGrain>().Setup(connection);
       await Component<ISchwabPositionsGrain>().Setup(connection);
-      await Component<ISchwabTransactionsGrain>().Setup(connection);
       await Component<ISchwabConnectionGrain>().Setup(connection);
+      await Component<ISchwabOrderSenderGrain>().Setup(connection);
+      await Component<ISchwabTransactionsGrain>().Setup(connection);
 
       return new()
       {
@@ -68,7 +67,7 @@ namespace Schwab
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Subscribe(Instrument instrument)
     {
       return Component<ISchwabConnectionGrain>().Subscribe(instrument);
     }
@@ -77,7 +76,7 @@ namespace Schwab
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
       return Task.FromResult(new StatusResponse { Data = StatusEnum.Pause });
     }
@@ -86,7 +85,7 @@ namespace Schwab
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<DomModel> GetDom(CriteriaModel criteria)
+    public override Task<DomResponse> GetDom(Criteria criteria)
     {
       return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
@@ -95,7 +94,7 @@ namespace Schwab
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetTicks(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPrices(Criteria criteria)
     {
       return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
@@ -104,7 +103,7 @@ namespace Schwab
     /// Bars
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetBars(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
       return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
@@ -113,7 +112,7 @@ namespace Schwab
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria)
+    public override Task<InstrumentsResponse> GetOptions(Criteria criteria)
     {
       return Component<ISchwabOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
@@ -122,45 +121,45 @@ namespace Schwab
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetOrders(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetOrders(Criteria criteria)
     {
-      return Component<IOrdersGrain>().Orders(criteria with { Account = Account });
+      return Component<ISchwabOrdersGrain>().Orders(criteria with { Account = Account });
     }
 
     /// <summary>
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetPositions(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetPositions(Criteria criteria)
     {
-      return Component<IPositionsGrain>().Positions(criteria);
+      return Component<ISchwabPositionsGrain>().Positions(criteria);
     }
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetTransactions(Criteria criteria)
     {
-      return Component<ITransactionsGrain>().Transactions(criteria);
+      return Component<ISchwabTransactionsGrain>().Transactions(criteria);
     }
 
     /// <summary>
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
-    public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
+    public override Task<OrderGroupResponse> SendOrder(Order order)
     {
-      return Component<IOrdersGrain>().Store(order);
+      return Component<ISchwabOrderSenderGrain>().Send(order);
     }
 
     /// <summary>
     /// Clear order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<DescriptorResponse> ClearOrder(OrderModel order)
+    public override Task<DescriptorResponse> ClearOrder(Order order)
     {
-      return Component<IOrdersGrain>().Clear(order);
+      return Component<ISchwabOrderSenderGrain>().Clear(order);
     }
   }
 }

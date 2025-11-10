@@ -33,7 +33,7 @@
     {
       StateHasChanged();
 
-      Messenger.Subscribe<MessageModel>(message =>
+      Messenger.Subscribe<Message>(message =>
       {
         try
         {
@@ -50,7 +50,7 @@
 
         return Task.CompletedTask;
 
-      }, nameof(MessageModel));
+      }, nameof(Message));
     }
   }
 }

@@ -7,7 +7,7 @@ namespace Core.Models
     /// <summary>
     /// Data
     /// </summary>
-    public IList<OrderModel> Data { get; init; } = [];
+    public IList<Order> Data { get; init; } = [];
 
     /// <summary>
     /// Errors

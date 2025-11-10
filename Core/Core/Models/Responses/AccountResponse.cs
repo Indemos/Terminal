@@ -7,7 +7,7 @@ namespace Core.Models
     /// <summary>
     /// Data
     /// </summary>
-    public AccountModel Data { get; init; }
+    public Account Data { get; init; }
 
     /// <summary>
     /// Errors

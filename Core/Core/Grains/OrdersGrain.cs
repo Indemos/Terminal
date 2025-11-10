@@ -1,4 +1,5 @@
 using Core.Enums;
+using Core.Extensions;
 using Core.Models;
 using Core.Validators;
 using Orleans;
@@ -14,25 +15,25 @@ namespace Core.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Orders(CriteriaModel criteria);
+    Task<OrdersResponse> Orders(Criteria criteria);
 
     /// <summary>
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupsResponse> Store(OrderModel order);
+    Task<OrderGroupResponse> Send(Order order);
 
     /// <summary>
     /// Update order data
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Tap(InstrumentModel instrument);
+    Task<StatusResponse> Tap(Instrument instrument);
 
     /// <summary>
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> Clear(OrderModel order);
+    Task<DescriptorResponse> Clear(Order order);
 
     /// <summary>
     /// Clear orders
@@ -40,7 +41,7 @@ namespace Core.Grains
     Task<StatusResponse> Clear();
   }
 
-  public class OrdersGrain : Grain<OrdersModel>, IOrdersGrain
+  public class OrdersGrain : Grain<Orders>, IOrdersGrain
   {
     /// <summary>
     /// Order validator
@@ -51,33 +52,60 @@ namespace Core.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Orders(CriteriaModel criteria) => await Task.WhenAll(State
-      .Grains
-      .Values
-      .Select(o => o.Order()));
+    public virtual async Task<OrdersResponse> Orders(Criteria criteria)
+    {
+      var items = await Task.WhenAll(State
+        .Grains
+        .Values
+        .Select(o => o.Order()));
+
+      return new()
+      {
+        Data = items
+      };
+    }
 
     /// <summary>
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderGroupsResponse> Store(OrderModel order)
+    public virtual async Task<OrderResponse> Store(Order order)
+    {
+      var descriptor = this.GetDescriptor(order.Id);
+      var grain = GrainFactory.GetGrain<IOrderGrain>(descriptor);
+
+      await grain.Store(order with
+      {
+        Operation = order.Operation with
+        {
+          Status = OrderStatusEnum.Order
+        }
+      });
+
+      State.Grains[order.Id] = grain;
+
+      return new()
+      {
+        Data = order
+      };
+    }
+
+    /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual async Task<OrderGroupResponse> Send(Order order)
     {
       var orders = Compose(order);
-      var descriptor = this.GetPrimaryKeyString();
       var responses = orders
         .Select(o => new OrderResponse { Data = o, Errors = [.. Errors(o).Select(error => error.Message)] })
         .ToArray();
 
       if (responses.Sum(o => o.Errors.Count) is 0)
       {
-        foreach (var o in orders)
+        foreach (var subOrder in orders)
         {
-          var name = $"{descriptor}:{o.Id}";
-          var grain = GrainFactory.GetGrain<IOrderGrain>(name);
-
-          await grain.Store(o);
-
-          State.Grains[o.Id] = grain;
+          await Store(subOrder);
         }
       }
 
@@ -91,9 +119,9 @@ namespace Core.Grains
     /// Update order data
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Tap(InstrumentModel instrument)
+    public virtual async Task<StatusResponse> Tap(Instrument instrument)
     {
-      var descriptor = this.GetPrimaryKeyString();
+      var descriptor = this.GetDescriptor();
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
       foreach (var grain in State.Grains)
@@ -117,7 +145,7 @@ namespace Core.Grains
     /// Remove order from the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<DescriptorResponse> Clear(OrderModel order)
+    public virtual Task<DescriptorResponse> Clear(Order order)
     {
       State.Grains.Remove(order.Id);
 
@@ -143,7 +171,7 @@ namespace Core.Grains
     /// <summary>
     /// Convert hierarchy of orders into a plain list
     /// </summary>
-    protected virtual List<OrderModel> Compose(OrderModel order)
+    protected virtual List<Order> Compose(Order order)
     {
       var nextOrders = order
         .Orders
@@ -164,7 +192,7 @@ namespace Core.Grains
     /// </summary>
     /// <param name="group"></param>
     /// <param name="order"></param>
-    protected virtual OrderModel Merge(OrderModel group, OrderModel order)
+    protected virtual Order Merge(Order group, Order order)
     {
       var instrument =
         order?.Operation?.Instrument ??
@@ -192,9 +220,9 @@ namespace Core.Grains
     /// Preprocess order
     /// </summary>
     /// <param name="order"></param>
-    protected virtual List<ErrorModel> Errors(OrderModel order)
+    protected virtual List<Error> Errors(Order order)
     {
-      var response = new List<ErrorModel>();
+      var response = new List<Error>();
       var orders = order.Orders.Append(order);
 
       foreach (var subOrder in orders)
@@ -202,7 +230,7 @@ namespace Core.Grains
         var errors = orderValidator
           .Validate(subOrder)
           .Errors
-          .Select(error => new ErrorModel { Message = error.ErrorMessage });
+          .Select(error => new Error { Message = error.ErrorMessage });
 
         response.AddRange(errors);
       }

@@ -7,7 +7,7 @@ namespace Core.Models
     /// <summary>
     /// Data
     /// </summary>
-    public IList<InstrumentModel> Data { get; init; } = [];
+    public IList<Instrument> Data { get; init; } = [];
 
     /// <summary>
     /// Errors

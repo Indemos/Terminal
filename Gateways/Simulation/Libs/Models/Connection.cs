@@ -2,7 +2,7 @@ using Core.Models;
 
 namespace Simulation.Models
 {
-  public record ConnectionModel
+  public record Connection
   {
     /// <summary>
     /// Data source
@@ -12,6 +12,6 @@ namespace Simulation.Models
     /// <summary>
     /// Account
     /// </summary>
-    public AccountModel Account { get; init; }
+    public Account Account { get; init; }
   }
 }

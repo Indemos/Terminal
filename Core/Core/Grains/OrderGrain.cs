@@ -10,52 +10,41 @@ namespace Core.Grains
     /// <summary>
     /// Get order
     /// </summary>
-    Task<OrderModel> Order();
+    Task<Order> Order();
 
     /// <summary>
     /// Send order
     /// </summary>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderResponse> Store(Order order);
 
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="instrument"></param>
-    Task<OrderResponse> Tap(InstrumentModel instrument);
+    Task<OrderResponse> Tap(Instrument instrument);
   }
 
-  public class OrderGrain : Grain<OrderModel>, IOrderGrain
+  public class OrderGrain : Grain<Order>, IOrderGrain
   {
     /// <summary>
     /// Get order 
     /// </summary>
-    public virtual Task<OrderModel> Order() => Task.FromResult(State);
+    public virtual Task<Order> Order() => Task.FromResult(State);
 
     /// <summary>
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<OrderResponse> Store(OrderModel order)
+    public virtual Task<OrderResponse> Store(Order order) => Task.FromResult(new OrderResponse
     {
-      State = order with
-      {
-        Operation = order.Operation with
-        {
-          Status = OrderStatusEnum.Order
-        }
-      };
-
-      return Task.FromResult(new OrderResponse
-      {
-        Data = State
-      });
-    }
+      Data = State = order
+    });
 
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<OrderResponse> Tap(InstrumentModel instrument)
+    public virtual Task<OrderResponse> Tap(Instrument instrument)
     {
       var price = instrument.Price;
       var response = new OrderResponse();
@@ -100,7 +89,7 @@ namespace Core.Grains
     /// Get position
     /// </summary>
     /// <param name="price"></param>
-    protected virtual OrderModel Position(PriceModel price)
+    protected virtual Order Position(Price price)
     {
       var position = State with
       {

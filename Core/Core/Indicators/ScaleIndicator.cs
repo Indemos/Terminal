@@ -34,7 +34,7 @@ namespace Core.Indicators
     /// Calculate indicator value
     /// </summary>
     /// <param name="prices"></param>
-    public override Task<IIndicator> Update(IList<PriceModel> prices)
+    public override Task<IIndicator> Update(IList<Price> prices)
     {
       var response = Task.FromResult<IIndicator>(this);
       var currentPoint = prices.LastOrDefault();

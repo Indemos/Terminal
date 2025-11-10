@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record AccountModel
+  public record Account
   {
     /// <summary>
     /// Name
@@ -22,6 +22,6 @@ namespace Core.Models
     /// <summary>
     /// Instruments
     /// </summary>
-    public Dictionary<string, InstrumentModel> Instruments { get; init; } = new();
+    public Dictionary<string, Instrument> Instruments { get; init; } = new();
   }
 }

@@ -1,15 +1,10 @@
-using Canvas.Core.Extensions;
 using Canvas.Core.Shapes;
-using Core.Conventions;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
-using Core.Services;
 using Dashboard.Components;
 using InteractiveBrokers;
-using Microsoft.AspNetCore.Components;
-using Microsoft.Extensions.Configuration;
-using Orleans;
+using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -20,11 +15,6 @@ namespace Dashboard.Pages.Gateways
 {
   public partial class InterBrokerDemo
   {
-    [Inject] IClusterClient Connector { get; set; }
-    [Inject] IConfiguration Configuration { get; set; }
-    [Inject] MessageService Messenger { get; set; }
-    [Inject] StateService State { get; set; }
-
     ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
@@ -33,88 +23,65 @@ namespace Dashboard.Pages.Gateways
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
-    Dictionary<string, InstrumentModel> Instruments => new()
+    Dictionary<string, Instrument> Instruments => new()
     {
       ["ES"] = new()
       {
         Name = "ESZ5",
         Exchange = "CME",
         Type = InstrumentEnum.Futures,
-        Basis = new InstrumentModel { Name = "ES" }
+        Basis = new Instrument { Name = "ES" }
       }
     };
 
-    IGateway Adapter
+    protected override async Task OnView()
     {
-      get => View.Adapters.Get(string.Empty);
-      set => View.Adapters[string.Empty] = value;
+      await DataView.Create("Prices");
+      await PerformanceView.Create("Performance");
     }
 
-    protected override async Task OnAfterRenderAsync(bool setup)
+    protected override Task OnTrade()
     {
-      if (setup)
+      Performance = new PerformanceIndicator();
+      View.Adapters["Prime"] = new InterGateway
       {
-        await DataView.Create("Prices");
-        await PerformanceView.Create("Performance");
-
-        Messenger.Subscribe<InstrumentModel>(async o =>
+        Messenger = Messenger,
+        Connector = Connector,
+        Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"]),
+        Account = new()
         {
-          if (Equals(o.Name, Instruments.First().Key))
-          {
-            Show(o);
-            await Trade(o);
-          }
-        });
+          Name = Configuration["InteractiveBrokers:PaperAccount"],
+          Instruments = Instruments
+        }
+      };
 
-        State.Subscribe(state =>
-        {
-          if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
-          {
-            Performance = new PerformanceIndicator();
-            Adapter = new InterGateway
-            {
-              Messenger = Messenger,
-              Connector = Connector,
-              Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"]),
-              Account = new AccountModel
-              {
-                Name = Configuration["InteractiveBrokers:PaperAccount"],
-                Instruments = Instruments
-              }
-            };
-          }
-
-          return Task.CompletedTask;
-        });
-      }
-
-      await base.OnAfterRenderAsync(setup);
+      return base.OnTrade();
     }
 
-    void Show(InstrumentModel instrument)
+    protected override async Task OnViewUpdate(Instrument instrument)
     {
       var name = instrument.Name;
       var price = instrument.Price;
-      var account = Adapter.Account;
-      //var orders = await Adapter.GetOrders(default);
-      //var positions = await Adapter.GetPositions(default);
-      //var performance = await Performance.Update(View.Adapters.Values);
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var performance = await Performance.Update(View.Adapters.Values);
 
       OrdersView.Update(View.Adapters.Values);
       PositionsView.Update(View.Adapters.Values);
       TransactionsView.Update(View.Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      //PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
-    async Task Trade(InstrumentModel instrument)
+    protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var name = instrument.Name;
       var price = instrument.Price;
-      var account = Adapter.Account;
-      var orders = await Adapter.GetOrders(default);
-      var positions = await Adapter.GetPositions(default);
+      var adapter = View.Adapters["Prime"];
+      var account = adapter.Account;
+      var orders = (await adapter.GetOrders(default)).Data;
+      var positions = (await adapter.GetPositions(default)).Data;
       var performance = await Performance.Update(View.Adapters.Values);
 
       if (orders.Count is 0 && positions.Count is 0)
@@ -135,14 +102,14 @@ namespace Dashboard.Pages.Gateways
       }
     }
 
-    async Task OpenPositions(InstrumentModel instrument, double direction)
+    async Task OpenPositions(Instrument instrument, double direction)
     {
       var price = instrument.Price.Last;
       var adapter = View.Adapters["Prime"];
       var side = direction > 0 ? OrderSideEnum.Long : OrderSideEnum.Short;
       var stopSide = direction < 0 ? OrderSideEnum.Long : OrderSideEnum.Short;
 
-      var TP = new OrderModel
+      var TP = new Order
       {
         Amount = 1,
         Side = stopSide,
@@ -152,7 +119,7 @@ namespace Dashboard.Pages.Gateways
         Operation = new() { Instrument = instrument }
       };
 
-      var SL = new OrderModel
+      var SL = new Order
       {
         Amount = 1,
         Side = stopSide,
@@ -162,7 +129,7 @@ namespace Dashboard.Pages.Gateways
         Operation = new() { Instrument = instrument }
       };
 
-      var order = new OrderModel
+      var order = new Order
       {
         Amount = 1,
         Side = side,
@@ -175,14 +142,14 @@ namespace Dashboard.Pages.Gateways
       await adapter.SendOrder(order);
     }
 
-    async Task ClosePositions(string name, IList<OrderModel> positions)
+    async Task ClosePositions(string name, IList<Order> positions)
     {
       var adapter = View.Adapters["Prime"];
 
       foreach (var position in positions.Where(o => Equals(name, o.Operation.Instrument.Name)))
       {
         var side = position.Side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long;
-        var order = new OrderModel
+        var order = new Order
         {
           Side = side,
           Type = OrderTypeEnum.Market,

@@ -17,7 +17,7 @@ namespace Schwab.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupsResponse> Store(OrderModel order)
+    public override async Task<OrderGroupResponse> Send(Order order)
     {
       var message = MapOrder(order);
       var accountCode = order.Account.Name;
@@ -35,7 +35,7 @@ namespace Schwab.Grains
     /// </summary>
     /// <param name="account"></param>
     /// <param name="order"></param>
-    protected virtual OrderMessage MapOrder(OrderModel order)
+    protected virtual OrderMessage MapOrder(Order order)
     {
       var action = order.Operation;
       var message = new OrderMessage
@@ -137,7 +137,7 @@ namespace Schwab.Grains
     /// <param name="order"></param>
     /// <param name="group"></param>
     /// <returns></returns>
-    protected virtual OrderLegMessage GetSubOrder(OrderModel order, OrderModel group = null)
+    protected virtual OrderLegMessage GetSubOrder(Order order, Order group = null)
     {
       var action = order?.Operation ?? group?.Operation;
       var assetType = action?.Instrument?.Type ?? group?.Operation?.Instrument?.Type;

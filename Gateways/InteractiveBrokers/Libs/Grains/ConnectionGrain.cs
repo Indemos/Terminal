@@ -10,7 +10,6 @@ using InteractiveBrokers.Models;
 using Orleans;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -23,42 +22,42 @@ namespace InteractiveBrokers
     /// Setup
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Store(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> Bars(CriteriaModel criteria);
+    Task<PricesResponse> PriceGroups(Criteria criteria);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> Ticks(CriteriaModel criteria);
+    Task<PricesResponse> Prices(Criteria criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Orders(CriteriaModel criteria);
+    Task<OrdersResponse> Orders(Criteria criteria);
 
     /// <summary>
     /// Get positions 
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Positions(CriteriaModel criteria);
+    Task<OrdersResponse> Positions(Criteria criteria);
 
     /// <summary>
     /// Get contract definitions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentModel>> Options(CriteriaModel criteria);
+    Task<InstrumentsResponse> Options(Criteria criteria);
 
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    Task<AccountModel> AccountSummary();
+    Task<Account> AccountSummary();
   }
 
   public class InterConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), IInterConnectionGrain
@@ -66,7 +65,7 @@ namespace InteractiveBrokers
     /// <summary>
     /// State
     /// </summary>
-    protected ConnectionModel state;
+    protected Connection state;
 
     /// <summary>
     /// IB client
@@ -93,7 +92,7 @@ namespace InteractiveBrokers
     /// Setup
     /// </summary>
     /// <param name="connection"></param>
-    public virtual Task<StatusResponse> Store(ConnectionModel connection)
+    public virtual Task<StatusResponse> Setup(Connection connection)
     {
       state = connection;
 
@@ -141,18 +140,18 @@ namespace InteractiveBrokers
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
       await Unsubscribe(instrument);
 
-      var contract = Upstream.Contract(instrument);
+      var contract = Upstream.MapContract(instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var contracts = await connector.GetContracts(cleaner.Token, contract);
       var contractMessage = contracts.FirstOrDefault();
 
       if (contractMessage is null)
       {
-        await messenger.Send(new MessageModel()
+        await messenger.Send(new Message()
         {
           Content = "No such instrument",
           Action = ActionEnum.Disconnect
@@ -164,10 +163,10 @@ namespace InteractiveBrokers
         };
       }
 
-      var name = this.GetPrimaryKeyString();
+      var name = this.GetDescriptor();
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(name);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(name);
-      var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>($"{name}:{instrument.Name}");
+      var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(this.GetDescriptor(instrument.Name));
       var dataMessage = new DataStreamMessage
       {
         DataTypes = [IBApi.Enums.SubscriptionEnum.Price],
@@ -176,8 +175,8 @@ namespace InteractiveBrokers
 
       subscriptions[instrument.Name] = connector.SubscribeToTicks(dataMessage, async priceMessage =>
       {
-        var price = Downstream.Price(priceMessage);
-        var group = await instrumentGrain.Store(instrument with { Price = price });
+        var price = Downstream.MapPrice(priceMessage);
+        var group = await instrumentGrain.Send(instrument with { Price = price });
 
         await ordersGrain.Tap(group);
         await positionsGrain.Tap(group);
@@ -195,7 +194,7 @@ namespace InteractiveBrokers
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
       if (subscriptions.TryRemove(instrument.Name, out var subscription))
       {
@@ -209,42 +208,12 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Get orders
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Orders(CriteriaModel criteria)
-    {
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetOrders(cleaner.Token);
-      var items = sourceItems.Select(Downstream.Order).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return items;
-    }
-
-    /// <summary>
-    /// Get positions 
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Positions(CriteriaModel criteria)
-    {
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
-      var items = sourceItems.Select(o => Downstream.Position(o, criteria.Instrument)).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return items;
-    }
-
-    /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<PriceModel>> Ticks(CriteriaModel criteria)
+    public virtual async Task<PricesResponse> Prices(Criteria criteria)
     {
-      var contract = Upstream.Contract(criteria.Instrument);
+      var contract = Upstream.MapContract(criteria.Instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetTicks(
         cleaner.Token,
@@ -254,21 +223,24 @@ namespace InteractiveBrokers
         "BID_ASK",
         criteria.Count ?? 1);
 
-      var items = sourceItems.Select(Downstream.Price).ToArray();
+      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
 
-      return items;
+      return new()
+      {
+        Data = items
+      };
     }
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<PriceModel>> Bars(CriteriaModel criteria)
+    public virtual async Task<PricesResponse> PriceGroups(Criteria criteria)
     {
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var contract = Upstream.Contract(criteria.Instrument);
+      var contract = Upstream.MapContract(criteria.Instrument);
       var maxDate = criteria.MaxDate ?? DateTime.Now;
       var sourceItems = await connector.GetBars(
         cleaner.Token,
@@ -279,38 +251,44 @@ namespace InteractiveBrokers
         criteria.Data.Get("DataType"),
         0);
 
-      var items = sourceItems.Select(Downstream.Price).ToArray();
+      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
 
-      return items;
+      return new()
+      {
+        Data = items
+      };
     }
 
     /// <summary>
     /// List options
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<InstrumentModel>> Options(CriteriaModel criteria)
+    public virtual async Task<InstrumentsResponse> Options(Criteria criteria)
     {
       var instrument = criteria.Instrument;
       var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
       var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
-      var contract = Upstream.Contract(criteria.Instrument);
+      var contract = Upstream.MapContract(criteria.Instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetContracts(cleaner.Token, contract);
-      var items = sourceItems.Select(o => Downstream.Instrument(o.Contract)).ToArray();
+      var items = sourceItems.Select(o => Downstream.MapInstrument(o.Contract)).ToArray();
 
       await Task.Delay(state.Span);
 
-      return items;
+      return new()
+      {
+        Data = items
+      };
     }
 
     /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
-    public virtual async Task<AccountModel> AccountSummary()
+    public virtual async Task<Account> AccountSummary()
     {
-      var account = new AccountModel();
+      var account = new Account();
       var cleaner = new CancellationTokenSource(state.Timeout);
       var message = await connector.GetAccountSummary(cleaner.Token);
 
@@ -319,6 +297,50 @@ namespace InteractiveBrokers
       await Task.Delay(state.Span);
 
       return account;
+    }
+
+    /// <summary>
+    /// Get positions 
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual async Task<OrdersResponse> Positions(Criteria criteria)
+    {
+      var descriptor = this.GetDescriptor();
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
+      var items = sourceItems.Select(o => Downstream.MapPosition(o, criteria.Instrument)).ToArray();
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+
+      await positionsGrain.Clear();
+      await Task.WhenAll(items.Select(positionsGrain.Store));
+      await Task.Delay(state.Span);
+
+      return new()
+      {
+        Data = items
+      };
+    }
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual async Task<OrdersResponse> Orders(Criteria criteria)
+    {
+      var descriptor = this.GetDescriptor();
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetOrders(cleaner.Token);
+      var items = sourceItems.Select(Downstream.MapOrder).ToArray();
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+
+      await ordersGrain.Clear();
+      await Task.WhenAll(items.Select(ordersGrain.Send));
+      await Task.Delay(state.Span);
+
+      return new()
+      {
+        Data = items
+      };
     }
   }
 }

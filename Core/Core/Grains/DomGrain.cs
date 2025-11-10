@@ -11,28 +11,36 @@ namespace Core.Grains
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomModel> Dom(CriteriaModel criteria);
+    Task<DomResponse> Dom(Criteria criteria);
 
     /// <summary>
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    Task<StatusResponse> Store(DomModel dom);
+    Task<StatusResponse> Store(Dom dom);
   }
 
-  public class DomGrain : Grain<DomModel>, IDomGrain
+  public class DomGrain : Grain<Dom>, IDomGrain
   {
     /// <summary>
     /// Get DOM
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<DomModel> Dom(CriteriaModel criteria) => Task.FromResult(State);
+    public virtual Task<DomResponse> Dom(Criteria criteria)
+    {
+      var response = new DomResponse
+      {
+        Data = State
+      };
+
+      return Task.FromResult(response);
+    }
 
     /// <summary>
     /// Update DOM
     /// </summary>
     /// <param name="dom"></param>
-    public virtual Task<StatusResponse> Store(DomModel dom)
+    public virtual Task<StatusResponse> Store(Dom dom)
     {
       if (dom is not null)
       {

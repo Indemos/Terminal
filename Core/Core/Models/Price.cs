@@ -2,7 +2,7 @@ using System;
 
 namespace Core.Models
 {
-  public record PriceModel
+  public record Price
   {
     /// <summary>
     /// Bid
@@ -42,6 +42,6 @@ namespace Core.Models
     /// <summary>
     /// Reference to the complex data point
     /// </summary>
-    public BarModel Bar { get; init; }
+    public Bar Bar { get; init; }
   }
 }

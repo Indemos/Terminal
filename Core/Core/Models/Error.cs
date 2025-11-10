@@ -1,6 +1,6 @@
 namespace Core.Models
 {
-  public record ErrorModel
+  public record Error
   {
     public string Message { get; init; }
   }

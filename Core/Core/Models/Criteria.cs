@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record CriteriaModel
+  public record Criteria
   {
     /// <summary>
     /// Count
@@ -33,12 +33,12 @@ namespace Core.Models
     /// <summary>
     /// Account
     /// </summary>
-    public AccountModel Account { get; init; }
+    public Account Account { get; init; }
 
     /// <summary>
     /// Instrument
     /// </summary>
-    public InstrumentModel Instrument { get; init; }
+    public Instrument Instrument { get; init; }
 
     /// <summary>
     /// Criteria

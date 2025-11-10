@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Models
 {
-  public record DerivativeModel
+  public record Derivative
   {
     /// <summary>
     /// Strike price
@@ -48,6 +48,6 @@ namespace Core.Models
     /// <summary>
     /// Option metrics
     /// </summary>
-    public VarianceModel Variance { get; init; }
+    public Variance Variance { get; init; }
   }
 }

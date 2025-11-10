@@ -15,29 +15,35 @@ namespace Simulation.Grains
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceModel>> Prices(CriteriaModel criteria)
+    public override Task<PricesResponse> Prices(Criteria criteria)
     {
-      var prices = State.Prices
+      var items = State.Items
         .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
         .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
-        .TakeLast(criteria?.Count ?? State.Prices.Count)
+        .TakeLast(criteria?.Count ?? State.Items.Count)
         .ToArray();
 
-      return Task.FromResult<IList<PriceModel>>(prices);
+      return Task.FromResult(new PricesResponse
+      {
+        Data = items
+      });
     }
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
-    public override Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria)
+    public override Task<PricesResponse> PriceGroups(Criteria criteria)
     {
-      var prices = State.PriceGroups
+      var items = State.ItemGroups
         .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
         .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
-        .TakeLast(criteria?.Count ?? State.PriceGroups.Count)
+        .TakeLast(criteria?.Count ?? State.ItemGroups.Count)
         .ToArray();
 
-      return Task.FromResult<IList<PriceModel>>(prices);
+      return Task.FromResult(new PricesResponse
+      {
+        Data = items
+      });
     }
   }
 }

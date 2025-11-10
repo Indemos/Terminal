@@ -7,7 +7,7 @@ namespace Core.Models
     /// <summary>
     /// Data
     /// </summary>
-    public IList<PriceModel> Data { get; init; } = [];
+    public IList<Price> Data { get; init; } = [];
 
     /// <summary>
     /// Errors

@@ -74,7 +74,7 @@ namespace Dashboard.Components
         var queries = adapters.Select(o => o.GetOrders(default));
         var responses = await Task.WhenAll(queries);
         var orders = responses
-          .SelectMany(o => o)
+          .SelectMany(o => o.Data)
           .OrderByDescending(o => o.Operation.Time)
           .ToList();
 

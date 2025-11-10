@@ -3,7 +3,7 @@ using System;
 
 namespace Core.Models
 {
-  public record MessageModel
+  public record Message
   {
     /// <summary>
     /// Event type

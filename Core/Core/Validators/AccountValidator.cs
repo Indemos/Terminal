@@ -6,7 +6,7 @@ namespace Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class AccountValidator : AbstractValidator<AccountModel>
+  public class AccountValidator : AbstractValidator<Account>
   {
     public AccountValidator()
     {

@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record PositionsModel
+  public record Orders
   {
     /// <summary>
     /// Active orders
     /// </summary>
-    public Dictionary<string, IPositionGrain> Grains { get; init; } = [];
+    public Dictionary<string, IOrderGrain> Grains { get; init; } = [];
   }
 }

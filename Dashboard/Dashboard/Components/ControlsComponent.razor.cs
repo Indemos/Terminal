@@ -61,7 +61,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -88,7 +88,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -115,7 +115,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -142,7 +142,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new MessageModel() { Error = e, Content = e.Message });
+        await Messenger.Send(new Message() { Error = e, Content = e.Message });
       }
     }
   }

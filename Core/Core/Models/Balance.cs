@@ -1,6 +1,6 @@
 namespace Core.Models
 {
-  public record BalanceModel
+  public record Balance
   {
     /// <summary>
     /// Current PnL

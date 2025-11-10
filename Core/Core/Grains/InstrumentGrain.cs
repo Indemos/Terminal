@@ -14,67 +14,83 @@ namespace Core.Grains
     /// Get instrument
     /// </summary>
     /// <param name="criteria"></param>
-    Task<InstrumentModel> Instrument(CriteriaModel criteria);
+    Task<Instrument> Instrument(Criteria criteria);
 
     /// <summary>
     /// Store instrument
     /// </summary>
     /// <param name="instrument"></param>
-    Task<InstrumentModel> Store(InstrumentModel instrument);
+    Task<Instrument> Send(Instrument instrument);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> Prices(CriteriaModel criteria);
+    Task<PricesResponse> Prices(Criteria criteria);
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria);
+    Task<PricesResponse> PriceGroups(Criteria criteria);
   }
 
-  public class InstrumentGrain : Grain<PricesModel>, IInstrumentGrain
+  public class InstrumentGrain : Grain<Prices>, IInstrumentGrain
   {
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceModel>> Prices(CriteriaModel criteria) => Task.FromResult(State.Prices);
+    public virtual Task<PricesResponse> Prices(Criteria criteria)
+    {
+      var response = new PricesResponse
+      {
+        Data = State.Items
+      };
+
+      return Task.FromResult(response);
+    }
 
     /// <summary>
     /// List of prices by criteria
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<IList<PriceModel>> PriceGroups(CriteriaModel criteria) => Task.FromResult(State.PriceGroups);
+    public virtual Task<PricesResponse> PriceGroups(Criteria criteria)
+    {
+      var response = new PricesResponse
+      {
+        Data = State.ItemGroups
+      };
+
+      return Task.FromResult(response);
+    }
 
     /// <summary>
     /// Get instrument
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual Task<InstrumentModel> Instrument(CriteriaModel criteria) => Task.FromResult(State.Instrument);
+    public virtual Task<Instrument> Instrument(Criteria criteria) => Task.FromResult(State.Instrument);
 
     /// <summary>
     /// Add price to the list
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<InstrumentModel> Store(InstrumentModel instrument)
+    public virtual Task<Instrument> Send(Instrument instrument)
     {
       var span = instrument.TimeFrame;
       var nextPrice = instrument.Price;
       var nextTime = nextPrice.Time.Round(span);
-      var currentPrice = State.PriceGroups.LastOrDefault() ?? new PriceModel();
+      var currentPrice = State.ItemGroups.LastOrDefault() ?? new Price();
       var currentTime = currentPrice.Time.Round(span) ?? DateTime.MinValue.Ticks;
       var price = Combine(nextTime > currentTime ? nextPrice : currentPrice, nextPrice, span);
 
       if (span is null || nextTime - currentTime >= span.Value.Ticks)
       {
-        State.PriceGroups.Add(price);
+        State.ItemGroups.Add(price);
       }
 
-      State.Prices.Add(price);
-      State.PriceGroups[State.PriceGroups.Count - 1] = price;
+      State.Items.Add(price);
+      State.ItemGroups[State.ItemGroups.Count - 1] = price;
       State = State with { Instrument = instrument with { Price = price } };
 
       return Task.FromResult(State.Instrument);
@@ -86,7 +102,7 @@ namespace Core.Grains
     /// <param name="currentPrice"></param>
     /// <param name="nextPrice"></param>
     /// <param name="nextTime"></param>
-    protected virtual PriceModel Combine(PriceModel currentPrice, PriceModel nextPrice, TimeSpan? nextTime)
+    protected virtual Price Combine(Price currentPrice, Price nextPrice, TimeSpan? nextTime)
     {
       var price = (nextPrice.Last ?? currentPrice.Last).Value;
 
@@ -98,7 +114,7 @@ namespace Core.Grains
         Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
         AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
         BidSize = nextPrice.BidSize ?? currentPrice?.BidSize ?? 0.0,
-        Bar = new BarModel() with
+        Bar = new Bar() with
         {
           Close = price,
           Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),

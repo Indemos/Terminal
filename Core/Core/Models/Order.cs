@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record OrderModel
+  public record Order
   {
     /// <summary>
     /// Client order ID
@@ -54,21 +54,21 @@ namespace Core.Models
     /// <summary>
     /// Account
     /// </summary>
-    public AccountModel Account { get; init; }
+    public Account Account { get; init; }
 
     /// <summary>
     /// Balance
     /// </summary>
-    public BalanceModel Balance { get; init; } = new();
+    public Balance Balance { get; init; } = new();
 
     /// <summary>
     /// Transaction
     /// </summary>
-    public OperationModel Operation { get; init; }
+    public Operation Operation { get; init; }
 
     /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
-    public IList<OrderModel> Orders { get; init; } = [];
+    public IList<Order> Orders { get; init; } = [];
   }
 }

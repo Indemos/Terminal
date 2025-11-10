@@ -2,7 +2,7 @@ using Core.Enums;
 
 namespace Core.Models
 {
-  public record CurrencyModel
+  public record Currency
   {
     /// <summary>
     /// Currency

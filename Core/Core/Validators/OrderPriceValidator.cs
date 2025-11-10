@@ -7,7 +7,7 @@ namespace Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class OrderPriceValidator : AbstractValidator<OrderModel>
+  public class OrderPriceValidator : AbstractValidator<Order>
   {
     public OrderPriceValidator()
     {

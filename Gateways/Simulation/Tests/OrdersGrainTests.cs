@@ -44,9 +44,9 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<IOrdersGrain>(Descriptor);
 
-      var order = new OrderModel();
+      var order = new Order();
 
-      Assert.Throws<AggregateException>(() => grain.Store(order).Result);
+      Assert.Throws<AggregateException>(() => grain.Send(order).Result);
     }
 
     [Fact]
@@ -54,14 +54,14 @@ namespace Simulation.Prices.Tests
     {
       var descriptor = Descriptor;
       var grain = _cluster.GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-      var order = new OrderModel
+      var order = new Order
       {
         Amount = 1.0,
         Side = OrderSideEnum.Long,
         Type = OrderTypeEnum.Market,
-        Operation = new OperationModel
+        Operation = new Operation
         {
-          Instrument = new InstrumentModel
+          Instrument = new Instrument
           {
             Name = "SPY"
           }
@@ -70,11 +70,11 @@ namespace Simulation.Prices.Tests
 
       var copyId = $"{Guid.NewGuid()}";
 
-      await grain.Store(order);
-      await grain.Store(order with { Id = copyId });
+      await grain.Send(order);
+      await grain.Send(order with { Id = copyId });
       await grain.Clear(order with { Id = copyId });
 
-      var orders = await grain.Orders(default);
+      var orders = (await grain.Orders(default)).Data;
       var orderExpectation = JsonSerializer.Serialize(order with
       {
         Operation = order.Operation with { Status = OrderStatusEnum.Order }
@@ -85,7 +85,7 @@ namespace Simulation.Prices.Tests
 
       await grain.Tap(order.Operation.Instrument with { Price = new() });
 
-      Assert.Empty(await grain.Orders(default));
+      Assert.Empty((await grain.Orders(default)).Data);
     }
   }
 }

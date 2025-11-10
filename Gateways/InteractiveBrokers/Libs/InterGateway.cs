@@ -3,7 +3,6 @@ using Core.Grains;
 using Core.Models;
 using InteractiveBrokers.Models;
 using System;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace InteractiveBrokers
@@ -37,7 +36,7 @@ namespace InteractiveBrokers
     {
       var grain = Component<IInterConnectionGrain>();
 
-      await grain.Store(new ConnectionModel
+      await grain.Setup(new Connection
       {
         Host = Host,
         Port = Port,
@@ -63,7 +62,7 @@ namespace InteractiveBrokers
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Subscribe(Instrument instrument)
     {
       return Component<IInterConnectionGrain>().Subscribe(instrument);
     }
@@ -72,7 +71,7 @@ namespace InteractiveBrokers
     /// Unsubscribe from data streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
       return Component<IInterConnectionGrain>().Unsubscribe(instrument);
     }
@@ -81,25 +80,25 @@ namespace InteractiveBrokers
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<DomModel> GetDom(CriteriaModel criteria)
+    public override Task<DomResponse> GetDom(Criteria criteria)
     {
       return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
 
     /// <summary>
-    /// List of points by criteria, e.g. for specified instrument
+    /// List of prices
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetTicks(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPrices(Criteria criteria)
     {
       return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
-    /// List of points by criteria, e.g. for specified instrument
+    /// List of aggregated prices
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetBars(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
       return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
@@ -108,7 +107,7 @@ namespace InteractiveBrokers
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria)
+    public override Task<InstrumentsResponse> GetOptions(Criteria criteria)
     {
       return Component<IInterConnectionGrain>(criteria.Instrument.Name).Options(criteria);
     }
@@ -117,47 +116,25 @@ namespace InteractiveBrokers
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetOrders(CriteriaModel criteria)
+    public override async Task<OrdersResponse> GetOrders(Criteria criteria)
     {
-      var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<IInterConnectionGrain>();
-      var response = await connectionGrain.Orders(criteria);
-
-      await ordersGrain.Clear();
-
-      foreach (var order in response)
-      {
-        await ordersGrain.Store(order);
-      }
-
-      return response;
+      return await Component<IInterConnectionGrain>().Orders(criteria);
     }
 
     /// <summary>
     /// Get positions 
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> GetPositions(CriteriaModel criteria)
+    public override async Task<OrdersResponse> GetPositions(Criteria criteria)
     {
-      var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<IInterConnectionGrain>();
-      var response = await positionsGrain.Positions(criteria);
-
-      await positionsGrain.Clear();
-
-      foreach (var order in response)
-      {
-        await positionsGrain.Store(order);
-      }
-
-      return response;
+      return await Component<IInterConnectionGrain>().Positions(criteria);
     }
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetTransactions(Criteria criteria)
     {
       return Component<ITransactionsGrain>().Transactions(criteria);
     }
@@ -166,16 +143,16 @@ namespace InteractiveBrokers
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
+    public override Task<OrderGroupResponse> SendOrder(Order order)
     {
-      return Component<IOrdersGrain>().Store(order);
+      return Component<IOrdersGrain>().Send(order);
     }
 
     /// <summary>
     /// Clear order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<DescriptorResponse> ClearOrder(OrderModel order)
+    public override Task<DescriptorResponse> ClearOrder(Order order)
     {
       return Component<IOrdersGrain>().Clear(order);
     }

@@ -2,7 +2,7 @@ using Core.Enums;
 
 namespace Core.Models
 {
-  public record OperationModel
+  public record Operation
   {
     /// <summary>
     /// Id
@@ -37,6 +37,6 @@ namespace Core.Models
     /// <summary>
     /// Instrument to buy or sell
     /// </summary>
-    public InstrumentModel Instrument { get; init; }
+    public Instrument Instrument { get; init; }
   }
 }

@@ -1,4 +1,5 @@
 using Core.Enums;
+using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using Core.Services;
@@ -17,7 +18,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
   }
 
   /// <summary>
@@ -34,13 +35,13 @@ namespace Schwab.Grains
     /// <summary>
     /// State
     /// </summary>
-    protected ConnectionModel state;
+    protected Connection state;
 
     /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       await Disconnect();
 
@@ -82,10 +83,10 @@ namespace Schwab.Grains
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override async Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      var descriptor = this.GetPrimaryKeyString();
-      var instrumentDescriptor = $"{descriptor}:{instrument.Name}";
+      var descriptor = this.GetDescriptor();
+      var instrumentDescriptor = this.GetDescriptor(instrument.Name);
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
@@ -93,7 +94,7 @@ namespace Schwab.Grains
 
       await broker.Subscribe(instrument.Name, MapSubType(instrument), async o =>
       {
-        var message = await instrumentGrain.Store(instrument with
+        var message = await instrumentGrain.Send(instrument with
         {
           Price = MapPrice(o)
         });
@@ -118,7 +119,7 @@ namespace Schwab.Grains
     /// Get price
     /// </summary>
     /// <param name="message"></param>
-    protected virtual PriceModel MapPrice(PriceMessage message) => new()
+    protected virtual Price MapPrice(PriceMessage message) => new()
     {
       Ask = message.Ask,
       Bid = message.Bid,
@@ -132,7 +133,7 @@ namespace Schwab.Grains
     /// Get price
     /// </summary>
     /// <param name="message"></param>
-    protected virtual DomModel MapDom(DomMessage message) => new()
+    protected virtual Dom MapDom(DomMessage message) => new()
     {
       Bids = [.. message.Bids.Select(MapPrice)],
       Asks = [.. message.Asks.Select(MapPrice)]
@@ -142,7 +143,7 @@ namespace Schwab.Grains
     /// Get subscription type
     /// </summary>
     /// <param name="instrument"></param>
-    protected virtual Schwab.Enums.SubscriptionEnum MapSubType(InstrumentModel instrument)
+    protected virtual Schwab.Enums.SubscriptionEnum MapSubType(Instrument instrument)
     {
       switch (instrument.Type)
       {
@@ -159,7 +160,7 @@ namespace Schwab.Grains
     /// Get subscription type
     /// </summary>
     /// <param name="instrument"></param>
-    protected virtual DomEnum MapDomSubType(InstrumentModel instrument)
+    protected virtual DomEnum MapDomSubType(Instrument instrument)
     {
       return instrument.Type is InstrumentEnum.Options ?
         DomEnum.OPTIONS_BOOK : 

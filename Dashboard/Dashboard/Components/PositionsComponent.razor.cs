@@ -75,7 +75,7 @@ namespace Dashboard.Components
         var queries = adapters.Select(o => o.GetPositions(default));
         var responses = await Task.WhenAll(queries);
         var positions = responses
-          .SelectMany(o => o)
+          .SelectMany(o => o.Data)
           .OrderByDescending(o => o.Operation.Time)
           .ToList();
 

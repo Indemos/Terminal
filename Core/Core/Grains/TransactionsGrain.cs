@@ -1,3 +1,4 @@
+using Core.Extensions;
 using Core.Models;
 using Core.Services;
 using Orleans;
@@ -13,20 +14,20 @@ namespace Core.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Transactions(CriteriaModel criteria);
+    Task<OrdersResponse> Transactions(Criteria criteria);
 
     /// <summary>
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderResponse> Store(Order order);
   }
 
   /// <summary>
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class TransactionsGrain(MessageService messenger) : Grain<TransactionsModel>, ITransactionsGrain
+  public class TransactionsGrain(MessageService messenger) : Grain<Transactions>, ITransactionsGrain
   {
     /// <summary>
     /// Messenger
@@ -37,17 +38,25 @@ namespace Core.Grains
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Transactions(CriteriaModel criteria) => await Task.WhenAll(State
-      .Grains
-      .Select(o => o.Transaction()));
+    public virtual async Task<OrdersResponse> Transactions(Criteria criteria)
+    {
+      var items = await Task.WhenAll(State
+        .Grains
+        .Select(o => o.Transaction()));
+
+      return new OrdersResponse
+      {
+        Data = items
+      };
+    }
 
     /// <summary>
     /// Add to the list
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderModel order)
+    public virtual async Task<OrderResponse> Store(Order order)
     {
-      var descriptor = $"{this.GetPrimaryKeyString()}:{order.Operation.Id}";
+      var descriptor = this.GetDescriptor(order.Operation.Id);
       var grain = GrainFactory.GetGrain<ITransactionGrain>(descriptor);
       var response = await grain.Store(order);
 

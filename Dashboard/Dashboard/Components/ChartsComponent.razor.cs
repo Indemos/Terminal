@@ -100,14 +100,14 @@ namespace Dashboard.Components
     /// <param name="value"></param>
     public virtual IShape GetShape<T>(double? value, SKColor? color = null) where T : IShape, new()
     {
-      return GetShape<T>(new PriceModel { Last = value }, color);
+      return GetShape<T>(new Price { Last = value }, color);
     }
 
     /// <summary>
     /// Point to shape
     /// </summary>
     /// <param name="price"></param>
-    public virtual IShape GetShape<T>(PriceModel price, SKColor? color = null) where T : IShape, new()
+    public virtual IShape GetShape<T>(Price price, SKColor? color = null) where T : IShape, new()
     {
       if (typeof(T).Equals(typeof(CandleShape)))
       {

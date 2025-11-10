@@ -6,7 +6,7 @@ namespace Core.Validators
   /// <summary>
   /// Validation rules
   /// </summary>
-  public class OperationValidator : AbstractValidator<OperationModel>
+  public class OperationValidator : AbstractValidator<Operation>
   {
     public OperationValidator()
     {

@@ -15,7 +15,7 @@ namespace Simulation.Prices.Tests
     private readonly TestCluster _cluster;
 
     private string Descriptor => $"{Guid.NewGuid()}";
-    private InstrumentModel Instrument => new InstrumentModel { Name = "SPY" };
+    private Instrument Instrument => new Instrument { Name = "SPY" };
 
     public Prices()
     {
@@ -42,7 +42,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<ISimInstrumentGrain>(Descriptor);
 
-      var response = await grain.Store(Instrument with { Price = new() { Last = 100.0 } });
+      var response = await grain.Send(Instrument with { Price = new() { Last = 100.0 } });
       var price = response.Price;
 
       Assert.Null(price.Time);
@@ -65,9 +65,9 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<ISimInstrumentGrain>(Descriptor);
 
-      await grain.Store(Instrument with { Price = new() { Last = 100.0, Time = 1 } });
+      await grain.Send(Instrument with { Price = new() { Last = 100.0, Time = 1 } });
 
-      var response = await grain.Store(Instrument with { Price = new() { Time = 1 } });
+      var response = await grain.Send(Instrument with { Price = new() { Time = 1 } });
       var price = response.Price;
 
       Assert.Equal(1, price.Time);
@@ -90,7 +90,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<ISimInstrumentGrain>(Descriptor);
 
-      await grain.Store(Instrument with
+      await grain.Send(Instrument with
       {
         Price = new()
         {
@@ -103,11 +103,11 @@ namespace Simulation.Prices.Tests
         }
       });
 
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 50 } });
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 200 }});
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 150 } });
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 50 } });
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 200 }});
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 150 } });
 
-      var response = await grain.Store(Instrument with { Price = new() { Time = 1, Last = 50 } });
+      var response = await grain.Send(Instrument with { Price = new() { Time = 1, Last = 50 } });
       var price = response.Price;
 
       Assert.Equal(1, price.Time);
@@ -130,7 +130,7 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<ISimInstrumentGrain>(Descriptor);
 
-      await grain.Store(Instrument with
+      await grain.Send(Instrument with
       {
         Price = new()
         {
@@ -143,18 +143,18 @@ namespace Simulation.Prices.Tests
         }
       });
 
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 50 } });
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 200 } });
-      await grain.Store(Instrument with { Price = new() { Time = 1, Last = 150 } });
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 50 } });
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 200 } });
+      await grain.Send(Instrument with { Price = new() { Time = 1, Last = 150 } });
 
-      Assert.Equal(10.0, (await grain.Store(Instrument with { Price = new() { Time = 1, Last = 10 } })).Price.Bar.Low);
-      Assert.Equal(250.0, (await grain.Store(Instrument with { Price = new() { Time = 1, Last = 250 } })).Price.Bar.High);
-      Assert.Equal(15.0, (await grain.Store(Instrument with { Price = new() { Time = 1, Bid = 15 } })).Price.Bid);
-      Assert.Equal(25.0, (await grain.Store(Instrument with { Price = new() { Time = 1, Ask = 25 } })).Price.Ask);
-      Assert.Equal(15.0, (await grain.Store(Instrument with { Price = new() { Time = 1, BidSize = 15 } })).Price.BidSize);
-      Assert.Equal(25.0, (await grain.Store(Instrument with { Price = new() { Time = 1, AskSize = 25 } })).Price.AskSize);
-      Assert.Equal(2, (await grain.Store(Instrument with { Price = new() { Time = 2, Last = 15 } })).Price.Bar.Time);
-      Assert.Equal(35, (await grain.Store(Instrument with { Price = new() { Time = 3, Last = 35 } })).Price.Bar.Open);
+      Assert.Equal(10.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 10 } })).Price.Bar.Low);
+      Assert.Equal(250.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 250 } })).Price.Bar.High);
+      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Bid = 15 } })).Price.Bid);
+      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Ask = 25 } })).Price.Ask);
+      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, BidSize = 15 } })).Price.BidSize);
+      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, AskSize = 25 } })).Price.AskSize);
+      Assert.Equal(2, (await grain.Send(Instrument with { Price = new() { Time = 2, Last = 15 } })).Price.Bar.Time);
+      Assert.Equal(35, (await grain.Send(Instrument with { Price = new() { Time = 3, Last = 35 } })).Price.Bar.Open);
     }
 
     [Fact]
@@ -164,8 +164,8 @@ namespace Simulation.Prices.Tests
         .GrainFactory
         .GetGrain<ISimInstrumentGrain>(Descriptor);
 
-      Assert.Throws<AggregateException>(() => grain.Store(null).Result);
-      Assert.Throws<AggregateException>(() => grain.Store(new()).Result);
+      Assert.Throws<AggregateException>(() => grain.Send(null).Result);
+      Assert.Throws<AggregateException>(() => grain.Send(new()).Result);
     }
   }
 }

@@ -74,7 +74,7 @@ namespace Dashboard.Components
     /// <param name="adapter"></param>
     /// <param name="point"></param>
     /// <param name="positions"></param>
-    public virtual void UpdateItems(IGateway adapter, PriceModel point, IEnumerable<OrderModel> positions)
+    public virtual void UpdateItems(IGateway adapter, Price point, IEnumerable<Order> positions)
     {
       if (Observer.State.Next is SubscriptionEnum.None)
       {

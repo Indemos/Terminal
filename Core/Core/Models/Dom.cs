@@ -2,16 +2,16 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record DomModel
+  public record Dom
   {
     /// <summary>
     /// Asks
     /// </summary>
-    public IList<PriceModel> Asks { get; init; } = [];
+    public IList<Price> Asks { get; init; } = [];
 
     /// <summary>
     /// Bids
     /// </summary>
-    public IList<PriceModel> Bids { get; init; } = [];
+    public IList<Price> Bids { get; init; } = [];
   }
 }

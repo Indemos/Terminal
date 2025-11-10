@@ -14,7 +14,7 @@ namespace Core.Conventions
     /// <summary>
     /// Account
     /// </summary>
-    AccountModel Account { get; set; }
+    Account Account { get; set; }
 
     /// <summary>
     /// Connect
@@ -30,13 +30,13 @@ namespace Core.Conventions
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Subscribe(InstrumentModel instrument);
+    Task<StatusResponse> Subscribe(Instrument instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
+    Task<StatusResponse> Unsubscribe(Instrument instrument);
 
     /// <summary>
     /// Subscribe
@@ -52,61 +52,55 @@ namespace Core.Conventions
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    Task<DomModel> GetDom(CriteriaModel criteria);
+    Task<DomResponse> GetDom(Criteria criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> GetBars(CriteriaModel criteria);
+    Task<PricesResponse> GetPriceGroups(Criteria criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<PriceModel>> GetTicks(CriteriaModel criteria);
+    Task<PricesResponse> GetPrices(Criteria criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria);
+    Task<InstrumentsResponse> GetOptions(Criteria criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetOrders(CriteriaModel criteria);
+    Task<OrdersResponse> GetOrders(Criteria criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetPositions(CriteriaModel criteria);
+    Task<OrdersResponse> GetPositions(Criteria criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria);
+    Task<OrdersResponse> GetTransactions(Criteria criteria);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupsResponse> SendOrder(OrderModel order);
+    Task<OrderGroupResponse> SendOrder(Order order);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="order"></param>
-    Task<DescriptorResponse> ClearOrder(OrderModel order);
-
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<string> Descriptor(string instrument = null);
+    Task<DescriptorResponse> ClearOrder(Order order);
   }
 
   public abstract class Gateway : IGateway
@@ -124,7 +118,7 @@ namespace Core.Conventions
     /// <summary>
     /// Account
     /// </summary>
-    public virtual AccountModel Account { get; set; }
+    public virtual Account Account { get; set; }
 
     /// <summary>
     /// Grain namespace
@@ -145,67 +139,67 @@ namespace Core.Conventions
     /// Subscribe
     /// </summary>
     /// <param name="instrument"></param>
-    public abstract Task<StatusResponse> Subscribe(InstrumentModel instrument);
+    public abstract Task<StatusResponse> Subscribe(Instrument instrument);
 
     /// <summary>
     /// Unsubscribe
     /// </summary>
     /// <param name="instrument"></param>
-    public abstract Task<StatusResponse> Unsubscribe(InstrumentModel instrument);
+    public abstract Task<StatusResponse> Unsubscribe(Instrument instrument);
 
     /// <summary>
     /// Get latest quote
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<DomModel> GetDom(CriteriaModel criteria);
+    public abstract Task<DomResponse> GetDom(Criteria criteria);
 
     /// <summary>
     /// Get historical bars
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceModel>> GetBars(CriteriaModel criteria);
+    public abstract Task<PricesResponse> GetPriceGroups(Criteria criteria);
 
     /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<PriceModel>> GetTicks(CriteriaModel criteria);
+    public abstract Task<PricesResponse> GetPrices(Criteria criteria);
 
     /// <summary>
     /// Get options
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria);
+    public abstract Task<InstrumentsResponse> GetOptions(Criteria criteria);
 
     /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetOrders(CriteriaModel criteria);
+    public abstract Task<OrdersResponse> GetOrders(Criteria criteria);
 
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetPositions(CriteriaModel criteria);
+    public abstract Task<OrdersResponse> GetPositions(Criteria criteria);
 
     /// <summary>
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public abstract Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria);
+    public abstract Task<OrdersResponse> GetTransactions(Criteria criteria);
 
     /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    public abstract Task<OrderGroupsResponse> SendOrder(OrderModel order);
+    public abstract Task<OrderGroupResponse> SendOrder(Order order);
 
     /// <summary>
     /// Cancel orders
     /// </summary>
     /// <param name="order"></param>
-    public abstract Task<DescriptorResponse> ClearOrder(OrderModel order);
+    public abstract Task<DescriptorResponse> ClearOrder(Order order);
 
     /// <summary>
     /// Subscribe
@@ -243,27 +237,24 @@ namespace Core.Conventions
     /// Descriptor
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<string> Descriptor(string instrument = null) => Task.FromResult(Name(instrument));
-
-    /// <summary>
-    /// Descriptor
-    /// </summary>
-    /// <param name="instrument"></param>
-    protected virtual string Name(string instrument = null) => instrument is null ?
+    protected virtual string Descriptor(string instrument = null) => instrument is null ?
       $"{Space}:{Account.Name}" :
       $"{Space}:{Account.Name}:{instrument}";
 
     /// <summary>
     /// Grain selector
     /// </summary>
-    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey => Connector.GetGrain<T>(Name(instrument));
+    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey
+    {
+      return Connector.GetGrain<T>(Descriptor(instrument));
+    }
 
     /// <summary>
     /// Subscribe to account updates
     /// </summary>
     protected virtual void SubscribeToUpdates()
     {
-      Messenger.Subscribe<OrderModel>(order =>
+      Messenger.Subscribe<Order>(order =>
       {
         if (order.Operation.Status is OrderStatusEnum.Transaction)
         {
@@ -275,7 +266,7 @@ namespace Core.Conventions
 
         return Task.CompletedTask;
 
-      }, nameof(OrderModel));
+      }, nameof(Order));
     }
   }
 }

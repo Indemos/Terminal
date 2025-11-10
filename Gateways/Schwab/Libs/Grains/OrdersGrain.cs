@@ -4,7 +4,6 @@ using Core.Models;
 using Schwab.Messages;
 using Schwab.Models;
 using Schwab.Queries;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +16,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
   }
 
   public class SchwabOrdersGrain : OrdersGrain, ISchwabOrdersGrain
@@ -31,7 +30,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       broker = new()
       {
@@ -53,19 +52,26 @@ namespace Schwab.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> Orders(CriteriaModel criteria)
+    public override async Task<OrdersResponse> Orders(Criteria criteria)
     {
       var query = new OrderQuery { AccountCode = criteria.Account.Name};
       var messages = await broker.GetOrders(query, CancellationToken.None);
+      var items = messages.Select(MapOrder);
 
-      return [.. messages.Select(MapOrder)];
+      await Clear();
+      await Task.WhenAll(items.Select(Send));
+
+      return new()
+      {
+        Data = [.. items]
+      };
     }
 
     /// <summary>
     /// Message to order
     /// </summary>
     /// <param name="message"></param>
-    protected virtual OrderModel MapOrder(OrderMessage message)
+    protected virtual Order MapOrder(OrderMessage message)
     {
       var orders = message?.OrderLegCollection ?? [];
       var (stopPrice, activationPrice, orderType) = MapPrice(message);
@@ -73,12 +79,12 @@ namespace Schwab.Grains
         .Select(o => o.Instrument.UnderlyingSymbol ?? o.Instrument.Symbol)
         .Distinct();
 
-      var instrument = new InstrumentModel
+      var instrument = new Instrument
       {
         Name = string.Join(" / ", name)
       };
 
-      var action = new OperationModel
+      var action = new Operation
       {
         Id = message.OrderId,
         Amount = message.FilledQuantity,
@@ -86,7 +92,7 @@ namespace Schwab.Grains
         Status = OrderStatusEnum.Order
       };
 
-      var order = new OrderModel
+      var order = new Order
       {
         Type = orderType,
         Price = stopPrice,
@@ -102,19 +108,19 @@ namespace Schwab.Grains
 
         foreach (var subOrder in orders)
         {
-          var subInstrument = new InstrumentModel
+          var subInstrument = new Instrument
           {
             Name = subOrder.Instrument.Symbol,
             Type = MapInstrument(subOrder.Instrument.AssetType)
           };
 
-          var subAction = new OperationModel
+          var subAction = new Operation
           {
             Instrument = subInstrument,
             Amount = subOrder.Quantity
           };
 
-          order.Orders.Add(new OrderModel
+          order.Orders.Add(new Order
           {
             Operation = subAction,
             Amount = subOrder.Quantity,

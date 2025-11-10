@@ -5,7 +5,6 @@ using Schwab.Messages;
 using Schwab.Models;
 using Schwab.Queries;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,10 +17,10 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
   }
 
-  public class SimOptionsGrain : OptionsGrain, ISchwabOptionsGrain
+  public class SchwabOptionsGrain : OptionsGrain, ISchwabOptionsGrain
   {
     /// <summary>
     /// Messenger
@@ -32,7 +31,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       broker = new()
       {
@@ -54,7 +53,7 @@ namespace Schwab.Grains
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<InstrumentModel>> Options(CriteriaModel criteria)
+    public override async Task<InstrumentsResponse> Options(Criteria criteria)
     {
       var query = new ChainQuery
       {
@@ -75,7 +74,10 @@ namespace Schwab.Grains
         ?.ThenBy(o => o.Derivative.Side)
         ?.ToList() ?? [];
 
-      return options;
+      return new()
+      {
+        Data = options
+      };
     }
 
     /// <summary>
@@ -128,11 +130,11 @@ namespace Schwab.Grains
     /// </summary>
     /// <param name="optionMessage"></param>
     /// <param name="message"></param>
-    protected InstrumentModel MapOption(OptionMessage optionMessage, OptionChainMessage message)
+    protected Instrument MapOption(OptionMessage optionMessage, OptionChainMessage message)
     {
       var asset = message.Underlying;
       var price = message.UnderlyingPrice;
-      var item = new PriceModel
+      var item = new Price
       {
         Ask = asset?.Ask ?? price,
         Bid = asset?.Bid ?? price,
@@ -141,7 +143,7 @@ namespace Schwab.Grains
         Last = asset?.Last ?? price
       };
 
-      var instrument = new InstrumentModel
+      var instrument = new Instrument
       {
         Type = MapInstrumentType(message.AssetType),
         Exchange = asset?.ExchangeName,
@@ -149,7 +151,7 @@ namespace Schwab.Grains
         Price = item
       };
 
-      var optionItem = new PriceModel
+      var optionItem = new Price
       {
         Ask = optionMessage.Ask,
         Bid = optionMessage.Bid,
@@ -159,7 +161,7 @@ namespace Schwab.Grains
         Last = optionMessage.Last,
       };
 
-      var optionInstrument = new InstrumentModel
+      var optionInstrument = new Instrument
       {
         Basis = instrument,
         Price = optionItem,
@@ -168,7 +170,7 @@ namespace Schwab.Grains
         Type = MapOptionType(message.AssetType)
       };
 
-      var variance = new VarianceModel
+      var variance = new Variance
       {
         Rho = optionMessage.Rho ?? 0,
         Vega = optionMessage.Vega ?? 0,
@@ -177,7 +179,7 @@ namespace Schwab.Grains
         Theta = optionMessage.Theta ?? 0
       };
 
-      var derivative = new DerivativeModel
+      var derivative = new Derivative
       {
         Strike = optionMessage.StrikePrice,
         ExpirationDate = optionMessage.ExpirationDate,

@@ -9,27 +9,27 @@ namespace Core.Grains
     /// <summary>
     /// Get order state
     /// </summary>
-    Task<OrderModel> Transaction();
+    Task<Order> Transaction();
 
     /// <summary>
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderResponse> Store(Order order);
   }
 
-  public class TransactionGrain : Grain<OrderModel>, ITransactionGrain
+  public class TransactionGrain : Grain<Order>, ITransactionGrain
   {
     /// <summary>
     /// Get order state
     /// </summary>
-    public virtual Task<OrderModel> Transaction() => Task.FromResult(State);
+    public virtual Task<Order> Transaction() => Task.FromResult(State);
 
     /// <summary>
     /// Store order
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task<OrderResponse> Store(OrderModel order) => Task.FromResult(new OrderResponse
+    public virtual Task<OrderResponse> Store(Order order) => Task.FromResult(new OrderResponse
     {
       Data = State = order
     });

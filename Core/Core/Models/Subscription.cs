@@ -2,7 +2,7 @@ using Core.Enums;
 
 namespace Core.Models
 {
-  public record SubscriptionModel
+  public record Subscription
   {
     /// <summary>
     /// Next state

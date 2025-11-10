@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record TransactionsModel
+  public record Transactions
   {
     /// <summary>
     /// History of completed deals, closed positions

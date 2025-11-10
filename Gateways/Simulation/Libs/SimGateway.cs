@@ -2,7 +2,6 @@ using Core.Conventions;
 using Core.Grains;
 using Core.Models;
 using Simulation.Grains;
-using System.Collections.Generic;
 using System.Threading.Tasks;
 
 namespace Simulation
@@ -36,7 +35,7 @@ namespace Simulation
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Subscribe(Instrument instrument)
     {
       return Component<ISimConnectionGrain>().Subscribe(instrument);
     }
@@ -45,7 +44,7 @@ namespace Simulation
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(InstrumentModel instrument)
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
       return Component<ISimConnectionGrain>().Unsubscribe(instrument);
     }
@@ -54,7 +53,7 @@ namespace Simulation
     /// Get depth of market when available or just a top of the book
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<DomModel> GetDom(CriteriaModel criteria)
+    public override Task<DomResponse> GetDom(Criteria criteria)
     {
       return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
     }
@@ -63,7 +62,7 @@ namespace Simulation
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetTicks(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPrices(Criteria criteria)
     {
       return Component<ISimInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
@@ -72,7 +71,7 @@ namespace Simulation
     /// Bars
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<PriceModel>> GetBars(CriteriaModel criteria)
+    public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
       return Component<ISimInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
@@ -81,7 +80,7 @@ namespace Simulation
     /// Option chain
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<InstrumentModel>> GetOptions(CriteriaModel criteria)
+    public override Task<InstrumentsResponse> GetOptions(Criteria criteria)
     {
       return Component<ISimOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
@@ -90,7 +89,7 @@ namespace Simulation
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetOrders(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetOrders(Criteria criteria)
     {
       return Component<IOrdersGrain>().Orders(criteria);
     }
@@ -99,7 +98,7 @@ namespace Simulation
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetPositions(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetPositions(Criteria criteria)
     {
       return Component<IPositionsGrain>().Positions(criteria);
     }
@@ -108,7 +107,7 @@ namespace Simulation
     /// Get all account transactions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<IList<OrderModel>> GetTransactions(CriteriaModel criteria)
+    public override Task<OrdersResponse> GetTransactions(Criteria criteria)
     {
       return Component<ITransactionsGrain>().Transactions(criteria);
     }
@@ -117,16 +116,16 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
-    public override Task<OrderGroupsResponse> SendOrder(OrderModel order)
+    public override Task<OrderGroupResponse> SendOrder(Order order)
     {
-      return Component<IOrdersGrain>().Store(order);
+      return Component<IOrdersGrain>().Send(order);
     }
 
     /// <summary>
     /// Clear order
     /// </summary>
     /// <param name="order"></param>
-    public override Task<DescriptorResponse> ClearOrder(OrderModel order)
+    public override Task<DescriptorResponse> ClearOrder(Order order)
     {
       return Component<IOrdersGrain>().Clear(order);
     }

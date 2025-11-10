@@ -4,7 +4,6 @@ using Core.Models;
 using Schwab.Messages;
 using Schwab.Models;
 using Schwab.Queries;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +16,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(ConnectionModel connection);
+    Task<StatusResponse> Setup(Connection connection);
   }
 
   public class SchwabPositionsGrain : PositionsGrain, ISchwabPositionsGrain
@@ -31,7 +30,7 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(ConnectionModel connection)
+    public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       broker = new()
       {
@@ -53,23 +52,30 @@ namespace Schwab.Grains
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<IList<OrderModel>> Positions(CriteriaModel criteria)
+    public override async Task<OrdersResponse> Positions(Criteria criteria)
     {
       var query = new AccountQuery { AccountCode = criteria.Account.Name };
       var messages = await broker.GetPositions(query, CancellationToken.None);
+      var items = messages.Select(MapPosition);
 
-      return [.. messages.Select(MapPosition)];
+      await Clear();
+      await Task.WhenAll(items.Select(Store));
+
+      return new()
+      {
+        Data = [.. items]
+      };
     }
 
     /// <summary>
     /// Map position
     /// </summary>
     /// <param name="message"></param>
-    protected virtual OrderModel MapPosition(PositionMessage message)
+    protected virtual Order MapPosition(PositionMessage message)
     {
       var price = message.AveragePrice + message.Instrument.NetChange;
       var volume = message.LongQuantity + message.ShortQuantity;
-      var point = new PriceModel
+      var point = new Price
       {
         Bid = price,
         Ask = price,
@@ -77,21 +83,21 @@ namespace Schwab.Grains
       };
 
       var instrumentType = MapInstrument(message.Instrument.AssetType);
-      var instrument = new InstrumentModel
+      var instrument = new Instrument
       {
         Price = point,
         Name = message.Instrument.Symbol,
         Type = instrumentType
       };
 
-      var action = new OperationModel
+      var action = new Operation
       {
         Amount = volume,
         Instrument = instrument,
         AveragePrice = message.AveragePrice
       };
 
-      var order = new OrderModel
+      var order = new Order
       {
         Amount = volume,
         Operation = action,

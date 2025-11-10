@@ -2,7 +2,7 @@ using Core.Models;
 
 namespace Schwab.Models
 {
-  public record ConnectionModel
+  public record Connection
   {
     /// <summary>
     /// Client ID
@@ -27,6 +27,6 @@ namespace Schwab.Models
     /// <summary>
     /// Account
     /// </summary>
-    public AccountModel Account { get; init; }
+    public Account Account { get; init; }
   }
 }

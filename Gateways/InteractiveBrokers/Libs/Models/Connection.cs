@@ -3,7 +3,7 @@ using System;
 
 namespace InteractiveBrokers.Models
 {
-  public record ConnectionModel
+  public record Connection
   {
     /// <summary>
     /// Port
@@ -28,6 +28,6 @@ namespace InteractiveBrokers.Models
     /// <summary>
     /// Account
     /// </summary>
-    public AccountModel Account { get; init; }
+    public Account Account { get; init; }
   }
 }

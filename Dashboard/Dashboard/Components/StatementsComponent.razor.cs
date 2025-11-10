@@ -66,7 +66,7 @@ namespace Dashboard.Components
       var actionResponses = await Task.WhenAll(adapters.Select(o => o.GetTransactions(default)));
       var balance = adapters.Sum(o => o.Account.Balance ?? 0);
       var actions = actionResponses
-        .SelectMany(o => o)
+        .SelectMany(o => o.Data)
         .OrderBy(o => o.Operation.Time)
         .ToList();
 

@@ -2,7 +2,6 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Models;
 using Orleans;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -14,19 +13,19 @@ namespace Core.Grains
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    Task<IList<OrderModel>> Positions(CriteriaModel criteria);
+    Task<OrdersResponse> Positions(Criteria criteria);
 
     /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(OrderModel order);
+    Task<OrderResponse> Store(Order order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="instrument"></param>
-    Task<StatusResponse> Tap(InstrumentModel instrument);
+    Task<StatusResponse> Tap(Instrument instrument);
 
     /// <summary>
     /// Clear positions
@@ -34,30 +33,38 @@ namespace Core.Grains
     Task<StatusResponse> Clear();
   }
 
-  public class PositionsGrain : Grain<PositionsModel>, IPositionsGrain
+  public class PositionsGrain : Grain<Positions>, IPositionsGrain
   {
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<IList<OrderModel>> Positions(CriteriaModel criteria) => await Task.WhenAll(State
-      .Grains
-      .Values
-      .Select(o => o.Position()));
+    public virtual async Task<OrdersResponse> Positions(Criteria criteria)
+    {
+      var items = await Task.WhenAll(State
+        .Grains
+        .Values
+        .Select(o => o.Position()));
+
+      return new()
+      {
+        Data = items
+      };
+    }
 
     /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(OrderModel order)
+    public virtual async Task<OrderResponse> Store(Order order)
     {
-      var descriptor = this.GetPrimaryKeyString();
+      var descriptor = this.GetDescriptor();
       var instrument = order.Operation.Instrument.Name;
       var grain = State.Grains.Get(instrument);
 
       if (grain is null)
       {
-        var positionGrain = GrainFactory.GetGrain<IPositionGrain>($"{descriptor}:{order.Id}");
+        var positionGrain = GrainFactory.GetGrain<IPositionGrain>(this.GetDescriptor(order.Id));
         var orderResponse = await positionGrain.Store(order);
 
         State.Grains[instrument] = positionGrain;
@@ -86,7 +93,7 @@ namespace Core.Grains
     /// Update instruments assigned to positions and other models
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Tap(InstrumentModel instrument)
+    public virtual async Task<StatusResponse> Tap(Instrument instrument)
     {
       foreach (var grain in State.Grains)
       {
