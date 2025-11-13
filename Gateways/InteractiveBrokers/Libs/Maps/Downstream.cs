@@ -59,7 +59,7 @@ namespace InteractiveBrokers.Mappers
     /// <param name="message"></param>
     public static Core.Models.Order MapOrder(OpenOrderMessage message)
     {
-      var instrument = MapInstrument(message.Contract);
+      var instrument = MapInstrumentType(message.Contract);
       var action = new Operation
       {
         Instrument = instrument,
@@ -120,12 +120,13 @@ namespace InteractiveBrokers.Mappers
     /// Convert remote position to local
     /// </summary>
     /// <param name="message"></param>
-    /// <param name="instrument"></param>
-    public static Core.Models.Order MapPosition(PositionMultiMessage message, Instrument instrument)
+    public static Core.Models.Order MapPosition(PositionMultiMessage message)
     {
+      var instrument = MapInstrument(message.Contract);
       var volume = (double)Math.Abs(message.Position);
       var action = new Operation
       {
+        AveragePrice = message.AverageCost,
         Instrument = instrument,
         Amount = volume
       };
@@ -136,11 +137,65 @@ namespace InteractiveBrokers.Mappers
         Operation = action,
         Type = OrderTypeEnum.Market,
         Descriptor = $"{message.Contract.ConId}",
-        Price = message.AverageCost,
         Side = message.Position > 0 ? OrderSideEnum.Long : OrderSideEnum.Short
       };
 
       return order;
+    }
+
+    /// <summary>
+    /// Get instrument from contract
+    /// </summary>
+    /// <param name="contract"></param>
+    /// <param name="instrument"></param>
+    public static Instrument MapInstrument(Contract contract)
+    {
+      var expiration = contract.LastTradeDateOrContractMonth;
+      var response = new Instrument
+      {
+        Id = $"{contract.ConId}",
+        Name = contract.LocalSymbol,
+        Exchange = contract.Exchange,
+        Type = MapInstrumentType(contract.SecType),
+        Currency = new Currency { Name = contract.Currency },
+        Leverage = int.TryParse(contract.Multiplier, out var leverage) ? Math.Max(1, leverage) : 1
+      };
+
+      if (string.IsNullOrEmpty(contract.Symbol) is false)
+      {
+        response = response with { Basis = new Instrument { Name = contract.Symbol } };
+      }
+
+      if (string.IsNullOrEmpty(expiration) is false)
+      {
+        var expirationDate = DateTime.ParseExact(expiration, "yyyyMMdd", CultureInfo.InvariantCulture);
+        var derivative = new Derivative
+        {
+          Strike = contract.Strike,
+          TradeDate = expirationDate,
+          ExpirationDate = expirationDate,
+          Side = MapOptionSide(contract.Right)
+        };
+
+        response = response with { Derivative = derivative };
+      }
+
+      return response;
+    }
+
+    /// <summary>
+    /// Map option side
+    /// </summary>
+    /// <param name="side"></param>
+    public static OptionSideEnum? MapOptionSide(string side)
+    {
+      switch (side)
+      {
+        case "P": return OptionSideEnum.Put;
+        case "C": return OptionSideEnum.Call;
+      }
+
+      return null;
     }
 
     /// <summary>
@@ -198,7 +253,7 @@ namespace InteractiveBrokers.Mappers
     /// Get instrument from contract
     /// </summary>
     /// <param name="contract"></param>
-    public static Instrument MapInstrument(Contract contract)
+    public static Instrument MapInstrumentType(Contract contract)
     {
       var expiration = contract.LastTradeDateOrContractMonth;
       var response = new Instrument() with

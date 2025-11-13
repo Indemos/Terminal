@@ -55,16 +55,16 @@ namespace Core.Conventions
     Task<DomResponse> GetDom(Criteria criteria);
 
     /// <summary>
-    /// Get historical bars
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<PricesResponse> GetPriceGroups(Criteria criteria);
-
-    /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
     Task<PricesResponse> GetPrices(Criteria criteria);
+
+    /// <summary>
+    /// Get historical bars
+    /// </summary>
+    /// <param name="criteria"></param>
+    Task<PricesResponse> GetPriceGroups(Criteria criteria);
 
     /// <summary>
     /// Get options
@@ -94,7 +94,7 @@ namespace Core.Conventions
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupResponse> SendOrder(Order order);
+    Task<OrderResponse> SendOrder(Order order);
 
     /// <summary>
     /// Cancel orders
@@ -154,16 +154,16 @@ namespace Core.Conventions
     public abstract Task<DomResponse> GetDom(Criteria criteria);
 
     /// <summary>
-    /// Get historical bars
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetPriceGroups(Criteria criteria);
-
-    /// <summary>
     /// Get historical ticks
     /// </summary>
     /// <param name="criteria"></param>
     public abstract Task<PricesResponse> GetPrices(Criteria criteria);
+
+    /// <summary>
+    /// Get historical bars
+    /// </summary>
+    /// <param name="criteria"></param>
+    public abstract Task<PricesResponse> GetPriceGroups(Criteria criteria);
 
     /// <summary>
     /// Get options
@@ -193,7 +193,7 @@ namespace Core.Conventions
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
-    public abstract Task<OrderGroupResponse> SendOrder(Order order);
+    public abstract Task<OrderResponse> SendOrder(Order order);
 
     /// <summary>
     /// Cancel orders
@@ -254,13 +254,13 @@ namespace Core.Conventions
     /// </summary>
     protected virtual void SubscribeToUpdates()
     {
-      Messenger.Subscribe<Order>(order =>
+      Messenger.Subscribe<Order>(position =>
       {
-        if (order.Operation.Status is OrderStatusEnum.Transaction)
+        if (position.Operation.Status is OrderStatusEnum.Transaction)
         {
           Account = Account with
           {
-            Performance = Account.Performance + order.Balance.Current
+            Performance = Account.Performance + position.Balance.Current
           };
         }
 

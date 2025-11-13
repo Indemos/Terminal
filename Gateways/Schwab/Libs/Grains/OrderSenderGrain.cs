@@ -17,17 +17,14 @@ namespace Schwab.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupResponse> Send(Order order)
+    public override async Task<OrderResponse> Send(Order order)
     {
       var message = MapOrder(order);
       var accountCode = order.Account.Name;
-      var messageResponse = await broker.SendOrder(message, accountCode, CancellationToken.None);
+      var messageResponse = await connector.SendOrder(message, accountCode, CancellationToken.None);
       var response = new OrderResponse { Data = new() { Id = messageResponse.OrderId } };
 
-      return new()
-      {
-        Data = [response]
-      };
+      return response;
     }
 
     /// <summary>

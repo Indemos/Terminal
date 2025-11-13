@@ -22,12 +22,12 @@ namespace InteractiveBrokers
     /// <summary>
     /// Timeout
     /// </summary>
-    public virtual TimeSpan Span { get; set; } = TimeSpan.FromSeconds(1);
+    public virtual TimeSpan Span { get; set; } = TimeSpan.Zero;
 
     /// <summary>
     /// Timeout
     /// </summary>
-    public virtual TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(10);
+    public virtual TimeSpan Timeout { get; set; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Connect
@@ -143,10 +143,10 @@ namespace InteractiveBrokers
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderGroupResponse> SendOrder(Order order) => new OrderGroupResponse
+    public override async Task<OrderResponse> SendOrder(Order order)
     {
-      Data = [await Component<IInterConnectionGrain>().SendOrder(order)]
-    };
+      return await Component<IInterConnectionGrain>().SendOrder(order);
+    }
 
     /// <summary>
     /// Clear order

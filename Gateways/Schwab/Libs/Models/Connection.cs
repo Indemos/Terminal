@@ -1,4 +1,5 @@
 using Core.Models;
+using System;
 
 namespace Schwab.Models
 {
@@ -7,22 +8,27 @@ namespace Schwab.Models
     /// <summary>
     /// Client ID
     /// </summary>
-    public virtual string Id { get; set; }
+    public string Id { get; set; }
 
     /// <summary>
     /// Client secret
     /// </summary>
-    public virtual string Secret { get; set; }
+    public string Secret { get; set; }
 
     /// <summary>
     /// Access token
     /// </summary>
-    public virtual string AccessToken { get; set; }
+    public string AccessToken { get; set; }
 
     /// <summary>
     /// Refresh token
     /// </summary>
-    public virtual string RefreshToken { get; set; }
+    public string RefreshToken { get; set; }
+
+    /// <summary>
+    /// Timeout
+    /// </summary>
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Account

@@ -76,10 +76,6 @@ namespace Dashboard.Pages.Options
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
-    /// <summary>
-    /// Process tick data
-    /// </summary>
-    /// <param name="instrument"></param>
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var price = instrument.Price;
@@ -209,7 +205,6 @@ namespace Dashboard.Pages.Options
       var order = new Order
       {
         Type = OrderTypeEnum.Market,
-        Instruction = InstructionEnum.Group,
         Orders =
         [
           new()

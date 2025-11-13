@@ -14,6 +14,7 @@ namespace Dashboard.Components
   {
     [Inject] MessageService Messenger { get; set; }
     [Inject] StateService Subscription { get; set; }
+    [Inject] NavigationManager Navigator { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
 

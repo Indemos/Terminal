@@ -18,12 +18,12 @@ namespace InteractiveBrokers.Models
     /// <summary>
     /// Throttle
     /// </summary>
-    public TimeSpan Span { get; init; }
+    public TimeSpan Span { get; init; } = TimeSpan.Zero;
 
     /// <summary>
     /// Timeout
     /// </summary>
-    public TimeSpan Timeout { get; init; }
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
 
     /// <summary>
     /// Account

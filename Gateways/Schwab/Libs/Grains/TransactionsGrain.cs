@@ -19,9 +19,14 @@ namespace Schwab.Grains
   public class SchwabTransactionsGrain(MessageService messenger) : TransactionsGrain(messenger), ISchwabTransactionsGrain
   {
     /// <summary>
-    /// Messenger
+    /// State
     /// </summary>
-    protected SchwabBroker broker;
+    protected Connection state;
+
+    /// <summary>
+    /// Connector
+    /// </summary>
+    protected SchwabBroker connector;
 
     /// <summary>
     /// Connect
@@ -29,7 +34,8 @@ namespace Schwab.Grains
     /// <param name="connection"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
-      broker = new()
+      state = connection;
+      connector = new()
       {
         ClientId = connection.Id,
         ClientSecret = connection.Secret,
@@ -37,7 +43,7 @@ namespace Schwab.Grains
         RefreshToken = connection.RefreshToken
       };
 
-      await broker.Connect();
+      await connector.Connect();
 
       return new()
       {

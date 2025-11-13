@@ -65,7 +65,7 @@ namespace Core.Grains
       if (grain is null)
       {
         var positionGrain = GrainFactory.GetGrain<IPositionGrain>(this.GetDescriptor(order.Id));
-        var orderResponse = await positionGrain.Store(order);
+        var orderResponse = await positionGrain.Send(order);
 
         State.Grains[instrument] = positionGrain;
 

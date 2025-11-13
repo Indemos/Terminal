@@ -83,7 +83,7 @@ namespace Dashboard.Components
         {
           Name = o?.Operation?.Instrument?.Name,
           Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-          Time = new DateTime(o.Operation.Time.Value),
+          Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
           Side = o.Side,
           Size = o.Operation.Amount ?? 0,
           OpenPrice = o.Operation.AveragePrice ?? 0,

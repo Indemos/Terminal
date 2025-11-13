@@ -3,7 +3,6 @@ using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using Core.Services;
-using Orleans;
 using Schwab.Enums;
 using Schwab.Messages;
 using Schwab.Models;
@@ -28,14 +27,14 @@ namespace Schwab.Grains
   public class SchwabConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), ISchwabConnectionGrain
   {
     /// <summary>
-    /// Messenger
-    /// </summary>
-    protected SchwabBroker broker;
-
-    /// <summary>
     /// State
     /// </summary>
     protected Connection state;
+
+    /// <summary>
+    /// Connector
+    /// </summary>
+    protected SchwabBroker connector;
 
     /// <summary>
     /// Connect
@@ -46,8 +45,7 @@ namespace Schwab.Grains
       await Disconnect();
 
       state = connection;
-
-      broker = new()
+      connector = new()
       {
         ClientId = connection.Id,
         ClientSecret = connection.Secret,
@@ -55,7 +53,7 @@ namespace Schwab.Grains
         RefreshToken = connection.RefreshToken
       };
 
-      await broker.Connect();
+      await connector.Connect();
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 
       return new()
@@ -71,7 +69,7 @@ namespace Schwab.Grains
     {
       connections?.ForEach(o => o.Dispose());
       connections?.Clear();
-      broker?.Dispose();
+      connector?.Dispose();
 
       return Task.FromResult(new StatusResponse
       {
@@ -92,7 +90,7 @@ namespace Schwab.Grains
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
-      await broker.Subscribe(instrument.Name, MapSubType(instrument), async o =>
+      await connector.Subscribe(instrument.Name, MapSubType(instrument), async o =>
       {
         var message = await instrumentGrain.Send(instrument with
         {
@@ -104,7 +102,7 @@ namespace Schwab.Grains
         await messenger.Send(message);
       });
 
-      await broker.SubscribeToDom(instrument.Name, MapDomSubType(instrument), async o =>
+      await connector.SubscribeToDom(instrument.Name, MapDomSubType(instrument), async o =>
       {
         await domGrain.Store(MapDom(o));
       });

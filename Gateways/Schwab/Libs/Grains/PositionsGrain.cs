@@ -22,9 +22,14 @@ namespace Schwab.Grains
   public class SchwabPositionsGrain : PositionsGrain, ISchwabPositionsGrain
   {
     /// <summary>
-    /// Messenger
+    /// State
     /// </summary>
-    protected SchwabBroker broker;
+    protected Connection state;
+
+    /// <summary>
+    /// Connector
+    /// </summary>
+    protected SchwabBroker connector;
 
     /// <summary>
     /// Connect
@@ -32,7 +37,7 @@ namespace Schwab.Grains
     /// <param name="connection"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
-      broker = new()
+      connector = new()
       {
         ClientId = connection.Id,
         ClientSecret = connection.Secret,
@@ -40,7 +45,7 @@ namespace Schwab.Grains
         RefreshToken = connection.RefreshToken
       };
 
-      await broker.Connect();
+      await connector.Connect();
 
       return new()
       {
@@ -54,8 +59,9 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Positions(Criteria criteria)
     {
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var query = new AccountQuery { AccountCode = criteria.Account.Name };
-      var messages = await broker.GetPositions(query, CancellationToken.None);
+      var messages = await connector.GetPositions(query, cleaner.Token);
       var items = messages.Select(MapPosition);
 
       await Clear();

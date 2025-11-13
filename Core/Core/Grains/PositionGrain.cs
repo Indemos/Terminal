@@ -25,7 +25,7 @@ namespace Core.Grains
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(Order order);
+    Task<OrderResponse> Send(Order order);
 
     /// <summary>
     /// Match positions
@@ -45,7 +45,7 @@ namespace Core.Grains
     /// Create position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(Order order)
+    public virtual async Task<OrderResponse> Send(Order order)
     {
       await SendBraces(State = order);
 
@@ -93,11 +93,15 @@ namespace Core.Grains
     {
       State = State with
       {
-        Balance = Balance(),
         Operation = State.Operation with
         {
           Instrument = instrument with { Basis = State.Operation.Instrument.Basis }
         }
+      };
+
+      State = State with
+      {
+        Balance = Balance()
       };
 
       return Task.FromResult(new StatusResponse
@@ -235,14 +239,14 @@ namespace Core.Grains
     /// </summary>
     protected virtual double? Price()
     {
-      var point = State.Operation.Instrument.Price;
+      var price = State.Operation.Instrument.Price;
 
-      if (point is not null)
+      if (price is not null)
       {
         switch (State.Side)
         {
-          case OrderSideEnum.Long: return point.Bid;
-          case OrderSideEnum.Short: return point.Ask;
+          case OrderSideEnum.Long: return price.Bid;
+          case OrderSideEnum.Short: return price.Ask;
         }
       }
 

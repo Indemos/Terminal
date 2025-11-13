@@ -22,9 +22,14 @@ namespace Schwab.Grains
   public class SchwabOrdersGrain : OrdersGrain, ISchwabOrdersGrain
   {
     /// <summary>
-    /// Messenger
+    /// State
     /// </summary>
-    protected SchwabBroker broker;
+    protected Connection state;
+
+    /// <summary>
+    /// Connector
+    /// </summary>
+    protected SchwabBroker connector;
 
     /// <summary>
     /// Connect
@@ -32,7 +37,8 @@ namespace Schwab.Grains
     /// <param name="connection"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
-      broker = new()
+      state = connection;
+      connector = new()
       {
         ClientId = connection.Id,
         ClientSecret = connection.Secret,
@@ -40,7 +46,7 @@ namespace Schwab.Grains
         RefreshToken = connection.RefreshToken
       };
 
-      await broker.Connect();
+      await connector.Connect();
 
       return new()
       {
@@ -54,8 +60,9 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Orders(Criteria criteria)
     {
+      var cleaner = new CancellationTokenSource(state.Timeout);
       var query = new OrderQuery { AccountCode = criteria.Account.Name};
-      var messages = await broker.GetOrders(query, CancellationToken.None);
+      var messages = await connector.GetOrders(query, cleaner.Token);
       var items = messages.Select(MapOrder);
 
       await Clear();
@@ -104,8 +111,6 @@ namespace Schwab.Grains
 
       if (orders.Count is not 0)
       {
-        order = order with { Instruction = InstructionEnum.Group };
-
         foreach (var subOrder in orders)
         {
           var subInstrument = new Instrument

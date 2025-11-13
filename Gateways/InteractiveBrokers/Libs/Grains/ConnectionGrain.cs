@@ -121,8 +121,28 @@ namespace InteractiveBrokers
     {
       await Disconnect();
 
-      connector = new InterBroker { Port = state.Port };
-      connector.Connect();
+      connector = new InterBroker
+      {
+        Port = state.Port,
+        Span = state.Span,
+        Timeout = state.Timeout
+      };
+
+      var id = await connector.Connect();
+
+      if (id is 0)
+      {
+        await messenger.Send(new Message()
+        {
+          Content = "No connection",
+          Action = ActionEnum.Disconnect
+        });
+
+        return new()
+        {
+          Data = StatusEnum.Inactive
+        };
+      }
 
       foreach (var instrument in state.Account.Instruments.Values)
       {
@@ -179,7 +199,7 @@ namespace InteractiveBrokers
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(name);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(name);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(this.GetDescriptor(instrument.Name));
-      var dataMessage = new DataStreamMessage
+      var dataMessage = new PriceStreamMessage
       {
         DataTypes = [IBApi.Enums.SubscriptionEnum.Price],
         Contract = contract
@@ -285,7 +305,7 @@ namespace InteractiveBrokers
       var contract = Upstream.MapContract(criteria.Instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetContracts(cleaner.Token, contract);
-      var items = sourceItems.Select(o => Downstream.MapInstrument(o.Contract)).ToArray();
+      var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToArray();
 
       await Task.Delay(state.Span);
 
@@ -312,28 +332,6 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// Get positions 
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Positions(Criteria criteria)
-    {
-      var descriptor = this.GetDescriptor();
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
-      var items = sourceItems.Select(o => Downstream.MapPosition(o, criteria.Instrument)).ToArray();
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-
-      await positionsGrain.Clear();
-      await Task.WhenAll(items.Select(positionsGrain.Store));
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
     /// Get orders
     /// </summary>
     /// <param name="criteria"></param>
@@ -347,6 +345,28 @@ namespace InteractiveBrokers
 
       await ordersGrain.Clear();
       await Task.WhenAll(items.Select(ordersGrain.Send));
+      await Task.Delay(state.Span);
+
+      return new()
+      {
+        Data = items
+      };
+    }
+
+    /// <summary>
+    /// Get positions 
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual async Task<OrdersResponse> Positions(Criteria criteria)
+    {
+      var descriptor = this.GetDescriptor();
+      var cleaner = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
+      var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+
+      await positionsGrain.Clear();
+      await Task.WhenAll(items.Select(positionsGrain.Store));
       await Task.Delay(state.Span);
 
       return new()

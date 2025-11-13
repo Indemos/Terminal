@@ -13,7 +13,7 @@
     <PackageReference Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="9.0.0" />
     <PackageReference Include="System.Interactive" Version="6.0.3" />
-    <PackageReference Include="System.ServiceModel.Primitives" Version="8.1.2" />
+    <PackageReference Include="System.ServiceModel.Primitives" Version="10.0.652802" />
   </ItemGroup>
 
 </Project>

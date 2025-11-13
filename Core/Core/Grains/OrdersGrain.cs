@@ -21,7 +21,7 @@ namespace Core.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderGroupResponse> Send(Order order);
+    Task<OrderResponse> Send(Order order);
 
     /// <summary>
     /// Update order data
@@ -94,25 +94,32 @@ namespace Core.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderGroupResponse> Send(Order order)
+    public virtual async Task<OrderResponse> Send(Order order)
     {
-      var orders = Compose(order);
-      var responses = orders
-        .Select(o => new OrderResponse { Data = o, Errors = [.. Errors(o).Select(error => error.Message)] })
-        .ToArray();
-
-      if (responses.Sum(o => o.Errors.Count) is 0)
+      var response = new OrderResponse
       {
-        foreach (var subOrder in orders)
+        Errors = [.. Errors(order).Select(error => error.Message).Distinct()]
+      };
+
+      if (response.Errors.Count is 0)
+      {
+        var orders = order
+          .Orders
+          .Where(o => o.Instruction is null)
+          .ToList();
+
+        if (order.Amount is not null || order.Orders.Count is 0)
         {
-          await Store(subOrder);
+          orders.Add(order);
+        }
+
+        foreach (var o in orders)
+        {
+          await Store(o with { Orders = [.. o.Orders.Where(v => v.Instruction is InstructionEnum.Brace)] });
         }
       }
 
-      return new()
-      {
-        Data = responses
-      };
+      return response;
     }
 
     /// <summary>
@@ -166,54 +173,6 @@ namespace Core.Grains
       {
         Data = StatusEnum.Inactive
       });
-    }
-
-    /// <summary>
-    /// Convert hierarchy of orders into a plain list
-    /// </summary>
-    protected virtual List<Order> Compose(Order order)
-    {
-      var nextOrders = order
-        .Orders
-        .Where(o => o.Instruction is null)
-        .Select(o => Merge(order, o))
-        .ToList();
-
-      if (order.Amount is not null || order.Orders.Count is 0)
-      {
-        nextOrders.Add(Merge(order, order));
-      }
-
-      return nextOrders;
-    }
-
-    /// <summary>
-    /// Update side order from group
-    /// </summary>
-    /// <param name="group"></param>
-    /// <param name="order"></param>
-    protected virtual Order Merge(Order group, Order order)
-    {
-      var instrument =
-        order?.Operation?.Instrument ??
-        group?.Operation?.Instrument;
-
-      var groupOrders = order
-        ?.Orders
-        ?.Where(o => o.Instruction is InstructionEnum.Brace)
-        ?.Select(o => Merge(group, o));
-
-      var nextOrder = order with
-      {
-        Descriptor = group.Descriptor,
-        Orders = [.. groupOrders],
-        Operation = order.Operation with
-        {
-          Time = instrument?.Price?.Time
-        }
-      };
-
-      return nextOrder;
     }
 
     /// <summary>

@@ -116,9 +116,9 @@ namespace Simulation
     /// Create order and depending on the account, send it to the processing queue
     /// </summary>
     /// <param name="order"></param>
-    public override Task<OrderGroupResponse> SendOrder(Order order)
+    public override Task<OrderResponse> SendOrder(Order order)
     {
-      return Component<IOrdersGrain>().Send(order);
+      return Component<IOrdersGrain>().Send(order with { Account = Account });
     }
 
     /// <summary>

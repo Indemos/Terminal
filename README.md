@@ -32,6 +32,7 @@ The core library already implements a set of Orleans grains and services that ca
 
 # Gateways 
 
+* Schwab
 * Interactive Brokers
 * Simulation - virtual orders and market data 
 
@@ -39,12 +40,10 @@ In order to create connector for preferred broker, implement interface `IGateway
 
 # Migration
 
-The application is being migrated to Orleans to simplify maintenance and tracking with extension to fully distributed framework. 
-Gateways below are still being migrated. 
-Previous implementation with already implemented gateways is available in the `gateways` branch.
+The application is being migrated to Orleans. 
+Previous implementation with gateways below is available in the `gateways` branch.
 
 * Tradier
-* Schwab
 * Alpaca
 
 # Trading Strategies
