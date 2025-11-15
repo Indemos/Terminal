@@ -79,7 +79,7 @@ namespace Dashboard.Pages.Options
     {
       await DataView.Create("Data");
       await DeltaView.Create("Delta");
-      await VarianceView.Create("Sigma");
+      await VarianceView.Create("Variance");
       await PerformanceView.Create("Performance");
 
       DataView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
@@ -95,7 +95,7 @@ namespace Dashboard.Pages.Options
       {
         Messenger = Messenger,
         Connector = Connector,
-        Source = Configuration["Documents:Resources"],
+        Source = "D:/Code/Options", // Configuration["Documents:Resources"],
         Account = new()
         {
           Name = "Demo",
@@ -138,27 +138,29 @@ namespace Dashboard.Pages.Options
       var account = adapter.Account;
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
+      var curDate = CurDate(point);
+      var nextDate = NextDate(point);
+      var curPositions = Positions(positions, curDate);
+      var nextPositions = Positions(positions, nextDate);
 
       if (orders.Count is 0 && positions.Count is 0)
       {
         Strike = Price;
-        var curDate = new DateTime(point.Time.Value);
         var options = await GetOptions(instrument, curDate);
         var order = GetCurOrder(options);
         await adapter.SendOrder(order);
       }
 
-      if (orders.Count is 0 && Positions(positions, CurDate(point)).Count == 4)
+      if (orders.Count is 0 && curPositions.Count == 4)
       {
-        var nextDate = new DateTime(point.Time.Value).AddDays(3);
         var options = await GetOptions(instrument, nextDate);
         var (curDelta, nextDelta, sigma) = GetIndicators(positions, point);
-        var isBuy = curDelta > 0 && nextDelta > 0;
-        var isSell = curDelta < 0 && nextDelta < 0;
+        var isBuy = Price > Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put); // curDelta > 0 && nextDelta > 0;
+        var isSell = Price < Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call); // curDelta < 0 && nextDelta < 0;
 
-        if (nextDelta is 0 || isBuy || isSell)
+        if (nextPositions.Count is 0 || isBuy || isSell)
         {
-          var order = GetNextOrder(options, isSell ? 1 : -1);
+          var order = GetNextOrder(options, isSell ? -1 : 1);
 
           await ClosePosition(adapter, o => Equals(o?.Operation?.Instrument?.Derivative?.ExpirationDate?.Date, NextDate(point).Date));
           await adapter.SendOrder(order);
