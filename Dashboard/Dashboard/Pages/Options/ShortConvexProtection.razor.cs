@@ -155,8 +155,17 @@ namespace Dashboard.Pages.Options
       {
         var options = await GetOptions(instrument, nextDate);
         var (curDelta, nextDelta, sigma) = GetIndicators(positions, point);
-        var isBuy = Price > Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put); // curDelta > 0 && nextDelta > 0;
-        var isSell = Price < Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call); // curDelta < 0 && nextDelta < 0;
+        var isBuy = Price > Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put);
+        var isSell = Price < Strike && nextPositions.Any(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call);
+
+        if (Math.Abs((Price - Strike).Value) > 1)
+        {
+          //await ClosePosition(adapter, o => Equals(o?.Operation?.Instrument?.Derivative?.ExpirationDate?.Date, NextDate(point).Date));
+          await ClosePosition(adapter);
+          Strike = Price;
+          isBuy = Price > Strike;
+          isSell = Price < Strike;
+        }
 
         if (nextPositions.Count is 0 || isBuy || isSell)
         {
