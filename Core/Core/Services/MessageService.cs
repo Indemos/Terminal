@@ -16,11 +16,13 @@ namespace Core.Services
     /// <summary>
     /// Subscribe to messages
     /// </summary>
-    public virtual string Subscribe<T>(Func<T, Task> action, string name = null)
+    /// <typeparam name="T"></typeparam>
+    /// <param name="action"></param>
+    /// <param name="descriptor"></param>
+    public virtual string Subscribe<T>(Func<T, Task> action, string descriptor)
     {
       var group = typeof(T);
-      var descriptor = name ?? $"{Guid.NewGuid()}";
-
+      
       subscriptions[group] = subscriptions.Get(group) ?? new();
       subscriptions[group][descriptor] = o => action((T)o);
 
@@ -28,8 +30,10 @@ namespace Core.Services
     }
 
     /// <summary>
-    /// Unsubscribe from messages
+    /// Unsubscribe
     /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="name"></param>
     public virtual void Unsubscribe<T>(string name)
     {
       if (subscriptions.TryGetValue(typeof(T), out var actions))
@@ -39,8 +43,10 @@ namespace Core.Services
     }
 
     /// <summary>
-    /// Send message without state change
+    /// Send message
     /// </summary>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="state"></param>
     public virtual async Task Send<T>(T state)
     {
       if (subscriptions.TryGetValue(typeof(T), out var actions))

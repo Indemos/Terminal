@@ -35,10 +35,10 @@ namespace Dashboard.Pages.Futures
       await IndicatorsView.Create("Indicators");
       await PerformanceView.Create("Performance");
 
-      LeaderView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      FollowerView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
+      LeaderView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      FollowerView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
     }
 
     protected override Task OnTrade()

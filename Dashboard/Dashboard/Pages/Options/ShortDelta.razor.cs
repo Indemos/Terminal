@@ -37,9 +37,9 @@ namespace Dashboard.Pages.Options
       await IndicatorsView.Create("Indicators");
       await PerformanceView.Create("Performance");
 
-      DataView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
-      PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDateByIndex(o.Items, (int)i));
+      DataView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
     }
 
     protected override Task OnTrade()

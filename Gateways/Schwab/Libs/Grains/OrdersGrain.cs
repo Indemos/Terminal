@@ -1,4 +1,5 @@
 using Core.Enums;
+using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using Schwab.Messages;
@@ -60,6 +61,11 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Orders(Criteria criteria)
     {
+      if (criteria.Store)
+      {
+        return await Orders(criteria);
+      }
+
       var cleaner = new CancellationTokenSource(state.Timeout);
       var query = new OrderQuery { AccountCode = criteria.Account.Name};
       var messages = await connector.GetOrders(query, cleaner.Token);

@@ -42,7 +42,7 @@ namespace Dashboard.Services
       engine = new AnalyticEuropeanEngine(process);
     }
 
-    public double ComputeDelta(Option.Type optionType, double? spotPrice, double? strikePrice, double timeToMaturity)
+    public double Delta(Option.Type optionType, double? spotPrice, double? strikePrice, double timeToMaturity)
     {
       spotQuote.setValue(spotPrice.Value);
 
@@ -56,7 +56,7 @@ namespace Dashboard.Services
       return option.delta();
     }
 
-    public double ComputeSigma(double optionPrice, double spotPrice, double strikePrice, double timeToMaturity, Option.Type optionType)
+    public double Sigma(double optionPrice, double spotPrice, double strikePrice, double timeToMaturity, Option.Type optionType)
     {
       spotQuote.setValue(spotPrice);
 

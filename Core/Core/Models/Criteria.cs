@@ -11,6 +11,11 @@ namespace Core.Models
     public int? Count { get; init; }
 
     /// <summary>
+    /// Cache
+    /// </summary>
+    public bool Store { get; init; } = true;
+
+    /// <summary>
     /// Start date
     /// </summary>
     public double? MinPrice { get; init; }

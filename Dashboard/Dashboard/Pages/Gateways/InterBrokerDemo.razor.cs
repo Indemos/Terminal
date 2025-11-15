@@ -80,8 +80,8 @@ namespace Dashboard.Pages.Gateways
       var price = instrument.Price;
       var adapter = View.Adapters["Prime"];
       var account = adapter.Account;
-      var orders = (await adapter.GetOrders(default)).Data;
-      var positions = (await adapter.GetPositions(default)).Data;
+      var orders = (await adapter.GetOrders(new() { Store = false })).Data;
+      var positions = (await adapter.GetPositions(new() { Store = false })).Data;
 
       if (orders.Count is 0 && positions.Count is 0)
       {

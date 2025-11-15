@@ -34,8 +34,8 @@ namespace Dashboard.Pages
       if (setup)
       {
         await OnView();
-        Messenger.Subscribe<Instrument>(OnViewUpdate);
-        Messenger.Subscribe<Instrument>(OnTradeUpdate);
+        Messenger.Subscribe<Instrument>(OnViewUpdate, nameof(OnViewUpdate));
+        Messenger.Subscribe<Instrument>(OnTradeUpdate, nameof(OnTradeUpdate));
         State.Subscribe(async state =>
         {
           if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
@@ -58,7 +58,7 @@ namespace Dashboard.Pages
     /// </summary>
     /// <param name="items"></param>
     /// <param name="index"></param>
-    protected virtual string GetDateByIndex(IList<IShape> items, int index)
+    protected virtual string GetDate(IList<IShape> items, int index)
     {
       var empty = index <= 0 ? items.FirstOrDefault()?.X : items.LastOrDefault()?.X;
       var stamp = (long)(items.ElementAtOrDefault(index)?.X ?? empty ?? DateTime.Now.Ticks);

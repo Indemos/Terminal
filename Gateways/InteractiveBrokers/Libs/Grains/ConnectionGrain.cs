@@ -338,10 +338,16 @@ namespace InteractiveBrokers
     public virtual async Task<OrdersResponse> Orders(Criteria criteria)
     {
       var descriptor = this.GetDescriptor();
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+
+      if (criteria.Store)
+      {
+        return await ordersGrain.Orders(criteria);
+      }
+
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.MapOrder).ToArray();
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       await ordersGrain.Clear();
       await Task.WhenAll(items.Select(ordersGrain.Send));
@@ -360,10 +366,16 @@ namespace InteractiveBrokers
     public virtual async Task<OrdersResponse> Positions(Criteria criteria)
     {
       var descriptor = this.GetDescriptor();
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+
+      if (criteria.Store)
+      {
+        return await positionsGrain.Positions(criteria);
+      }
+
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
       var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
       await positionsGrain.Clear();
       await Task.WhenAll(items.Select(positionsGrain.Store));
