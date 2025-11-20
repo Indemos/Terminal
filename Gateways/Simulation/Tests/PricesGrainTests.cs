@@ -1,3 +1,4 @@
+using Core.Grains;
 using Core.Models;
 using Core.Tests;
 using Moq;
@@ -40,7 +41,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimInstrumentGrain>(Descriptor);
+        .GetGrain<IInstrumentGrain>(Descriptor);
 
       var response = await grain.Send(Instrument with { Price = new() { Last = 100.0 } });
       var price = response.Price;
@@ -63,7 +64,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimInstrumentGrain>(Descriptor);
+        .GetGrain<IInstrumentGrain>(Descriptor);
 
       await grain.Send(Instrument with { Price = new() { Last = 100.0, Time = 1 } });
 
@@ -88,7 +89,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimInstrumentGrain>(Descriptor);
+        .GetGrain<IInstrumentGrain>(Descriptor);
 
       await grain.Send(Instrument with
       {
@@ -128,7 +129,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimInstrumentGrain>(Descriptor);
+        .GetGrain<IInstrumentGrain>(Descriptor);
 
       await grain.Send(Instrument with
       {
@@ -162,7 +163,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<ISimInstrumentGrain>(Descriptor);
+        .GetGrain<IInstrumentGrain>(Descriptor);
 
       Assert.Throws<AggregateException>(() => grain.Send(null).Result);
       Assert.Throws<AggregateException>(() => grain.Send(new()).Result);

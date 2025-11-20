@@ -22,25 +22,31 @@ namespace Dashboard.Pages
     [Inject] protected virtual IJSRuntime RuntimeService { get; set; }
     [Inject] protected virtual IClusterClient Connector { get; set; }
     [Inject] protected virtual IConfiguration Configuration { get; set; }
-    [Inject] protected virtual MessageService Messenger { get; set; }
     [Inject] protected virtual StateService State { get; set; }
 
     protected virtual ComponentModel Com { get; set; } = new() { Color = SKColors.LimeGreen };
     protected virtual ComponentModel ComUp { get; set; } = new() { Color = SKColors.DeepSkyBlue };
     protected virtual ComponentModel ComDown { get; set; } = new() { Color = SKColors.OrangeRed };
 
+    public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
+
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
       {
         await OnView();
-        Messenger.Subscribe<Instrument>(OnViewUpdate, nameof(OnViewUpdate));
-        Messenger.Subscribe<Instrument>(OnTradeUpdate, nameof(OnTradeUpdate));
+
         State.Subscribe(async state =>
         {
           if (state.Previous is SubscriptionEnum.None && state.Next is SubscriptionEnum.Progress)
           {
             await OnTrade();
+
+            foreach (var adapter in Adapters.Values)
+            {
+              adapter.OnPrice = OnViewUpdate;
+              adapter.OnTrade = OnTradeUpdate;
+            }
           }
         });
       }
@@ -50,7 +56,7 @@ namespace Dashboard.Pages
 
     protected virtual Task OnView() => Task.CompletedTask;
     protected virtual Task OnTrade() => Task.CompletedTask;
-    protected virtual Task OnViewUpdate(Instrument instrument) => Task.CompletedTask;
+    protected virtual void OnViewUpdate(Instrument instrument) { }
     protected virtual Task OnTradeUpdate(Instrument instrument) => Task.CompletedTask;
 
     /// <summary>

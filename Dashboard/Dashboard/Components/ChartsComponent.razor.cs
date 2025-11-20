@@ -150,8 +150,11 @@ namespace Dashboard.Components
 
       foreach (var input in inputs)
       {
-        currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
-        currentPoint.Groups[area].Groups[series] = input;
+        lock (sync)
+        {
+          currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
+          currentPoint.Groups[area].Groups[series] = input;
+        }
       }
 
       var domain = new DimensionModel
@@ -161,6 +164,8 @@ namespace Dashboard.Components
 
       await View.Update(domain, Shapes);
     }
+
+    object sync = new();
 
     /// <summary>
     /// Update

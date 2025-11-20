@@ -35,6 +35,7 @@ namespace Schwab
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Connection()
       {
         Account = Account
@@ -45,7 +46,7 @@ namespace Schwab
       await Component<ISchwabOrdersGrain>().Setup(connection);
       await Component<ISchwabOptionsGrain>().Setup(connection);
       await Component<ISchwabPositionsGrain>().Setup(connection);
-      await Component<ISchwabConnectionGrain>().Setup(connection);
+      await Component<ISchwabConnectionGrain>().Setup(connection, observer);
       await Component<ISchwabOrderSenderGrain>().Setup(connection);
       await Component<ISchwabTransactionsGrain>().Setup(connection);
 

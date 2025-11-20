@@ -2,7 +2,6 @@ using Core.Extensions;
 using Core.Models;
 using Orleans;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -43,12 +42,16 @@ namespace Core.Grains
     /// <param name="criteria"></param>
     public virtual Task<PricesResponse> Prices(Criteria criteria)
     {
-      var response = new PricesResponse
-      {
-        Data = State.Items
-      };
+      var items = State.Items
+        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
+        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
+        .TakeLast(criteria?.Count ?? State.Items.Count)
+        .ToArray();
 
-      return Task.FromResult(response);
+      return Task.FromResult(new PricesResponse
+      {
+        Data = items
+      });
     }
 
     /// <summary>
@@ -57,12 +60,16 @@ namespace Core.Grains
     /// <param name="criteria"></param>
     public virtual Task<PricesResponse> PriceGroups(Criteria criteria)
     {
-      var response = new PricesResponse
-      {
-        Data = State.ItemGroups
-      };
+      var items = State.ItemGroups
+        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
+        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
+        .TakeLast(criteria?.Count ?? State.ItemGroups.Count)
+        .ToArray();
 
-      return Task.FromResult(response);
+      return Task.FromResult(new PricesResponse
+      {
+        Data = items
+      });
     }
 
     /// <summary>

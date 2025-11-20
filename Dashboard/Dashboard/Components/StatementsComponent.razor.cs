@@ -67,6 +67,7 @@ namespace Dashboard.Components
       var balance = adapters.Sum(o => o.Account.Balance ?? 0);
       var actions = actionResponses
         .SelectMany(o => o.Data)
+        .Where(o => o?.Operation?.Time is not null)
         .OrderBy(o => o.Operation.Time)
         .ToList();
 

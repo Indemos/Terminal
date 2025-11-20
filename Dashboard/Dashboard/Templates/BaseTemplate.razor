@@ -5,11 +5,13 @@
 @using Dashboard.Services
 @using Dashboard.Templates
 @using Dashboard.Themes
+@using Orleans
+@using Orleans.Streams
 
 @inject ISnackbar Popup
 @inject IConfiguration Configuration
+@inject IClusterClient Connector
 @inject LogService Recorder
-@inject MessageService Messenger
 
 @inherits LayoutComponentBase
 
@@ -31,15 +33,17 @@
   {
     if (setup)
     {
+      var messenger = Connector
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
       StateHasChanged();
 
-      Messenger.Subscribe<Message>(message =>
+      messenger.SubscribeAsync<Message>((message, o) =>
       {
         try
         {
-          Recorder
-          .Data
-          .Information("{@Message}", message);
+          Recorder.Data.Information("{@Message}", message);
 
           if (message.Content is not null)
           {
@@ -49,8 +53,7 @@
         catch (Exception) { }
 
         return Task.CompletedTask;
-
-      }, nameof(Message));
+      });
     }
   }
 }

@@ -1,8 +1,8 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
-using Core.Services;
 using MessagePack;
 using Orleans;
 using Simulation.Models;
@@ -23,19 +23,24 @@ namespace Simulation.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="observer"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
   }
 
   /// <summary>
   /// Constructor
   /// </summary>
-  /// <param name="messenger"></param>
-  public class SimConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), ISimConnectionGrain
+  public class SimConnectionGrain : ConnectionGrain, ISimConnectionGrain
   {
     /// <summary>
     /// State
     /// </summary>
     protected Connection state;
+
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
 
     /// <summary>
     /// Subscription states
@@ -53,14 +58,16 @@ namespace Simulation.Grains
     protected ConcurrentDictionary<string, IEnumerator<string>> streams = new();
 
     /// <summary>
-    /// Connect
+    /// Setup
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       await Disconnect();
 
       state = connection;
+      observer = grainObserver;
       streams = state.Account.Instruments.ToDictionary(
         o => o.Value.Name,
         o => Directory
@@ -114,8 +121,8 @@ namespace Simulation.Grains
       var descriptor = this.GetDescriptor();
       var instrumentDescriptor = this.GetDescriptor(instrument.Name);
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
-      var instrumentGrain = GrainFactory.GetGrain<ISimInstrumentGrain>(instrumentDescriptor);
-      var optionsGrain = GrainFactory.GetGrain<ISimOptionsGrain>(instrumentDescriptor);
+      var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
+      var optionsGrain = GrainFactory.GetGrain<IOptionsGrain>(instrumentDescriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
 
@@ -144,17 +151,19 @@ namespace Simulation.Grains
           var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var optionsMap = min.Value.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-          var message = await instrumentGrain.Send(min.Value.Instrument with
+          var group = await instrumentGrain.Send(min.Value.Instrument with
           {
             Name = instrument.Name,
             TimeFrame = instrument.TimeFrame
           });
 
+          observer.StreamPrice(group);
+
           await domGrain.Store(min.Value.Dom);
           await optionsGrain.Store(min.Value.Options);
-          await ordersGrain.Tap(message);
-          await positionsGrain.Tap(message);
-          await messenger.Send(message);
+          await ordersGrain.Tap(group);
+          await positionsGrain.Tap(group);
+          await observer.StreamTrade(group);
 
           foreach (var option in optionsMap)
           {

@@ -1,6 +1,8 @@
 using Core.Conventions;
+using Core.Enums;
 using Core.Grains;
 using Core.Models;
+using Orleans;
 using Simulation.Grains;
 using System.Threading.Tasks;
 
@@ -18,9 +20,22 @@ namespace Simulation
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      var observer = Connector.CreateObjectReference<ITradeObserver>(this);
+      var connection = new Models.Connection()
+      {
+        Account = Account,
+        Source = Source
+      };
+
       SubscribeToUpdates();
 
-      return await Component<ISimConnectionGrain>().Setup(new() { Account = Account, Source = Source });
+      await Component<ISimConnectionGrain>().Setup(connection, observer);
+      await Component<ITransactionsGrain>().Setup(observer);
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
     }
 
     /// <summary>
@@ -64,7 +79,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPrices(Criteria criteria)
     {
-      return Component<ISimInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
     }
 
     /// <summary>
@@ -73,7 +88,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
-      return Component<ISimInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
     }
 
     /// <summary>
@@ -82,7 +97,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<InstrumentsResponse> GetOptions(Criteria criteria)
     {
-      return Component<ISimOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>

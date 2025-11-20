@@ -138,7 +138,7 @@ namespace Core.Grains
         if (response.Data is not null)
         {
           State.Grains.Remove(grain.Key);
-          await positionsGrain.Store(response.Data);
+          await positionsGrain.Send(response.Data);
         }
       }
 

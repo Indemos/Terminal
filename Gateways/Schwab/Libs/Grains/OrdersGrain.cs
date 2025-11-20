@@ -61,13 +61,13 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Orders(Criteria criteria)
     {
-      if (criteria.Store)
+      if (criteria?.Source is true)
       {
         return await Orders(criteria);
       }
 
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var query = new OrderQuery { AccountCode = criteria.Account.Name};
+      var query = new OrderQuery { AccountCode = criteria.Account.Descriptor};
       var messages = await connector.GetOrders(query, cleaner.Token);
       var items = messages.Select(MapOrder);
 

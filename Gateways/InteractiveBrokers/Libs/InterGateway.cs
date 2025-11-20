@@ -3,6 +3,7 @@ using Core.Grains;
 using Core.Models;
 using InteractiveBrokers.Models;
 using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace InteractiveBrokers
@@ -35,6 +36,7 @@ namespace InteractiveBrokers
     public override async Task<StatusResponse> Connect()
     {
       var grain = Component<IInterConnectionGrain>();
+      var observer = Connector.CreateObjectReference<ITradeObserver>(this);
 
       await grain.Setup(new Connection
       {
@@ -43,7 +45,8 @@ namespace InteractiveBrokers
         Span = Span,
         Timeout = Timeout,
         Account = Account,
-      });
+
+      }, observer);
 
       SubscribeToUpdates();
 
@@ -91,7 +94,15 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPrices(Criteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      var instrumentGrain = Component<IInstrumentGrain>(criteria.Instrument.Name);
+      var connectionGrain = Component<IInterConnectionGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return instrumentGrain.Prices(criteria);
+      }
+
+      return connectionGrain.Prices(criteria);
     }
 
     /// <summary>
@@ -100,7 +111,15 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      var instrumentGrain = Component<IInstrumentGrain>(criteria.Instrument.Name);
+      var connectionGrain = Component<IInterConnectionGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return instrumentGrain.PriceGroups(criteria);
+      }
+
+      return connectionGrain.PriceGroups(criteria);
     }
 
     /// <summary>
@@ -118,7 +137,20 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(Criteria criteria)
     {
-      return await Component<IInterConnectionGrain>().Orders(criteria);
+      var ordersGrain = Component<IOrdersGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return await ordersGrain.Orders(criteria);
+      }
+
+      var response = await connectionGrain.Orders(criteria);
+
+      await ordersGrain.Clear();
+      await Task.WhenAll(response.Data.Select(ordersGrain.Send));
+
+      return response;
     }
 
     /// <summary>
@@ -127,7 +159,20 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(Criteria criteria)
     {
-      return await Component<IInterConnectionGrain>().Positions(criteria);
+      var positionsGrain = Component<IPositionsGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return await positionsGrain.Positions(criteria);
+      }
+
+      var response = await connectionGrain.Positions(criteria);
+
+      await positionsGrain.Clear();
+      await Task.WhenAll(response.Data.Select(positionsGrain.Send));
+
+      return response;
     }
 
     /// <summary>
@@ -145,7 +190,13 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public override async Task<OrderResponse> SendOrder(Order order)
     {
-      return await Component<IInterConnectionGrain>().SendOrder(order);
+      var ordersGrain = Component<IOrdersGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
+      var response = await connectionGrain.SendOrder(order);
+
+      await ordersGrain.Send(order);
+
+      return response;
     }
 
     /// <summary>

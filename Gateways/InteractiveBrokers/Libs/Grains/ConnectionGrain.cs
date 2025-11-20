@@ -1,8 +1,8 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
-using Core.Services;
 using IBApi;
 using IBApi.Messages;
 using InteractiveBrokers.Mappers;
@@ -22,7 +22,8 @@ namespace InteractiveBrokers
     /// Setup
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
 
     /// <summary>
     /// List of prices by criteria
@@ -72,7 +73,7 @@ namespace InteractiveBrokers
     Task<Account> AccountSummary();
   }
 
-  public class InterConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), IInterConnectionGrain
+  public class InterConnectionGrain : ConnectionGrain, IInterConnectionGrain
   {
     /// <summary>
     /// State
@@ -83,6 +84,11 @@ namespace InteractiveBrokers
     /// IB client
     /// </summary>
     protected InterBroker connector;
+
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
 
     /// <summary>
     /// Asset subscriptions
@@ -104,9 +110,11 @@ namespace InteractiveBrokers
     /// Setup
     /// </summary>
     /// <param name="connection"></param>
-    public virtual Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       state = connection;
+      observer = grainObserver;
 
       return Task.FromResult(new StatusResponse
       {
@@ -132,7 +140,7 @@ namespace InteractiveBrokers
 
       if (id is 0)
       {
-        await messenger.Send(new Message()
+        await messenger.OnNextAsync(new Message()
         {
           Content = "No connection",
           Action = ActionEnum.Disconnect
@@ -183,7 +191,7 @@ namespace InteractiveBrokers
 
       if (contractMessage is null)
       {
-        await messenger.Send(new Message()
+        await messenger.OnNextAsync(new Message()
         {
           Content = "No such instrument",
           Action = ActionEnum.Disconnect
@@ -210,10 +218,11 @@ namespace InteractiveBrokers
         var price = Downstream.MapPrice(priceMessage);
         var group = await instrumentGrain.Send(instrument with { Price = price });
 
+        observer.StreamPrice(group);
+
         await ordersGrain.Tap(group);
         await positionsGrain.Tap(group);
-
-        await messenger.Send(group);
+        await observer.StreamTrade(group);
       });
 
       return new()
@@ -337,20 +346,10 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Orders(Criteria criteria)
     {
-      var descriptor = this.GetDescriptor();
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-
-      if (criteria.Store)
-      {
-        return await ordersGrain.Orders(criteria);
-      }
-
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.MapOrder).ToArray();
 
-      await ordersGrain.Clear();
-      await Task.WhenAll(items.Select(ordersGrain.Send));
       await Task.Delay(state.Span);
 
       return new()
@@ -365,20 +364,10 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Positions(Criteria criteria)
     {
-      var descriptor = this.GetDescriptor();
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-
-      if (criteria.Store)
-      {
-        return await positionsGrain.Positions(criteria);
-      }
-
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Name);
+      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Descriptor);
       var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
 
-      await positionsGrain.Clear();
-      await Task.WhenAll(items.Select(positionsGrain.Store));
       await Task.Delay(state.Span);
 
       return new()
@@ -393,14 +382,11 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> SendOrder(Core.Models.Order order)
     {
-      var descriptor = this.GetDescriptor();
       var cleaner = new CancellationTokenSource(state.Timeout);
       var contract = Upstream.MapContract(order.Operation.Instrument);
       var (orderMessage, SL, TP) = Upstream.MapOrder(connector.Id, order, state.Account);
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       await connector.SendOrder(cleaner.Token, contract, orderMessage, SL, TP);
-      await ordersGrain.Send(order);
       await Task.Delay(state.Span);
 
       return new()
@@ -416,10 +402,10 @@ namespace InteractiveBrokers
     public virtual async Task<DescriptorResponse> ClearOrder(Core.Models.Order order)
     {
       var descriptor = this.GetDescriptor();
-      var cleaner = new CancellationTokenSource(state.Timeout);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
-      await connector.ClearOrder(cleaner.Token, int.Parse(order.Id));
+      connector.ClearOrder(int.Parse(order.Id));
+
       await ordersGrain.Clear(order);
       await Task.Delay(state.Span);
 

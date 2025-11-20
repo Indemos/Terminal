@@ -2,11 +2,11 @@
 
 @page "/gateways/interbroker"
 
-<ControlsComponent @ref="View">
+<ControlsComponent Adapters="Adapters">
   <ChartsComponent Name="Indicators" @ref="DataView" />
   <ChartsComponent Name="Performance" @ref="PerformanceView" />
   <OrdersComponent Name="Orders" @ref="OrdersView" />
   <PositionsComponent Name="Positions" @ref="PositionsView" />
   <TransactionsComponent Name="Transactions" @ref="TransactionsView" />
-  <StatementsComponent Name="Statements" Adapters="View.Adapters" @ref="StatementsView" />
+  <StatementsComponent Name="Statements" Adapters="Adapters" @ref="StatementsView" />
 </ControlsComponent>

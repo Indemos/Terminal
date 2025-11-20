@@ -20,7 +20,7 @@ namespace Schwab.Grains
     public override async Task<OrderResponse> Send(Order order)
     {
       var message = MapOrder(order);
-      var accountCode = order.Account.Name;
+      var accountCode = order.Account.Descriptor;
       var messageResponse = await connector.SendOrder(message, accountCode, CancellationToken.None);
       var response = new OrderResponse { Data = new() { Id = messageResponse.OrderId } };
 

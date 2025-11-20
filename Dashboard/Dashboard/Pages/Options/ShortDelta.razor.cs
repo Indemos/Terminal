@@ -45,14 +45,13 @@ namespace Dashboard.Pages.Options
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      View.Adapters["Prime"] = new SimGateway
+      Adapters["Prime"] = new SimGateway
       {
-        Messenger = Messenger,
         Connector = Connector,
         Source = Configuration["Documents:Resources"],
         Account = new()
         {
-          Name = "Demo",
+          Descriptor = "Demo",
           Balance = 25000,
           Instruments = Instruments
         }
@@ -61,16 +60,16 @@ namespace Dashboard.Pages.Options
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
-      var performance = await Performance.Update(View.Adapters.Values);
+      var performance = await Performance.Update(Adapters.Values);
 
-      OrdersView.Update(View.Adapters.Values);
-      PositionsView.Update(View.Adapters.Values);
-      TransactionsView.Update(View.Adapters.Values);
+      OrdersView.Update(Adapters.Values);
+      PositionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
@@ -79,7 +78,7 @@ namespace Dashboard.Pages.Options
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var options = await GetOptions(price, new DateTime(price.Time.Value));
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
@@ -103,7 +102,7 @@ namespace Dashboard.Pages.Options
     /// </summary>
     (double, double) UpdateIndicators(Price point, IList<Order> positions)
     {
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
@@ -154,7 +153,7 @@ namespace Dashboard.Pages.Options
     /// <param name="date"></param>
     async Task<IList<Instrument>> GetOptions(Price price, DateTime date)
     {
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var screener = new Criteria
       {
         MinDate = date,

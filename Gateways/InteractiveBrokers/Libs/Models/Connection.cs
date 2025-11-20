@@ -23,7 +23,7 @@ namespace InteractiveBrokers.Models
     /// <summary>
     /// Timeout
     /// </summary>
-    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Account

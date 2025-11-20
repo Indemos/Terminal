@@ -1,3 +1,4 @@
+using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -8,6 +9,7 @@ using MudBlazor;
 using MudBlazor.Services;
 using Orleans;
 using Orleans.Hosting;
+using Orleans.Providers;
 using Orleans.Serialization;
 
 namespace Dashboard
@@ -24,6 +26,7 @@ namespace Dashboard
       {
         orleans.UseLocalhostClustering();
         orleans.AddMemoryGrainStorageAsDefault();
+        orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(Message));
         orleans.AddMemoryGrainStorage("PubSubStore");
         orleans.UseDashboard(options =>
         {
@@ -47,9 +50,7 @@ namespace Dashboard
       builder.Services.AddRazorPages();
       builder.Services.AddServerSideBlazor();
       builder.Services.AddSingleton<StateService>();
-      builder.Services.AddSingleton<MessageService>();
       builder.Services.AddSingleton<SchedulerService>();
-      builder.Services.AddSingleton<ConversionService>();
       builder.Services.AddSingleton(o => new LogService(setup["Documents:Logs"]));
       builder.Services.AddMudServices(o =>
       {

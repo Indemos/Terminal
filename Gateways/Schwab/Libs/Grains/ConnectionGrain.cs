@@ -1,8 +1,8 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
-using Core.Services;
 using Schwab.Enums;
 using Schwab.Messages;
 using Schwab.Models;
@@ -17,14 +17,14 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="observer"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
   }
 
   /// <summary>
   /// Constructor
   /// </summary>
-  /// <param name="messenger"></param>
-  public class SchwabConnectionGrain(MessageService messenger) : ConnectionGrain(messenger), ISchwabConnectionGrain
+  public class SchwabConnectionGrain : ConnectionGrain, ISchwabConnectionGrain
   {
     /// <summary>
     /// State
@@ -37,14 +37,21 @@ namespace Schwab.Grains
     protected SchwabBroker connector;
 
     /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
+    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       await Disconnect();
 
       state = connection;
+      observer = grainObserver;
       connector = new()
       {
         ClientId = connection.Id,
@@ -92,14 +99,16 @@ namespace Schwab.Grains
 
       await connector.Subscribe(instrument.Name, MapSubType(instrument), async o =>
       {
-        var message = await instrumentGrain.Send(instrument with
+        var group = await instrumentGrain.Send(instrument with
         {
           Price = MapPrice(o)
         });
 
-        await ordersGrain.Tap(message);
-        await positionsGrain.Tap(message);
-        await messenger.Send(message);
+        observer.StreamPrice(group);
+
+        await ordersGrain.Tap(group);
+        await positionsGrain.Tap(group);
+        await observer.StreamTrade(group);
       });
 
       await connector.SubscribeToDom(instrument.Name, MapDomSubType(instrument), async o =>

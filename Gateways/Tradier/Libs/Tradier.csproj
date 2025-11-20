@@ -1,17 +1,19 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
     <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>disable</ImplicitUsings>
+    <AppDesignerFolder>Data</AppDesignerFolder>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="InterBroker" Version="0.0.23" />
+    <PackageReference Include="Flurl.Http" Version="4.0.2" />
+    <PackageReference Include="tradier-dotnet-client" Version="1.0.11" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\Core\Core\Core.csproj" />
   </ItemGroup>
-
+  
 </Project>

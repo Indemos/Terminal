@@ -40,8 +40,8 @@ namespace Dashboard.Pages.Options
 
     IGateway Adapter
     {
-      get => View.Adapters["Prime"];
-      set => View.Adapters["Prime"] = value;
+      get => Adapters["Prime"];
+      set => Adapters["Prime"] = value;
     }
 
     DateTime CurDate(Price point)
@@ -91,14 +91,13 @@ namespace Dashboard.Pages.Options
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      View.Adapters["Prime"] = new SimGateway
+      Adapters["Prime"] = new SimGateway
       {
-        Messenger = Messenger,
         Connector = Connector,
-        Source = "D:/Code/Options", // Configuration["Documents:Resources"],
+        Source = Configuration["Documents:Resources"],
         Account = new()
         {
-          Name = "Demo",
+          Descriptor = "Demo",
           Balance = 25000,
           Instruments = Instruments
         }
@@ -107,7 +106,7 @@ namespace Dashboard.Pages.Options
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected override async void OnViewUpdate(Instrument instrument)
     {
       Price = instrument.Price.Last;
 
@@ -115,12 +114,12 @@ namespace Dashboard.Pages.Options
       var price = instrument.Price;
       var account = adapter.Account;
       var positions = (await adapter.GetPositions(default)).Data;
-      var performance = await Performance.Update(View.Adapters.Values);
+      var performance = await Performance.Update(Adapters.Values);
       var (curDelta, nextDelta, sigma) = GetIndicators(positions, price);
 
-      OrdersView.Update(View.Adapters.Values);
-      PositionsView.Update(View.Adapters.Values);
-      TransactionsView.Update(View.Adapters.Values);
+      OrdersView.Update(Adapters.Values);
+      PositionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Data", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
@@ -160,7 +159,6 @@ namespace Dashboard.Pages.Options
 
         if (Math.Abs((Price - Strike).Value) > 1)
         {
-          //await ClosePosition(adapter, o => Equals(o?.Operation?.Instrument?.Derivative?.ExpirationDate?.Date, NextDate(point).Date));
           await ClosePosition(adapter);
           Strike = Price;
           isBuy = Price > Strike;

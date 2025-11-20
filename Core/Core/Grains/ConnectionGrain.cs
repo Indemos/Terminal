@@ -2,8 +2,10 @@ using Core.Enums;
 using Core.Models;
 using Core.Services;
 using Orleans;
+using Orleans.Streams;
 using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -36,23 +38,35 @@ namespace Core.Grains
   /// <summary>
   /// Constructor
   /// </summary>
-  /// <param name="messenger"></param>
-  public class ConnectionGrain(MessageService messenger) : Grain, IConnectionGrain
+  public class ConnectionGrain : Grain, IConnectionGrain
   {
-    /// <summary>
-    /// Messenger
-    /// </summary>
-    protected MessageService messenger = messenger;
-
     /// <summary>
     /// HTTP service
     /// </summary>
     protected ConversionService converter = new();
 
     /// <summary>
+    /// Messenger
+    /// </summary>
+    protected IAsyncStream<Message> messenger;
+
+    /// <summary>
     /// Disposable connections
     /// </summary>
     protected List<IDisposable> connections = new();
+
+    /// <summary>
+    /// Activation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
+    {
+      messenger = this
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
+      await base.OnActivateAsync(cancellation);
+    }
 
     /// <summary>
     /// Connect

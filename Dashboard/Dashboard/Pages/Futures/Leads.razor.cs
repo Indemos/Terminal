@@ -23,10 +23,19 @@ namespace Dashboard.Pages.Futures
     OrdersComponent OrdersView { get; set; }
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
+
     PerformanceIndicator Performance { get; set; }
+
     Dictionary<string, ScaleIndicator> Scales { get; set; }
+
     Price PreviousLeader { get; set; }
     Price PreviousFollower { get; set; }
+
+    Dictionary<string, Instrument> Instruments = new()
+    {
+      ["ESU25"] = new() { Name = "ESU25", StepValue = 12.50, StepSize = 0.25, Leverage = 50, Commission = 3.65 },
+      ["NQU25"] = new() { Name = "NQU25", StepValue = 5, StepSize = 0.25, Leverage = 20, Commission = 3.65 },
+    };
 
     protected override async Task OnView()
     {
@@ -43,20 +52,15 @@ namespace Dashboard.Pages.Futures
 
     protected override Task OnTrade()
     {
-      var adapter = View.Adapters["Prime"] = new SimGateway
+      var adapter = Adapters["Prime"] = new SimGateway
       {
-        Messenger = Messenger,
         Connector = Connector,
         Source = Configuration["Documents:Resources"] + "/FUTS/2025-06-17",
         Account = new()
         {
-          Name = "Demo",
+          Descriptor = "Demo",
           Balance = 25000,
-          Instruments = new()
-          {
-            ["ESU25"] = new() { Name = "ESU25", StepValue = 12.50, StepSize = 0.25, Leverage = 50, Commission = 3.65 },
-            ["NQU25"] = new() { Name = "NQU25", StepValue = 5, StepSize = 0.25, Leverage = 20, Commission = 3.65 },
-          }
+          Instruments = Instruments
         }
       };
 
@@ -71,10 +75,43 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
+    protected override async void OnViewUpdate(Instrument instrument)
+    {
+      var price = instrument.Price;
+      var adapter = Adapters["Prime"];
+      var account = adapter.Account;
+      var assetX = account.Instruments["ESU25"];
+      var assetY = account.Instruments["NQU25"];
+      var seriesX = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = assetX })).Data;
+      var seriesY = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = assetY })).Data;
+
+      if (seriesX.Count is 0 || seriesY.Count is 0)
+      {
+        return;
+      }
+
+      var performance = await Performance.Update([adapter]);
+      var scaleX = await Scales[assetX.Name].Update(seriesX);
+      var scaleY = await Scales[assetY.Name].Update(seriesY);
+      var priceX = seriesX.Last();
+      var priceY = seriesY.Last();
+      var spread = Math.Abs((scaleX.Response.Last - scaleY.Response.Last).Value);
+
+      OrdersView.Update(Adapters.Values);
+      PositionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values);
+      LeaderView.Update(price.Time.Value, "Prices", "Leader", new AreaShape { Y = priceX.Last, Component = ComUp });
+      FollowerView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = spread, Component = Com });
+      IndicatorsView.Update(price.Time.Value, "Indicators", "X", new LineShape { Y = scaleX.Response.Last, Component = ComUp });
+      IndicatorsView.Update(price.Time.Value, "Indicators", "Y", new LineShape { Y = scaleY.Response.Last, Component = ComDown });
+      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+    }
+
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
       var assetX = account.Instruments["ESU25"];
       var assetY = account.Instruments["NQU25"];
@@ -121,15 +158,6 @@ namespace Dashboard.Pages.Futures
 
       PreviousLeader = scaleX.Response with { };
       PreviousFollower = scaleY.Response with { };
-      TransactionsView.Update([.. View.Adapters.Values]);
-      OrdersView.Update([.. View.Adapters.Values]);
-      PositionsView.Update([.. View.Adapters.Values]);
-      LeaderView.Update(price.Time.Value, "Prices", "Leader", LeaderView.GetShape<CandleShape>(priceX));
-      FollowerView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = spread, Component = Com });
-      IndicatorsView.Update(price.Time.Value, "Indicators", "X", new LineShape { Y = scaleX.Response.Last, Component = ComUp });
-      IndicatorsView.Update(price.Time.Value, "Indicators", "Y", new LineShape { Y = scaleY.Response.Last, Component = ComDown });
-      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
   }
 }

@@ -2,7 +2,7 @@
 
 @page "/futures/leads"
 
-<ControlsComponent @ref="View">
+<ControlsComponent Adapters="Adapters">
   <ChartsComponent Name="Prices" @ref="LeaderView" />
   <ChartsComponent Name="Spread" @ref="FollowerView" />
   <ChartsComponent Name="Indicators" @ref="IndicatorsView" />
@@ -10,5 +10,5 @@
   <OrdersComponent Name="Orders" @ref="OrdersView" />
   <PositionsComponent Name="Positions" @ref="PositionsView" />
   <TransactionsComponent Name="Transactions" @ref="TransactionsView" />
-  <StatementsComponent Name="Statements" Adapters="View.Adapters" @ref="StatementsView" />
+  <StatementsComponent Name="Statements" Adapters="Adapters" @ref="StatementsView" />
 </ControlsComponent>

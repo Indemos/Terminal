@@ -1,8 +1,12 @@
+using Core.Conventions;
+using Core.Enums;
 using Core.Extensions;
 using Core.Models;
 using Core.Services;
 using Orleans;
+using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -10,6 +14,12 @@ namespace Core.Grains
 {
   public interface ITransactionsGrain : IGrainWithStringKey
   {
+    /// <summary>
+    /// Setup
+    /// </summary>
+    /// <param name="observer"></param>
+    Task<StatusResponse> Setup(ITradeObserver observer);
+
     /// <summary>
     /// Get transactions
     /// </summary>
@@ -27,12 +37,26 @@ namespace Core.Grains
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class TransactionsGrain(MessageService messenger) : Grain<Transactions>, ITransactionsGrain
+  public class TransactionsGrain : Grain<Transactions>, ITransactionsGrain
   {
     /// <summary>
-    /// Messenger
+    /// Observer
     /// </summary>
-    protected MessageService messenger = messenger;
+    protected ITradeObserver observer;
+
+    /// <summary>
+    /// Setup
+    /// </summary>
+    /// <param name="grainObserver"></param>
+    public virtual Task<StatusResponse> Setup(ITradeObserver grainObserver)
+    {
+      observer = grainObserver;
+
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Active
+      });
+    }
 
     /// <summary>
     /// Get transactions
@@ -62,7 +86,7 @@ namespace Core.Grains
 
       State.Grains.Add(grain);
 
-      await messenger.Send(order);
+      await observer.StreamOrder(order);
 
       return response;
     }

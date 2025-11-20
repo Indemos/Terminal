@@ -7,7 +7,7 @@ namespace Core.Models
     /// <summary>
     /// Name
     /// </summary>
-    public string Name { get; init; }
+    public string Descriptor { get; init; }
 
     /// <summary>
     /// Balance

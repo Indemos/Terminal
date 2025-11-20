@@ -1,20 +1,63 @@
 using Core.Enums;
 using Core.Models;
-using Core.Services;
 using Orleans;
+using Orleans.Streams;
 using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Core.Conventions
 {
+  /// <summary>
+  /// Grain messenger
+  /// </summary>
+  public interface ITradeObserver : IGrainObserver
+  {
+    /// <summary>
+    /// Order message
+    /// </summary>
+    /// <param name="order"></param>
+    Task StreamOrder(Order order);
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task StreamTrade(Instrument instrument);
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    /// <param name="instrument"></param>
+    void StreamPrice(Instrument instrument);
+  }
+
   public interface IGateway
   {
     /// <summary>
     /// Account
     /// </summary>
     Account Account { get; set; }
+
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    IAsyncStream<Message> Messenger { get; }
+
+    /// <summary>
+    /// Order message
+    /// </summary>
+    Func<Order, Task> OnOrder { get; set; }
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    Action<Instrument> OnPrice { get; set; }
+
+    /// <summary>
+    /// Trade message
+    /// </summary>
+    Func<Instrument, Task> OnTrade { get; set; }
 
     /// <summary>
     /// Connect
@@ -103,17 +146,12 @@ namespace Core.Conventions
     Task<DescriptorResponse> ClearOrder(Order order);
   }
 
-  public abstract class Gateway : IGateway
+  public abstract class Gateway : IGateway, ITradeObserver
   {
     /// <summary>
     /// Grain client
     /// </summary>
     public virtual IClusterClient Connector { get; set; }
-
-    /// <summary>
-    /// Messenger
-    /// </summary>
-    public virtual MessageService Messenger { get; set; }
 
     /// <summary>
     /// Account
@@ -124,6 +162,46 @@ namespace Core.Conventions
     /// Grain namespace
     /// </summary>
     public virtual string Space { get; set; } = Guid.NewGuid().ToString();
+
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    public virtual IAsyncStream<Message> Messenger => Connector
+      .GetStreamProvider(nameof(Message))
+      .GetStream<Message>(string.Empty, Guid.Empty);
+
+    /// <summary>
+    /// Order message
+    /// </summary>
+    public virtual Func<Order, Task> OnOrder { get; set; } = o => Task.CompletedTask;
+
+    /// <summary>
+    /// Trade message
+    /// </summary>
+    public virtual Func<Instrument, Task> OnTrade { get; set; } = o => Task.CompletedTask;
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    public virtual Action<Instrument> OnPrice { get; set; } = o => { };
+
+    /// <summary>
+    /// Order message
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual Task StreamOrder(Order order) => OnOrder(order);
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    /// <param name="instrument"></param>
+    public virtual void StreamPrice(Instrument instrument) => OnPrice(instrument);
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    /// <param name="instrument"></param>
+    public virtual Task StreamTrade(Instrument instrument) => OnTrade(instrument);
 
     /// <summary>
     /// Connect
@@ -238,8 +316,8 @@ namespace Core.Conventions
     /// </summary>
     /// <param name="instrument"></param>
     protected virtual string Descriptor(string instrument = null) => instrument is null ?
-      $"{Space}:{Account.Name}" :
-      $"{Space}:{Account.Name}:{instrument}";
+      $"{Space}:{Account.Descriptor}" :
+      $"{Space}:{Account.Descriptor}:{instrument}";
 
     /// <summary>
     /// Grain selector
@@ -254,7 +332,7 @@ namespace Core.Conventions
     /// </summary>
     protected virtual void SubscribeToUpdates()
     {
-      Messenger.Subscribe<Order>(position =>
+      OnOrder += position =>
       {
         if (position.Operation.Status is OrderStatusEnum.Transaction)
         {
@@ -265,8 +343,7 @@ namespace Core.Conventions
         }
 
         return Task.CompletedTask;
-
-      }, nameof(Order));
+      };
     }
   }
 }

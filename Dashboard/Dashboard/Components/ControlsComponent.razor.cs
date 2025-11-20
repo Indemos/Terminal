@@ -3,6 +3,8 @@ using Core.Enums;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
+using Orleans;
+using Orleans.Streams;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,13 +14,17 @@ namespace Dashboard.Components
 {
   public partial class ControlsComponent
   {
-    [Inject] MessageService Messenger { get; set; }
+    [Inject] IClusterClient Connector { get; set; }
     [Inject] StateService Subscription { get; set; }
     [Inject] NavigationManager Navigator { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
+    [Parameter] public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
 
-    public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    IAsyncStream<Message> Messenger { get; set; }
 
     /// <summary>
     /// Setup views
@@ -30,6 +36,10 @@ namespace Dashboard.Components
 
       if (setup)
       {
+        Messenger = Connector
+          .GetStreamProvider(nameof(Message))
+          .GetStream<Message>(string.Empty, Guid.Empty);
+
         Subscription.State = new()
         {
           Next = SubscriptionEnum.None
@@ -62,7 +72,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new Message() { Error = e, Content = e.Message });
+        await Messenger.OnNextAsync(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -89,7 +99,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new Message() { Error = e, Content = e.Message });
+        await Messenger.OnNextAsync(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -116,7 +126,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new Message() { Error = e, Content = e.Message });
+        await Messenger.OnNextAsync(new Message() { Error = e, Content = e.Message });
       }
     }
 
@@ -143,7 +153,7 @@ namespace Dashboard.Components
       }
       catch (Exception e)
       {
-        await Messenger.Send(new Message() { Error = e, Content = e.Message });
+        await Messenger.OnNextAsync(new Message() { Error = e, Content = e.Message });
       }
     }
   }

@@ -126,7 +126,7 @@ namespace InteractiveBrokers.Mappers
       var volume = (double)Math.Abs(message.Position);
       var action = new Operation
       {
-        AveragePrice = message.AverageCost,
+        AveragePrice = message.AverageCost / instrument.Leverage,
         Instrument = instrument,
         Amount = volume
       };

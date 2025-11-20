@@ -40,14 +40,13 @@ namespace Dashboard.Pages.Shares
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      View.Adapters["Prime"] = new SimGateway
+      Adapters["Prime"] = new SimGateway
       {
-        Messenger = Messenger,
         Connector = Connector,
         Source = Configuration["Documents:Resources"],
         Account = new Account
         {
-          Name = "Demo",
+          Descriptor = "Demo",
           Balance = 25000,
           Instruments = Instruments
         }
@@ -56,16 +55,16 @@ namespace Dashboard.Pages.Shares
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
       var seriesX = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
       var seriesY = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
-      var performance = await Performance.Update(View.Adapters.Values);
+      var performance = await Performance.Update(Adapters.Values);
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -80,9 +79,9 @@ namespace Dashboard.Pages.Shares
         (xPoint.Bid - yPoint.Ask - expenses).Value,
         (yPoint.Bid - xPoint.Ask - expenses).Value);
 
-      OrdersView.Update(View.Adapters.Values);
-      PositionsView.Update(View.Adapters.Values);
-      TransactionsView.Update(View.Adapters.Values);
+      OrdersView.Update(Adapters.Values);
+      PositionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = range, Component = Com });
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
@@ -91,7 +90,7 @@ namespace Dashboard.Pages.Shares
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];

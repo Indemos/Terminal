@@ -11,7 +11,7 @@ namespace Core.Validators
     public AccountValidator()
     {
       RuleFor(o => o.Balance).NotEmpty();
-      RuleFor(o => o.Name).NotEmpty();
+      RuleFor(o => o.Descriptor).NotEmpty();
     }
   }
 }

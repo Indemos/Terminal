@@ -19,7 +19,7 @@ namespace Core.Grains
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    Task<OrderResponse> Store(Order order);
+    Task<OrderResponse> Send(Order order);
 
     /// <summary>
     /// Update instruments assigned to positions and other models
@@ -56,7 +56,7 @@ namespace Core.Grains
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(Order order)
+    public virtual async Task<OrderResponse> Send(Order order)
     {
       var descriptor = this.GetDescriptor();
       var instrument = order.Operation.Instrument.Name;

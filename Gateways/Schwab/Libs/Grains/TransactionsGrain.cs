@@ -1,7 +1,6 @@
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using Core.Services;
 using Schwab.Models;
 using System.Threading.Tasks;
 
@@ -16,7 +15,7 @@ namespace Schwab.Grains
     Task<StatusResponse> Setup(Connection connection);
   }
 
-  public class SchwabTransactionsGrain(MessageService messenger) : TransactionsGrain(messenger), ISchwabTransactionsGrain
+  public class SchwabTransactionsGrain : TransactionsGrain, ISchwabTransactionsGrain
   {
     /// <summary>
     /// State

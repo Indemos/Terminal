@@ -1,9 +1,9 @@
+using Core.Models;
 using Core.Services;
-using MessagePack;
-using MessagePack.Resolvers;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Orleans.Hosting;
+using Orleans.Providers;
 using Orleans.Serialization;
 using Orleans.TestingHost;
 
@@ -15,7 +15,7 @@ namespace Core.Tests
     {
       orleans.AddMemoryGrainStorageAsDefault();
       orleans.AddMemoryGrainStorage("PubSubStore");
-      orleans.Services.AddSingleton<MessageService>();
+      orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(Message));
       orleans.Services.AddSerializer(serializers =>
       {
         var converter = new ConversionService();
@@ -29,7 +29,7 @@ namespace Core.Tests
 
     public void Configure(IConfiguration configuration, IClientBuilder orleans)
     {
-      orleans.Services.AddSingleton<MessageService>();
+      orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(Message));
       orleans.Services.AddSerializer(serializers =>
       {
         var converter = new ConversionService();

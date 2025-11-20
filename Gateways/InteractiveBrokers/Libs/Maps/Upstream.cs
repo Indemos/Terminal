@@ -23,7 +23,7 @@ namespace InteractiveBrokers.Mappers
         OrderType = MapOrderType(orderModel.Type),
         TotalQuantity = (decimal)orderModel.Amount,
         ExtOperator = orderModel.Descriptor,
-        Account = account.Name
+        Account = account.Descriptor
       };
 
       switch (orderModel.Type)

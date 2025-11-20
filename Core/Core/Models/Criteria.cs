@@ -13,7 +13,7 @@ namespace Core.Models
     /// <summary>
     /// Cache
     /// </summary>
-    public bool Store { get; init; } = true;
+    public bool Source { get; init; }
 
     /// <summary>
     /// Start date

@@ -44,14 +44,13 @@ namespace Dashboard.Pages.Gateways
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      View.Adapters["Prime"] = new InterGateway
+      Adapters["Prime"] = new InterGateway
       {
-        Messenger = Messenger,
         Connector = Connector,
         Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"]),
         Account = new()
         {
-          Name = Configuration["InteractiveBrokers:PaperAccount"],
+          Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
           Instruments = Instruments
         }
       };
@@ -59,16 +58,16 @@ namespace Dashboard.Pages.Gateways
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
-      var performance = await Performance.Update(View.Adapters.Values);
+      var performance = await Performance.Update(Adapters.Values);
 
-      OrdersView.Update(View.Adapters.Values);
-      PositionsView.Update(View.Adapters.Values);
-      TransactionsView.Update(View.Adapters.Values);
+      OrdersView.Update(Adapters.Values);
+      PositionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
@@ -78,10 +77,10 @@ namespace Dashboard.Pages.Gateways
     {
       var name = instrument.Name;
       var price = instrument.Price;
-      var adapter = View.Adapters["Prime"];
+      var adapter = Adapters["Prime"];
       var account = adapter.Account;
-      var orders = (await adapter.GetOrders(new() { Store = false })).Data;
-      var positions = (await adapter.GetPositions(new() { Store = false })).Data;
+      var orders = (await adapter.GetOrders(new() { Source = false })).Data;
+      var positions = (await adapter.GetPositions(new() { Source = false })).Data;
 
       if (orders.Count is 0 && positions.Count is 0)
       {
