@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
@@ -52,8 +53,10 @@ namespace Simulation.Prices.Tests
     [Fact]
     public async Task Store()
     {
+      var descriptor = Descriptor;
       var stamp = DateTime.Now.Ticks;
-      var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(Descriptor);
+      var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+      var actionsGrain = _cluster.GrainFactory.GetGrain<ITransactionsGrain>(descriptor);
       var order = new Order
       {
         Amount = 1,
@@ -75,6 +78,15 @@ namespace Simulation.Prices.Tests
           }
         }
       };
+
+      var observer = new Mock<ITradeObserver>();
+      var observerReference = _cluster.Client.CreateObjectReference<ITradeObserver>(observer.Object);
+
+      observer
+        .Setup(o => o.StreamOrder(It.IsAny<Order>()))
+        .Verifiable();
+
+      await actionsGrain.Setup(observerReference);
 
       // Open
 
