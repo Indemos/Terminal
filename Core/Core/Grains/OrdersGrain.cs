@@ -3,6 +3,7 @@ using Core.Extensions;
 using Core.Models;
 using Core.Validators;
 using Orleans;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -16,6 +17,12 @@ namespace Core.Grains
     /// </summary>
     /// <param name="criteria"></param>
     Task<OrdersResponse> Orders(Criteria criteria);
+
+    /// <summary>
+    /// Store order
+    /// </summary>
+    /// <param name="order"></param>
+    Task<OrderResponse> Store(Order order);
 
     /// <summary>
     /// Send order
@@ -66,7 +73,7 @@ namespace Core.Grains
     }
 
     /// <summary>
-    /// Send order
+    /// Store order
     /// </summary>
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(Order order)

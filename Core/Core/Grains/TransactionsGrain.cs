@@ -2,11 +2,7 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Extensions;
 using Core.Models;
-using Core.Services;
 using Orleans;
-using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -85,8 +81,7 @@ namespace Core.Grains
       var response = await grain.Store(order);
 
       State.Grains.Add(grain);
-
-      await observer.StreamOrder(order);
+      observer.StreamOrder(order);
 
       return response;
     }

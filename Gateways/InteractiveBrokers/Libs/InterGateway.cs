@@ -35,10 +35,12 @@ namespace InteractiveBrokers
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      var grain = Component<IInterConnectionGrain>();
+      var actionsGrain = Component<ITransactionsGrain>();
+      var connectionGrain = Component<IInterConnectionGrain>();
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
 
-      await grain.Setup(new Connection
+      await actionsGrain.Setup(observer);
+      await connectionGrain.Setup(new Connection
       {
         Host = Host,
         Port = Port,
@@ -50,7 +52,7 @@ namespace InteractiveBrokers
 
       SubscribeToUpdates();
 
-      return await grain.Connect();
+      return await connectionGrain.Connect();
     }
 
     /// <summary>

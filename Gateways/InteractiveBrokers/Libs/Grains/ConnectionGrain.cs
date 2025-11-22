@@ -3,8 +3,10 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
+using Google.Protobuf.Reflection;
 using IBApi;
 using IBApi.Messages;
+using IBApi.Queries;
 using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Models;
 using Orleans;
@@ -186,7 +188,7 @@ namespace InteractiveBrokers
 
       var contract = Upstream.MapContract(instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var contracts = await connector.GetContracts(cleaner.Token, contract);
+      var contracts = await connector.GetContracts(contract, cleaner.Token);
       var contractMessage = contracts.FirstOrDefault();
 
       if (contractMessage is null)
@@ -256,14 +258,16 @@ namespace InteractiveBrokers
     {
       var contract = Upstream.MapContract(criteria.Instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetTicks(
-        cleaner.Token,
-        contract,
-        criteria.MinDate.Value,
-        criteria.MaxDate.Value,
-        "BID_ASK",
-        criteria.Count ?? 1);
+      var query = new HistoricalTicksQuery()
+      {
+        Contract = contract,
+        MinDate = criteria.MinDate.Value,
+        MaxDate = criteria.MaxDate.Value,
+        DataType = "BID_ASK",
+        Count = criteria.Count ?? 1
+      };
 
+      var sourceItems = await connector.GetTicks(query, cleaner.Token);
       var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
@@ -283,15 +287,16 @@ namespace InteractiveBrokers
       var cleaner = new CancellationTokenSource(state.Timeout);
       var contract = Upstream.MapContract(criteria.Instrument);
       var maxDate = criteria.MaxDate ?? DateTime.Now;
-      var sourceItems = await connector.GetBars(
-        cleaner.Token,
-        contract,
-        maxDate,
-        criteria.Data.Get("Duration"),
-        criteria.Data.Get("BarType"),
-        criteria.Data.Get("DataType"),
-        0);
+      var query = new HistoricalBarsQuery
+      {
+        Contract = contract,
+        MaxDate = maxDate,
+        Duration = criteria.Data.Get("Duration"),
+        BarType = criteria.Data.Get("BarType"),
+        DataType = criteria.Data.Get("DataType"),
+      };
 
+      var sourceItems = await connector.GetBars(query, cleaner.Token);
       var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
@@ -313,7 +318,7 @@ namespace InteractiveBrokers
       var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
       var contract = Upstream.MapContract(criteria.Instrument);
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetContracts(cleaner.Token, contract);
+      var sourceItems = await connector.GetContracts(contract, cleaner.Token);
       var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToArray();
 
       await Task.Delay(state.Span);
@@ -346,10 +351,14 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Orders(Criteria criteria)
     {
+      var descriptor = this.GetDescriptor();
+      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.MapOrder).ToArray();
 
+      await ordersGrain.Clear();
+      await Task.WhenAll(items.Select(ordersGrain.Store));
       await Task.Delay(state.Span);
 
       return new()
@@ -364,10 +373,14 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Positions(Criteria criteria)
     {
+      var descriptor = this.GetDescriptor();
+      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(cleaner.Token, state.Account.Descriptor);
+      var sourceItems = await connector.GetPositions(state.Account.Descriptor, cleaner.Token);
       var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
 
+      await positionsGrain.Clear();
+      await Task.WhenAll(items.Select(positionsGrain.Store));
       await Task.Delay(state.Span);
 
       return new()
@@ -382,11 +395,12 @@ namespace InteractiveBrokers
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> SendOrder(Core.Models.Order order)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
       var contract = Upstream.MapContract(order.Operation.Instrument);
-      var (orderMessage, SL, TP) = Upstream.MapOrder(connector.Id, order, state.Account);
+      var (orderMessage, SL, TP) = Upstream.MapOrder(order, state.Account);
+      var (group, braces) = connector.SendOrder(contract, orderMessage, SL, TP);
 
-      await connector.SendOrder(cleaner.Token, contract, orderMessage, SL, TP);
+      order = order with { Operation = order.Operation with { Id = $"{group.OrderId}" } };
+
       await Task.Delay(state.Span);
 
       return new()

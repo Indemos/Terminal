@@ -10,14 +10,12 @@ namespace InteractiveBrokers.Mappers
     /// <summary>
     /// Convert remote order from brokerage to local record
     /// </summary>
-    /// <param name="orderId"></param>
     /// <param name="orderModel"></param>
     /// <param name="account"></param>
-    public static (IBApi.Order, double?, double?) MapOrder(int orderId, Core.Models.Order orderModel, Account account)
+    public static (IBApi.Order, double?, double?) MapOrder(Core.Models.Order orderModel, Account account)
     {
       var order = new IBApi.Order
       {
-        OrderId = orderId,
         Action = MapSide(orderModel.Side),
         Tif = MapTimeSpan(orderModel.TimeSpan),
         OrderType = MapOrderType(orderModel.Type),

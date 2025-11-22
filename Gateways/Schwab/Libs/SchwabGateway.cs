@@ -4,6 +4,7 @@ using Core.Grains;
 using Core.Models;
 using Schwab.Grains;
 using Schwab.Models;
+using System.Linq;
 using System.Threading.Tasks;
 
 namespace Schwab
@@ -46,9 +47,9 @@ namespace Schwab
       await Component<ISchwabOrdersGrain>().Setup(connection);
       await Component<ISchwabOptionsGrain>().Setup(connection);
       await Component<ISchwabPositionsGrain>().Setup(connection);
-      await Component<ISchwabConnectionGrain>().Setup(connection, observer);
       await Component<ISchwabOrderSenderGrain>().Setup(connection);
-      await Component<ISchwabTransactionsGrain>().Setup(connection);
+      await Component<ISchwabConnectionGrain>().Setup(connection, observer);
+      await Component<ISchwabTransactionsGrain>().Setup(connection, observer);
 
       return new()
       {
@@ -122,18 +123,44 @@ namespace Schwab
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetOrders(Criteria criteria)
+    public override async Task<OrdersResponse> GetOrders(Criteria criteria)
     {
-      return Component<ISchwabOrdersGrain>().Orders(criteria with { Account = Account });
+      var ordersGrain = Component<IOrdersGrain>();
+      var connectionGrain = Component<ISchwabOrdersGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return await ordersGrain.Orders(criteria);
+      }
+
+      var response = await connectionGrain.Orders(criteria);
+
+      await ordersGrain.Clear();
+      await Task.WhenAll(response.Data.Select(ordersGrain.Send));
+
+      return response;
     }
 
     /// <summary>
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetPositions(Criteria criteria)
+    public override async Task<OrdersResponse> GetPositions(Criteria criteria)
     {
-      return Component<ISchwabPositionsGrain>().Positions(criteria);
+      var positionsGrain = Component<IPositionsGrain>();
+      var connectionGrain = Component<ISchwabPositionsGrain>();
+
+      if (criteria?.Source is not true)
+      {
+        return await positionsGrain.Positions(criteria);
+      }
+
+      var response = await connectionGrain.Positions(criteria);
+
+      await positionsGrain.Clear();
+      await Task.WhenAll(response.Data.Select(positionsGrain.Send));
+
+      return response;
     }
 
     /// <summary>

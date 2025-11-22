@@ -17,19 +17,19 @@ namespace Core.Conventions
     /// Order message
     /// </summary>
     /// <param name="order"></param>
-    Task StreamOrder(Order order);
-
-    /// <summary>
-    /// Price message
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task StreamTrade(Instrument instrument);
+    void StreamOrder(Order order);
 
     /// <summary>
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
     void StreamPrice(Instrument instrument);
+
+    /// <summary>
+    /// Price message
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task StreamTrade(Instrument instrument);
   }
 
   public interface IGateway
@@ -40,14 +40,9 @@ namespace Core.Conventions
     Account Account { get; set; }
 
     /// <summary>
-    /// Messenger
-    /// </summary>
-    IAsyncStream<Message> Messenger { get; }
-
-    /// <summary>
     /// Order message
     /// </summary>
-    Func<Order, Task> OnOrder { get; set; }
+    Action<Order> OnOrder { get; set; }
 
     /// <summary>
     /// Price message
@@ -164,21 +159,9 @@ namespace Core.Conventions
     public virtual string Space { get; set; } = Guid.NewGuid().ToString();
 
     /// <summary>
-    /// Messenger
-    /// </summary>
-    public virtual IAsyncStream<Message> Messenger => Connector
-      .GetStreamProvider(nameof(Message))
-      .GetStream<Message>(string.Empty, Guid.Empty);
-
-    /// <summary>
     /// Order message
     /// </summary>
-    public virtual Func<Order, Task> OnOrder { get; set; } = o => Task.CompletedTask;
-
-    /// <summary>
-    /// Trade message
-    /// </summary>
-    public virtual Func<Instrument, Task> OnTrade { get; set; } = o => Task.CompletedTask;
+    public virtual Action<Order> OnOrder { get; set; } = o => { };
 
     /// <summary>
     /// Price message
@@ -186,10 +169,15 @@ namespace Core.Conventions
     public virtual Action<Instrument> OnPrice { get; set; } = o => { };
 
     /// <summary>
+    /// Trade message
+    /// </summary>
+    public virtual Func<Instrument, Task> OnTrade { get; set; } = o => Task.CompletedTask;
+
+    /// <summary>
     /// Order message
     /// </summary>
     /// <param name="order"></param>
-    public virtual Task StreamOrder(Order order) => OnOrder(order);
+    public virtual void StreamOrder(Order order) => OnOrder(order);
 
     /// <summary>
     /// Price message
@@ -341,8 +329,6 @@ namespace Core.Conventions
             Performance = Account.Performance + position.Balance.Current
           };
         }
-
-        return Task.CompletedTask;
       };
     }
   }

@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
@@ -12,7 +13,8 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="observer"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
   }
 
   public class SchwabTransactionsGrain : TransactionsGrain, ISchwabTransactionsGrain
@@ -31,9 +33,11 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       state = connection;
+      observer = grainObserver;
       connector = new()
       {
         ClientId = connection.Id,

@@ -59,18 +59,10 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Positions(Criteria criteria)
     {
-      if (criteria?.Source is true)
-      {
-        return await Positions(criteria);
-      }
-
       var cleaner = new CancellationTokenSource(state.Timeout);
       var query = new AccountQuery { AccountCode = criteria.Account.Descriptor };
       var messages = await connector.GetPositions(query, cleaner.Token);
       var items = messages.Select(MapPosition);
-
-      await Clear();
-      await Task.WhenAll(items.Select(Send));
 
       return new()
       {

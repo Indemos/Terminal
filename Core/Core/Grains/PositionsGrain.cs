@@ -16,6 +16,12 @@ namespace Core.Grains
     Task<OrdersResponse> Positions(Criteria criteria);
 
     /// <summary>
+    /// Store
+    /// </summary>
+    /// <param name="order"></param>
+    Task<OrderResponse> Store(Order order);
+
+    /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
@@ -53,6 +59,21 @@ namespace Core.Grains
     }
 
     /// <summary>
+    /// Store
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual async Task<OrderResponse> Store(Order order)
+    {
+      var instrument = order.Operation.Instrument.Name;
+      var positionGrain = GrainFactory.GetGrain<IPositionGrain>(this.GetDescriptor(order.Id));
+      var orderResponse = await positionGrain.Send(order);
+
+      State.Grains[instrument] = positionGrain;
+
+      return orderResponse;
+    }
+
+    /// <summary>
     /// Process order to position conversion
     /// </summary>
     /// <param name="order"></param>
@@ -64,12 +85,7 @@ namespace Core.Grains
 
       if (grain is null)
       {
-        var positionGrain = GrainFactory.GetGrain<IPositionGrain>(this.GetDescriptor(order.Id));
-        var orderResponse = await positionGrain.Send(order);
-
-        State.Grains[instrument] = positionGrain;
-
-        return orderResponse;
+        return await Store(order);
       }
 
       var response = await grain.Combine(order);
