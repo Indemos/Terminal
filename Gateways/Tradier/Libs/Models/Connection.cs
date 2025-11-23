@@ -11,6 +11,11 @@ namespace Tradier.Models
     public string AccessToken { get; set; }
 
     /// <summary>
+    /// Streaming session token
+    /// </summary>
+    public string SessionToken { get; set; }
+
+    /// <summary>
     /// Timeout
     /// </summary>
     public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
