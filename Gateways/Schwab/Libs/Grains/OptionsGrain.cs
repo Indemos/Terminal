@@ -129,7 +129,7 @@ namespace Schwab.Grains
         case "OPTION": return InstrumentEnum.Options;
       }
 
-      return InstrumentEnum.Group;
+      return null;
     }
 
     /// <summary>

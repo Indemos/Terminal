@@ -2,7 +2,6 @@ namespace Core.Enums
 {
   public enum InstrumentEnum : byte
   {
-    Group,
     Bonds,
     Coins,
     Shares,

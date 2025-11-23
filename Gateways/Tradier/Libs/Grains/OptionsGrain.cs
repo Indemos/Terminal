@@ -179,7 +179,7 @@ namespace Tradier.Grains
         case "OPTION": return InstrumentEnum.Options;
       }
 
-      return InstrumentEnum.Group;
+      return null;
     }
   }
 }

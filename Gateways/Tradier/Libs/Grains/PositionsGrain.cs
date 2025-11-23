@@ -83,7 +83,7 @@ namespace Tradier.Grains
         Name = message.Symbol
       };
 
-      if (instrument.Derivative is not null)
+      if (instrument.Name.Length > 10)
       {
         instrument = instrument with
         {
