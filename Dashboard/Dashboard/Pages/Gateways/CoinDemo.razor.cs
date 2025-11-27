@@ -3,17 +3,18 @@ using Core.Enums;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
-using InteractiveBrokers;
+using Coin;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using CryptoClients.Net.Enums;
 
 namespace Dashboard.Pages.Gateways
 {
-  public partial class InterBrokerDemo
+  public partial class CoinDemo
   {
     ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
@@ -25,13 +26,12 @@ namespace Dashboard.Pages.Gateways
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, Instrument> Instruments => new()
     {
-      ["ES"] = new()
+      ["ETH"] = new()
       {
-        Name = "ESZ5",
-        Exchange = "CME",
-        Type = InstrumentEnum.Futures,
+        Name = "ETH",
+        Type = InstrumentEnum.Coins,
         TimeFrame = TimeSpan.FromMinutes(1),
-        Basis = new Instrument { Name = "ES" }
+        Currency = new() { Name = "USDT" }
       }
     };
 
@@ -44,13 +44,15 @@ namespace Dashboard.Pages.Gateways
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapter = new InterGateway
+      Adapter = new CoinGateway
       {
         Connector = Connector,
-        Port = int.Parse(Configuration["InteractiveBrokers:PaperPort"]),
+        Token = Configuration["Coinbase:Token"],
+        Secret = Configuration["Coinbase:Secret"],
+        Exchange = Exchange.Coinbase,
         Account = new()
         {
-          Descriptor = Configuration["InteractiveBrokers:PaperAccount"],
+          Descriptor = Configuration["Coinbase:App"],
           Instruments = Instruments
         }
       };

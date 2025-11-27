@@ -2,7 +2,6 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using Orleans;
 using Simulation.Grains;
 using System.Threading.Tasks;
 
@@ -29,8 +28,8 @@ namespace Simulation
 
       SubscribeToUpdates();
 
-      await Component<ISimConnectionGrain>().Setup(connection, observer);
       await Component<ITransactionsGrain>().Setup(observer);
+      await Component<ISimConnectionGrain>().Setup(connection, observer);
 
       return new()
       {
@@ -115,7 +114,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<OrdersResponse> GetPositions(Criteria criteria)
     {
-      return Component<IPositionsGrain>().Positions(criteria);
+      return Component<ISimPositionsGrain>().Positions(criteria);
     }
 
     /// <summary>
@@ -133,7 +132,7 @@ namespace Simulation
     /// <param name="order"></param>
     public override Task<OrderResponse> SendOrder(Order order)
     {
-      return Component<IOrdersGrain>().Send(order with { Account = Account });
+      return Component<ISimOrdersGrain>().Send(order with { Account = Account });
     }
 
     /// <summary>
@@ -142,7 +141,7 @@ namespace Simulation
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(Order order)
     {
-      return Component<IOrdersGrain>().Clear(order);
+      return Component<ISimOrdersGrain>().Clear(order);
     }
   }
 }

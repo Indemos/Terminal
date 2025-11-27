@@ -37,13 +37,6 @@ namespace Dashboard.Pages.Options
     double? Price { get; set; }
     double? Strike { get; set; }
 
-
-    IGateway Adapter
-    {
-      get => Adapters["Prime"];
-      set => Adapters["Prime"] = value;
-    }
-
     DateTime CurDate(Price point)
     {
       var date = new DateTime(point.Time.Value);

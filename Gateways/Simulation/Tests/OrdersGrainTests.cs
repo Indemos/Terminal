@@ -5,6 +5,7 @@ using Core.Tests;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
+using Simulation.Grains;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -42,7 +43,7 @@ namespace Simulation.Prices.Tests
     {
       var grain = _cluster
         .GrainFactory
-        .GetGrain<IOrdersGrain>(Descriptor);
+        .GetGrain<ISimOrdersGrain>(Descriptor);
 
       var order = new Order();
 
@@ -53,7 +54,7 @@ namespace Simulation.Prices.Tests
     public async Task StoreUpdatesMarketOrders()
     {
       var descriptor = Descriptor;
-      var grain = _cluster.GrainFactory.GetGrain<IOrdersGrain>(descriptor);
+      var grain = _cluster.GrainFactory.GetGrain<ISimOrdersGrain>(descriptor);
       var order = new Order
       {
         Amount = 1.0,
@@ -82,10 +83,6 @@ namespace Simulation.Prices.Tests
 
       Assert.Single(orders);
       Assert.Equal(orderExpectation, JsonSerializer.Serialize(orders.First()));
-
-      await grain.Tap(order.Operation.Instrument with { Price = new() });
-
-      Assert.Empty((await grain.Orders(default)).Data);
     }
   }
 }

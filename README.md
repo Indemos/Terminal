@@ -23,9 +23,7 @@ The core library already implements a set of Orleans grains and services that ca
 * **DomGrain** - order book storage
 * **InstrumentGrain** - instrument storage and price aggregator
 * **OptionsGrain** - option chain storage
-* **OrderGrain** - storage for a single distributed order
 * **OrdersGrain** - order manager tracking active orders
-* **PositionGrain** - storage for a single distributed position
 * **PositionsGrain** - position manager tracking open positions
 * **TransactionGrain** - storage for a single distributed transaction
 * **TransactionsGrain** - transactions manager tracking closed positions

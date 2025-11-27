@@ -6,6 +6,7 @@ using Core.Tests;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
+using Simulation.Grains;
 using System;
 using System.Linq;
 using System.Text.Json;
@@ -39,23 +40,11 @@ namespace Simulation.Prices.Tests
     }
 
     [Fact]
-    public void StoreException()
-    {
-      var grain = _cluster
-        .GrainFactory
-        .GetGrain<IPositionsGrain>(Descriptor);
-
-      var order = new Order();
-
-      Assert.Throws<AggregateException>(() => grain.Send(order).Result);
-    }
-
-    [Fact]
     public async Task Store()
     {
       var descriptor = Descriptor;
       var stamp = DateTime.Now.Ticks;
-      var grain = _cluster.GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+      var grain = _cluster.GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
       var actionsGrain = _cluster.GrainFactory.GetGrain<ITransactionsGrain>(descriptor);
       var order = new Order
       {

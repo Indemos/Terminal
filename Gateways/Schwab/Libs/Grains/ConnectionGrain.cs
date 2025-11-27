@@ -106,9 +106,7 @@ namespace Schwab.Grains
 
         observer.StreamPrice(group);
 
-        await ordersGrain.Tap(group);
-        await positionsGrain.Tap(group);
-        await observer.StreamTrade(group);
+        await observer.StreamInstrument(group);
       });
 
       await connector.SubscribeToDom(instrument.Name, MapDomSubType(instrument), async o =>

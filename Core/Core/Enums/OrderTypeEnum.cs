@@ -7,5 +7,6 @@ namespace Core.Enums
     Limit,
     Market,
     StopLimit,
+    LimitMaker,
   }
 }

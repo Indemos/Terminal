@@ -1,0 +1,12 @@
+@inherits BasePage
+
+@page "/gateways/coin"
+
+<ControlsComponent Adapters="Adapters">
+  <ChartsComponent Name="Indicators" @ref="DataView" />
+  <ChartsComponent Name="Performance" @ref="PerformanceView" />
+  <OrdersComponent Name="Orders" @ref="OrdersView" />
+  <PositionsComponent Name="Positions" @ref="PositionsView" />
+  <TransactionsComponent Name="Transactions" @ref="TransactionsView" />
+  <StatementsComponent Name="Statements" Adapters="Adapters" @ref="StatementsView" />
+</ControlsComponent>

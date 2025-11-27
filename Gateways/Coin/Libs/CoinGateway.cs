@@ -5,22 +5,27 @@ using Core.Models;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using Tradier.Grains;
-using Tradier.Models;
+using Coin.Grains;
+using Coin.Models;
 
-namespace Tradier
+namespace Coin
 {
-  public class TradierGateway : Gateway
+  public class CoinGateway : Gateway
   {
     /// <summary>
-    /// Access token
+    /// Token
     /// </summary>
-    public virtual string AccessToken { get; set; }
+    public virtual string Token { get; set; }
 
     /// <summary>
-    /// Streaming session token
+    /// Secret
     /// </summary>
-    public virtual string SessionToken { get; set; }
+    public virtual string Secret { get; set; }
+
+    /// <summary>
+    /// Exchange
+    /// </summary>
+    public virtual string Exchange { get; set; }
 
     /// <summary>
     /// Timeout
@@ -35,17 +40,18 @@ namespace Tradier
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Connection()
       {
-        Account = Account
+        Token = Token,
+        Secret = Secret,
+        Account = Account,
+        Exchange = Exchange
       };
 
       SubscribeToUpdates();
 
-      await Component<ITradierOrdersGrain>().Setup(connection);
-      await Component<ITradierOptionsGrain>().Setup(connection);
-      await Component<ITradierPositionsGrain>().Setup(connection);
-      await Component<ITradierOrderSenderGrain>().Setup(connection);
-      await Component<ITradierConnectionGrain>().Setup(connection, observer);
-      await Component<ITradierTransactionsGrain>().Setup(connection, observer);
+      await Component<ICoinOrdersGrain>().Setup(connection);
+      await Component<ICoinPositionsGrain>().Setup(connection);
+      await Component<ICoinOrderSenderGrain>().Setup(connection);
+      await Component<ICoinConnectionGrain>().Setup(connection, observer);
 
       return new()
       {
@@ -58,7 +64,7 @@ namespace Tradier
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      return Component<ITradierConnectionGrain>().Disconnect();
+      return Component<ICoinConnectionGrain>().Disconnect();
     }
 
     /// <summary>
@@ -67,7 +73,7 @@ namespace Tradier
     /// <param name="instrument"></param>
     public override Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      return Component<ITradierConnectionGrain>().Subscribe(instrument);
+      return Component<ICoinConnectionGrain>().Subscribe(instrument);
     }
 
     /// <summary>
@@ -112,7 +118,7 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override Task<InstrumentsResponse> GetOptions(Criteria criteria)
     {
-      return Component<ITradierOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      return Component<IOptionsGrain>(criteria.Instrument.Name).Options(criteria);
     }
 
     /// <summary>
@@ -122,7 +128,7 @@ namespace Tradier
     public override async Task<OrdersResponse> GetOrders(Criteria criteria)
     {
       var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<ITradierOrdersGrain>();
+      var connectionGrain = Component<ICoinOrdersGrain>();
 
       if (criteria?.Source is not true)
       {
@@ -143,7 +149,7 @@ namespace Tradier
     public override async Task<OrdersResponse> GetPositions(Criteria criteria)
     {
       var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<ITradierPositionsGrain>();
+      var connectionGrain = Component<ICoinPositionsGrain>();
 
       if (criteria?.Source is not true)
       {
@@ -163,7 +169,7 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override Task<OrdersResponse> GetTransactions(Criteria criteria)
     {
-      return Component<ITradierTransactionsGrain>().Transactions(criteria);
+      return Component<ITransactionsGrain>().Transactions(criteria);
     }
 
     /// <summary>
@@ -172,7 +178,7 @@ namespace Tradier
     /// <param name="order"></param>
     public override Task<OrderResponse> SendOrder(Order order)
     {
-      return Component<ITradierOrderSenderGrain>().Send(order);
+      return Component<ICoinOrderSenderGrain>().Send(order);
     }
 
     /// <summary>
@@ -181,7 +187,7 @@ namespace Tradier
     /// <param name="order"></param>
     public override Task<DescriptorResponse> ClearOrder(Order order)
     {
-      return Component<ITradierOrderSenderGrain>().Clear(order);
+      return Component<ICoinOrderSenderGrain>().Clear(order);
     }
   }
 }

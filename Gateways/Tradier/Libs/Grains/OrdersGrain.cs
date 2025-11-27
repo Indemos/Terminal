@@ -83,7 +83,7 @@ namespace Tradier.Grains
     }
 
     /// <summary>
-    /// Get order
+    /// Map order
     /// </summary>
     /// <param name="message"></param>
     protected virtual Order MapOrder(OrderMessage message)
@@ -112,6 +112,7 @@ namespace Tradier.Grains
 
       var order = new Order
       {
+        Id = $"{message.Id}",
         Operation = action,
         Type = OrderTypeEnum.Market,
         Amount = message.Quantity,
@@ -140,7 +141,7 @@ namespace Tradier.Grains
     }
 
     /// <summary>
-    /// Convert remote order side to local
+    /// Map side
     /// </summary>
     /// <param name="status"></param>
     public static OrderSideEnum? MapSide(OrderMessage message)
@@ -166,7 +167,7 @@ namespace Tradier.Grains
     }
 
     /// <summary>
-    /// Asset type
+    /// Map asset type
     /// </summary>
     /// <param name="assetType"></param>
     protected virtual InstrumentEnum? GetInstrumentType(string assetType)

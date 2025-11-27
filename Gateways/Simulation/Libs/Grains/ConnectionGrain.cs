@@ -84,6 +84,7 @@ namespace Simulation.Grains
         TimeSpan.FromMicroseconds(1));
 
       connections.AddRange(streams.Values);
+      connections.Add(counter);
 
       return new()
       {
@@ -123,8 +124,8 @@ namespace Simulation.Grains
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
       var optionsGrain = GrainFactory.GetGrain<IOptionsGrain>(instrumentDescriptor);
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
+      var ordersGrain = GrainFactory.GetGrain<ISimOrdersGrain>(descriptor);
+      var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
 
       subscriptions[instrument.Name] = async () =>
       {
@@ -163,13 +164,14 @@ namespace Simulation.Grains
           await optionsGrain.Store(min.Value.Options);
           await ordersGrain.Tap(group);
           await positionsGrain.Tap(group);
-          await observer.StreamTrade(group);
 
           foreach (var option in optionsMap)
           {
             await ordersGrain.Tap(option);
             await positionsGrain.Tap(option);
           }
+
+          await observer.StreamInstrument(group);
 
           summaries[instrument.Name] = null;
         }

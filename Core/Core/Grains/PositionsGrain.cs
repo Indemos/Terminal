@@ -1,8 +1,8 @@
 using Core.Enums;
-using Core.Extensions;
 using Core.Models;
 using Orleans;
-using System.Linq;
+using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -16,125 +16,64 @@ namespace Core.Grains
     Task<OrdersResponse> Positions(Criteria criteria);
 
     /// <summary>
-    /// Store
+    /// Store positions
+    /// </summary>
+    /// <param name="orders"></param>
+    Task<StatusResponse> Store(Dictionary<string, Order> orders);
+
+    /// <summary>
+    /// Store position
     /// </summary>
     /// <param name="order"></param>
     Task<OrderResponse> Store(Order order);
-
-    /// <summary>
-    /// Process order to position conversion
-    /// </summary>
-    /// <param name="order"></param>
-    Task<OrderResponse> Send(Order order);
-
-    /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task<StatusResponse> Tap(Instrument instrument);
-
-    /// <summary>
-    /// Clear positions
-    /// </summary>
-    Task<StatusResponse> Clear();
   }
 
-  public class PositionsGrain : Grain<Positions>, IPositionsGrain
+  public class PositionsGrain : Grain<Dictionary<string, Order>>, IPositionsGrain
   {
+    /// <summary>
+    /// Activation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
+    {
+      State = [];
+      await base.OnActivateAsync(cancellation);
+    }
+
     /// <summary>
     /// Get positions
     /// </summary>
     /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Positions(Criteria criteria)
+    public virtual async Task<OrdersResponse> Positions(Criteria criteria) => new()
     {
-      var items = await Task.WhenAll(State
-        .Grains
-        .Values
-        .Select(o => o.Position()));
+      Data = [.. State.Values]
+    };
 
-      return new()
+    /// <summary>
+    /// Store positions
+    /// </summary>
+    /// <param name="orders"></param>
+    public virtual Task<StatusResponse> Store(Dictionary<string, Order> orders)
+    {
+      State = orders;
+
+      return Task.FromResult(new StatusResponse()
       {
-        Data = items
-      };
+        Data = StatusEnum.Active
+      });
     }
 
     /// <summary>
-    /// Store
+    /// Store position
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Store(Order order)
+    public virtual Task<OrderResponse> Store(Order order)
     {
-      var instrument = order.Operation.Instrument.Name;
-      var positionGrain = GrainFactory.GetGrain<IPositionGrain>(this.GetDescriptor(order.Id));
-      var orderResponse = await positionGrain.Send(order);
+      State[order.Operation.Instrument.Name] = order;
 
-      State.Grains[instrument] = positionGrain;
-
-      return orderResponse;
-    }
-
-    /// <summary>
-    /// Process order to position conversion
-    /// </summary>
-    /// <param name="order"></param>
-    public virtual async Task<OrderResponse> Send(Order order)
-    {
-      var descriptor = this.GetDescriptor();
-      var instrument = order.Operation.Instrument.Name;
-      var grain = State.Grains.Get(instrument);
-
-      if (grain is null)
+      return Task.FromResult(new OrderResponse()
       {
-        return await Store(order);
-      }
-
-      var response = await grain.Combine(order);
-
-      if (response.Data is null)
-      {
-        State.Grains.Remove(instrument);
-      }
-
-      if (response.Transaction is not null)
-      {
-        await GrainFactory
-          .GetGrain<ITransactionsGrain>(descriptor)
-          .Store(response.Transaction);
-      }
-
-      return response;
-    }
-
-    /// <summary>
-    /// Update instruments assigned to positions and other models
-    /// </summary>
-    /// <param name="instrument"></param>
-    public virtual async Task<StatusResponse> Tap(Instrument instrument)
-    {
-      foreach (var grain in State.Grains)
-      {
-        if (Equals(grain.Key, instrument.Name))
-        {
-          await grain.Value.Tap(instrument);
-        }
-      }
-
-      return new StatusResponse
-      {
-        Data = Enums.StatusEnum.Active
-      };
-    }
-
-    /// <summary>
-    /// Clear positions
-    /// </summary>
-    public virtual Task<StatusResponse> Clear()
-    {
-      State.Grains.Clear();
-
-      return Task.FromResult(new StatusResponse
-      {
-        Data = StatusEnum.Inactive
+        Data = order
       });
     }
   }

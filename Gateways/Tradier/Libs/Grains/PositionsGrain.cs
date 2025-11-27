@@ -72,7 +72,7 @@ namespace Tradier.Grains
     }
 
     /// <summary>
-    /// Convert remote position to local
+    /// Map position
     /// </summary>
     /// <param name="message"></param>
     public static Order MapPosition(PositionMessage message)

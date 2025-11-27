@@ -3,7 +3,9 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Models;
 using Orleans;
+using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -23,7 +25,13 @@ namespace Core.Grains
     Task<OrdersResponse> Transactions(Criteria criteria);
 
     /// <summary>
-    /// Add to the list
+    /// Store transactions
+    /// </summary>
+    /// <param name="orders"></param>
+    Task<StatusResponse> Store(List<Order> orders);
+
+    /// <summary>
+    /// Store transaction
     /// </summary>
     /// <param name="order"></param>
     Task<OrderResponse> Store(Order order);
@@ -33,12 +41,22 @@ namespace Core.Grains
   /// Constructor
   /// </summary>
   /// <param name="messenger"></param>
-  public class TransactionsGrain : Grain<Transactions>, ITransactionsGrain
+  public class TransactionsGrain : Grain<List<Order>>, ITransactionsGrain
   {
     /// <summary>
     /// Observer
     /// </summary>
     protected ITradeObserver observer;
+
+    /// <summary>
+    /// Activation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
+    {
+      State = [];
+      await base.OnActivateAsync(cancellation);
+    }
 
     /// <summary>
     /// Setup
@@ -60,30 +78,39 @@ namespace Core.Grains
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Transactions(Criteria criteria)
     {
-      var items = await Task.WhenAll(State
-        .Grains
-        .Select(o => o.Transaction()));
-
       return new OrdersResponse
       {
-        Data = items
+        Data = State
       };
     }
 
     /// <summary>
-    /// Add to the list
+    /// Store transactions
+    /// </summary>
+    /// <param name="orders"></param>
+    public virtual Task<StatusResponse> Store(List<Order> orders)
+    {
+      State = orders;
+
+      return Task.FromResult(new StatusResponse()
+      {
+        Data = StatusEnum.Active
+      });
+    }
+
+    /// <summary>
+    /// Store transaction
     /// </summary>
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(Order order)
     {
-      var descriptor = this.GetDescriptor(order.Operation.Id);
-      var grain = GrainFactory.GetGrain<ITransactionGrain>(descriptor);
-      var response = await grain.Store(order);
-
-      State.Grains.Add(grain);
+      State.Add(order);
       observer.StreamOrder(order);
 
-      return response;
+      return new()
+      {
+        Data = order
+      };
     }
   }
 }

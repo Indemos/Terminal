@@ -20,8 +20,11 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Gateways\Coin\Libs\Coin.csproj" />
     <ProjectReference Include="..\..\Gateways\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
+    <ProjectReference Include="..\..\Gateways\Schwab\Libs\Schwab.csproj" />
     <ProjectReference Include="..\..\Gateways\Simulation\Libs\Simulation.csproj" />
+    <ProjectReference Include="..\..\Gateways\Tradier\Libs\Tradier.csproj" />
   </ItemGroup>
 
 </Project>

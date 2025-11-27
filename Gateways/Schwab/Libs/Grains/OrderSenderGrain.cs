@@ -9,6 +9,11 @@ namespace Schwab.Grains
 {
   public interface ISchwabOrderSenderGrain : ISchwabOrdersGrain
   {
+    /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    Task<OrderResponse> Send(Order order);
   }
 
   public class SchwabOrderSenderGrain : SchwabOrdersGrain, ISchwabOrderSenderGrain
@@ -17,7 +22,7 @@ namespace Schwab.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderResponse> Send(Order order)
+    public virtual async Task<OrderResponse> Send(Order order)
     {
       var message = MapOrder(order);
       var accountCode = order.Account.Descriptor;

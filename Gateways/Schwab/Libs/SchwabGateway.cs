@@ -135,8 +135,7 @@ namespace Schwab
 
       var response = await connectionGrain.Orders(criteria);
 
-      await ordersGrain.Clear();
-      await Task.WhenAll(response.Data.Select(ordersGrain.Send));
+      await ordersGrain.Store(response.Data.ToDictionary(o => o.Id));
 
       return response;
     }
@@ -157,8 +156,7 @@ namespace Schwab
 
       var response = await connectionGrain.Positions(criteria);
 
-      await positionsGrain.Clear();
-      await Task.WhenAll(response.Data.Select(positionsGrain.Send));
+      await positionsGrain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
 
       return response;
     }

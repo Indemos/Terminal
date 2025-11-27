@@ -24,12 +24,31 @@ namespace Dashboard.Pages
     [Inject] protected virtual IConfiguration Configuration { get; set; }
     [Inject] protected virtual StateService State { get; set; }
 
+    /// <summary>
+    /// Chart settings
+    /// </summary>
     protected virtual ComponentModel Com { get; set; } = new() { Color = SKColors.LimeGreen };
     protected virtual ComponentModel ComUp { get; set; } = new() { Color = SKColors.DeepSkyBlue };
     protected virtual ComponentModel ComDown { get; set; } = new() { Color = SKColors.OrangeRed };
 
+    /// <summary>
+    /// Gateways
+    /// </summary>
     public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
 
+    /// <summary>
+    /// Primary gateway
+    /// </summary>
+    public virtual IGateway Adapter
+    {
+      get => Adapters[string.Empty];
+      set => Adapters[string.Empty] = value;
+    }
+
+    /// <summary>
+    /// View and subscription setup
+    /// </summary>
+    /// <param name="setup"></param>
     protected override async Task OnAfterRenderAsync(bool setup)
     {
       if (setup)
@@ -45,7 +64,7 @@ namespace Dashboard.Pages
             foreach (var adapter in Adapters.Values)
             {
               adapter.OnPrice = OnViewUpdate;
-              adapter.OnTrade = OnTradeUpdate;
+              adapter.OnInstrument = OnTradeUpdate;
             }
           }
         });
@@ -54,6 +73,9 @@ namespace Dashboard.Pages
       await base.OnAfterRenderAsync(setup);
     }
 
+    /// <summary>
+    /// Processors
+    /// </summary>
     protected virtual Task OnView() => Task.CompletedTask;
     protected virtual Task OnTrade() => Task.CompletedTask;
     protected virtual void OnViewUpdate(Instrument instrument) { }
@@ -97,7 +119,6 @@ namespace Dashboard.Pages
     protected virtual async Task ClosePosition(IGateway adapter, Func<Order, bool> condition = null)
     {
       var positions = await adapter.GetPositions(default);
-      var account = adapter.Account;
 
       foreach (var position in positions.Data)
       {

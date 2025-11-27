@@ -3,7 +3,6 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
-using Google.Protobuf.Reflection;
 using IBApi;
 using IBApi.Messages;
 using IBApi.Queries;
@@ -222,9 +221,7 @@ namespace InteractiveBrokers
 
         observer.StreamPrice(group);
 
-        await ordersGrain.Tap(group);
-        await positionsGrain.Tap(group);
-        await observer.StreamTrade(group);
+        await observer.StreamInstrument(group);
       });
 
       return new()
@@ -351,14 +348,10 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Orders(Criteria criteria)
     {
-      var descriptor = this.GetDescriptor();
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cleaner.Token);
       var items = sourceItems.Select(Downstream.MapOrder).ToArray();
 
-      await ordersGrain.Clear();
-      await Task.WhenAll(items.Select(ordersGrain.Store));
       await Task.Delay(state.Span);
 
       return new()
@@ -373,14 +366,10 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Positions(Criteria criteria)
     {
-      var descriptor = this.GetDescriptor();
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
       var cleaner = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetPositions(state.Account.Descriptor, cleaner.Token);
       var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
 
-      await positionsGrain.Clear();
-      await Task.WhenAll(items.Select(positionsGrain.Store));
       await Task.Delay(state.Span);
 
       return new()

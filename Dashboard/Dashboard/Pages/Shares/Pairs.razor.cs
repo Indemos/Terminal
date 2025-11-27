@@ -40,7 +40,7 @@ namespace Dashboard.Pages.Shares
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapters["Prime"] = new SimGateway
+      Adapter = new SimGateway
       {
         Connector = Connector,
         Source = Configuration["Documents:Resources"],
@@ -58,12 +58,11 @@ namespace Dashboard.Pages.Shares
     protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
-      var account = adapter.Account;
+      var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
       var performance = await Performance.Update(Adapters.Values);
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
@@ -89,21 +88,25 @@ namespace Dashboard.Pages.Shares
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
+      if (Equals(instrument.Name, assetX) is false)
+      {
+        return;
+      }
+
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
-      var account = adapter.Account;
+      var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
 
-      var orders = (await adapter.GetOrders(default)).Data;
-      var positions = (await adapter.GetPositions(default)).Data;
+      var orders = (await Adapter.GetOrders(default)).Data;
+      var positions = (await Adapter.GetPositions(default)).Data;
       var xPoint = seriesX.Last();
       var yPoint = seriesY.Last();
       var spread = (xPoint.Ask - xPoint.Bid) + (yPoint.Ask - yPoint.Bid);
@@ -112,19 +115,21 @@ namespace Dashboard.Pages.Shares
 
       if (orders.Count is 0)
       {
-        var buy = positions.FirstOrDefault(o => o.Side is OrderSideEnum.Long);
-        var sell = positions.FirstOrDefault(o => o.Side is OrderSideEnum.Short);
+        var longs = positions.Where(o => o.Side is OrderSideEnum.Long).ToList();
+        var shorts = positions.Where(o => o.Side is OrderSideEnum.Short).ToList();
 
-        if (buy is not null && sell is not null)
+        if (positions.Count is not 0 && longs.Count == shorts.Count)
         {
+          var buy = longs.First();
+          var sell = shorts.First();
           var gain = buy.Balance.Current + sell.Balance.Current;
 
           switch (true)
           {
-            case true when gain > expenses * 2: await ClosePosition(adapter); break;
+            case true when gain > expenses * 2: await ClosePosition(Adapter); break;
             case true when gain < -expenses * posAmount:
-              await OpenPosition(adapter, buy.Operation.Instrument, OrderSideEnum.Long);
-              await OpenPosition(adapter, sell.Operation.Instrument, OrderSideEnum.Short);
+              await OpenPosition(Adapter, buy.Operation.Instrument, OrderSideEnum.Long);
+              await OpenPosition(Adapter, sell.Operation.Instrument, OrderSideEnum.Short);
               break;
           }
         }
@@ -134,13 +139,13 @@ namespace Dashboard.Pages.Shares
           switch (true)
           {
             case true when (xPoint.Bid - yPoint.Ask) > expenses:
-              await OpenPosition(adapter, instrumentY, OrderSideEnum.Long);
-              await OpenPosition(adapter, instrumentX, OrderSideEnum.Short);
+              await OpenPosition(Adapter, instrumentY, OrderSideEnum.Long);
+              await OpenPosition(Adapter, instrumentX, OrderSideEnum.Short);
               break;
 
             case true when (yPoint.Bid - xPoint.Ask) > expenses:
-              await OpenPosition(adapter, instrumentX, OrderSideEnum.Long);
-              await OpenPosition(adapter, instrumentY, OrderSideEnum.Short);
+              await OpenPosition(Adapter, instrumentX, OrderSideEnum.Long);
+              await OpenPosition(Adapter, instrumentY, OrderSideEnum.Short);
               break;
           }
         }

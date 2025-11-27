@@ -11,6 +11,11 @@ namespace Tradier.Grains
 {
   public interface ITradierOrderSenderGrain : ITradierOrdersGrain
   {
+    /// <summary>
+    /// Send order
+    /// </summary>
+    /// <param name="order"></param>
+    Task<OrderResponse> Send(Order order);
   }
 
   public class TradierOrderSenderGrain : TradierOrdersGrain, ITradierOrderSenderGrain
@@ -19,7 +24,7 @@ namespace Tradier.Grains
     /// Send order
     /// </summary>
     /// <param name="order"></param>
-    public override async Task<OrderResponse> Send(Order order)
+    public virtual async Task<OrderResponse> Send(Order order)
     {
       var message = MapOrder(order);
       var response = null as OrderResponseMessage;

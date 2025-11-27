@@ -1,18 +1,20 @@
+using Coin.Models;
 using Core.Conventions;
 using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
+using CryptoClients.Net;
+using CryptoClients.Net.Interfaces;
+using CryptoExchange.Net.SharedApis;
 using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Tradier.Messages.Stream;
-using Tradier.Models;
 
-namespace Tradier.Grains
+namespace Coin.Grains
 {
-  public interface ITradierConnectionGrain : IConnectionGrain
+  public interface ICoinConnectionGrain : IConnectionGrain
   {
     /// <summary>
     /// Connect
@@ -25,7 +27,7 @@ namespace Tradier.Grains
   /// <summary>
   /// Constructor
   /// </summary>
-  public class TradierConnectionGrain : ConnectionGrain, ITradierConnectionGrain
+  public class CoinConnectionGrain : ConnectionGrain, ICoinConnectionGrain
   {
     /// <summary>
     /// State
@@ -33,14 +35,14 @@ namespace Tradier.Grains
     protected Connection state;
 
     /// <summary>
-    /// Connector
-    /// </summary>
-    protected TradierBroker connector;
-
-    /// <summary>
     /// Observer
     /// </summary>
     protected ITradeObserver observer;
+
+    /// <summary>
+    /// Streamer
+    /// </summary>
+    protected IExchangeSocketClient streamer;
 
     /// <summary>
     /// Connect
@@ -55,13 +57,8 @@ namespace Tradier.Grains
 
       state = connection;
       observer = grainObserver;
-      connector = new()
-      {
-        Token = connection.AccessToken,
-        SessionToken = connection.SessionToken,
-      };
+      streamer = new ExchangeSocketClient();
 
-      await connector.Connect(cleaner.Token);
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 
       return new()
@@ -77,7 +74,6 @@ namespace Tradier.Grains
     {
       connections?.ForEach(o => o.Dispose());
       connections?.Clear();
-      connector?.Dispose();
 
       return Task.FromResult(new StatusResponse
       {
@@ -92,25 +88,31 @@ namespace Tradier.Grains
     public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
       var descriptor = this.GetDescriptor();
-      var instrumentDescriptor = this.GetDescriptor(instrument.Name);
+      var currency = instrument.Currency.Name;
+      var instrumentDescriptor = this.GetDescriptor(instrument.Name + currency);
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
       var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
       var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-
-      connector.OnPrice += async o =>
+      var symbol = new SharedSymbol(TradingMode.Spot, instrument.Name, currency);
+      var subResponse = await streamer.SubscribeToBookTickerUpdatesAsync(state.Exchange, new SubscribeBookTickerRequest(symbol), async o =>
       {
-        var group = await instrumentGrain.Send(instrument with
-        {
-          Price = MapPrice(o)
-        });
+        var group = await instrumentGrain.Send(instrument with { Price = MapBook(o) });
 
         observer.StreamPrice(group);
-
         await observer.StreamInstrument(group);
-      };
+      });
 
-      await connector.Subscribe(instrument.Name);
+      if (subResponse.Success is false)
+      {
+        await streamer.SubscribeToTickerUpdatesAsync(state.Exchange, new SubscribeTickerRequest(symbol), async o =>
+        {
+          var group = await instrumentGrain.Send(instrument with { Price = MapPrice(o) });
+
+          observer.StreamPrice(group);
+          await observer.StreamInstrument(group);
+        });
+      }
 
       return new()
       {
@@ -119,17 +121,29 @@ namespace Tradier.Grains
     }
 
     /// <summary>
-    /// Get price
+    /// Map book
     /// </summary>
-    /// <param name="message"></param>
-    protected virtual Price MapPrice(PriceMessage message) => new()
+    /// <param name="o"></param>
+    protected virtual Price MapBook(ExchangeEvent<SharedBookTicker> o) => new()
     {
-      Ask = message.Ask,
-      Bid = message.Bid,
-      AskSize = message.AskSize,
-      BidSize = message.BidSize,
-      Last = (message.Bid + message.Ask) / 2.0,
-      Time = message?.BidDate ?? DateTime.Now.Ticks
+      Bid = (double)o.Data.BestBidPrice,
+      BidSize = (double)o.Data.BestBidQuantity,
+      Ask = (double)o.Data.BestAskPrice,
+      AskSize = (double)o.Data.BestAskQuantity,
+      Time = DateTime.Now.Ticks
+    };
+
+    /// <summary>
+    /// Map price
+    /// </summary>
+    /// <param name="o"></param>
+    protected virtual Price MapPrice(ExchangeEvent<SharedSpotTicker> o) => new()
+    {
+      Bid = (double)o.Data.LastPrice,
+      BidSize = (double)o.Data.LastPrice,
+      Ask = (double)o.Data.QuoteVolume,
+      AskSize = (double)o.Data.QuoteVolume,
+      Time = DateTime.Now.Ticks
     };
   }
 }

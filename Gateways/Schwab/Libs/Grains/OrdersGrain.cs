@@ -138,7 +138,7 @@ namespace Schwab.Grains
     /// Map remote order
     /// </summary>
     /// <param name="status"></param>
-    public static OrderSideEnum? MapSide(string status)
+    protected virtual OrderSideEnum? MapSide(string status)
     {
       switch (status?.ToUpper())
       {
