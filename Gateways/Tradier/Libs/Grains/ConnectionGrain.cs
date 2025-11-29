@@ -93,10 +93,7 @@ namespace Tradier.Grains
     {
       var descriptor = this.GetDescriptor();
       var instrumentDescriptor = this.GetDescriptor(instrument.Name);
-      var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       connector.OnPrice += async o =>
       {

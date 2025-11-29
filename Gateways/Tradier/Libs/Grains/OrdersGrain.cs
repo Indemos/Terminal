@@ -144,7 +144,7 @@ namespace Tradier.Grains
     /// Map side
     /// </summary>
     /// <param name="status"></param>
-    public static OrderSideEnum? MapSide(OrderMessage message)
+    protected virtual OrderSideEnum? MapSide(OrderMessage message)
     {
       switch (message.Side?.ToUpper())
       {

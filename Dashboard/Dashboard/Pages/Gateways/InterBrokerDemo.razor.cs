@@ -79,8 +79,8 @@ namespace Dashboard.Pages.Gateways
       var name = instrument.Name;
       var price = instrument.Price;
       var account = adapter.Account;
-      var orders = (await adapter.GetOrders(new() { Source = false })).Data;
-      var positions = (await adapter.GetPositions(new() { Source = false })).Data;
+      var orders = (await adapter.GetOrders(new() { Source = true })).Data;
+      var positions = (await adapter.GetPositions(new() { Source = true })).Data;
 
       if (orders.Count is 0 && positions.Count is 0)
       {

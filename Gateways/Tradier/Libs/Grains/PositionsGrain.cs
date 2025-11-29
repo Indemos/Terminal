@@ -75,7 +75,7 @@ namespace Tradier.Grains
     /// Map position
     /// </summary>
     /// <param name="message"></param>
-    public static Order MapPosition(PositionMessage message)
+    protected virtual Order MapPosition(PositionMessage message)
     {
       var volume = Math.Abs(message.Quantity ?? 0);
       var instrument = new Instrument

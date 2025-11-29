@@ -5,7 +5,6 @@ using Core.Models;
 using CryptoClients.Net;
 using CryptoClients.Net.Interfaces;
 using CryptoExchange.Net.SharedApis;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -68,7 +67,7 @@ namespace Coin.Grains
 
       return new()
       {
-        Data = []
+        Data = [.. spotItems, .. futureItems]
       };
     }
 
@@ -78,7 +77,7 @@ namespace Coin.Grains
     /// <param name="message"></param>
     protected virtual Order MapSpotOrder(SharedSpotOrder message)
     {
-      var instrument = new Core.Models.Instrument
+      var instrument = new Instrument
       {
         Type = InstrumentEnum.Coins,
         Name = message.Symbol
@@ -87,7 +86,7 @@ namespace Coin.Grains
       var action = new Operation
       {
         Id = $"{message.OrderId}",
-        Amount = (double)message.QuantityFilled.QuantityInContracts,
+        Amount = (double?)message.QuantityFilled.QuantityInContracts,
         Time = message.UpdateTime?.Ticks,
         Status = OrderStatusEnum.Order,
         Instrument = instrument
@@ -98,14 +97,19 @@ namespace Coin.Grains
         Operation = action,
         Id = message.ClientOrderId,
         Type = OrderTypeEnum.Market,
-        Amount = (double)message.OrderQuantity.QuantityInContracts,
+        Price = (double?)message.OrderPrice,
+        Amount = (double?)message.OrderQuantity.QuantityInContracts,
         Side = MapSide(message.Side)
       };
 
-      switch (message.OrderType)
+      if (message.OrderType is SharedOrderType.Limit or SharedOrderType.LimitMaker)
       {
-        case SharedOrderType.Limit:
-        case SharedOrderType.LimitMaker: order = order with { Type = OrderTypeEnum.Limit, Price = (double)message.OrderPrice }; break;
+        order = order with { Type = OrderTypeEnum.Limit };
+      }
+
+      if (message.IsTriggerOrder is true)
+      {
+        order = order with { Type = OrderTypeEnum.StopLimit, Price = (double?)message.TriggerPrice };
       }
 
       return order;
@@ -117,22 +121,17 @@ namespace Coin.Grains
     /// <param name="message"></param>
     protected virtual Order MapFutureOrder(SharedFuturesOrder message)
     {
-      var basis = new Core.Models.Instrument
+      var instrument = new Instrument
       {
-        Name = message.SharedSymbol.QuoteAsset,
-        Type = InstrumentEnum.Coins
-      };
-
-      var instrument = new Core.Models.Instrument
-      {
-        Type = InstrumentEnum.Coins,
+        Leverage = (double?)message.Leverage,
+        Type = InstrumentEnum.Futures,
         Name = message.Symbol
       };
 
       var action = new Operation
       {
         Id = $"{message.OrderId}",
-        Amount = (double)message.QuantityFilled.QuantityInContracts,
+        Amount = (double?)message.QuantityFilled.QuantityInContracts,
         Time = message.UpdateTime?.Ticks,
         Status = OrderStatusEnum.Order,
         Instrument = instrument
@@ -143,14 +142,19 @@ namespace Coin.Grains
         Operation = action,
         Id = message.ClientOrderId,
         Type = OrderTypeEnum.Market,
-        Amount = (double)message.OrderQuantity.QuantityInContracts,
+        Price = (double?)message.OrderPrice,
+        Amount = (double?)message.OrderQuantity.QuantityInContracts,
         Side = MapSide(message.Side)
       };
 
-      switch (message.OrderType)
+      if (message.OrderType is SharedOrderType.Limit or SharedOrderType.LimitMaker)
       {
-        case SharedOrderType.Limit:
-        case SharedOrderType.LimitMaker: order = order with { Type = OrderTypeEnum.Limit, Price = (double)message.OrderPrice }; break;
+        order = order with { Type = OrderTypeEnum.Limit };
+      }
+
+      if (message.IsTriggerOrder is true)
+      {
+        order = order with { Type = OrderTypeEnum.StopLimit, Price = (double?)message.TriggerPrice };
       }
 
       return order;

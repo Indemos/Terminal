@@ -205,8 +205,6 @@ namespace InteractiveBrokers
       }
 
       var name = this.GetDescriptor();
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(name);
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(name);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(this.GetDescriptor(instrument.Name));
       var dataMessage = new PriceStreamMessage
       {

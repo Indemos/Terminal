@@ -1,11 +1,14 @@
 using Core.Enums;
+using Core.Extensions;
 using Core.Models;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Principal;
 using System.Threading;
 using System.Threading.Tasks;
-using Tradier.Enums;
 using Tradier.Messages.Trading;
 using Tradier.Queries.Trading;
+using Ens = Tradier.Enums;
 
 namespace Tradier.Grains
 {
@@ -26,9 +29,12 @@ namespace Tradier.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Send(Order order)
     {
-      var message = MapOrder(order);
-      var response = null as OrderResponseMessage;
+      var descriptor = this.GetDescriptor();
+      var positionsGrain = GrainFactory.GetGrain<ITradierPositionsGrain>(descriptor);
+      var positionsResponse = await positionsGrain.Positions(new() { Source = true });
+      var message = MapOrder(order, positionsResponse.Data.ToDictionary(o => o.Operation.Instrument.Name));
       var cleaner = new CancellationTokenSource(state.Timeout);
+      var response = null as OrderResponseMessage;
 
       if (order.Orders.Count is 0)
       {
@@ -70,17 +76,20 @@ namespace Tradier.Grains
     /// Map order
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OpenOrderRequest MapOrder(Order order)
+    /// <param name="positions"></param>
+    protected virtual OpenOrderRequest MapOrder(Order order, Dictionary<string, Order> positions)
     {
       OpenOrderRequest map(Order o)
       {
-        var response = new OpenOrderRequest();
-
-        response.Price = o.Price;
-        response.Quantity = o.Amount;
-        response.AccountNumber = o.Account.Descriptor;
-        response.Duration = MapTimeSpan(o);
-        response.Side = MapOrderSide(o);
+        var response = new OpenOrderRequest
+        {
+          Price = o.Price,
+          Quantity = o.Amount,
+          AccountNumber = o.Account.Descriptor,
+          Side = MapSide(o, positions),
+          Duration = MapTimeSpan(o),
+          Type = MapType(o)
+        };
 
         if (o?.Operation?.Instrument?.Type is InstrumentEnum.Options)
         {
@@ -109,12 +118,33 @@ namespace Tradier.Grains
     /// Order side
     /// </summary>
     /// <param name="order"></param>
-    protected virtual Tradier.Enums.OrderSideEnum? MapOrderSide(Order order)
+    /// <param name="positions"></param>
+    protected virtual Ens.OrderSideEnum? MapSide(Order order, Dictionary<string, Order> positions)
     {
-      switch (order.Side)
+      var position = positions.Get(order?.Operation?.Instrument?.Name);
+      var option = order?.Operation?.Instrument?.Type is InstrumentEnum.Options or InstrumentEnum.FutureOptions;
+
+      if (option)
       {
-        case Core.Enums.OrderSideEnum.Long: return Tradier.Enums.OrderSideEnum.BUY;
-        case Core.Enums.OrderSideEnum.Short: return Tradier.Enums.OrderSideEnum.SELL;
+        switch (true)
+        {
+          case true when position is null && order.Side is OrderSideEnum.Long:
+          case true when position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Long: return Ens.OrderSideEnum.BUY_TO_OPEN;
+          case true when position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Long: return Ens.OrderSideEnum.BUY_TO_CLOSE;
+          case true when position is null && order.Side is OrderSideEnum.Short:
+          case true when position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Short: return Ens.OrderSideEnum.SELL_TO_OPEN;
+          case true when position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Short: return Ens.OrderSideEnum.SELL_TO_CLOSE;
+        }
+      }
+
+      switch (true)
+      {
+        case true when position is null && order.Side is OrderSideEnum.Long:
+        case true when position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Long: return Ens.OrderSideEnum.BUY;
+        case true when position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Long: return Ens.OrderSideEnum.BUY_TO_COVER;
+        case true when position is null && order.Side is OrderSideEnum.Short:
+        case true when position.Side is OrderSideEnum.Short && order.Side is OrderSideEnum.Short: return Ens.OrderSideEnum.SELL_SHORT;
+        case true when position.Side is OrderSideEnum.Long && order.Side is OrderSideEnum.Short: return Ens.OrderSideEnum.SELL;
       }
 
       return null;
@@ -124,32 +154,32 @@ namespace Tradier.Grains
     /// Order type
     /// </summary>
     /// <param name="order"></param>
-    protected virtual string MapOrderType(Order order)
+    protected virtual Ens.OrderTypeEnum MapType(Order order)
     {
       switch (order.Type)
       {
-        case Core.Enums.OrderTypeEnum.Stop: return "stop";
-        case Core.Enums.OrderTypeEnum.Limit: return "limit";
-        case Core.Enums.OrderTypeEnum.StopLimit: return "stop_limit";
+        case OrderTypeEnum.Stop: return Ens.OrderTypeEnum.STOP;
+        case OrderTypeEnum.Limit: return Ens.OrderTypeEnum.LIMIT;
+        case OrderTypeEnum.StopLimit: return Ens.OrderTypeEnum.STOP_LIMIT;
       }
 
-      return "market";
+      return Ens.OrderTypeEnum.MARKET;
     }
 
     /// <summary>
     /// Convert local time in force to remote
     /// </summary>
     /// <param name="order"></param>
-    protected virtual OrderDurationEnum MapTimeSpan(Order order)
+    protected virtual Ens.OrderDurationEnum MapTimeSpan(Order order)
     {
       switch (order.TimeSpan)
       {
-        case OrderTimeSpanEnum.AM: return OrderDurationEnum.PRE;
-        case OrderTimeSpanEnum.PM: return OrderDurationEnum.POST;
-        case OrderTimeSpanEnum.GTC: return OrderDurationEnum.GTC;
+        case OrderTimeSpanEnum.AM: return Ens.OrderDurationEnum.PRE;
+        case OrderTimeSpanEnum.PM: return Ens.OrderDurationEnum.POST;
+        case OrderTimeSpanEnum.GTC: return Ens.OrderDurationEnum.GTC;
       }
 
-      return OrderDurationEnum.DAY;
+      return Ens.OrderDurationEnum.DAY;
     }
   }
 }

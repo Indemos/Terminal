@@ -113,7 +113,7 @@ namespace Schwab.Grains
     /// Map instrument
     /// </summary>
     /// <param name="assetType"></param>
-    public static InstrumentEnum? MapInstrumentType(string assetType)
+    protected virtual InstrumentEnum? MapInstrumentType(string assetType)
     {
       switch (assetType?.ToUpper())
       {

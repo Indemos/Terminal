@@ -94,8 +94,6 @@ namespace Schwab.Grains
       var instrumentDescriptor = this.GetDescriptor(instrument.Name);
       var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
 
       await connector.Subscribe(instrument.Name, MapSubType(instrument), async o =>
       {

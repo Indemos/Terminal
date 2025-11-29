@@ -87,31 +87,17 @@ namespace Coin.Grains
     /// <param name="instrument"></param>
     public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      var descriptor = this.GetDescriptor();
       var currency = instrument.Currency.Name;
-      var instrumentDescriptor = this.GetDescriptor(instrument.Name + currency);
-      var domGrain = GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor);
-      var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
-      var positionsGrain = GrainFactory.GetGrain<IPositionsGrain>(descriptor);
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-      var symbol = new SharedSymbol(TradingMode.Spot, instrument.Name, currency);
-      var subResponse = await streamer.SubscribeToBookTickerUpdatesAsync(state.Exchange, new SubscribeBookTickerRequest(symbol), async o =>
-      {
-        var group = await instrumentGrain.Send(instrument with { Price = MapBook(o) });
-
-        observer.StreamPrice(group);
-        await observer.StreamInstrument(group);
-      });
+      var security = new SharedSymbol(TradingMode.Spot, instrument.Name, currency, instrument?.Derivative?.ExpirationDate);
+      var query = new SubscribeBookTickerRequest(security);
+      var subResponse = await streamer.SubscribeToBookTickerUpdatesAsync(state.Exchange, query, o => SendStream(instrument, MapPrice(o)));
 
       if (subResponse.Success is false)
       {
-        await streamer.SubscribeToTickerUpdatesAsync(state.Exchange, new SubscribeTickerRequest(symbol), async o =>
+        switch (true)
         {
-          var group = await instrumentGrain.Send(instrument with { Price = MapPrice(o) });
-
-          observer.StreamPrice(group);
-          await observer.StreamInstrument(group);
-        });
+          case true when Equals(state.Exchange, streamer.Coinbase.Exchange): await Coinbase(instrument); break;
+        }
       }
 
       return new()
@@ -121,29 +107,66 @@ namespace Coin.Grains
     }
 
     /// <summary>
+    /// Stream price
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <param name="o"></param>
+    protected virtual async void SendStream(Instrument instrument, Price o)
+    {
+      var currency = instrument.Currency.Name;
+      var instrumentDescriptor = this.GetDescriptor(instrument.Name + currency);
+      var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
+      var group = await instrumentGrain.Send(instrument with { Price = o });
+
+      observer.StreamPrice(group);
+
+      await observer.StreamInstrument(group);
+    }
+
+    /// <summary>
     /// Map book
     /// </summary>
     /// <param name="o"></param>
-    protected virtual Price MapBook(ExchangeEvent<SharedBookTicker> o) => new()
+    protected virtual Price MapPrice(ExchangeEvent<SharedBookTicker> o) => new()
     {
       Bid = (double)o.Data.BestBidPrice,
       BidSize = (double)o.Data.BestBidQuantity,
       Ask = (double)o.Data.BestAskPrice,
       AskSize = (double)o.Data.BestAskQuantity,
-      Time = DateTime.Now.Ticks
+      Last = (double)((o.Data.BestBidPrice + o.Data.BestAskPrice) / 2),
+      Time = o.DataTime?.Ticks
     };
 
     /// <summary>
-    /// Map price
+    /// Subscribe to Coinbase
     /// </summary>
-    /// <param name="o"></param>
-    protected virtual Price MapPrice(ExchangeEvent<SharedSpotTicker> o) => new()
+    /// <param name="instrument"></param>
+    protected virtual Task Coinbase(Instrument instrument)
     {
-      Bid = (double)o.Data.LastPrice,
-      BidSize = (double)o.Data.LastPrice,
-      Ask = (double)o.Data.QuoteVolume,
-      AskSize = (double)o.Data.QuoteVolume,
-      Time = DateTime.Now.Ticks
-    };
+      var security = new SharedSymbol(
+        TradingMode.Spot,
+        instrument.Name,
+        instrument.Currency.Name,
+        instrument?.Derivative?.ExpirationDate);
+
+      var name = streamer.Coinbase.AdvancedTradeApi.FormatSymbol(
+        security.BaseAsset,
+        security.QuoteAsset,
+        security.TradingMode,
+        security.DeliverTime);
+
+      return streamer.Coinbase.AdvancedTradeApi.SubscribeToTickerUpdatesAsync(name, o =>
+      {
+        SendStream(instrument, new()
+        {
+          Bid = (double)o.Data.BestBidPrice,
+          BidSize = (double)o.Data.BestBidQuantity,
+          Ask = (double)o.Data.BestAskPrice,
+          AskSize = (double)o.Data.BestAskQuantity,
+          Last = (double)((o.Data.BestBidPrice + o.Data.BestAskPrice) / 2),
+          Time = o.DataTime?.Ticks
+        });
+      });
+    }
   }
 }

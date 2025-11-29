@@ -140,7 +140,7 @@ namespace Schwab.Grains
     /// Convert remote position side to local
     /// </summary>
     /// <param name="message"></param>
-    public static OrderSideEnum? MapSide(PositionMessage message)
+    protected virtual OrderSideEnum? MapSide(PositionMessage message)
     {
       switch (true)
       {
