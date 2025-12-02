@@ -126,8 +126,8 @@ namespace Dashboard.Pages.Futures
         return;
       }
 
-      var orders = (await adapter.GetOrders(new() { Source = true })).Data;
-      var positions = (await adapter.GetPositions(new() { Source = true })).Data;
+      var orders = (await adapter.GetOrders(default)).Data;
+      var positions = (await adapter.GetPositions(default)).Data;
       var performance = await Performance.Update([adapter]);
       var scaleX = await Scales[assetX.Name].Update(seriesX);
       var scaleY = await Scales[assetY.Name].Update(seriesY);
