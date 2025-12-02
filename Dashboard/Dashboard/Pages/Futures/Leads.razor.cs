@@ -23,9 +23,7 @@ namespace Dashboard.Pages.Futures
     OrdersComponent OrdersView { get; set; }
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
-
     PerformanceIndicator Performance { get; set; }
-
     Dictionary<string, ScaleIndicator> Scales { get; set; }
 
     Price PreviousLeader { get; set; }
@@ -52,7 +50,7 @@ namespace Dashboard.Pages.Futures
 
     protected override Task OnTrade()
     {
-      var adapter = Adapters["Prime"] = new SimGateway
+      var adapter = Adapter = new SimGateway
       {
         Connector = Connector,
         Source = Configuration["Documents:Resources"] + "/FUTS/2025-06-17",
@@ -78,7 +76,7 @@ namespace Dashboard.Pages.Futures
     protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var account = adapter.Account;
       var assetX = account.Instruments["ESU25"];
       var assetY = account.Instruments["NQU25"];
@@ -110,8 +108,13 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
+      if (Equals(instrument.Name, "ESU25") is false)
+      {
+        return;
+      }
+
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var account = adapter.Account;
       var assetX = account.Instruments["ESU25"];
       var assetY = account.Instruments["NQU25"];
@@ -123,8 +126,8 @@ namespace Dashboard.Pages.Futures
         return;
       }
 
-      var orders = (await adapter.GetOrders(default)).Data;
-      var positions = (await adapter.GetPositions(default)).Data;
+      var orders = (await adapter.GetOrders(new() { Source = true })).Data;
+      var positions = (await adapter.GetPositions(new() { Source = true })).Data;
       var performance = await Performance.Update([adapter]);
       var scaleX = await Scales[assetX.Name].Update(seriesX);
       var scaleY = await Scales[assetY.Name].Update(seriesY);
@@ -132,27 +135,30 @@ namespace Dashboard.Pages.Futures
       var priceY = seriesY.Last();
       var spread = Math.Abs((scaleX.Response.Last - scaleY.Response.Last).Value);
 
-      if (orders.Count is 0 && positions.Count is 0 && spread > 0.1)
+      if (orders.Count is 0)
       {
-        var isLong = scaleX.Response.Last > PreviousLeader.Last && scaleX.Response.Last > scaleY.Response.Last;
-        var isShort = scaleX.Response.Last < PreviousLeader.Last && scaleX.Response.Last < scaleY.Response.Last;
-
-        switch (true)
+        if (PreviousLeader is not null && positions.Count is 0 && spread > 0.1)
         {
-          case true when isLong: await OpenPosition(adapter, assetY, OrderSideEnum.Long); break;
-          case true when isShort: await OpenPosition(adapter, assetY, OrderSideEnum.Short); break;
+          var isLong = scaleX.Response.Last > PreviousLeader.Last && scaleX.Response.Last > scaleY.Response.Last;
+          var isShort = scaleX.Response.Last < PreviousLeader.Last && scaleX.Response.Last < scaleY.Response.Last;
+
+          switch (true)
+          {
+            case true when isLong: await OpenPosition(adapter, assetY, OrderSideEnum.Long); break;
+            case true when isShort: await OpenPosition(adapter, assetY, OrderSideEnum.Short); break;
+          }
         }
-      }
 
-      if (positions.Count is not 0 && orders.Count is 0)
-      {
-        var pos = positions.First();
-        var closeLong = pos.Side is OrderSideEnum.Long && scaleX.Response.Last < scaleY.Response.Last;
-        var closeShort = pos.Side is OrderSideEnum.Short && scaleX.Response.Last > scaleY.Response.Last;
-
-        if (closeLong || closeShort)
+        if (positions.Count is not 0)
         {
-          await ClosePosition(adapter);
+          var pos = positions.First();
+          var closeLong = pos.Side is OrderSideEnum.Long && scaleX.Response.Last < scaleY.Response.Last;
+          var closeShort = pos.Side is OrderSideEnum.Short && scaleX.Response.Last > scaleY.Response.Last;
+
+          if (closeLong || closeShort)
+          {
+            await ClosePosition(adapter);
+          }
         }
       }
 

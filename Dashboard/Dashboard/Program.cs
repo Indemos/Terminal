@@ -5,12 +5,15 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Options;
 using MudBlazor;
 using MudBlazor.Services;
 using Orleans;
+using Orleans.Configuration;
 using Orleans.Hosting;
 using Orleans.Providers;
 using Orleans.Serialization;
+using System;
 
 namespace Dashboard
 {
@@ -32,6 +35,13 @@ namespace Dashboard
         {
           options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
           options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
+        });
+
+        orleans.Configure<GrainCollectionOptions>(options =>
+        {
+          options.CollectionAge = TimeSpan.FromDays(100);
+          options.CollectionQuantum = TimeSpan.FromDays(1);
+          options.DeactivationTimeout = TimeSpan.FromDays(1);
         });
 
         orleans.ConfigureServices(services =>

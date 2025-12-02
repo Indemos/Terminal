@@ -105,7 +105,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<OrdersResponse> GetOrders(Criteria criteria)
     {
-      return Component<IOrdersGrain>().Orders(criteria);
+      return Component<ISimOrdersGrain>().Orders(criteria);
     }
 
     /// <summary>

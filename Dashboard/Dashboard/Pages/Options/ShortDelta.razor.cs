@@ -45,7 +45,7 @@ namespace Dashboard.Pages.Options
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapters["Prime"] = new SimGateway
+      Adapter = new SimGateway
       {
         Connector = Connector,
         Source = Configuration["Documents:Resources"],
@@ -63,7 +63,7 @@ namespace Dashboard.Pages.Options
     protected override async void OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var account = adapter.Account;
       var performance = await Performance.Update(Adapters.Values);
 
@@ -78,7 +78,7 @@ namespace Dashboard.Pages.Options
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
       var price = instrument.Price;
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var options = await GetOptions(price, new DateTime(price.Time.Value));
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
@@ -102,7 +102,7 @@ namespace Dashboard.Pages.Options
     /// </summary>
     (double, double) UpdateIndicators(Price point, IList<Order> positions)
     {
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var account = adapter.Account;
       var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
       var comDown = new ComponentModel { Color = SKColors.OrangeRed };
@@ -153,7 +153,7 @@ namespace Dashboard.Pages.Options
     /// <param name="date"></param>
     async Task<IList<Instrument>> GetOptions(Price price, DateTime date)
     {
-      var adapter = Adapters["Prime"];
+      var adapter = Adapter;
       var screener = new Criteria
       {
         MinDate = date,

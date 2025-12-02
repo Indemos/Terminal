@@ -31,6 +31,7 @@ namespace Core.Services
     public SchedulerService(int count, CancellationTokenSource cleaner)
     {
       this.cleaner = cleaner;
+
       queue = Channel.CreateBounded<Action>(new BoundedChannelOptions(count)
       {
         SingleReader = false,

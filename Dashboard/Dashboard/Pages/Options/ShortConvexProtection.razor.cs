@@ -1,11 +1,9 @@
 using Canvas.Core.Shapes;
-using Core.Conventions;
 using Core.Enums;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
 using Dashboard.Services;
-using Lib = QuantLib;
 using Simulation;
 using SkiaSharp;
 using System;
@@ -13,6 +11,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
+using Lib = QuantLib;
 
 namespace Dashboard.Pages.Options
 {
@@ -84,7 +83,7 @@ namespace Dashboard.Pages.Options
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapters["Prime"] = new SimGateway
+      Adapter = new SimGateway
       {
         Connector = Connector,
         Source = Configuration["Documents:Resources"],
