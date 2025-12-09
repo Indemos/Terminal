@@ -1,6 +1,9 @@
 namespace Dashboard.Services
 {
+  using Core.Enums;
+  using Estimator.Services;
   using QuantLib;
+  using System;
 
   public class OptionPriceService
   {
@@ -19,6 +22,8 @@ namespace Dashboard.Services
     private readonly YieldTermStructureHandle rateHandle;
     private readonly YieldTermStructureHandle dividendHandle;
     private readonly BlackVolTermStructureHandle volHandle;
+
+    private readonly OptionService optionService = new();
 
     public OptionPriceService(double riskFreeRate, double dividendRate, double volatility)
     {
@@ -42,6 +47,13 @@ namespace Dashboard.Services
       engine = new AnalyticEuropeanEngine(process);
     }
 
+    /// <summary>
+    /// Estimated delta
+    /// </summary>
+    /// <param name="optionType"></param>
+    /// <param name="spotPrice"></param>
+    /// <param name="strikePrice"></param>
+    /// <param name="timeToMaturity"></param>
     public double Delta(Option.Type optionType, double? spotPrice, double? strikePrice, double timeToMaturity)
     {
       spotQuote.setValue(spotPrice.Value);
@@ -56,6 +68,14 @@ namespace Dashboard.Services
       return option.delta();
     }
 
+    /// <summary>
+    /// Estimated volatility
+    /// </summary>
+    /// <param name="optionPrice"></param>
+    /// <param name="spotPrice"></param>
+    /// <param name="strikePrice"></param>
+    /// <param name="timeToMaturity"></param>
+    /// <param name="optionType"></param>
     public double Sigma(double optionPrice, double spotPrice, double strikePrice, double timeToMaturity, Option.Type optionType)
     {
       spotQuote.setValue(spotPrice);
@@ -76,5 +96,31 @@ namespace Dashboard.Services
           5.0     // max vol guess
       );
     }
+
+    /// <summary>
+    /// Estimated price
+    /// </summary>
+    /// <param name="optionType"></param>
+    /// <param name="spotPrice"></param>
+    /// <param name="strikePrice"></param>
+    /// <param name="timeToMaturity"></param>
+    /// <param name="volatility"></param>
+    /// <param name="riskRate"></param>
+    /// <param name="divRate"></param>
+    public double Price(
+      string optionType,
+      double spotPrice,
+      double strikePrice,
+      double timeToMaturity,
+      double volatility,
+      double riskRate = 0.05,
+      double divRate = 0.05) => OptionService.Price(
+        optionType,
+        spotPrice,
+        strikePrice,
+        timeToMaturity,
+        volatility,
+        riskRate,
+        divRate);
   }
 }

@@ -17,26 +17,27 @@ namespace Dashboard.Pages.Options
 {
   public partial class BreakProtection
   {
+    static double IV { get; set; } = 0.15;
+    static double DivRate { get; set; } = 0.05;
+    static double RiskRate { get; set; } = 0.05;
+    double? Strike { get; set; }
+    double? StrikeUp { get; set; }
+    double? StrikeDown { get; set; }
+    OptionSideEnum? Side { get; set; }
+
     ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
-    ChartsComponent DeltaView { get; set; }
-    ChartsComponent VarianceView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     TransactionsComponent TransactionsView { get; set; }
     OrdersComponent OrdersView { get; set; }
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
-    OptionPriceService PriceService { get; set; } = new(0.05, 0.05, 0.15);
+    OptionPriceService PriceService { get; set; } = new(RiskRate, DivRate, IV);
     Dictionary<string, Instrument> Instruments => new()
     {
       ["SPY"] = new Instrument { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) }
     };
-
-    double? Strike { get; set; }
-    double? StrikeUp { get; set; }
-    double? StrikeDown { get; set; }
-    OptionSideEnum? Side { get; set; }
 
     DateTime CurDate(Price point)
     {
@@ -72,13 +73,9 @@ namespace Dashboard.Pages.Options
     protected override async Task OnView()
     {
       await DataView.Create("Data");
-      await DeltaView.Create("Delta");
-      await VarianceView.Create("Variance");
       await PerformanceView.Create("Performance");
 
       DataView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
-      DeltaView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
-      VarianceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
       PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
     }
 
@@ -88,7 +85,7 @@ namespace Dashboard.Pages.Options
       Adapter = new SimGateway
       {
         Connector = Connector,
-        Source = "D:/Code/Options", // Configuration["Documents:Resources"],
+        Source = Configuration["Documents:Resources"],
         Account = new()
         {
           Descriptor = "Demo",
@@ -107,7 +104,6 @@ namespace Dashboard.Pages.Options
       var account = adapter.Account;
       var positions = (await adapter.GetPositions(default)).Data;
       var performance = await Performance.Update(Adapters.Values);
-      var (curDelta, nextDelta, sigma) = GetIndicators(positions, price);
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
@@ -115,9 +111,6 @@ namespace Dashboard.Pages.Options
       DataView.Update(price.Bar.Time.Value, "Data", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
       PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
-      DeltaView.Update(price.Time.Value, "Delta", "Next Delta", new BarShape { Y = nextDelta, Component = ComUp });
-      DeltaView.Update(price.Time.Value, "Delta", "Current Delta", new LineShape { Y = curDelta, Component = ComDown });
-      VarianceView.Update(price.Time.Value, "Variance", "Sigma", new AreaShape { Y = sigma, Component = Com });
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)
@@ -144,18 +137,24 @@ namespace Dashboard.Pages.Options
       if (orders.Count is 0 && curPositions.Count == 4)
       {
         var options = await GetOptions(instrument, nextDate);
-        var (curDelta, nextDelta, sigma) = GetIndicators(positions, point);
         var isBuy = price > Strike && Side is OptionSideEnum.Put;
         var isSell = price < Strike && Side is OptionSideEnum.Call;
-
+        var range = Range(price, IV);
+        var contracts = nextPositions.Where(o => o.Side is OrderSideEnum.Long).Sum(o => o.Operation.Amount) / 2;
+        var step = contracts is 0 ? 0.1 : Math.Max(0.1, (range / contracts).Value);
+        
         if (nextPositions.Count is 0 || isBuy || isSell)
         {
-          var order = GetNextOrder(options, isSell ? -1 : 1);
-          await adapter.SendOrder(order);
-          Side = isSell ? OptionSideEnum.Put : OptionSideEnum.Call;
+          var order = GetNextOrder(options, isSell ? -1 : 1, nextPositions);
+
+          if (order is not null)
+          {
+            await adapter.SendOrder(order);
+            Side = isSell ? OptionSideEnum.Put : OptionSideEnum.Call;
+          }
         }
 
-        if (price - StrikeUp > 0.1)
+        if (price - StrikeUp > step)
         {
           var order = GetCoverOrder(options, 1, price, nextPositions);
 
@@ -166,7 +165,7 @@ namespace Dashboard.Pages.Options
           }
         }
 
-        if (StrikeDown - price > 0.1)
+        if (StrikeDown - price > step)
         {
           var order = GetCoverOrder(options, -1, price, nextPositions);
 
@@ -237,29 +236,42 @@ namespace Dashboard.Pages.Options
     /// </summary>
     /// <param name="options"></param>
     /// <param name="direction"></param>
-    Order GetNextOrder(IList<Instrument> options, int direction)
+    Order GetNextOrder(IList<Instrument> options, int direction, IList<Order> positions)
     {
+      var countLongs = positions
+        .Where(o => o.Side is OrderSideEnum.Long)
+        .Where(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call)
+        .Sum(o => o.Operation.Amount);
+
+      var countShorts = positions
+        .Where(o => o.Side is OrderSideEnum.Long)
+        .Where(o => o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put)
+        .Sum(o => o.Operation.Amount);
+
+      var noLong = direction > 0 && countLongs > countShorts;
+      var noShort = direction < 0 && countLongs < countShorts;
+
+      if (noLong || noShort)
+      {
+        return null;
+      }
+
       var instrument = null as Instrument;
 
       if (direction < 0)
       {
         instrument = options
           ?.Where(o => o.Derivative.Side is OptionSideEnum.Put)
-          ?.Where(o => o.Derivative.Strike <= Strike)
-          ?.LastOrDefault();
+          ?.Where(o => o.Derivative.Strike > Strike)
+          ?.FirstOrDefault();
       }
 
       if (direction > 0)
       {
         instrument = options
           ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
-          ?.Where(o => o.Derivative.Strike >= Strike)
-          ?.FirstOrDefault();
-      }
-
-      if (instrument is null)
-      {
-        return null;
+          ?.Where(o => o.Derivative.Strike < Strike)
+          ?.LastOrDefault();
       }
 
       var order = new Order
@@ -281,21 +293,21 @@ namespace Dashboard.Pages.Options
     Order GetCoverOrder(IList<Instrument> options, int direction, double? price, IList<Order> positions)
     {
       var instrument = null as Instrument;
-      var longAmount = positions
+      var countLongs = positions
         .Where(o => o.Side is OrderSideEnum.Long)
         .Where(o => direction < 0 ?
           o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put :
           o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call)
-        .Sum(o => o.Operation.Amount) - 1;
+        .Sum(o => o.Operation.Amount);
 
-      var shortAmount = positions
+      var countShorts = positions
         .Where(o => o.Side is OrderSideEnum.Short)
         .Where(o => direction < 0 ?
           o.Operation.Instrument.Derivative.Side is OptionSideEnum.Put :
           o.Operation.Instrument.Derivative.Side is OptionSideEnum.Call)
         .Sum(o => o.Operation.Amount);
 
-      if (longAmount - shortAmount < 1)
+      if (countLongs - countShorts <= 1)
       {
         return null;
       }
@@ -314,11 +326,6 @@ namespace Dashboard.Pages.Options
           ?.Where(o => o.Derivative.Side is OptionSideEnum.Call)
           ?.Where(o => o.Derivative.Strike >= price)
           ?.FirstOrDefault();
-      }
-
-      if (instrument is null)
-      {
-        return null;
       }
 
       var order = new Order
@@ -401,5 +408,12 @@ namespace Dashboard.Pages.Options
 
       return order;
     }
+
+    /// <summary>
+    /// Expected daily variance 
+    /// </summary>
+    /// <param name="price"></param>
+    /// <param name="volatility"></param>
+    double? Range(double? price, double? volatility) => Math.Sqrt(1.0 / 252.0) * price * volatility;
   }
 }
