@@ -54,19 +54,21 @@ namespace Dashboard.Services
     /// <param name="spotPrice"></param>
     /// <param name="strikePrice"></param>
     /// <param name="timeToMaturity"></param>
-    public double Delta(Option.Type optionType, double? spotPrice, double? strikePrice, double timeToMaturity)
-    {
-      spotQuote.setValue(spotPrice.Value);
-
-      var maturityDate = evaluationDate + new Period((int)(timeToMaturity * 365), TimeUnit.Days);
-      var exercise = new EuropeanExercise(maturityDate);
-      var premium = new PlainVanillaPayoff(optionType, strikePrice.Value);
-      var option = new VanillaOption(premium, exercise);
-
-      option.setPricingEngine(engine);
-
-      return option.delta();
-    }
+    public double Delta(
+      string optionType,
+      double? spotPrice,
+      double? strikePrice,
+      double timeToMaturity,
+      double volatility,
+      double riskRate = 0.05,
+      double divRate = 0.05) => OptionService.Delta(
+        optionType,
+        spotPrice.Value,
+        strikePrice.Value,
+        timeToMaturity,
+        volatility,
+        riskRate,
+        divRate);
 
     /// <summary>
     /// Estimated volatility

@@ -33,11 +33,11 @@ namespace Core.Indicators
     /// <summary>
     /// Calculate indicator value
     /// </summary>
-    /// <param name="prices"></param>
-    public override Task<IIndicator> Update(IList<Price> prices)
+    /// <param name="collection"></param>
+    public override Task<IIndicator> Update(IList<Price> collection)
     {
       var response = Task.FromResult<IIndicator>(this);
-      var currentPoint = prices.LastOrDefault();
+      var currentPoint = collection.LastOrDefault();
 
       if (currentPoint is null)
       {

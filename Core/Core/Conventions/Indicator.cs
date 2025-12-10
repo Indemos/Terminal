@@ -1,4 +1,5 @@
 using Core.Models;
+using Core.Services;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 
@@ -34,6 +35,11 @@ namespace Core.Conventions
     /// Point
     /// </summary>
     public virtual Price Response { get; protected set; } = new();
+
+    /// <summary>
+    /// Average
+    /// </summary>
+    public virtual AverageService Average { get; protected set; } = new();
 
     /// <summary>
     /// Calculate indicator values

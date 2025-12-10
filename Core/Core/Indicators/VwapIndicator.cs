@@ -1,0 +1,63 @@
+using Core.Conventions;
+using Core.Models;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace Core.Indicators
+{
+  public class VwapIndicator : Indicator
+  {
+    /// <summary>
+    /// Calculate indicator value
+    /// </summary>
+    /// <param name="collection"></param>
+    public override Task<IIndicator> Update(IList<Price> collection)
+    {
+      var response = Task.FromResult<IIndicator>(this);
+      var currentPoint = collection.LastOrDefault();
+
+      if (currentPoint?.Bar is null)
+      {
+        return response;
+      }
+
+      var cumPrice = 0.0;
+      var cumVolume = 0.0;
+      var items = new List<(double Price, double Volume)>();
+
+      Response = Response with { Bar = Response.Bar ?? new() };
+
+      foreach (var point in collection)
+      {
+        var price = (point.Bar.Low + point.Bar.High + point.Bar.Close).Value / 3.0;
+        var volume = point.Volume ?? (point.BidSize ?? 0 + point.AskSize ?? 0);
+
+        cumPrice += price * volume;
+        cumVolume += volume;
+
+        items.Add((price, volume));
+
+        var average = cumPrice / cumVolume;
+        var variance = items
+            .Select(o => o.Volume * (o.Price - average) * (o.Price - average))
+            .Sum() / cumVolume;
+
+        var deviation = Math.Sqrt(variance);
+
+        Response = Response with
+        {
+          Last = average,
+          Bar = Response.Bar with
+          {
+            High = average + 2.0 * deviation,
+            Low = average - 2.0 * deviation
+          }
+        };
+      }
+
+      return response;
+    }
+  }
+}

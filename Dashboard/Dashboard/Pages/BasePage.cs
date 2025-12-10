@@ -1,3 +1,4 @@
+using BitMart.Net.Enums;
 using Canvas.Core.Models;
 using Canvas.Core.Shapes;
 using Core.Conventions;
@@ -97,14 +98,16 @@ namespace Dashboard.Pages
     /// <summary>
     /// Open position
     /// </summary>
+    /// <param name="adapter"></param>
     /// <param name="asset"></param>
     /// <param name="side"></param>
-    protected virtual async Task OpenPosition(IGateway adapter, Instrument asset, OrderSideEnum side)
+    /// <param name="amount"></param>
+    protected virtual async Task OpenPosition(IGateway adapter, Instrument asset, OrderSideEnum side, double amount = 1)
     {
       var order = new Order
       {
-        Amount = 1,
         Side = side,
+        Amount = amount,
         Type = OrderTypeEnum.Market,
         Operation = new() { Instrument = asset }
       };
@@ -115,9 +118,11 @@ namespace Dashboard.Pages
     /// <summary>
     /// Close positions
     /// </summary>
+    /// <param name="adapter"></param>
     /// <param name="condition"></param>
-    protected virtual async Task ClosePosition(IGateway adapter, Func<Order, bool> condition = null)
+    protected virtual async Task<List<Order>> ClosePosition(IGateway adapter, Func<Order, bool> condition = null)
     {
+      var response = new List<Order>();
       var positions = await adapter.GetPositions(default);
 
       foreach (var position in positions.Data)
@@ -136,8 +141,12 @@ namespace Dashboard.Pages
           };
 
           await adapter.SendOrder(order);
+
+          response.Add(order);
         }
       }
+
+      return response;
     }
   }
 }

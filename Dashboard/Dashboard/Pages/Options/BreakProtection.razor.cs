@@ -179,42 +179,6 @@ namespace Dashboard.Pages.Options
     }
 
     /// <summary>
-    /// Render indicators
-    /// </summary>
-    (double, double, double) GetIndicators(IList<Order> positions, Price point)
-    {
-      var price = point.Last;
-      var nextPositions = Positions(positions, NextDate(point));
-      var curPositions = Positions(positions, CurDate(point)).Where(o => o.Side is OrderSideEnum.Short);
-      var sigma = curPositions.Sum(o => o.Operation.Instrument.Derivative.Volatility ?? 0);
-      var customCurDelta = Math.Round(curPositions.Sum(o =>
-      {
-        var instrument = o.Operation.Instrument;
-
-        return PriceService.Delta(
-          instrument.Derivative.Side is OptionSideEnum.Put ? Lib.Option.Type.Put : Lib.Option.Type.Call,
-          price,
-          instrument.Derivative.Strike,
-          0.01) * -1 * 100.0;
-
-      }), MidpointRounding.ToZero);
-
-      var customNextDelta = Math.Round(nextPositions.Sum(o =>
-      {
-        var instrument = o.Operation.Instrument;
-
-        return PriceService.Delta(
-          instrument.Derivative.Side is OptionSideEnum.Put ? Lib.Option.Type.Put : Lib.Option.Type.Call,
-          price,
-          instrument.Derivative.Strike,
-          0.01) * 100.0;
-
-      }), MidpointRounding.ToZero);
-
-      return (customCurDelta, customNextDelta, sigma);
-    }
-
-    /// <summary>
     /// Get option chain
     /// </summary>
     /// <param name="instrument"></param>
