@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Core\Core.Tests\Core.Common.Tests.csproj" />
+    <ProjectReference Include="..\..\..\Core\Core.Tests\Core.Tests.csproj" />
     <ProjectReference Include="..\Libs\Simulation.csproj" />
   </ItemGroup>
 

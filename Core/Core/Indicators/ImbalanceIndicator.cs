@@ -17,7 +17,6 @@ namespace Core.Indicators
     /// Calculate indicator value
     /// </summary>
     /// <param name="collection"></param>
-    /// <param name="side"></param>
     public override Task<IIndicator> Update(IList<Price> collection)
     {
       var response = Task.FromResult<IIndicator>(this);
@@ -30,14 +29,23 @@ namespace Core.Indicators
 
       var value = 0.0;
 
-      switch (Mode)
+      if (Equals(currentPoint.Bar.Time, Response.Time))
       {
-        case 0: value = currentPoint.AskSize.Value - currentPoint.BidSize.Value; break;
-        case 1: value = currentPoint.AskSize.Value; break;
-        case -1: value = currentPoint.BidSize.Value; break;
+        value = Response.Last.Value;
       }
 
-      Response = Response with { Last = value };
+      switch (Mode)
+      {
+        case 0: value += currentPoint.AskSize.Value - currentPoint.BidSize.Value; break;
+        case 1: value += currentPoint.AskSize.Value; break;
+        case -1: value += currentPoint.BidSize.Value; break;
+      }
+
+      Response = Response with
+      {
+        Last = value,
+        Time = currentPoint.Bar.Time
+      };
 
       return response;
     }

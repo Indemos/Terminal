@@ -29,15 +29,17 @@ namespace Core.Indicators
         return response;
       }
 
-      var interval = Math.Min(Interval, collection.Count);
-      var value =
-        Math.Max(currentPoint.Bar.High.Value, previousPoint.Bar.Close.Value) -
-        Math.Min(currentPoint.Bar.Low.Value, previousPoint.Bar.Close.Value);
+      var interval = Math.Max(Math.Min(Interval, collection.Count), 1);
 
-      if (interval is not 0)
+      var max = new double[]
       {
-        value = ((Response.Last ?? 1) * Math.Max(Interval - 1, 0) + value) / interval;
-      }
+        Math.Abs(currentPoint.Bar.High.Value - previousPoint.Bar.Close.Value),
+        Math.Abs(currentPoint.Bar.Low.Value - previousPoint.Bar.Close.Value),
+        currentPoint.Bar.High.Value - currentPoint.Bar.Low.Value
+
+      }.Max();
+
+      var value = ((Response.Last ?? 1) * Math.Max(interval - 1, 0) + max) / interval;
 
       Response = Response with { Last = value };
 

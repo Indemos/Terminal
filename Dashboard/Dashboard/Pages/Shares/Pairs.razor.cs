@@ -97,8 +97,8 @@ namespace Dashboard.Pages.Shares
       var account = Adapter.Account;
       var instrumentX = account.Instruments[assetX];
       var instrumentY = account.Instruments[assetY];
-      var seriesX = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await Adapter.GetPrices(new Criteria { Count = 1, Instrument = instrumentY })).Data;
+      var seriesX = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {

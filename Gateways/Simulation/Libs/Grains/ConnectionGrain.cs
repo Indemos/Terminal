@@ -77,14 +77,18 @@ namespace Simulation.Grains
 
       await Task.WhenAll(state.Account.Instruments.Values.Select(Subscribe));
 
-      var counter = this.RegisterGrainTimer(
-        o => Task.WhenAll(subscriptions.Values.Select(o => o())),
-        0,
-        TimeSpan.Zero,
-        TimeSpan.FromMicroseconds(1));
+      Task.Run(async () =>
+      {
+        while (streams.Count is not 0)
+        {
+          foreach (var action in subscriptions.Values)
+          {
+            await action();
+          }
+        }
+      }).Ignore();
 
       connections.AddRange(streams.Values);
-      connections.Add(counter);
 
       return new()
       {

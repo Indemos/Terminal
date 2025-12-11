@@ -32,8 +32,9 @@ namespace Core.Indicators
 
       var ups = new List<double>(Interval);
       var downs = new List<double>(Interval);
+      var interval = Math.Min(Interval, collection.Count);
 
-      for (var i = 1; i <= Interval; i++)
+      for (var i = 1; i < interval; i++)
       {
         var nextPrice = collection.ElementAtOrDefault(collection.Count - i);
         var previousPrice = collection.ElementAtOrDefault(collection.Count - i - 1);
@@ -45,10 +46,9 @@ namespace Core.Indicators
         }
       }
 
-      var interval = Math.Min(Interval, collection.Count);
       var averageUp = Average.SimpleAverage(ups, ups.Count - 1, interval);
       var averageDown = Average.SimpleAverage(downs, downs.Count - 1, interval) as double?;
-      var average = averageDown.Is(0) ? 1.0 : averageUp / averageDown;
+      var average = averageDown.Is(0) ? 0 : averageUp / averageDown;
 
       Response = Response with { Last = 100.0 - 100.0 / (1.0 + average) };
 

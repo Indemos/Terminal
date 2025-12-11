@@ -53,7 +53,7 @@ namespace Core.Indicators
       }
 
       var interval = Math.Min(Interval, collection.Count);
-      var average = Average.LinearWeightAverage(collection.Select(o => o.Last.Value), collection.Count - 1, interval) as double?;
+      var average = Average.LinearWeightAverage([.. collection.Select(o => o.Last.Value)], collection.Count - 1, interval) as double?;
 
       Response = Response with { Last = average.Is(0) ? value : average };
 

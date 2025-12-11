@@ -1,3 +1,4 @@
+using Canvas.Core.Extensions;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
@@ -22,13 +23,20 @@ namespace Dashboard.Pages.Shares
     TransactionsComponent TransactionsView { get; set; }
     PerformanceIndicator Performance { get; set; }
 
-    double? Price { get; set; }
     double Step { get; set; } = 1;
-    string Asset { get; set; } = "GOOG";
+    const string AssetX = "GOOG";
+    const string AssetY = "GOOGL";
+
+    Dictionary<string, double?> Prices = new()
+    {
+      [AssetX] = null,
+      [AssetY] = null
+    };
 
     Dictionary<string, Instrument> Instruments => new()
     {
-      [Asset] = new Instrument { Name = Asset }
+      [AssetX] = new Instrument { Name = AssetX },
+      [AssetY] = new Instrument { Name = AssetY }
     };
 
     protected override async Task OnView()
@@ -57,6 +65,11 @@ namespace Dashboard.Pages.Shares
 
     protected override async void OnViewUpdate(Instrument instrument)
     {
+      if (instrument.Name == AssetY)
+      {
+        return;
+      }
+
       var price = instrument.Price;
       var account = Adapter.Account;
       var performance = await Performance.Update(Adapters.Values);
@@ -71,13 +84,38 @@ namespace Dashboard.Pages.Shares
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
+      if (instrument.Name == AssetY)
+      {
+        return;
+      }
+
+      var account = Adapter.Account;
+      var instrumentX = account.Instruments[AssetX];
+      var instrumentY = account.Instruments[AssetY];
+      var seriesX = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentX })).Data;
+      var seriesY = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentY })).Data;
+
+      if (seriesX.Count is 0 || seriesY.Count is 0)
+      {
+        return;
+      }
+
+      var priceX = seriesX.Last();
+      var priceY = seriesY.Last();
+
+      await Trade(instrumentX with { Price = priceX });
+      await Trade(instrumentY with { Price = priceY });
+    }
+
+    protected async Task Trade(Instrument instrument)
+    {
       var price = instrument.Price;
       var account = Adapter.Account;
 
-      Price ??= price.Last;
+      Prices[instrument.Name] = Prices.Get(instrument.Name) ?? price.Last;
 
-      var orders = (await Adapter.GetOrders(default)).Data;
-      var positions = (await Adapter.GetPositions(default)).Data;
+      var orders = (await Adapter.GetOrders(default)).Data.Where(o => o.Operation.Instrument.Name == instrument.Name).ToList();
+      var positions = (await Adapter.GetPositions(default)).Data.Where(o => o.Operation.Instrument.Name == instrument.Name).ToList();
 
       if (orders.Count is not 0)
       {
@@ -88,18 +126,18 @@ namespace Dashboard.Pages.Shares
       {
         var pos = positions.First();
         var closures = new List<Order>();
-        var isStepUp = price.Last - Price > Step;
-        var isStepDown = Price - price.Last > Step;
+        var isStepUp = price.Last - Prices[instrument.Name] > Step;
+        var isStepDown = Prices[instrument.Name] - price.Last > Step;
 
         if (isStepUp)
         {
-          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Short);
+          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Short && o.Operation.Instrument.Name == instrument.Name);
           await OpenPosition(Adapter, instrument, OrderSideEnum.Long);
         }
 
         if (isStepDown)
         {
-          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Long);
+          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Long && o.Operation.Instrument.Name == instrument.Name);
           await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
         }
 
@@ -107,7 +145,7 @@ namespace Dashboard.Pages.Shares
 
         if (isStepUp || isStepDown)
         {
-          Price = price.Last;
+          Prices[instrument.Name] = price.Last;
         }
       }
 
