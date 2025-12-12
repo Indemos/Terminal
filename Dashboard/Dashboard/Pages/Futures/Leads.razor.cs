@@ -15,8 +15,8 @@ namespace Dashboard.Pages.Futures
   public partial class Leads
   {
     ControlsComponent View { get; set; }
-    ChartsComponent LeaderView { get; set; }
-    ChartsComponent FollowerView { get; set; }
+    ChartsComponent DataView { get; set; }
+    ChartsComponent SpreadView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     TransactionsComponent TransactionsView { get; set; }
@@ -37,13 +37,13 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnView()
     {
-      await LeaderView.Create("Prices");
-      await FollowerView.Create("Prices");
-      await IndicatorsView.Create("Indicators");
-      await PerformanceView.Create("Performance");
+      await DataView.Create(nameof(DataView));
+      await SpreadView.Create(nameof(SpreadView));
+      await IndicatorsView.Create(nameof(IndicatorsView));
+      await PerformanceView.Create(nameof(PerformanceView));
 
-      LeaderView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
-      FollowerView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      DataView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
+      SpreadView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
       IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
       PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
     }
@@ -98,12 +98,12 @@ namespace Dashboard.Pages.Futures
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
       TransactionsView.Update(Adapters.Values);
-      LeaderView.Update(price.Time.Value, "Prices", "Leader", new AreaShape { Y = priceX.Last, Component = ComUp });
-      FollowerView.Update(price.Time.Value, "Prices", "Spread", new AreaShape { Y = spread, Component = Com });
-      IndicatorsView.Update(price.Time.Value, "Indicators", "X", new LineShape { Y = scaleX.Response.Last, Component = ComUp });
-      IndicatorsView.Update(price.Time.Value, "Indicators", "Y", new LineShape { Y = scaleY.Response.Last, Component = ComDown });
-      PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      DataView.Update(price.Time.Value, nameof(DataView), "Leader", new AreaShape { Y = priceX.Last, Component = ComUp });
+      SpreadView.Update(price.Time.Value, nameof(SpreadView), "Spread", new AreaShape { Y = spread, Component = Com });
+      IndicatorsView.Update(price.Time.Value, nameof(IndicatorsView), "X", new LineShape { Y = scaleX.Response.Last, Component = ComUp });
+      IndicatorsView.Update(price.Time.Value, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY.Response.Last, Component = ComDown });
+      PerformanceView.Update(price.Time.Value, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
+      PerformanceView.Update(price.Time.Value, nameof(PerformanceView), "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)

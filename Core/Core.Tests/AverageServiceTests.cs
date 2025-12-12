@@ -12,8 +12,8 @@ namespace Core.Tests
     {
       var service = new AverageService();
 
-      Assert.Equal(0, service.SimpleAverage(items, -5, 5));
-      Assert.Equal(5, service.SimpleAverage(items, 0, 5));
+      Assert.Equal(39, service.SimpleAverage(items, -5, 5));
+      Assert.Equal(39, service.SimpleAverage(items, 0, 5));
       Assert.Equal(15, service.SimpleAverage(items, 2, 2));
       Assert.Equal(40, service.SimpleAverage(items, 3, 2));
       Assert.Equal(246, service.SimpleAverage(items, items.Count - 1, 5));

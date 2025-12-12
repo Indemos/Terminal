@@ -1,11 +1,9 @@
 @inherits BasePage
 
-@page "/futures/leads"
+@page "/shares/convex-fade"
 
 <ControlsComponent Adapters="Adapters">
-  <ChartsComponent Name="Prices" @ref="DataView" />
-  <ChartsComponent Name="Spread" @ref="SpreadView" />
-  <ChartsComponent Name="Indicators" @ref="IndicatorsView" />
+  <ChartsComponent Name="Indicators" @ref="DataView" />
   <ChartsComponent Name="Performance" @ref="PerformanceView" />
   <OrdersComponent Name="Orders" @ref="OrdersView" />
   <PositionsComponent Name="Positions" @ref="PositionsView" />
