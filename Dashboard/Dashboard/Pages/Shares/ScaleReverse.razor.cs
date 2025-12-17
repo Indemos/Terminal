@@ -59,7 +59,7 @@ namespace Dashboard.Pages.Shares
       return base.OnTrade();
     }
 
-    protected override async void OnViewUpdate(Instrument instrument)
+    protected override async Task OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
       var account = Adapter.Account;

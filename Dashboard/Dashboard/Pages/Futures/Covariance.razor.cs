@@ -13,6 +13,19 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Futures
 {
+  public class Indexer : List<(long, double)>
+  {
+    public new void Add((long, double) item)
+    {
+      if (Count is 0 || item.Item1 > this[^1].Item1)
+      {
+        base.Add(item);
+      }
+
+      this[^1] = item;
+    }
+  }
+
   public partial class Covariance
   {
     ControlsComponent View { get; set; }
@@ -27,13 +40,18 @@ namespace Dashboard.Pages.Futures
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
 
+    int Direction { get; set; } = 0;
     double Deviation { get; set; } = 2;
+    Indexer Scores { get; set; } = new();
     AverageService AverageService { get; set; } = new();
+
+    const string nameX = "ESU25";
+    const string nameY = "NQU25";
 
     Dictionary<string, Instrument> Instruments = new()
     {
-      ["ESU25"] = new() { Name = "ESU25", StepValue = 12.50, StepSize = 0.25, Leverage = 50, Commission = 3.65, TimeFrame = TimeSpan.FromSeconds(1) },
-      ["NQU25"] = new() { Name = "NQU25", StepValue = 5, StepSize = 0.25, Leverage = 20, Commission = 3.65, TimeFrame = TimeSpan.FromSeconds(1) },
+      [nameX] = new() { Name = nameX, StepValue = 12.50, StepSize = 0.25, Leverage = 50, Commission = 3.65 },
+      [nameY] = new() { Name = nameY, StepValue = 5, StepSize = 0.25, Leverage = 20, Commission = 3.65 },
     };
 
     protected override async Task OnView()
@@ -74,16 +92,16 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected override async void OnViewUpdate(Instrument instrument)
+    protected override async Task OnViewUpdate(Instrument instrument)
     {
       var adapter = Adapter;
       var account = adapter.Account;
       var price = instrument.Price;
       var index = price.Bar.Time.Value;
-      var assetX = account.Instruments["ESU25"];
-      var assetY = account.Instruments["NQU25"];
-      var seriesX = (await adapter.GetPriceGroups(new Criteria { Count = 100, Instrument = assetX })).Data;
-      var seriesY = (await adapter.GetPriceGroups(new Criteria { Count = 100, Instrument = assetY })).Data;
+      var assetX = account.Instruments[nameX];
+      var assetY = account.Instruments[nameY];
+      var seriesX = (await adapter.GetPrices(new() { Count = 100, Instrument = assetX })).Data;
+      var seriesY = (await adapter.GetPrices(new() { Count = 100, Instrument = assetY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -113,7 +131,7 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
-      if (Equals(instrument.Name, "ESU25") is false)
+      if (Equals(instrument.Name, nameX) is false)
       {
         return;
       }
@@ -121,10 +139,10 @@ namespace Dashboard.Pages.Futures
       var price = instrument.Price;
       var adapter = Adapter;
       var account = adapter.Account;
-      var assetX = account.Instruments["ESU25"];
-      var assetY = account.Instruments["NQU25"];
-      var seriesX = (await adapter.GetPrices(new Criteria { Count = 100, Instrument = assetX })).Data;
-      var seriesY = (await adapter.GetPrices(new Criteria { Count = 100, Instrument = assetY })).Data;
+      var assetX = account.Instruments[nameX];
+      var assetY = account.Instruments[nameY];
+      var seriesX = (await adapter.GetPrices(new() { Count = 100, Instrument = assetX })).Data;
+      var seriesY = (await adapter.GetPrices(new() { Count = 100, Instrument = assetY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -142,30 +160,24 @@ namespace Dashboard.Pages.Futures
         var retSeriesY = seriesY.Select(o => o.Last.Value * assetY.Leverage.Value).ToArray();
         var beta = CalculateHedgeRatio(retSeriesX, retSeriesY);
         var score = CalculateZScore(retSeriesX, retSeriesY, beta, (priceX.Last * assetX.Leverage.Value - beta * priceY.Last * assetY.Leverage.Value).Value);
+
+        Scores.Add((price.Bar.Time.Value, score));
+
         var isLong = score < -Deviation;
         var isShort = score > Deviation;
-
-        if (Equals(price.Bar.Time, scores.LastOrDefault().Item1))
-        {
-          scores[scores.Count - 1] = (price.Bar.Time.Value, score);
-        }
-        else
-        {
-          scores.Add((price.Bar.Time.Value, score));
-        }
-
-        var prevScore = scores.ElementAtOrDefault(scores.Count - 2).Item2;
 
         if (positions.Count is 0)
         {
           switch (true)
           {
             case true when isLong:
+              Direction = 1;
               await OpenPosition(adapter, assetX, OrderSideEnum.Long);
               await OpenPosition(adapter, assetY, OrderSideEnum.Short);
               break;
 
             case true when isShort:
+              Direction = -1;
               await OpenPosition(adapter, assetX, OrderSideEnum.Short);
               await OpenPosition(adapter, assetY, OrderSideEnum.Long);
               break;
@@ -174,9 +186,9 @@ namespace Dashboard.Pages.Futures
 
         if (positions.Count is not 0)
         {
-          var pos = positions.First();
-          var closeLong = pos.Side is OrderSideEnum.Long && prevScore > 0;
-          var closeShort = pos.Side is OrderSideEnum.Short && prevScore < 0;
+          var prevScore = Scores.ElementAtOrDefault(Scores.Count - 1).Item2;
+          var closeLong = Direction is 1 && prevScore > 0;
+          var closeShort = Direction is -1 && prevScore < 0;
 
           if (closeLong || closeShort)
           {
@@ -185,8 +197,6 @@ namespace Dashboard.Pages.Futures
         }
       }
     }
-
-    List<(long, double)> scores = new();
 
     /// <summary>
     /// Calculates the Hedge Ratio (Beta) between two time series (Y vs X) using simple linear regression.

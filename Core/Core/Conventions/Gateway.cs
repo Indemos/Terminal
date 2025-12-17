@@ -1,7 +1,6 @@
 using Core.Enums;
 using Core.Models;
 using Orleans;
-using Orleans.Streams;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,13 +22,13 @@ namespace Core.Conventions
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    void StreamPrice(Instrument instrument);
+    Task StreamView(Instrument instrument);
 
     /// <summary>
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    Task StreamInstrument(Instrument instrument);
+    Task StreamTrade(Instrument instrument);
   }
 
   public interface IGateway
@@ -47,12 +46,12 @@ namespace Core.Conventions
     /// <summary>
     /// Price message
     /// </summary>
-    Action<Instrument> OnPrice { get; set; }
+    Func<Instrument, Task> OnView { get; set; }
 
     /// <summary>
     /// Trade message
     /// </summary>
-    Func<Instrument, Task> OnInstrument { get; set; }
+    Func<Instrument, Task> OnTrade { get; set; }
 
     /// <summary>
     /// Connect
@@ -166,12 +165,12 @@ namespace Core.Conventions
     /// <summary>
     /// Price message
     /// </summary>
-    public virtual Action<Instrument> OnPrice { get; set; } = o => { };
+    public virtual Func<Instrument, Task> OnView { get; set; } = o => Task.CompletedTask;
 
     /// <summary>
     /// Trade message
     /// </summary>
-    public virtual Func<Instrument, Task> OnInstrument { get; set; } = o => Task.CompletedTask;
+    public virtual Func<Instrument, Task> OnTrade { get; set; } = o => Task.CompletedTask;
 
     /// <summary>
     /// Order message
@@ -183,13 +182,13 @@ namespace Core.Conventions
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual void StreamPrice(Instrument instrument) => OnPrice(instrument);
+    public virtual Task StreamView(Instrument instrument) => OnView(instrument);
 
     /// <summary>
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task StreamInstrument(Instrument instrument) => OnInstrument(instrument);
+    public virtual Task StreamTrade(Instrument instrument) => OnTrade(instrument);
 
     /// <summary>
     /// Connect

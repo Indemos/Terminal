@@ -60,7 +60,7 @@ namespace Dashboard.Pages.Gateways
       return base.OnTrade();
     }
 
-    protected override async void OnViewUpdate(Instrument instrument)
+    protected override async Task OnViewUpdate(Instrument instrument)
     {
       var adapter = Adapter;
       var price = instrument.Price;

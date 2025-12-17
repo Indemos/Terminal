@@ -26,6 +26,7 @@ namespace Dashboard.Pages.Futures
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
 
+    double ActionableSpread { get; set; } = 0.1;
     Price PreviousLeader { get; set; }
     Price PreviousFollower { get; set; }
 
@@ -73,15 +74,15 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected override async void OnViewUpdate(Instrument instrument)
+    protected override async Task OnViewUpdate(Instrument instrument)
     {
       var price = instrument.Price;
       var adapter = Adapter;
       var account = adapter.Account;
       var assetX = account.Instruments["ESU25"];
       var assetY = account.Instruments["NQU25"];
-      var seriesX = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = assetX })).Data;
-      var seriesY = (await adapter.GetPrices(new Criteria { Count = 1, Instrument = assetY })).Data;
+      var seriesX = (await adapter.GetPrices(new() { Count = 1, Instrument = assetX })).Data;
+      var seriesY = (await adapter.GetPrices(new() { Count = 1, Instrument = assetY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -137,7 +138,7 @@ namespace Dashboard.Pages.Futures
 
       if (orders.Count is 0)
       {
-        if (PreviousLeader is not null && positions.Count is 0 && spread > 0.1)
+        if (PreviousLeader is not null && positions.Count is 0 && spread > ActionableSpread)
         {
           var isLong = scaleX.Response.Last > PreviousLeader.Last && scaleX.Response.Last > scaleY.Response.Last;
           var isShort = scaleX.Response.Last < PreviousLeader.Last && scaleX.Response.Last < scaleY.Response.Last;

@@ -162,8 +162,6 @@ namespace Simulation.Grains
             TimeFrame = instrument.TimeFrame
           });
 
-          observer.StreamPrice(group);
-
           await domGrain.Store(min.Value.Dom);
           await optionsGrain.Store(min.Value.Options);
           await ordersGrain.Tap(group);
@@ -175,7 +173,8 @@ namespace Simulation.Grains
             await positionsGrain.Tap(option);
           }
 
-          await observer.StreamInstrument(group);
+          await observer.StreamView(group);
+          await observer.StreamTrade(group);
 
           summaries[instrument.Name] = null;
         }

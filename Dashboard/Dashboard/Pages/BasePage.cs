@@ -64,8 +64,8 @@ namespace Dashboard.Pages
 
             foreach (var adapter in Adapters.Values)
             {
-              adapter.OnPrice = OnViewUpdate;
-              adapter.OnInstrument = OnTradeUpdate;
+              adapter.OnView = OnViewUpdate;
+              adapter.OnTrade = OnTradeUpdate;
             }
           }
         });
@@ -79,7 +79,7 @@ namespace Dashboard.Pages
     /// </summary>
     protected virtual Task OnView() => Task.CompletedTask;
     protected virtual Task OnTrade() => Task.CompletedTask;
-    protected virtual void OnViewUpdate(Instrument instrument) { }
+    protected virtual Task OnViewUpdate(Instrument instrument) => Task.CompletedTask;
     protected virtual Task OnTradeUpdate(Instrument instrument) => Task.CompletedTask;
 
     /// <summary>
