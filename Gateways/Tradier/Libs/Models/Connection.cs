@@ -8,17 +8,17 @@ namespace Tradier.Models
     /// <summary>
     /// Access token
     /// </summary>
-    public string AccessToken { get; set; }
+    public string AccessToken { get; init; }
 
     /// <summary>
     /// Streaming session token
     /// </summary>
-    public string SessionToken { get; set; }
+    public string SessionToken { get; init; }
 
     /// <summary>
     /// Timeout
     /// </summary>
-    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Account

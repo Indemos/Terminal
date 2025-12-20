@@ -1,6 +1,8 @@
 using Core.Enums;
 using Core.Models;
 using Orleans;
+using Orleans.Streams;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,12 +33,22 @@ namespace Core.Grains
   public class PositionsGrain : Grain<Dictionary<string, Order>>, IPositionsGrain
   {
     /// <summary>
+    /// Messenger
+    /// </summary>
+    protected IAsyncStream<Message> messenger;
+
+    /// <summary>
     /// Activation
     /// </summary>
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
       State = [];
+
+      messenger = this
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
       await base.OnActivateAsync(cancellation);
     }
 

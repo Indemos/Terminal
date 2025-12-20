@@ -8,27 +8,27 @@ namespace Schwab.Models
     /// <summary>
     /// Client ID
     /// </summary>
-    public string Id { get; set; }
+    public string Id { get; init; }
 
     /// <summary>
     /// Client secret
     /// </summary>
-    public string Secret { get; set; }
+    public string Secret { get; init; }
 
     /// <summary>
     /// Access token
     /// </summary>
-    public string AccessToken { get; set; }
+    public string AccessToken { get; init; }
 
     /// <summary>
     /// Refresh token
     /// </summary>
-    public string RefreshToken { get; set; }
+    public string RefreshToken { get; init; }
 
     /// <summary>
     /// Timeout
     /// </summary>
-    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(1);
+    public TimeSpan Timeout { get; init; } = TimeSpan.FromSeconds(5);
 
     /// <summary>
     /// Account

@@ -19,7 +19,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core.Tests", "Core\Core.Tes
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Simulation.Tests", "Gateways\Simulation\Tests\Simulation.Tests.csproj", "{219277CA-BA54-F968-CDCA-E1286D14F1B6}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "InterBroker", "InterBroker", "{63AF1BF5-7ED6-4285-8287-C036D61513D5}"
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Interactive", "Interactive", "{63AF1BF5-7ED6-4285-8287-C036D61513D5}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Core", "Core\Core\Core.csproj", "{1C04AEE8-6883-E5B4-4547-08D3E377DF24}"
 EndProject

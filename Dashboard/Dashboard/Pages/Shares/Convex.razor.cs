@@ -23,7 +23,7 @@ namespace Dashboard.Pages.Shares
     TransactionsComponent TransactionsView { get; set; }
     PerformanceIndicator Performance { get; set; }
 
-    double Step { get; set; } = 1;
+    double Step { get; set; } = 5;
     const string AssetX = "GOOG";
     const string AssetY = "GOOGL";
 
@@ -94,8 +94,10 @@ namespace Dashboard.Pages.Shares
       var instrumentY = account.Instruments[AssetY];
       var seriesX = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentX })).Data;
       var seriesY = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentY })).Data;
+      var orders = (await Adapter.GetOrders(default)).Data;
+      var positions = (await Adapter.GetPositions(default)).Data;
 
-      if (seriesX.Count is 0 || seriesY.Count is 0)
+      if (orders.Count is not 0 || seriesX.Count is 0 || seriesY.Count is 0)
       {
         return;
       }
@@ -103,55 +105,49 @@ namespace Dashboard.Pages.Shares
       var priceX = seriesX.Last();
       var priceY = seriesY.Last();
 
-      await Trade(instrumentX with { Price = priceX });
-      await Trade(instrumentY with { Price = priceY });
+      await Trade(instrumentX with { Price = priceX }, OrderSideEnum.Long, positions);
+      await Trade(instrumentY with { Price = priceY }, OrderSideEnum.Short, positions);
     }
 
-    protected async Task Trade(Instrument instrument)
+    protected async Task Trade(Instrument instrument, OrderSideEnum direction, IList<Order> positions)
     {
       var price = instrument.Price;
       var account = Adapter.Account;
 
       Prices[instrument.Name] = Prices.Get(instrument.Name) ?? price.Last;
 
-      var orders = (await Adapter.GetOrders(default)).Data.Where(o => o.Operation.Instrument.Name == instrument.Name).ToList();
-      var positions = (await Adapter.GetPositions(default)).Data.Where(o => o.Operation.Instrument.Name == instrument.Name).ToList();
-
-      if (orders.Count is not 0)
-      {
-        return;
-      }
-
       if (positions.Count is not 0)
       {
-        var pos = positions.First();
-        var closures = new List<Order>();
         var isStepUp = price.Last - Prices[instrument.Name] > Step;
         var isStepDown = Prices[instrument.Name] - price.Last > Step;
 
         if (isStepUp)
         {
-          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Short && o.Operation.Instrument.Name == instrument.Name);
-          await OpenPosition(Adapter, instrument, OrderSideEnum.Long);
+          Prices[instrument.Name] = price.Last;
+
+          switch (direction)
+          {
+            case OrderSideEnum.Long: await OpenPosition(Adapter, instrument, OrderSideEnum.Long); break;
+            case OrderSideEnum.Short: await ClosePosition(Adapter, o => o.Operation.Instrument.Name == instrument.Name); break;
+          }
         }
 
         if (isStepDown)
         {
-          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Long && o.Operation.Instrument.Name == instrument.Name);
-          await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
-        }
-
-        // Progressive increase
-
-        if (isStepUp || isStepDown)
-        {
           Prices[instrument.Name] = price.Last;
+
+          switch (direction)
+          {
+            case OrderSideEnum.Short: await OpenPosition(Adapter, instrument, OrderSideEnum.Short); break;
+            case OrderSideEnum.Long: await ClosePosition(Adapter, o => o.Operation.Instrument.Name == instrument.Name); break;
+          }
         }
       }
 
       if (positions.Count is 0)
       {
-        await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
+        Prices[instrument.Name] = price.Last;
+        await OpenPosition(Adapter, instrument, direction);
       }
     }
   }

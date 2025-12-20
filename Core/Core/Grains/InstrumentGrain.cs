@@ -1,8 +1,10 @@
 using Core.Extensions;
 using Core.Models;
 using Orleans;
+using Orleans.Streams;
 using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -36,6 +38,24 @@ namespace Core.Grains
 
   public class InstrumentGrain : Grain<Prices>, IInstrumentGrain
   {
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    protected IAsyncStream<Message> messenger;
+
+    /// <summary>
+    /// Activation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
+    {
+      messenger = this
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
+      await base.OnActivateAsync(cancellation);
+    }
+
     /// <summary>
     /// List of prices by criteria
     /// </summary>

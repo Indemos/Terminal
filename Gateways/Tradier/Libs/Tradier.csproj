@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TradierBroker" Version="0.0.5" />
+    <PackageReference Include="TradierBroker" Version="0.0.6" />
   </ItemGroup>
 
   <ItemGroup>

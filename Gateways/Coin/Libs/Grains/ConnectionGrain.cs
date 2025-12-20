@@ -6,6 +6,7 @@ using Core.Grains;
 using Core.Models;
 using CryptoClients.Net;
 using CryptoClients.Net.Interfaces;
+using CryptoExchange.Net.Objects.Sockets;
 using CryptoExchange.Net.SharedApis;
 using System;
 using System.Linq;
@@ -126,7 +127,7 @@ namespace Coin.Grains
     /// Map book
     /// </summary>
     /// <param name="o"></param>
-    protected virtual Price MapPrice(ExchangeEvent<SharedBookTicker> o) => new()
+    protected virtual Price MapPrice(DataEvent<SharedBookTicker> o) => new()
     {
       Bid = (double)o.Data.BestBidPrice,
       BidSize = (double)o.Data.BestBidQuantity,

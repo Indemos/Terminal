@@ -1,7 +1,10 @@
 using Core.Models;
 using Orleans;
+using Orleans.Streams;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Core.Grains
@@ -23,6 +26,24 @@ namespace Core.Grains
 
   public class OptionsGrain : Grain<Instruments>, IOptionsGrain
   {
+    /// <summary>
+    /// Messenger
+    /// </summary>
+    protected IAsyncStream<Message> messenger;
+
+    /// <summary>
+    /// Activation
+    /// </summary>
+    /// <param name="cancellation"></param>
+    public override async Task OnActivateAsync(CancellationToken cancellation)
+    {
+      messenger = this
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
+      await base.OnActivateAsync(cancellation);
+    }
+
     /// <summary>
     /// Option chain
     /// </summary>

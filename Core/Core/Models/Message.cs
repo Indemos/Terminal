@@ -6,11 +6,6 @@ namespace Core.Models
   public record Message
   {
     /// <summary>
-    /// Event type
-    /// </summary>
-    public ActionEnum Action { get; init; }
-
-    /// <summary>
     /// Message or error code
     /// </summary>
     public int? Code { get; init; }
@@ -18,7 +13,17 @@ namespace Core.Models
     /// <summary>
     /// Description
     /// </summary>
-    public string Content { get; init; }
+    public string Source { get; init; }
+
+    /// <summary>
+    /// Description
+    /// </summary>
+    public string Description { get; init; }
+
+    /// <summary>
+    /// Action
+    /// </summary>
+    public ActionEnum Action { get; init; }
 
     /// <summary>
     /// Exception

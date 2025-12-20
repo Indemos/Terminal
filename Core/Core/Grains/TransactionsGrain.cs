@@ -3,6 +3,8 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Models;
 using Orleans;
+using Orleans.Streams;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -49,12 +51,22 @@ namespace Core.Grains
     protected ITradeObserver observer;
 
     /// <summary>
+    /// Messenger
+    /// </summary>
+    protected IAsyncStream<Message> messenger;
+
+    /// <summary>
     /// Activation
     /// </summary>
     /// <param name="cancellation"></param>
     public override async Task OnActivateAsync(CancellationToken cancellation)
     {
       State = [];
+
+      messenger = this
+        .GetStreamProvider(nameof(Message))
+        .GetStream<Message>(string.Empty, Guid.Empty);
+
       await base.OnActivateAsync(cancellation);
     }
 

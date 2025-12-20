@@ -7,12 +7,19 @@ using Schwab.Enums;
 using Schwab.Messages;
 using Schwab.Models;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Schwab.Grains
 {
   public interface ISchwabConnectionGrain : IConnectionGrain
   {
+    /// <summary>
+    /// Stamp
+    /// </summary>
+    /// <param name="accessToken"></param>
+    Task<StatusResponse> Stamp(string accessToken);
+
     /// <summary>
     /// Connect
     /// </summary>
@@ -34,12 +41,26 @@ namespace Schwab.Grains
     /// <summary>
     /// Connector
     /// </summary>
-    protected SchwabBroker connector;
+    protected SchwabBroker connector = new();
 
     /// <summary>
     /// Observer
     /// </summary>
     protected ITradeObserver observer;
+
+    /// <summary>
+    /// Stamp
+    /// </summary>
+    /// <param name="accessToken"></param>
+    public virtual async Task<StatusResponse> Stamp(string accessToken)
+    {
+      connector.AccessToken = accessToken;
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
+    }
 
     /// <summary>
     /// Connect
@@ -52,15 +73,12 @@ namespace Schwab.Grains
 
       state = connection;
       observer = grainObserver;
-      connector = new()
-      {
-        ClientId = connection.Id,
-        ClientSecret = connection.Secret,
-        AccessToken = connection.AccessToken,
-        RefreshToken = connection.RefreshToken
-      };
+      connector.ClientId = connection.Id;
+      connector.ClientSecret = connection.Secret;
+      connector.AccessToken = connection.AccessToken;
+      connector.RefreshToken = connection.RefreshToken;
 
-      await connector.Connect();
+      await connector.ConnectStream(CancellationToken.None);
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 
       return new()
@@ -70,7 +88,7 @@ namespace Schwab.Grains
     }
 
     /// <summary>
-    /// Save state and dispose
+    /// Disconnect
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
@@ -165,7 +183,7 @@ namespace Schwab.Grains
     protected virtual DomEnum MapDomSubType(Instrument instrument)
     {
       return instrument.Type is InstrumentEnum.Options ?
-        DomEnum.OPTIONS_BOOK : 
+        DomEnum.OPTIONS_BOOK :
         DomEnum.NASDAQ_BOOK;
     }
   }

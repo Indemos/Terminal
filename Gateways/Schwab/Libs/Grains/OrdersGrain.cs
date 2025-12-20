@@ -4,6 +4,7 @@ using Core.Models;
 using Schwab.Messages;
 using Schwab.Models;
 using Schwab.Queries;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +13,12 @@ namespace Schwab.Grains
 {
   public interface ISchwabOrdersGrain : IOrdersGrain
   {
+    /// <summary>
+    /// Stamp
+    /// </summary>
+    /// <param name="accessToken"></param>
+    Task<StatusResponse> Stamp(string accessToken);
+
     /// <summary>
     /// Connect
     /// </summary>
@@ -29,7 +36,21 @@ namespace Schwab.Grains
     /// <summary>
     /// Connector
     /// </summary>
-    protected SchwabBroker connector;
+    protected SchwabBroker connector = new();
+
+    /// <summary>
+    /// Stamp
+    /// </summary>
+    /// <param name="accessToken"></param>
+    public virtual async Task<StatusResponse> Stamp(string accessToken)
+    {
+      connector.AccessToken = accessToken;
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
+    }
 
     /// <summary>
     /// Connect
@@ -38,15 +59,7 @@ namespace Schwab.Grains
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
       state = connection;
-      connector = new()
-      {
-        ClientId = connection.Id,
-        ClientSecret = connection.Secret,
-        AccessToken = connection.AccessToken,
-        RefreshToken = connection.RefreshToken
-      };
-
-      await connector.Connect();
+      connector.AccessToken = connection.AccessToken;
 
       return new()
       {
@@ -61,7 +74,13 @@ namespace Schwab.Grains
     public override async Task<OrdersResponse> Orders(Criteria criteria)
     {
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var query = new OrderQuery { AccountCode = criteria.Account.Descriptor};
+      var query = new OrderQuery
+      {
+        AccountCode = criteria.Account.Descriptor,
+        ToEnteredTime = criteria.MaxDate ?? DateTime.Now,
+        FromEnteredTime = criteria.MinDate ?? DateTime.Now.AddDays(-30)
+      };
+
       var messages = await connector.GetOrders(query, cleaner.Token);
       var items = messages.Select(MapOrder);
 
@@ -193,7 +212,8 @@ namespace Schwab.Grains
         case "LIMIT": return (message.Price, null, OrderTypeEnum.Limit);
         case "STOP": return (message.StopPrice, null, OrderTypeEnum.Stop);
         case "STOP_LIMIT": return (message.Price, message.StopPrice, OrderTypeEnum.StopLimit);
-      };
+      }
+      ;
 
       return (null, null, OrderTypeEnum.Market);
     }

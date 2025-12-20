@@ -45,9 +45,9 @@
         {
           Recorder.Data.Information("{@Message}", message);
 
-          if (message.Content is not null)
+          if (message.Description is not null)
           {
-            Popup.Add(@<p>@(message.Content)</p>);
+            Popup.Add(@<p>@(message.Description)</p>);
           }
         }
         catch (Exception) { }

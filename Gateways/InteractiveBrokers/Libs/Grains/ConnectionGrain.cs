@@ -143,7 +143,7 @@ namespace InteractiveBrokers
       {
         await messenger.OnNextAsync(new Message()
         {
-          Content = "No connection",
+          Description = "No connection",
           Action = ActionEnum.Disconnect
         });
 
@@ -194,7 +194,7 @@ namespace InteractiveBrokers
       {
         await messenger.OnNextAsync(new Message()
         {
-          Content = "No such instrument",
+          Description = "No such instrument",
           Action = ActionEnum.Disconnect
         });
 
