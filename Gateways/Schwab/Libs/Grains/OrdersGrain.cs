@@ -14,12 +14,6 @@ namespace Schwab.Grains
   public interface ISchwabOrdersGrain : IOrdersGrain
   {
     /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    Task<StatusResponse> Stamp(string accessToken);
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
@@ -37,20 +31,6 @@ namespace Schwab.Grains
     /// Connector
     /// </summary>
     protected SchwabBroker connector = new();
-
-    /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    public virtual async Task<StatusResponse> Stamp(string accessToken)
-    {
-      connector.AccessToken = accessToken;
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
-    }
 
     /// <summary>
     /// Connect
@@ -76,7 +56,7 @@ namespace Schwab.Grains
       var cleaner = new CancellationTokenSource(state.Timeout);
       var query = new OrderQuery
       {
-        AccountCode = criteria.Account.Descriptor,
+        AccountCode = state.Account.Descriptor,
         ToEnteredTime = criteria.MaxDate ?? DateTime.Now,
         FromEnteredTime = criteria.MinDate ?? DateTime.Now.AddDays(-30)
       };

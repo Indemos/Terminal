@@ -5,9 +5,11 @@ using Core.Grains;
 using Core.Models;
 using Schwab.Grains;
 using Schwab.Models;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Timers;
 
 namespace Schwab
 {
@@ -40,55 +42,17 @@ namespace Schwab
     {
       SubscribeToUpdates();
 
-      var connector = new SchwabBroker()
-      {
-        ClientId = ClientId,
-        ClientSecret = ClientSecret,
-        AccessToken = AccessToken,
-        RefreshToken = RefreshToken,
-        OnToken = scope =>
-        {
-          AccessToken = scope.AccessToken;
-
-          Component<ISchwabOrdersGrain>().Stamp(scope.AccessToken);
-          Component<ISchwabPositionsGrain>().Stamp(scope.AccessToken);
-          Component<ISchwabOrderSenderGrain>().Stamp(scope.AccessToken);
-          Component<ISchwabConnectionGrain>().Stamp(scope.AccessToken);
-          Component<ISchwabTransactionsGrain>().Stamp(scope.AccessToken);
-
-          Task.WhenAll(Account.Instruments.Values.Select(async o =>
-          {
-            await Component<ISchwabOptionsGrain>(o.Name).Stamp(scope.AccessToken);
-          }));
-        }
-      };
-
-      await connector.Connect();
-
-      var account = await connector.GetAccountCode(CancellationToken.None);
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
-
-      Account = Account with { Descriptor = account?.FirstOrDefault()?.HashValue };
-
       var connection = new Connection()
       {
         Id = ClientId,
         Secret = ClientSecret,
-        AccessToken = AccessToken,
         RefreshToken = RefreshToken,
+        AccessToken = AccessToken,
         Account = Account
       };
 
-      await Component<ISchwabOrdersGrain>().Setup(connection);
-      await Component<ISchwabPositionsGrain>().Setup(connection);
-      await Component<ISchwabOrderSenderGrain>().Setup(connection);
       await Component<ISchwabConnectionGrain>().Setup(connection, observer);
-      await Component<ISchwabTransactionsGrain>().Setup(connection, observer);
-
-      await Task.WhenAll(Account.Instruments.Values.Select(async o =>
-      {
-        await Component<ISchwabOptionsGrain>(o.Name).Setup(connection);
-      }));
 
       return new()
       {

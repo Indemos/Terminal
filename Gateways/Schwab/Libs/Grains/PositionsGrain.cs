@@ -13,12 +13,6 @@ namespace Schwab.Grains
   public interface ISchwabPositionsGrain : IPositionsGrain
   {
     /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    Task<StatusResponse> Stamp(string accessToken);
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
@@ -36,20 +30,6 @@ namespace Schwab.Grains
     /// Connector
     /// </summary>
     protected SchwabBroker connector = new();
-
-    /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    public virtual async Task<StatusResponse> Stamp(string accessToken)
-    {
-      connector.AccessToken = accessToken;
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
-    }
 
     /// <summary>
     /// Connect
@@ -73,7 +53,7 @@ namespace Schwab.Grains
     public override async Task<OrdersResponse> Positions(Criteria criteria)
     {
       var cleaner = new CancellationTokenSource(state.Timeout);
-      var query = new AccountQuery { AccountCode = criteria.Account.Descriptor };
+      var query = new AccountQuery { AccountCode = state.Account.Descriptor };
       var messages = await connector.GetPositions(query, cleaner.Token);
       var items = messages.Select(MapPosition);
 

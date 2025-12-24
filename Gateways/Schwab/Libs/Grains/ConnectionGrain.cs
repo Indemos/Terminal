@@ -3,9 +3,11 @@ using Core.Enums;
 using Core.Extensions;
 using Core.Grains;
 using Core.Models;
+using Orleans;
 using Schwab.Enums;
 using Schwab.Messages;
 using Schwab.Models;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,12 +16,6 @@ namespace Schwab.Grains
 {
   public interface ISchwabConnectionGrain : IConnectionGrain
   {
-    /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    Task<StatusResponse> Stamp(string accessToken);
-
     /// <summary>
     /// Connect
     /// </summary>
@@ -41,26 +37,17 @@ namespace Schwab.Grains
     /// <summary>
     /// Connector
     /// </summary>
-    protected SchwabBroker connector = new();
+    protected SchwabBroker connector;
+
+    /// <summary>
+    /// Timer
+    /// </summary>
+    protected IDisposable counter;
 
     /// <summary>
     /// Observer
     /// </summary>
     protected ITradeObserver observer;
-
-    /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    public virtual async Task<StatusResponse> Stamp(string accessToken)
-    {
-      connector.AccessToken = accessToken;
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
-    }
 
     /// <summary>
     /// Connect
@@ -73,12 +60,55 @@ namespace Schwab.Grains
 
       state = connection;
       observer = grainObserver;
-      connector.ClientId = connection.Id;
-      connector.ClientSecret = connection.Secret;
-      connector.AccessToken = connection.AccessToken;
-      connector.RefreshToken = connection.RefreshToken;
+      connector = new SchwabBroker()
+      {
+        ClientId = connection.Id,
+        ClientSecret = connection.Secret,
+        AccessToken = connection.AccessToken,
+        RefreshToken = connection.RefreshToken
+      };
 
-      await connector.ConnectStream(CancellationToken.None);
+      var descriptor = this.GetDescriptor();
+      var scope = await connector.Authenticate();
+
+      connector.AccessToken = scope?.AccessToken;
+
+      var account = await connector.GetAccountCode(CancellationToken.None);
+
+      connection = connection with
+      {
+        AccessToken = scope?.AccessToken,
+        Account = connection.Account with { Descriptor = account?.FirstOrDefault()?.HashValue }
+      };
+
+      await connector.Stream(CancellationToken.None);
+
+      await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection);
+      await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection);
+      await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection);
+      await GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor).Setup(connection, observer);
+
+      foreach (var o in connection.Account.Instruments.Values)
+      {
+        await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection);
+      }
+
+      counter = this.RegisterGrainTimer(async data =>
+      {
+        connection = connection with { AccessToken = scope?.AccessToken };
+
+        await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection);
+        await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection);
+        await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection);
+        await GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor).Setup(connection, observer);
+
+        foreach (var o in state.Account.Instruments.Values)
+        {
+          await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection);
+        }
+
+      }, 0, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 
       return new()
@@ -95,6 +125,7 @@ namespace Schwab.Grains
       connections?.ForEach(o => o.Dispose());
       connections?.Clear();
       connector?.Dispose();
+      counter?.Dispose();
 
       return Task.FromResult(new StatusResponse
       {

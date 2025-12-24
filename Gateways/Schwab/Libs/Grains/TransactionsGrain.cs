@@ -10,12 +10,6 @@ namespace Schwab.Grains
   public interface ISchwabTransactionsGrain : ITransactionsGrain
   {
     /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    Task<StatusResponse> Stamp(string accessToken);
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
@@ -34,20 +28,6 @@ namespace Schwab.Grains
     /// Connector
     /// </summary>
     protected SchwabBroker connector = new();
-
-    /// <summary>
-    /// Stamp
-    /// </summary>
-    /// <param name="accessToken"></param>
-    public virtual async Task<StatusResponse> Stamp(string accessToken)
-    {
-      connector.AccessToken = accessToken;
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
-    }
 
     /// <summary>
     /// Connect
