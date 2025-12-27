@@ -3,18 +3,17 @@ using Core.Enums;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
-using Coin;
+using Schwab;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using CryptoClients.Net.Enums;
 
 namespace Dashboard.Pages.Gateways
 {
-  public partial class CoinDemo
+  public partial class SchwabBrokerDemo
   {
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
@@ -25,12 +24,13 @@ namespace Dashboard.Pages.Gateways
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, Instrument> Instruments => new()
     {
-      ["ETH"] = new()
+      ["ES"] = new()
       {
-        Name = "ETH",
-        Type = InstrumentEnum.Coins,
+        Name = "/ESH26",
+        Exchange = "CME",
+        Type = InstrumentEnum.Futures,
         TimeFrame = TimeSpan.FromMinutes(1),
-        Currency = new() { Name = "USD" }
+        Basis = new Instrument { Name = "ES" }
       }
     };
 
@@ -43,16 +43,17 @@ namespace Dashboard.Pages.Gateways
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapter = new CoinGateway
+      Adapter = new SchwabGateway
       {
         Connector = Connector,
-        Token = Configuration["Coinbase:Token"],
-        Secret = Configuration["Coinbase:Secret"],
-        Exchange = Exchange.Coinbase,
+        ClientId = Configuration["Schwab:ConsumerKey"],
+        ClientSecret = Configuration["Schwab:ConsumerSecret"],
+        AccessToken = Configuration["Schwab:AccessToken"],
+        RefreshToken = Configuration["Schwab:RefreshToken"],
         Account = new()
         {
-          Descriptor = Configuration["Coinbase:App"],
-          Instruments = Instruments
+          Instruments = Instruments,
+          Descriptor = Configuration["Schwab:Account"]
         }
       };
 

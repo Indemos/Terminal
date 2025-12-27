@@ -15,7 +15,6 @@ namespace Dashboard.Pages.Gateways
 {
   public partial class InterBrokerDemo
   {
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     TransactionsComponent TransactionsView { get; set; }

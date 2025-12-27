@@ -25,7 +25,6 @@ namespace Dashboard.Pages.Options
     double? StrikeDown { get; set; }
     OptionSideEnum? Side { get; set; }
 
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     TransactionsComponent TransactionsView { get; set; }

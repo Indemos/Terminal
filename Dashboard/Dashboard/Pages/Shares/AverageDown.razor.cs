@@ -12,9 +12,8 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Shares
 {
-  public partial class ConvexFade
+  public partial class AverageDown
   {
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     OrdersComponent OrdersView { get; set; }

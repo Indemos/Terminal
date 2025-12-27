@@ -3,18 +3,17 @@ using Core.Enums;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
-using Coin;
 using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using CryptoClients.Net.Enums;
+using Tradier;
 
 namespace Dashboard.Pages.Gateways
 {
-  public partial class CoinDemo
+  public partial class TradierBrokerDemo
   {
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
@@ -25,12 +24,11 @@ namespace Dashboard.Pages.Gateways
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, Instrument> Instruments => new()
     {
-      ["ETH"] = new()
+      ["SPY"] = new()
       {
-        Name = "ETH",
-        Type = InstrumentEnum.Coins,
-        TimeFrame = TimeSpan.FromMinutes(1),
-        Currency = new() { Name = "USD" }
+        Name = "SPY",
+        Type = InstrumentEnum.Shares,
+        TimeFrame = TimeSpan.FromMinutes(1)
       }
     };
 
@@ -43,16 +41,15 @@ namespace Dashboard.Pages.Gateways
     protected override Task OnTrade()
     {
       Performance = new PerformanceIndicator();
-      Adapter = new CoinGateway
+      Adapter = new TradierGateway
       {
         Connector = Connector,
-        Token = Configuration["Coinbase:Token"],
-        Secret = Configuration["Coinbase:Secret"],
-        Exchange = Exchange.Coinbase,
+        AccessToken = Configuration["Tradier:PaperToken"],
+        SessionToken = Configuration["Tradier:Token"],
         Account = new()
         {
-          Descriptor = Configuration["Coinbase:App"],
-          Instruments = Instruments
+          Instruments = Instruments,
+          Descriptor = Configuration["Tradier:Account"]
         }
       };
 

@@ -14,7 +14,6 @@ namespace Dashboard.Pages.Futures
 {
   public partial class Leads
   {
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent SpreadView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
@@ -90,8 +89,8 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
-      var scaleX = await Scales[assetX.Name].Update(seriesX);
-      var scaleY = await Scales[assetY.Name].Update(seriesY);
+      var scaleX = Scales[assetX.Name].Update(seriesX);
+      var scaleY = Scales[assetY.Name].Update(seriesY);
       var priceX = seriesX.Last();
       var priceY = seriesY.Last();
       var spread = Math.Abs((scaleX.Response.Last - scaleY.Response.Last).Value);
@@ -130,8 +129,8 @@ namespace Dashboard.Pages.Futures
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
       var performance = await Performance.Update([adapter]);
-      var scaleX = await Scales[assetX.Name].Update(seriesX);
-      var scaleY = await Scales[assetY.Name].Update(seriesY);
+      var scaleX = Scales[assetX.Name].Update(seriesX);
+      var scaleY = Scales[assetY.Name].Update(seriesY);
       var priceX = seriesX.Last();
       var priceY = seriesY.Last();
       var spread = Math.Abs((scaleX.Response.Last - scaleY.Response.Last).Value);

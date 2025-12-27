@@ -4,7 +4,6 @@ using Core.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Core.Indicators
 {
@@ -34,9 +33,9 @@ namespace Core.Indicators
     /// Calculate single value
     /// </summary>
     /// <param name="collection"></param>
-    public override Task<IIndicator> Update(IList<Price> collection)
+    public override IIndicator Update(IList<Price> collection)
     {
-      var response = Task.FromResult<IIndicator>(this);
+      var response = this;
       var currentPoint = collection.LastOrDefault();
 
       if (currentPoint is null)

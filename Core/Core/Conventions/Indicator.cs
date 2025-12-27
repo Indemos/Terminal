@@ -21,7 +21,7 @@ namespace Core.Conventions
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    Task<IIndicator> Update(IList<Price> collection);
+    IIndicator Update(IList<Price> collection);
   }
 
   public class Indicator : IIndicator
@@ -45,6 +45,6 @@ namespace Core.Conventions
     /// Calculate indicator values
     /// </summary>
     /// <param name="collection"></param>
-    public virtual Task<IIndicator> Update(IList<Price> collection) => Task.FromResult(this as IIndicator);
+    public virtual IIndicator Update(IList<Price> collection) => this;
   }
 }

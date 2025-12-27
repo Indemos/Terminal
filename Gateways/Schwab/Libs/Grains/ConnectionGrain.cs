@@ -70,9 +70,6 @@ namespace Schwab.Grains
 
       var descriptor = this.GetDescriptor();
       var scope = await connector.Authenticate();
-
-      connector.AccessToken = scope?.AccessToken;
-
       var account = await connector.GetAccountCode(CancellationToken.None);
 
       connection = connection with
@@ -82,7 +79,6 @@ namespace Schwab.Grains
       };
 
       await connector.Stream(CancellationToken.None);
-
       await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection);
       await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection);
       await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection);

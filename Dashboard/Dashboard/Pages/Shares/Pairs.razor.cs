@@ -17,7 +17,6 @@ namespace Dashboard.Pages.Shares
     const string assetX = "GOOG";
     const string assetY = "GOOGL";
 
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     OrdersComponent OrdersView { get; set; }

@@ -1,4 +1,3 @@
-using Canvas.Core.Extensions;
 using Canvas.Core.Shapes;
 using Core.Enums;
 using Core.Indicators;
@@ -6,15 +5,15 @@ using Core.Models;
 using Dashboard.Components;
 using Simulation;
 using SkiaSharp;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Shares
 {
-  public partial class Convex
+  public partial class AverageLimit
   {
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     OrdersComponent OrdersView { get; set; }
@@ -23,20 +22,15 @@ namespace Dashboard.Pages.Shares
     TransactionsComponent TransactionsView { get; set; }
     PerformanceIndicator Performance { get; set; }
 
+    double? Price { get; set; }
     double Step { get; set; } = 5;
-    const string AssetX = "GOOG";
-    const string AssetY = "GOOGL";
-
-    Dictionary<string, double?> Prices = new()
-    {
-      [AssetX] = null,
-      [AssetY] = null
-    };
+    double StepBase { get; set; } = 5;
+    double StepIncrement { get; set; } = -1;
+    string Asset { get; set; } = "GOOG";
 
     Dictionary<string, Instrument> Instruments => new()
     {
-      [AssetX] = new Instrument { Name = AssetX },
-      [AssetY] = new Instrument { Name = AssetY }
+      [Asset] = new Instrument { Name = Asset }
     };
 
     protected override async Task OnView()
@@ -65,11 +59,6 @@ namespace Dashboard.Pages.Shares
 
     protected override async Task OnViewUpdate(Instrument instrument)
     {
-      if (instrument.Name == AssetY)
-      {
-        return;
-      }
-
       var price = instrument.Price;
       var account = Adapter.Account;
       var performance = await Performance.Update(Adapters.Values);
@@ -84,70 +73,50 @@ namespace Dashboard.Pages.Shares
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
-      if (instrument.Name == AssetY)
-      {
-        return;
-      }
-
-      var account = Adapter.Account;
-      var instrumentX = account.Instruments[AssetX];
-      var instrumentY = account.Instruments[AssetY];
-      var seriesX = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentX })).Data;
-      var seriesY = (await Adapter.GetPrices(new() { Count = 1, Instrument = instrumentY })).Data;
-      var orders = (await Adapter.GetOrders(default)).Data;
-      var positions = (await Adapter.GetPositions(default)).Data;
-
-      if (orders.Count is not 0 || seriesX.Count is 0 || seriesY.Count is 0)
-      {
-        return;
-      }
-
-      var priceX = seriesX.Last();
-      var priceY = seriesY.Last();
-
-      await Trade(instrumentX with { Price = priceX }, OrderSideEnum.Long, positions);
-      await Trade(instrumentY with { Price = priceY }, OrderSideEnum.Short, positions);
-    }
-
-    protected async Task Trade(Instrument instrument, OrderSideEnum direction, IList<Order> positions)
-    {
       var price = instrument.Price;
       var account = Adapter.Account;
 
-      Prices[instrument.Name] = Prices.Get(instrument.Name) ?? price.Last;
+      Price ??= price.Last;
+
+      var orders = (await Adapter.GetOrders(default)).Data;
+      var positions = (await Adapter.GetPositions(default)).Data;
+
+      if (orders.Count is not 0)
+      {
+        return;
+      }
 
       if (positions.Count is not 0)
       {
-        var isStepUp = price.Last - Prices[instrument.Name] > Step;
-        var isStepDown = Prices[instrument.Name] - price.Last > Step;
+        var pos = positions.First();
+        var closures = new List<Order>();
+        var isStepUp = price.Last - Price > Step;
+        var isStepDown = Price - price.Last > Step;
 
-        if (isStepUp)
+        if (isStepUp && pos.Side is not OrderSideEnum.Long)
         {
-          Prices[instrument.Name] = price.Last;
-
-          switch (direction)
-          {
-            case OrderSideEnum.Long: await OpenPosition(Adapter, instrument, OrderSideEnum.Long); break;
-            case OrderSideEnum.Short: await ClosePosition(Adapter, o => o.Operation.Instrument.Name == instrument.Name); break;
-          }
+          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Short);
+          await OpenPosition(Adapter, instrument, OrderSideEnum.Long);
         }
 
-        if (isStepDown)
+        if (isStepDown && pos.Side is not OrderSideEnum.Short)
         {
-          Prices[instrument.Name] = price.Last;
+          closures = await ClosePosition(Adapter, o => o.Side is OrderSideEnum.Long);
+          await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
+        }
 
-          switch (direction)
-          {
-            case OrderSideEnum.Short: await OpenPosition(Adapter, instrument, OrderSideEnum.Short); break;
-            case OrderSideEnum.Long: await ClosePosition(Adapter, o => o.Operation.Instrument.Name == instrument.Name); break;
-          }
+        // Progressive increase
+
+        if (isStepUp || isStepDown)
+        {
+          Step = closures.Count is not 0 ? StepBase : Math.Max(Math.Abs(StepIncrement), Step + StepIncrement);
+          Price = price.Last;
         }
       }
 
       if (positions.Count is 0)
       {
-        Prices[instrument.Name] = price.Last;
-        await OpenPosition(Adapter, instrument, direction);
+        await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
       }
     }
   }

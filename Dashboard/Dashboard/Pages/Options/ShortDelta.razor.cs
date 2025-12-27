@@ -17,7 +17,6 @@ namespace Dashboard.Pages.Options
 {
   public partial class ShortDelta
   {
-    ControlsComponent View { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
     ChartsComponent PerformanceView { get; set; }

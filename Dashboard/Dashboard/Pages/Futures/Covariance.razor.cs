@@ -13,22 +13,21 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Futures
 {
-  public class Indexer : List<(long, double)>
-  {
-    public new void Add((long, double) item)
-    {
-      if (Count is 0 || item.Item1 > this[^1].Item1)
-      {
-        base.Add(item);
-      }
-
-      this[^1] = item;
-    }
-  }
-
   public partial class Covariance
   {
-    ControlsComponent View { get; set; }
+    public class Indexer : List<(long, double)>
+    {
+      public new void Add((long, double) item)
+      {
+        if (Count is 0 || item.Item1 > this[^1].Item1)
+        {
+          base.Add(item);
+        }
+
+        this[^1] = item;
+      }
+    }
+
     ChartsComponent DataView { get; set; }
     ChartsComponent ScoreView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
@@ -109,8 +108,8 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
-      var scaleX = await Scales[assetX.Name].Update(seriesX);
-      var scaleY = await Scales[assetY.Name].Update(seriesY);
+      var scaleX = Scales[assetX.Name].Update(seriesX);
+      var scaleY = Scales[assetY.Name].Update(seriesY);
       var priceX = seriesX.Last();
       var priceY = seriesY.Last();
       var retSeriesX = seriesX.Select(o => o.Last.Value * assetX.Leverage.Value).ToArray();
