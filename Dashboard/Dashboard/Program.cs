@@ -8,6 +8,7 @@ using Microsoft.Extensions.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
 using Orleans.Configuration;
+using Orleans;
 using Orleans.Hosting;
 using Orleans.Providers;
 using Orleans.Serialization;
@@ -29,11 +30,11 @@ namespace Dashboard
         orleans.AddMemoryGrainStorageAsDefault();
         orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(Message));
         orleans.AddMemoryGrainStorage("PubSubStore");
-        //orleans.UseDashboard(options =>
-        //{
-        //  options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
-        //  options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
-        //});
+        orleans.UseDashboard(options =>
+        {
+          options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
+          options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
+        });
 
         orleans.Configure<GrainCollectionOptions>(options =>
         {
