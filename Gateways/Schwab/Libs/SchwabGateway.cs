@@ -1,15 +1,11 @@
 using Core.Conventions;
 using Core.Enums;
-using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using Schwab.Grains;
 using Schwab.Models;
-using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 
 namespace Schwab
 {
@@ -99,18 +95,34 @@ namespace Schwab
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<PricesResponse> GetPrices(Criteria criteria)
+    public override async Task<PricesResponse> GetPrices(Criteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      var grain = Component<IInstrumentGrain>(criteria.Instrument.Name);
+      var instrumentGrain = Component<ISchwabInstrumentGrain>(criteria.Instrument.Name);
+
+      if (criteria?.Source is not true)
+      {
+        await instrumentGrain.Prices(criteria);
+      }
+
+      return await grain.Prices(criteria);
     }
 
     /// <summary>
     /// Bars
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<PricesResponse> GetPriceGroups(Criteria criteria)
+    public override async Task<PricesResponse> GetPriceGroups(Criteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      var grain = Component<IInstrumentGrain>(criteria.Instrument.Name);
+      var instrumentGrain = Component<ISchwabInstrumentGrain>(criteria.Instrument.Name);
+
+      if (criteria?.Source is not true)
+      {
+        await instrumentGrain.PriceGroups(criteria);
+      }
+
+      return await grain.PriceGroups(criteria);
     }
 
     /// <summary>
