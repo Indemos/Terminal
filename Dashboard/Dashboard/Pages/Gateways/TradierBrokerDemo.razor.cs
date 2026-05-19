@@ -56,7 +56,7 @@ namespace Dashboard.Pages.Gateways
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       var adapter = Adapter;
       var price = instrument.Price;
@@ -96,6 +96,8 @@ namespace Dashboard.Pages.Gateways
 
         }, 10000);
       }
+
+      await Render(instrument);
     }
 
     async Task Done(Action action, int interval)

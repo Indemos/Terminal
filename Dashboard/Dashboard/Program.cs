@@ -8,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using MudBlazor;
 using MudBlazor.Services;
 using Orleans.Configuration;
-using Orleans;
+using Orleans.Dashboard;
 using Orleans.Hosting;
 using Orleans.Providers;
 using Orleans.Serialization;
@@ -24,18 +24,13 @@ namespace Dashboard
       var setup = builder.Configuration;
 
       builder.WebHost.UseUrls(setup.GetValue<string>("Apps:Address"));
-      builder.Host.UseOrleans((o, orleans) =>
+      builder.Host.UseOrleans(orleans =>
       {
         orleans.UseLocalhostClustering();
         orleans.AddMemoryGrainStorageAsDefault();
         orleans.AddMemoryStreams<DefaultMemoryMessageBodySerializer>(nameof(Message));
         orleans.AddMemoryGrainStorage("PubSubStore");
-        orleans.UseDashboard(options =>
-        {
-          options.Port = setup.GetValue<int>("Apps:Dashboard:Port");
-          options.Host = setup.GetValue<string>("Apps:Dashboard:Host");
-        });
-
+        orleans.AddDashboard();
         orleans.Configure<GrainCollectionOptions>(options =>
         {
           options.CollectionAge = TimeSpan.FromDays(100);
@@ -75,6 +70,7 @@ namespace Dashboard
       app.UseStaticFiles();
       app.UseRouting();
       app.MapBlazorHub();
+      app.MapOrleansDashboard("/processors");
       app.MapFallbackToPage("/Host");
       app.Run();
     }

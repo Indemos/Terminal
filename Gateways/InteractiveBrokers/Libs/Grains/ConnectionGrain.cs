@@ -217,8 +217,7 @@ namespace InteractiveBrokers
         var price = Downstream.MapPrice(priceMessage);
         var group = await instrumentGrain.Send(instrument with { Price = price });
 
-        await observer.StreamView(group);
-        await observer.StreamTrade(group);
+        await observer.StreamInstrument(group);
       });
 
       return new()

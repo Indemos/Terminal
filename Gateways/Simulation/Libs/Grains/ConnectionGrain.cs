@@ -4,7 +4,6 @@ using Core.Extensions;
 using Core.Grains;
 using Core.Models;
 using MessagePack;
-using Orleans;
 using Simulation.Models;
 using System;
 using System.Collections.Concurrent;
@@ -23,8 +22,8 @@ namespace Simulation.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   /// <summary>
@@ -77,13 +76,19 @@ namespace Simulation.Grains
 
       await Task.WhenAll(state.Account.Instruments.Values.Select(Subscribe));
 
-      var counter = this.RegisterGrainTimer(async o =>
+      var counter = new System.Timers.Timer(TimeSpan.FromMicroseconds(1));
+
+      counter.Enabled = true;
+      counter.AutoReset = false;
+      counter.Elapsed += async (o, e) =>
       {
         foreach (var action in subscriptions.Values)
         {
           await action();
         }
-      }, 0, TimeSpan.Zero, TimeSpan.FromMicroseconds(1));
+
+        counter.Enabled = true;
+      };
 
       connections.AddRange(streams.Values);
       connections.Add(counter);
@@ -143,9 +148,13 @@ namespace Simulation.Grains
           }
 
           summaries[instrument.Name] = GetSummary(instrument.Name, stream.Current);
+          summaries[instrument.Name] = summaries[instrument.Name] with
+          {
+            Time = long.Parse(Path.GetFileName(stream.Current))
+          };
         }
 
-        var min = summaries.MinBy(o => o.Value?.Instrument?.Price?.Time);
+        var min = summaries.MinBy(o => o.Value?.Time);
 
         if (Equals(min.Key, instrument.Name) && summaries.All(o => o.Value is not null))
         {
@@ -171,8 +180,7 @@ namespace Simulation.Grains
             await positionsGrain.Tap(option);
           }
 
-          await observer.StreamView(group);
-          await observer.StreamTrade(group);
+          await observer.StreamInstrument(group);
 
           summaries[instrument.Name] = null;
         }

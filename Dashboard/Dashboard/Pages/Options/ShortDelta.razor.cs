@@ -59,7 +59,7 @@ namespace Dashboard.Pages.Options
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       var price = instrument.Price;
       var adapter = Adapter;
@@ -94,6 +94,8 @@ namespace Dashboard.Pages.Options
         var order = GetUpdate(basisDelta, optionDelta);
         if (order is not null) await adapter.SendOrder(order);
       }
+
+      await Render(instrument);
     }
 
     /// <summary>

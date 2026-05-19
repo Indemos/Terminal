@@ -57,7 +57,7 @@ namespace Dashboard.Pages.Shares
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       var price = instrument.Price;
       var account = Adapter.Account;
@@ -118,6 +118,8 @@ namespace Dashboard.Pages.Shares
       {
         await OpenPosition(Adapter, instrument, OrderSideEnum.Short);
       }
+
+      await Render(instrument);
     }
   }
 }

@@ -8,6 +8,11 @@ namespace Simulation.Models
     /// <summary>
     /// Depth of market
     /// </summary>
+    public long Time { get; init; }
+
+    /// <summary>
+    /// Depth of market
+    /// </summary>
     public Dom Dom { get; init; }
 
     /// <summary>

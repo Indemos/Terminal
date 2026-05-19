@@ -91,7 +91,7 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       var adapter = Adapter;
       var account = adapter.Account;
@@ -130,11 +130,6 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
-      if (Equals(instrument.Name, nameX) is false)
-      {
-        return;
-      }
-
       var price = instrument.Price;
       var adapter = Adapter;
       var account = adapter.Account;
@@ -195,6 +190,8 @@ namespace Dashboard.Pages.Futures
           }
         }
       }
+
+      await Render(instrument);
     }
 
     /// <summary>

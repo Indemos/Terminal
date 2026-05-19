@@ -11,11 +11,11 @@
     <PackageReference Include="CalcEngine.Core" Version="1.0.0" />
     <PackageReference Include="Canvas.Views.Web" Version="5.7.6" />
     <PackageReference Include="Estimator" Version="1.0.8" />
+    <PackageReference Include="Microsoft.Orleans.Dashboard" Version="10.1.0" />
     <PackageReference Include="MudBlazor" Version="8.6.0" />
-    <PackageReference Include="OrleansDashboard" Version="8.2.0" />
-    <PackageReference Include="QuantLib" Version="1.40.0" />
-    <PackageReference Include="Microsoft.Orleans.Server" Version="9.2.1" />
-    <PackageReference Include="Microsoft.Orleans.Streaming" Version="9.2.1" />
+    <PackageReference Include="QuantLib" Version="1.42.1" />
+    <PackageReference Include="Microsoft.Orleans.Server" Version="10.1.0" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.1.0" />
   </ItemGroup>
 
   <ItemGroup>

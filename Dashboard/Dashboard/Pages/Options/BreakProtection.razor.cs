@@ -96,7 +96,7 @@ namespace Dashboard.Pages.Options
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       var adapter = Adapter;
       var price = instrument.Price;
@@ -175,6 +175,8 @@ namespace Dashboard.Pages.Options
           }
         }
       }
+
+      await Render(instrument);
     }
 
     /// <summary>

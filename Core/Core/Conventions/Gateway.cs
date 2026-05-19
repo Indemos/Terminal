@@ -22,13 +22,7 @@ namespace Core.Conventions
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    Task StreamView(Instrument instrument);
-
-    /// <summary>
-    /// Price message
-    /// </summary>
-    /// <param name="instrument"></param>
-    Task StreamTrade(Instrument instrument);
+    Task StreamInstrument(Instrument instrument);
   }
 
   public interface IGateway
@@ -44,14 +38,9 @@ namespace Core.Conventions
     Action<Order> OnOrder { get; set; }
 
     /// <summary>
-    /// Price message
-    /// </summary>
-    Func<Instrument, Task> OnView { get; set; }
-
-    /// <summary>
     /// Trade message
     /// </summary>
-    Func<Instrument, Task> OnTrade { get; set; }
+    Func<Instrument, Task> OnInstrument { get; set; }
 
     /// <summary>
     /// Connect
@@ -163,32 +152,21 @@ namespace Core.Conventions
     public virtual Action<Order> OnOrder { get; set; } = o => { };
 
     /// <summary>
-    /// Price message
-    /// </summary>
-    public virtual Func<Instrument, Task> OnView { get; set; } = o => Task.CompletedTask;
-
-    /// <summary>
     /// Trade message
     /// </summary>
-    public virtual Func<Instrument, Task> OnTrade { get; set; } = o => Task.CompletedTask;
+    public virtual Func<Instrument, Task> OnInstrument { get; set; } = o => Task.CompletedTask;
 
     /// <summary>
     /// Order message
     /// </summary>
     /// <param name="order"></param>
-    public virtual void StreamOrder(Order order) => OnOrder(order);
+    public virtual void StreamOrder(Order order) => OnOrder(order); 
 
     /// <summary>
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task StreamView(Instrument instrument) => OnView(instrument);
-
-    /// <summary>
-    /// Price message
-    /// </summary>
-    /// <param name="instrument"></param>
-    public virtual Task StreamTrade(Instrument instrument) => OnTrade(instrument);
+    public virtual Task StreamInstrument(Instrument instrument) => OnInstrument(instrument);
 
     /// <summary>
     /// Connect

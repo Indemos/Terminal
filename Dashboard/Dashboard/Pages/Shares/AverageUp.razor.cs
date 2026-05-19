@@ -62,7 +62,7 @@ namespace Dashboard.Pages.Shares
       return base.OnTrade();
     }
 
-    protected override async Task OnViewUpdate(Instrument instrument)
+    protected async Task Render(Instrument instrument)
     {
       if (instrument.Name == AssetY)
       {
@@ -106,6 +106,7 @@ namespace Dashboard.Pages.Shares
 
       await Trade(instrumentX with { Price = priceX }, OrderSideEnum.Long, positions);
       await Trade(instrumentY with { Price = priceY }, OrderSideEnum.Short, positions);
+      await Render(instrument);
     }
 
     protected async Task Trade(Instrument instrument, OrderSideEnum direction, IList<Order> positions)

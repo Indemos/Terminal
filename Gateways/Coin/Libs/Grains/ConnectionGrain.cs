@@ -119,8 +119,7 @@ namespace Coin.Grains
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
       var group = await instrumentGrain.Send(instrument with { Price = o });
 
-      await observer.StreamView(group);
-      await observer.StreamTrade(group);
+      await observer.StreamInstrument(group);
     }
 
     /// <summary>

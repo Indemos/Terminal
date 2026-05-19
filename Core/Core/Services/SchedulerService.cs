@@ -34,7 +34,7 @@ namespace Core.Services
 
       queue = Channel.CreateBounded<Action>(new BoundedChannelOptions(count)
       {
-        SingleReader = false,
+        SingleReader = true,
         SingleWriter = false,
         FullMode = BoundedChannelFullMode.Wait
       });
@@ -62,11 +62,11 @@ namespace Core.Services
     /// Task delegate processor
     /// </summary>
     /// <param name="action"></param>
-    public virtual Task Send(Action action)
+    public virtual async Task Send(Action action)
     {
       var completion = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
 
-      Enqueue(() =>
+      await Enqueue(() =>
       {
         try
         {
@@ -79,18 +79,18 @@ namespace Core.Services
         }
       });
 
-      return completion.Task;
+      await completion.Task;
     }
 
     /// <summary>
     /// Task delegate processor
     /// </summary>
     /// <param name="action"></param>
-    public virtual Task<T> Send<T>(Func<Task<T>> action)
+    public virtual async Task<T> Send<T>(Func<Task<T>> action)
     {
       var completion = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-      Enqueue(() =>
+      await Enqueue(() =>
       {
         try
         {
@@ -102,21 +102,23 @@ namespace Core.Services
         }
       });
 
-      return completion.Task;
+      return await completion.Task;
     }
 
     /// <summary>
     /// Enqueue
     /// </summary>
     /// <param name="action"></param>
-    protected virtual void Enqueue(Action action)
+    protected virtual ValueTask Enqueue(Action action)
     {
       try
       {
-        queue.Writer.WriteAsync(action);
+        return queue.Writer.WriteAsync(action);
       }
       catch (OperationCanceledException) { }
       catch (ObjectDisposedException) { }
+
+      return default;
     }
 
     /// <summary>
