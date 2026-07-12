@@ -105,8 +105,8 @@ namespace Dashboard.Pages.Options
     {
       var adapter = Adapter;
       var account = adapter.Account;
-      var comUp = new ComponentModel { Color = SKColors.DeepSkyBlue };
-      var comDown = new ComponentModel { Color = SKColors.OrangeRed };
+      var comUp = new Section { Color = SKColors.DeepSkyBlue };
+      var comDown = new Section { Color = SKColors.OrangeRed };
 
       var basisDelta = Math.Round(positions
         .Where(o => o.Operation.Instrument.Derivative is null)

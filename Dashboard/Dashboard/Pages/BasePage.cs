@@ -27,9 +27,9 @@ namespace Dashboard.Pages
     /// <summary>
     /// Chart settings
     /// </summary>
-    protected virtual ComponentModel Com { get; set; } = new() { Color = SKColors.LimeGreen };
-    protected virtual ComponentModel ComUp { get; set; } = new() { Color = SKColors.DeepSkyBlue };
-    protected virtual ComponentModel ComDown { get; set; } = new() { Color = SKColors.OrangeRed };
+    protected virtual Section Com { get; set; } = new() { Color = SKColors.LimeGreen };
+    protected virtual Section ComUp { get; set; } = new() { Color = SKColors.DeepSkyBlue };
+    protected virtual Section ComDown { get; set; } = new() { Color = SKColors.OrangeRed };
 
     /// <summary>
     /// Gateways

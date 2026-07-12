@@ -1,3 +1,4 @@
+using Canvas.Core.Services;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Builder;

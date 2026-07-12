@@ -32,12 +32,12 @@ namespace Dashboard.Components
     /// <summary>
     /// Upside style
     /// </summary>
-    protected virtual ComponentModel UpSide { get; set; }
+    protected virtual Section UpSide { get; set; }
 
     /// <summary>
     /// Downside style
     /// </summary>
-    protected virtual ComponentModel DownSide { get; set; }
+    protected virtual Section DownSide { get; set; }
 
     /// <summary>
     /// Indices
@@ -87,8 +87,8 @@ namespace Dashboard.Components
     /// <param name="group"></param>
     public virtual async Task Create(params string[] areas)
     {
-      UpSide = new ComponentModel { Color = SKColors.DeepSkyBlue };
-      DownSide = new ComponentModel { Color = SKColors.OrangeRed };
+      UpSide = new Section { Color = SKColors.DeepSkyBlue };
+      DownSide = new Section { Color = SKColors.OrangeRed };
       View.Item = new Shape { Groups = areas.ToDictionary(o => o, o => new Shape() as IShape).Concurrent() };
 
       Composers = await View.CreateViews<CanvasEngine>();
@@ -124,7 +124,7 @@ namespace Dashboard.Components
       return new T
       {
         Y = price.Last,
-        Component = new ComponentModel { Color = color ?? SKColors.LimeGreen }
+        Component = new() { Color = color ?? SKColors.LimeGreen }
       };
     }
 
@@ -150,22 +150,17 @@ namespace Dashboard.Components
 
       foreach (var input in inputs)
       {
-        lock (sync)
-        {
-          currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
-          currentPoint.Groups[area].Groups[series] = input;
-        }
+        currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
+        currentPoint.Groups[area].Groups[series] = input;
       }
 
-      var domain = new DimensionModel
+      var domain = new Dimension
       {
         IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
       };
 
       await View.Update(domain, Shapes);
     }
-
-    object sync = new();
 
     /// <summary>
     /// Update
@@ -178,7 +173,7 @@ namespace Dashboard.Components
         return;
       }
 
-      var domain = new DimensionModel
+      var domain = new Dimension
       {
         IndexDomain = [0, shapes.Count]
       };
@@ -193,7 +188,7 @@ namespace Dashboard.Components
     {
       Shapes.Clear();
       Indices.Clear();
-      View.Update(new DimensionModel { IndexDomain = [0, 0] }, Shapes);
+      View.Update(new Dimension { IndexDomain = [0, 0] }, Shapes);
     }
 
     /// <summary>
