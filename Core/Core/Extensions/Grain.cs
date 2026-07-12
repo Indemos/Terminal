@@ -21,7 +21,7 @@ namespace Core.Extensions
     /// <param name="name"></param>
     public static string GetDescriptor(this IAddressable grain, string name)
     {
-      return $"{grain.GetPrimaryKeyString()}:{name}";
+      return string.Concat(grain.GetPrimaryKeyString(), ":", name);
     }
   }
 }
