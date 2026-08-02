@@ -35,8 +35,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tradier", "Tradier", "{35EF
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tradier", "Gateways\Tradier\Libs\Tradier.csproj", "{17AF4608-1300-A70C-8604-1CEC289B8E9F}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Estimator", "..\Estimator\Libs\Estimator.csproj", "{EDED62B6-747B-1DAC-F33D-DAE8E8032E22}"
-EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -79,10 +77,6 @@ Global
 		{17AF4608-1300-A70C-8604-1CEC289B8E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{17AF4608-1300-A70C-8604-1CEC289B8E9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{17AF4608-1300-A70C-8604-1CEC289B8E9F}.Release|Any CPU.Build.0 = Release|Any CPU
-		{EDED62B6-747B-1DAC-F33D-DAE8E8032E22}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{EDED62B6-747B-1DAC-F33D-DAE8E8032E22}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{EDED62B6-747B-1DAC-F33D-DAE8E8032E22}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{EDED62B6-747B-1DAC-F33D-DAE8E8032E22}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -8,17 +8,13 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Estimator" Version="1.1.2" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
     <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.2.2" />
     <PackageReference Include="Microsoft.Orleans.Serialization.MessagePack" Version="10.2.2" />
     <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.2.2" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="System.Interactive" Version="7.0.1" />
-    <PackageReference Include="System.ServiceModel.Primitives" Version="10.0.652802" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\..\Estimator\Libs\Estimator.csproj" />
   </ItemGroup>
 
 </Project>
