@@ -1,0 +1,88 @@
+using Core.Enums;
+using Core.Grains;
+using Core.Models;
+using Core.Tests;
+using Moq;
+using Orleans;
+using Orleans.TestingHost;
+using Simulation.Grains;
+using System;
+using System.Linq;
+using System.Text.Json;
+using System.Threading.Tasks;
+
+namespace Simulation.Prices.Tests
+{
+  public class Orders : IDisposable
+  {
+    private readonly Mock<IClusterClient> _mockConnector;
+    private readonly TestCluster _cluster;
+
+    private string Descriptor => $"{Guid.NewGuid()}";
+
+    public Orders()
+    {
+      _mockConnector = new Mock<IClusterClient>();
+
+      var builder = new TestClusterBuilder();
+
+      builder.AddSiloBuilderConfigurator<SiloConfigurator>();
+      builder.AddClientBuilderConfigurator<SiloConfigurator>();
+
+      _cluster = builder.Build();
+      _cluster.Deploy();
+    }
+
+    public void Dispose()
+    {
+      _cluster.StopAllSilos();
+    }
+
+    [Fact]
+    public void StoreException()
+    {
+      var grain = _cluster
+        .GrainFactory
+        .GetGrain<ISimOrdersGrain>(Descriptor);
+
+      var order = new Order();
+
+      Assert.Throws<AggregateException>(() => grain.Send(order).Result);
+    }
+
+    [Fact]
+    public async Task StoreUpdatesMarketOrders()
+    {
+      var descriptor = Descriptor;
+      var grain = _cluster.GrainFactory.GetGrain<ISimOrdersGrain>(descriptor);
+      var order = new Order
+      {
+        Amount = 1.0,
+        Side = OrderSideEnum.Long,
+        Type = OrderTypeEnum.Market,
+        Operation = new Operation
+        {
+          Instrument = new Instrument
+          {
+            Name = "SPY"
+          }
+        }
+      };
+
+      var copyId = $"{Guid.NewGuid()}";
+
+      await grain.Send(order);
+      await grain.Send(order with { Id = copyId });
+      await grain.Clear(order with { Id = copyId });
+
+      var orders = (await grain.Orders(default)).Data;
+      var orderExpectation = JsonSerializer.Serialize(order with
+      {
+        Operation = order.Operation with { Status = OrderStatusEnum.Order }
+      });
+
+      Assert.Single(orders);
+      Assert.Equal(orderExpectation, JsonSerializer.Serialize(orders.First()));
+    }
+  }
+}

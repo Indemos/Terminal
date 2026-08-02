@@ -1,0 +1,20 @@
+.updater {
+  color: green;
+}
+
+.updater:hover {
+  opacity: 0.5;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 0 15px;
+}
+
+.components {
+  flex-direction: column;
+  display: flex;
+  gap: 15px;
+}

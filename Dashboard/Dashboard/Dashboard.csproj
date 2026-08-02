@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="CalcEngine.Core" Version="1.0.0" />
+    <PackageReference Include="Canvas.Views.Web" Version="5.8.6" />
+    <PackageReference Include="Microsoft.Orleans.Dashboard" Version="10.2.2" />
+    <PackageReference Include="MudBlazor" Version="9.7.0" />
+    <PackageReference Include="QuantLib" Version="1.43.0" />
+    <PackageReference Include="Microsoft.Orleans.Server" Version="10.2.2" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.2.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Gateways\InteractiveBrokers\Libs\InteractiveBrokers.csproj" />
+    <ProjectReference Include="..\..\Gateways\Schwab\Libs\Schwab.csproj" />
+    <ProjectReference Include="..\..\Gateways\Simulation\Libs\Simulation.csproj" />
+    <ProjectReference Include="..\..\Gateways\Tradier\Libs\Tradier.csproj" />
+  </ItemGroup>
+
+</Project>

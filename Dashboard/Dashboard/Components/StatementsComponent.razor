@@ -1,0 +1,43 @@
+<MudExpansionPanels MultiExpansion="false">
+  <MudExpansionPanel>
+    <TitleContent>
+      <div class="d-flex">
+        <MudIcon Icon="@Icons.Material.Filled.Info" class="mr-3"></MudIcon>
+        <MudText>@Name</MudText>
+      </div>
+    </TitleContent>
+    <ChildContent>
+
+      @if (Stats.Count > 0)
+      {
+        <div class="statements">
+          @foreach (var group in Stats)
+          {
+            <MudCard Class="card">
+              <MudCardHeader>
+                <CardHeaderContent>
+                  <MudAlert Severity="Severity.Info" NoIcon="true" Dense="true">@group.Key</MudAlert>
+                </CardHeaderContent>
+              </MudCardHeader>
+              <MudCardContent>
+                @foreach (var data in group.Value)
+                {
+                  <div class="card-row py-2">
+                    <div class="cell-name pr-4">@data.Name</div>
+                    <div class="cell-value">@ShowDouble(data.Value)</div>
+                  </div>
+                }
+              </MudCardContent>
+            </MudCard>
+          }
+        </div>
+      }
+      else
+      {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Filled">No deals</MudAlert>
+      }
+
+    </ChildContent>
+  </MudExpansionPanel>
+
+</MudExpansionPanels>

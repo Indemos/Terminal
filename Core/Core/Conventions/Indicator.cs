@@ -1,0 +1,43 @@
+using Core.Models;
+using System.Collections.Generic;
+
+namespace Core.Conventions
+{
+  public interface IIndicator
+  {
+    /// <summary>
+    /// Name
+    /// </summary>
+    string Name { get; set; }
+
+    /// <summary>
+    /// Point
+    /// </summary>
+    Price Response { get; }
+
+    /// <summary>
+    /// Calculate indicator values
+    /// </summary>
+    /// <param name="collection"></param>
+    IIndicator Update(IList<Price> collection);
+  }
+
+  public class Indicator : IIndicator
+  {
+    /// <summary>
+    /// Name
+    /// </summary>
+    public virtual string Name { get; set; }
+
+    /// <summary>
+    /// Point
+    /// </summary>
+    public virtual Price Response { get; protected set; } = new();
+
+    /// <summary>
+    /// Calculate indicator values
+    /// </summary>
+    /// <param name="collection"></param>
+    public virtual IIndicator Update(IList<Price> collection) => this;
+  }
+}
