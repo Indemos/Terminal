@@ -95,7 +95,7 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected async Task Render(Instrument instrument, IList<Price> seriesX, IList<Price> seriesY, double spread, double score, double innovation)
+    protected async void Render(Instrument instrument, IList<Price> seriesX, IList<Price> seriesY, double spread, double score, double innovation)
     {
       var adapter = Adapter;
       var account = adapter.Account;
@@ -193,7 +193,7 @@ namespace Dashboard.Pages.Futures
         }
       }
 
-      await Render(instrument, seriesX, seriesY, spread, score, 0);
+      Render(instrument, seriesX, seriesY, spread, score, 0);
     }
   }
 }

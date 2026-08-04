@@ -30,6 +30,11 @@ namespace Dashboard.Components
     [Parameter] public virtual string Name { get; set; }
 
     /// <summary>
+    /// Throttle
+    /// </summary>
+    protected virtual Task Sync { get; set; } = Task.CompletedTask;
+
+    /// <summary>
     /// Upside style
     /// </summary>
     protected virtual Section UpSide { get; set; }
@@ -154,12 +159,12 @@ namespace Dashboard.Components
         IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
       };
 
-      if (Observer.State.Next is SubscriptionEnum.None)
+      if (Observer.State.Next is SubscriptionEnum.None || Sync.IsCompleted is false)
       {
         return;
       }
 
-      View.Update(domain, Shapes);
+      Sync = Task.WhenAny(View.Update(domain, Shapes), Task.Delay(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>

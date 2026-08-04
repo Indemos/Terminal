@@ -62,32 +62,35 @@ namespace Dashboard.Components
     /// <summary>
     /// Update table records 
     /// </summary>
-    /// <param name="account"></param>
+    /// <param name="adapters"></param>
     public virtual async void Update(IEnumerable<IGateway> adapters)
     {
       if (Sync.IsCompleted)
       {
         var queries = adapters.Select(o => o.GetTransactions(default));
         var responses = await Task.WhenAll(queries);
-        var actions = responses
-          .SelectMany(o => o.Data)
-          .OrderByDescending(o => o.Operation.Time)
-          .ToList();
 
-        Items = [.. actions.Select(o => new Row
+        Items.Clear();
+
+        foreach (var response in responses)
         {
-          Name = o?.Operation?.Instrument?.Name,
-          Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-          Time = new DateTime(o.Operation.Time.Value),
-          Side = o.Side,
-          Size = o.Operation.Amount ?? 0,
-          OpenPrice = o.Operation.AveragePrice ?? 0,
-          ClosePrice = o.Operation.Price ?? 0,
-          Gain = o.Balance.Current ?? 0
+          foreach (var o in response.Data)
+          {
+            Items.Add(new()
+            {
+              Name = o?.Operation?.Instrument?.Name,
+              Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+              Time = new DateTime(o.Operation.Time.Value),
+              Side = o.Side,
+              Size = o.Operation.Amount ?? 0,
+              OpenPrice = o.Operation.AveragePrice ?? 0,
+              ClosePrice = o.Operation.Price ?? 0,
+              Gain = o.Balance.Current ?? 0
+            });
+          }
+        }
 
-        })];
-
-        Sync = Task.WhenAll([InvokeAsync(StateHasChanged), Task.Delay(100)]);
+        Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
       }
     }
 

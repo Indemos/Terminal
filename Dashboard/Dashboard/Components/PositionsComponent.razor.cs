@@ -69,24 +69,28 @@ namespace Dashboard.Components
       {
         var queries = adapters.Select(o => o.GetPositions(default));
         var responses = await Task.WhenAll(queries);
-        var positions = responses
-          .SelectMany(o => o.Data)
-          .OrderByDescending(o => o.Operation.Time)
-          .ToList();
 
-        Items = [.. positions.Select(o => new Row
+        Items.Clear();
+
+        foreach (var response in responses)
         {
-          Name = o?.Operation?.Instrument?.Name,
-          Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-          Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
-          Side = o.Side,
-          Size = o.Operation.Amount ?? 0,
-          OpenPrice = o.Operation.AveragePrice ?? 0,
-          ClosePrice = o?.Operation?.Instrument?.Price?.Last ?? 0,
-          Gain = o.Balance.Current ?? 0
-        })];
+          foreach (var o in response.Data)
+          {
+            Items.Add(new()
+            {
+              Name = o?.Operation?.Instrument?.Name,
+              Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+              Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
+              Side = o.Side,
+              Size = o.Operation.Amount ?? 0,
+              OpenPrice = o.Operation.AveragePrice ?? 0,
+              ClosePrice = o?.Operation?.Instrument?.Price?.Last ?? 0,
+              Gain = o.Balance.Current ?? 0
+            });
+          }
+        }
 
-        Sync = Task.WhenAll([InvokeAsync(StateHasChanged)]);
+        Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
       }
     }
 

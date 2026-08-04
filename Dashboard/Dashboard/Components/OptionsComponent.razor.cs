@@ -14,7 +14,7 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Components
 {
-  public partial class OrdinalsComponent
+  public partial class OptionsComponent
   {
     [Inject] public virtual StateService Observer { get; set; }
 
@@ -74,7 +74,7 @@ namespace Dashboard.Components
     /// <param name="adapter"></param>
     /// <param name="point"></param>
     /// <param name="positions"></param>
-    public virtual void UpdateOptions(IGateway adapter, Price point, IEnumerable<Order> positions)
+    public virtual void Update(IGateway adapter, Price point, IEnumerable<Order> positions)
     {
       var sums = new Dictionary<double, double>();
 

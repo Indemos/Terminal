@@ -26,7 +26,6 @@ namespace Core.Indicators
 
       Response = Response with { Last = sum };
 
-
       return this;
     }
   }
