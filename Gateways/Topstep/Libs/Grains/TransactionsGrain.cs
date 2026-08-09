@@ -2,13 +2,13 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using System.Threading;
 using System.Threading.Tasks;
-using Tradier.Models;
+using Topstep.Models;
+using TopstepX;
 
-namespace Tradier.Grains
+namespace Topstep.Grains
 {
-  public interface ITradierTransactionsGrain : ITransactionsGrain
+  public interface ITopstepTransactionsGrain : ITransactionsGrain
   {
     /// <summary>
     /// Connect
@@ -16,9 +16,15 @@ namespace Tradier.Grains
     /// <param name="connection"></param>
     /// <param name="observer"></param>
     Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+
+    /// <summary>
+    /// Validate session token
+    /// </summary>
+    /// <param name="session"></param>
+    Task<StatusResponse> Validate(string session);
   }
 
-  public class TradierTransactionsGrain : TransactionsGrain, ITradierTransactionsGrain
+  public class TopstepTransactionsGrain : TransactionsGrain, ITopstepTransactionsGrain
   {
     /// <summary>
     /// State
@@ -28,7 +34,7 @@ namespace Tradier.Grains
     /// <summary>
     /// Connector
     /// </summary>
-    protected TradierBroker connector;
+    protected TopstepBroker connector;
 
     /// <summary>
     /// Connect
@@ -37,22 +43,27 @@ namespace Tradier.Grains
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      var cts = new CancellationTokenSource(connection.Timeout);
+      var response = new StatusResponse() { Data = StatusEnum.Active };
 
       state = connection;
       observer = grainObserver;
-      connector = new()
-      {
-        Token = connection.AccessToken,
-        SessionToken = connection.SessionToken,
-      };
+      connector = new(connection.Username, connection.Token);
 
-      await connector.Connect(cts.Token);
+      return response;
+    }
 
-      return new()
+    /// <summary>
+    /// Validate session token
+    /// </summary>
+    /// <param name="session"></param>
+    public virtual Task<StatusResponse> Validate(string session)
+    {
+      connector.SetAuthHeader(session);
+
+      return Task.FromResult(new StatusResponse
       {
         Data = StatusEnum.Active
-      };
+      });
     }
   }
 }

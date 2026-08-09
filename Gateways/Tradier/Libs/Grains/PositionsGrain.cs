@@ -37,7 +37,7 @@ namespace Tradier.Grains
     /// <param name="connection"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
-      var cleaner = new CancellationTokenSource(connection.Timeout);
+      var cts = new CancellationTokenSource(connection.Timeout);
 
       state = connection;
       connector = new()
@@ -46,7 +46,7 @@ namespace Tradier.Grains
         SessionToken = connection.SessionToken,
       };
 
-      await connector.Connect(cleaner.Token);
+      await connector.Connect(cts.Token);
 
       return new()
       {
@@ -60,9 +60,9 @@ namespace Tradier.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Positions(PositionCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var query = new Queries.Account.AccountRequest { AccountNumber = criteria.Account.Descriptor };
-      var messages = await connector.GetPositions(query, cleaner.Token);
+      var messages = await connector.GetPositions(query, cts.Token);
       var items = messages.Select(MapPosition);
 
       return new()

@@ -61,8 +61,8 @@ namespace Schwab.Grains
         StrikeCount = criteria.Count
       };
 
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var chain = await connector.GetOptions(query, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var chain = await connector.GetOptions(query, cts.Token);
       var options = chain
         ?.PutExpDateMap
         ?.Concat(chain?.CallExpDateMap)

@@ -53,7 +53,7 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Orders(OrderCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var query = new OrderQuery
       {
         AccountCode = state.Account.Descriptor,
@@ -61,7 +61,7 @@ namespace Schwab.Grains
         FromEnteredTime = criteria.MinDate ?? DateTime.Now.AddDays(-30)
       };
 
-      var messages = await connector.GetOrders(query, cleaner.Token);
+      var messages = await connector.GetOrders(query, cts.Token);
       var items = messages.Select(MapOrder);
 
       return new()

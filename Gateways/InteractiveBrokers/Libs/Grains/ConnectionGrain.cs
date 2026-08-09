@@ -100,11 +100,11 @@ namespace InteractiveBrokers
     /// Deactivation
     /// </summary>
     /// <param name="reason"></param>
-    /// <param name="cleaner"></param>
-    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cleaner)
+    /// <param name="cts"></param>
+    public override async Task OnDeactivateAsync(DeactivationReason reason, CancellationToken cts)
     {
       await Disconnect();
-      await base.OnActivateAsync(cleaner);
+      await base.OnActivateAsync(cts);
     }
 
     /// <summary>
@@ -186,8 +186,8 @@ namespace InteractiveBrokers
       await Unsubscribe(instrument);
 
       var contract = Upstream.MapContract(instrument);
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var contracts = await connector.GetContracts(contract, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var contracts = await connector.GetContracts(contract, cts.Token);
       var contractMessage = contracts.FirstOrDefault();
 
       if (contractMessage is null)
@@ -250,7 +250,7 @@ namespace InteractiveBrokers
     public virtual async Task<PricesResponse> Prices(PriceCriteria criteria)
     {
       var contract = Upstream.MapContract(criteria.Instrument);
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var query = new HistoricalTicksQuery()
       {
         Contract = contract,
@@ -260,7 +260,7 @@ namespace InteractiveBrokers
         Count = criteria.Count ?? 1
       };
 
-      var sourceItems = await connector.GetTicks(query, cleaner.Token);
+      var sourceItems = await connector.GetTicks(query, cts.Token);
       var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
@@ -277,7 +277,7 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<PricesResponse> PriceGroups(PriceCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var contract = Upstream.MapContract(criteria.Instrument);
       var maxDate = criteria.MaxDate ?? DateTime.Now;
       var query = new HistoricalBarsQuery
@@ -289,7 +289,7 @@ namespace InteractiveBrokers
         Duration = criteria.DurationType,
       };
 
-      var sourceItems = await connector.GetBars(query, cleaner.Token);
+      var sourceItems = await connector.GetBars(query, cts.Token);
       var items = sourceItems.Select(Downstream.MapPrice).ToArray();
 
       await Task.Delay(state.Span);
@@ -310,8 +310,8 @@ namespace InteractiveBrokers
       var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
       var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
       var contract = Upstream.MapContract(criteria.Instrument);
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetContracts(contract, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetContracts(contract, cts.Token);
       var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToArray();
 
       await Task.Delay(state.Span);
@@ -328,8 +328,8 @@ namespace InteractiveBrokers
     public virtual async Task<Account> AccountSummary()
     {
       var account = new Account();
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var message = await connector.GetAccountSummary(cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var message = await connector.GetAccountSummary(cts.Token);
 
       account = account with { Balance = double.Parse(message.Get("NetLiquidation")) };
 
@@ -344,8 +344,8 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Orders(OrderCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetOrders(cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetOrders(cts.Token);
       var items = sourceItems.Select(Downstream.MapOrder).ToArray();
 
       await Task.Delay(state.Span);
@@ -362,8 +362,8 @@ namespace InteractiveBrokers
     /// <param name="criteria"></param>
     public virtual async Task<OrdersResponse> Positions(PositionCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(state.Account.Descriptor, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var sourceItems = await connector.GetPositions(state.Account.Descriptor, cts.Token);
       var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
 
       await Task.Delay(state.Span);

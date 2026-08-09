@@ -1,6 +1,7 @@
 using Core.Enums;
 using Core.Models;
 using Schwab.Messages;
+using Schwab.Models;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,7 +27,8 @@ namespace Schwab.Grains
     {
       var message = MapOrder(order);
       var accountCode = order.Account.Descriptor;
-      var messageResponse = await connector.SendOrder(message, accountCode, CancellationToken.None);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var messageResponse = await connector.SendOrder(message, accountCode, cts.Token);
       var response = new OrderResponse { Data = new() { Id = messageResponse.OrderId } };
 
       return response;
@@ -138,7 +140,6 @@ namespace Schwab.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <param name="group"></param>
-    /// <returns></returns>
     protected virtual OrderLegMessage GetSubOrder(Order order, Order group = null)
     {
       var action = order?.Operation ?? group?.Operation;

@@ -61,8 +61,8 @@ namespace Schwab.Grains
         Symbol = criteria.Instrument.Name
       };
 
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var sourceResponse = await connector.GetBars(query, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var sourceResponse = await connector.GetBars(query, cts.Token);
       var items = sourceResponse.Bars.Select(MapPrice).ToArray();
 
       return new()

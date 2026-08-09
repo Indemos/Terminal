@@ -70,7 +70,12 @@ namespace Schwab.Grains
 
       var descriptor = this.GetDescriptor();
       var scope = await connector.Authenticate();
-      var account = await connector.GetAccountCode(CancellationToken.None);
+      var cts = new CancellationTokenSource(connection.Timeout);
+      var account = await connector.GetAccountCode(cts.Token);
+      var ordersGrain = GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor);
+      var positionsGrain = GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor);
+      var orderSenderGrain = GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor);
+      var transactionsGrain = GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor);
 
       connection = connection with
       {
@@ -79,10 +84,10 @@ namespace Schwab.Grains
       };
 
       await connector.Stream(CancellationToken.None);
-      await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection);
-      await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection);
-      await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection);
-      await GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor).Setup(connection, observer);
+      await ordersGrain.Setup(connection);
+      await positionsGrain.Setup(connection);
+      await orderSenderGrain.Setup(connection);
+      await transactionsGrain.Setup(connection, observer);
 
       foreach (var o in connection.Account.Instruments.Values)
       {
@@ -91,19 +96,21 @@ namespace Schwab.Grains
 
       counter = this.RegisterGrainTimer(async data =>
       {
+        var scope = await connector.Authenticate();
+
         connection = connection with { AccessToken = scope?.AccessToken };
 
-        await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection);
-        await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection);
-        await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection);
-        await GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor).Setup(connection, observer);
+        await ordersGrain.Setup(connection);
+        await positionsGrain.Setup(connection);
+        await orderSenderGrain.Setup(connection);
+        await transactionsGrain.Setup(connection, observer);
 
         foreach (var o in state.Account.Instruments.Values)
         {
           await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection);
         }
 
-      }, 0, TimeSpan.Zero, TimeSpan.FromMinutes(1));
+      }, 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
 
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 

@@ -33,6 +33,7 @@ The core library already implements a set of Orleans grains and services that ca
 Already implemented gateways.
 
 * Schwab
+* Topstep
 * Tradier
 * Interactive Brokers
 * Simulation - virtual orders and market data 

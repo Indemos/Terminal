@@ -37,7 +37,7 @@ namespace Tradier.Grains
     /// <param name="connection"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection)
     {
-      var cleaner = new CancellationTokenSource(connection.Timeout);
+      var cts = new CancellationTokenSource(connection.Timeout);
 
       state = connection;
       connector = new()
@@ -46,7 +46,7 @@ namespace Tradier.Grains
         SessionToken = connection.SessionToken,
       };
 
-      await connector.Connect(cleaner.Token);
+      await connector.Connect(cts.Token);
 
       return new()
       {
@@ -66,8 +66,8 @@ namespace Tradier.Grains
         Expiration = criteria.MaxDate ?? criteria.MinDate
       };
 
-      var cleaner = new CancellationTokenSource(state.Timeout);
-      var chain = await connector.GetOptionChain(query, cleaner.Token);
+      var cts = new CancellationTokenSource(state.Timeout);
+      var chain = await connector.GetOptionChain(query, cts.Token);
       var options = chain
         .Options
         ?.Select(MapOption)

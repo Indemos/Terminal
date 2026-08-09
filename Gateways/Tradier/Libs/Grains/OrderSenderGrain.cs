@@ -32,15 +32,15 @@ namespace Tradier.Grains
       var positionsGrain = GrainFactory.GetGrain<ITradierPositionsGrain>(descriptor);
       var positionsResponse = await positionsGrain.Positions(new() { Source = true });
       var message = MapOrder(order, positionsResponse.Data.ToDictionary(o => o.Operation.Instrument.Name));
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var response = null as OrderResponseMessage;
 
       if (order.Orders.Count is 0)
       {
         switch (order.Operation.Instrument.Type)
         {
-          case InstrumentEnum.Shares: response = await connector.SendEquityOrder(message, cleaner.Token); break;
-          case InstrumentEnum.Options: response = await connector.SendOptionOrder(message, cleaner.Token); break;
+          case InstrumentEnum.Shares: response = await connector.SendEquityOrder(message, cts.Token); break;
+          case InstrumentEnum.Options: response = await connector.SendOptionOrder(message, cts.Token); break;
         }
       }
       else
@@ -54,9 +54,9 @@ namespace Tradier.Grains
 
         switch (true)
         {
-          case true when isBrace: response = await connector.SendOtocoOrder(message, cleaner.Token); break;
-          case true when isCombo: response = await connector.SendComboOrder(message, cleaner.Token); break;
-          case true when isCombo is false: response = await connector.SendGroupOrder(message, cleaner.Token); break;
+          case true when isBrace: response = await connector.SendOtocoOrder(message, cts.Token); break;
+          case true when isCombo: response = await connector.SendComboOrder(message, cts.Token); break;
+          case true when isCombo is false: response = await connector.SendGroupOrder(message, cts.Token); break;
         }
       }
 

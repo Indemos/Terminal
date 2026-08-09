@@ -49,7 +49,7 @@ namespace Tradier.Grains
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      var cleaner = new CancellationTokenSource(connection.Timeout);
+      var cts = new CancellationTokenSource(connection.Timeout);
 
       await Disconnect();
 
@@ -61,7 +61,7 @@ namespace Tradier.Grains
         SessionToken = connection.SessionToken,
       };
 
-      await connector.Connect(cleaner.Token);
+      await connector.Connect(cts.Token);
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
 
       return new()

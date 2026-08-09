@@ -45,14 +45,14 @@ namespace Core.Grains
     /// <summary>
     /// Activation
     /// </summary>
-    /// <param name="cleaner"></param>
-    public override async Task OnActivateAsync(CancellationToken cleaner)
+    /// <param name="cts"></param>
+    public override async Task OnActivateAsync(CancellationToken cts)
     {
       messenger = this
         .GetStreamProvider(nameof(Message))
         .GetStream<Message>(string.Empty, Guid.Empty);
 
-      await base.OnActivateAsync(cleaner);
+      await base.OnActivateAsync(cts);
     }
 
     /// <summary>

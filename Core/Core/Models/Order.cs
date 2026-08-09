@@ -17,6 +17,11 @@ namespace Core.Models
     public string Descriptor { get; init; }
 
     /// <summary>
+    /// Time stamp
+    /// </summary>
+    public long? Time { get; init; }
+
+    /// <summary>
     /// Contract size
     /// </summary>
     public double? Amount { get; init; }

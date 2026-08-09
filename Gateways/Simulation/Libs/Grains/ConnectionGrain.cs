@@ -32,7 +32,7 @@ namespace Simulation.Grains
   {
     protected Connection state;
     protected ITradeObserver observer;
-    protected CancellationTokenSource cleaner;
+    protected CancellationTokenSource cts;
     protected PriorityQueue<SimStream, long> queue = new();
     protected ConcurrentDictionary<string, SimStream> docs = new();
     protected ConcurrentDictionary<string, SimStream> streams = new();
@@ -48,7 +48,7 @@ namespace Simulation.Grains
 
       state = connection;
       observer = grainObserver;
-      cleaner = new CancellationTokenSource();
+      cts = new CancellationTokenSource();
 
       foreach (var instrument in state.Account.Instruments.Values)
       {
@@ -127,8 +127,8 @@ namespace Simulation.Grains
     /// </summary>
     public override Task<StatusResponse> Disconnect()
     {
-      cleaner?.Cancel();
-      cleaner?.Dispose();
+      cts?.Cancel();
+      cts?.Dispose();
       streams?.Clear();
       docs?.Values?.ForEach(o => o.Dispose());
       docs?.Clear();

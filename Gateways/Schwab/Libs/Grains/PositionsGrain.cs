@@ -52,9 +52,9 @@ namespace Schwab.Grains
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> Positions(PositionCriteria criteria)
     {
-      var cleaner = new CancellationTokenSource(state.Timeout);
+      var cts = new CancellationTokenSource(state.Timeout);
       var query = new AccountQuery { AccountCode = state.Account.Descriptor };
-      var messages = await connector.GetPositions(query, cleaner.Token);
+      var messages = await connector.GetPositions(query, cts.Token);
       var items = messages.Select(MapPosition);
 
       return new()
