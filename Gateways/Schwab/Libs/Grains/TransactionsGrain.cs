@@ -13,8 +13,8 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   public class SchwabTransactionsGrain : TransactionsGrain, ISchwabTransactionsGrain

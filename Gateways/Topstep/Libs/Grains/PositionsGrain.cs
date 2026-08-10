@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
@@ -7,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Topstep.Models;
 using TopstepX;
-using TopstepX.Models.Orders;
 using TopstepX.Models.Positions;
 
 namespace Topstep.Grains
@@ -18,7 +18,8 @@ namespace Topstep.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
 
     /// <summary>
     /// Validate session token
@@ -43,28 +44,31 @@ namespace Topstep.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      var response = new StatusResponse() { Data = StatusEnum.Active };
-
       state = connection;
+      observer = grainObserver;
       connector = new(connection.Username, connection.Token);
 
-      return response;
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
     }
 
     /// <summary>
     /// Validate session token
     /// </summary>
     /// <param name="session"></param>
-    public virtual Task<StatusResponse> Validate(string session)
+    public virtual async Task<StatusResponse> Validate(string session)
     {
       connector.SetAuthHeader(session);
 
-      return Task.FromResult(new StatusResponse
+      return new()
       {
         Data = StatusEnum.Active
-      });
+      };
     }
 
     /// <summary>

@@ -18,8 +18,8 @@ namespace Tradier.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   /// <summary>
@@ -38,20 +38,14 @@ namespace Tradier.Grains
     protected TradierBroker connector;
 
     /// <summary>
-    /// Observer
-    /// </summary>
-    protected ITradeObserver observer;
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
+      var descriptor = this.GetDescriptor();
       var cts = new CancellationTokenSource(connection.Timeout);
-
-      await Disconnect();
 
       state = connection;
       observer = grainObserver;
@@ -60,6 +54,17 @@ namespace Tradier.Grains
         Token = connection.AccessToken,
         SessionToken = connection.SessionToken,
       };
+
+      await GrainFactory.GetGrain<ITradierOrdersGrain>(descriptor).Setup(connection, observer);
+      await GrainFactory.GetGrain<ITradierPositionsGrain>(descriptor).Setup(connection, observer);
+      await GrainFactory.GetGrain<ITradierOrderSenderGrain>(descriptor).Setup(connection, observer);
+      await GrainFactory.GetGrain<ITradierTransactionsGrain>(descriptor).Setup(connection, observer);
+
+      foreach (var o in state.Account.Instruments.Values)
+      {
+        await GrainFactory.GetGrain<ITradierOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
+        await GrainFactory.GetGrain<ITradierInstrumentGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
+      }
 
       await connector.Connect(cts.Token);
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));

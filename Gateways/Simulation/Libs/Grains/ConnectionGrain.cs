@@ -31,7 +31,6 @@ namespace Simulation.Grains
   public class SimConnectionGrain : ConnectionGrain, ISimConnectionGrain
   {
     protected Connection state;
-    protected ITradeObserver observer;
     protected CancellationTokenSource cts;
     protected PriorityQueue<SimStream, long> queue = new();
     protected ConcurrentDictionary<string, SimStream> docs = new();

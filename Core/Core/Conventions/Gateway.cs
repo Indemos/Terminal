@@ -1,4 +1,5 @@
 using Core.Enums;
+using Core.Grains;
 using Core.Models;
 using Orleans;
 using System;
@@ -203,48 +204,6 @@ namespace Core.Conventions
     public abstract Task<StatusResponse> Unsubscribe(Instrument instrument);
 
     /// <summary>
-    /// Get latest quote
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<DomResponse> GetDom(DomCriteria criteria);
-
-    /// <summary>
-    /// Get historical ticks
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetPrices(PriceCriteria criteria);
-
-    /// <summary>
-    /// Get historical bars
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<PricesResponse> GetPriceGroups(PriceCriteria criteria);
-
-    /// <summary>
-    /// Get options
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<InstrumentsResponse> GetOptions(OptionCriteria criteria);
-
-    /// <summary>
-    /// Get orders
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetOrders(OrderCriteria criteria);
-
-    /// <summary>
-    /// Get positions
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetPositions(PositionCriteria criteria);
-
-    /// <summary>
-    /// Get all account transactions
-    /// </summary>
-    /// <param name="criteria"></param>
-    public abstract Task<OrdersResponse> GetTransactions(TransactionCriteria criteria);
-
-    /// <summary>
     /// Send new orders
     /// </summary>
     /// <param name="order"></param>
@@ -255,6 +214,69 @@ namespace Core.Conventions
     /// </summary>
     /// <param name="order"></param>
     public abstract Task<DescriptorResponse> ClearOrder(Order order);
+
+    /// <summary>
+    /// Get latest quote
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<DomResponse> GetDom(DomCriteria criteria)
+    {
+      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
+    }
+
+    /// <summary>
+    /// Get historical ticks
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<PricesResponse> GetPrices(PriceCriteria criteria)
+    {
+      return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+    }
+
+    /// <summary>
+    /// Get historical bars
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<PricesResponse> GetPriceGroups(PriceCriteria criteria)
+    {
+      return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+    }
+
+    /// <summary>
+    /// Get options
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<InstrumentsResponse> GetOptions(OptionCriteria criteria)
+    {
+      return Component<IOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+    }
+
+    /// <summary>
+    /// Get orders
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<OrdersResponse> GetOrders(OrderCriteria criteria)
+    {
+      return Component<IOrdersGrain>().Orders(criteria);
+    }
+
+    /// <summary>
+    /// Get positions
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<OrdersResponse> GetPositions(PositionCriteria criteria)
+    {
+      return Component<IPositionsGrain>().Positions(criteria);
+    }
+
+    /// <summary>
+    /// Get all account transactions
+    /// </summary>
+    /// <param name="criteria"></param>
+    public virtual Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
+    {
+      return Component<ITransactionsGrain>().Transactions(criteria);
+    }
 
     /// <summary>
     /// Get order

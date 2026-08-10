@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Models;
 using Orleans;
 using Orleans.Streams;
@@ -26,6 +27,11 @@ namespace Core.Grains
 
   public class OptionsGrain : Grain<Instruments>, IOptionsGrain
   {
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
     /// <summary>
     /// Messenger
     /// </summary>

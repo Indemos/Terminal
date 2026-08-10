@@ -1,3 +1,5 @@
+using Core.Enums;
+
 namespace Core.Models
 {
   public record PriceCriteria : Criteria
@@ -15,7 +17,7 @@ namespace Core.Models
     /// <summary>
     /// Price type - bars, trades, ticks
     /// </summary>
-    public string PriceType { get; init; }
+    public PriceTypeEnum PriceType { get; init; }
 
     /// <summary>
     /// Period type - day, hour, minute

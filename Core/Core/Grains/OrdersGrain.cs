@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Models;
 using Core.Validators;
@@ -39,6 +40,11 @@ namespace Core.Grains
 
   public class OrdersGrain : Grain<Dictionary<string, Order>>, IOrdersGrain
   {
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
     /// <summary>
     /// Order validator
     /// </summary>

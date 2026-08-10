@@ -22,8 +22,8 @@ namespace Topstep.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<DescriptorResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   /// <summary>
@@ -47,11 +47,6 @@ namespace Topstep.Grains
     protected TopstepBroker connector;
 
     /// <summary>
-    /// Observer
-    /// </summary>
-    protected ITradeObserver observer;
-
-    /// <summary>
     /// Account connection
     /// </summary>
     protected UserHubGateway accountConnection;
@@ -66,50 +61,45 @@ namespace Topstep.Grains
     /// </summary>
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
-    public virtual async Task<DescriptorResponse> Setup(Connection connection, ITradeObserver grainObserver)
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      await Disconnect();
-
       state = connection;
       observer = grainObserver;
       connector = new(connection.Username, connection.Token);
 
-      var response = new DescriptorResponse();
+      async Task session()
+      {
+        var descriptor = this.GetDescriptor();
+        var scope = await connector.Validate();
+
+        connector.SetAuthHeader(scope.newToken);
+
+        await GrainFactory.GetGrain<ITopstepOrdersGrain>(descriptor).Validate(scope.newToken);
+        await GrainFactory.GetGrain<ITopstepPositionsGrain>(descriptor).Validate(scope.newToken);
+        await GrainFactory.GetGrain<ITopstepOrderSenderGrain>(descriptor).Validate(scope.newToken);
+        await GrainFactory.GetGrain<ITopstepTransactionsGrain>(descriptor).Validate(scope.newToken);
+
+        foreach (var o in state.Account.Instruments.Values)
+        {
+          await GrainFactory.GetGrain<ITopstepInstrumentGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
+        }
+      }
+
+      var response = new StatusResponse();
       var signature = await connector.SignIn();
 
       if (signature.success)
       {
-        response = response with { Data = signature.token };
+        response = response with { Data = StatusEnum.Active };
       }
 
       accountConnection = connector.CreateUserHubGateway(int.Parse(connection.Account.Descriptor));
       accountConnection.OnOrder += message => observer.StreamOrder(MapOrder(message));
 
-      var descriptor = this.GetDescriptor();
-      var ordersGrain = GrainFactory.GetGrain<ITopstepOrdersGrain>(descriptor);
-      var positionsGrain = GrainFactory.GetGrain<ITopstepPositionsGrain>(descriptor);
-      var orderSenderGrain = GrainFactory.GetGrain<ITopstepOrderSenderGrain>(descriptor);
-      var transactionsGrain = GrainFactory.GetGrain<ITopstepTransactionsGrain>(descriptor);
-
-      await ordersGrain.Setup(connection);
-      await positionsGrain.Setup(connection);
-      await orderSenderGrain.Setup(connection);
-      await transactionsGrain.Setup(connection, observer);
-
-      counter = this.RegisterGrainTimer(async data =>
-      {
-        var scope = await connector.Validate();
-
-        connector.SetAuthHeader(scope.newToken);
-
-        await ordersGrain.Validate(scope.newToken);
-        await positionsGrain.Validate(scope.newToken);
-        await orderSenderGrain.Validate(scope.newToken);
-        await transactionsGrain.Validate(scope.newToken);
-
-      }, 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
-
+      await session();
       await Task.WhenAll(state.Account.Instruments.Values.Select(Subscribe));
+
+      counter = this.RegisterGrainTimer(async data => await session(), 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
 
       return response;
     }

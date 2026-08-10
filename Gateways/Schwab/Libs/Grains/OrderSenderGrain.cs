@@ -1,7 +1,6 @@
 using Core.Enums;
 using Core.Models;
 using Schwab.Messages;
-using Schwab.Models;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;

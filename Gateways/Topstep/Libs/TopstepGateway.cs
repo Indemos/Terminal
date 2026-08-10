@@ -2,11 +2,8 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
-using System.Timers;
 using Topstep.Grains;
 using Topstep.Models;
 
@@ -14,11 +11,6 @@ namespace Topstep
 {
   public class TopstepGateway : Gateway
   {
-    /// <summary>
-    /// Repeater
-    /// </summary>
-    protected System.Timers.Timer counter;
-
     /// <summary>
     /// Username
     /// </summary>
@@ -34,6 +26,8 @@ namespace Topstep
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      await Component<ITopstepConnectionGrain>().Disconnect();
+
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Connection()
       {
@@ -44,12 +38,7 @@ namespace Topstep
 
       SubscribeToUpdates();
 
-      await Component<ITopstepConnectionGrain>().Setup(connection, observer);
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
+      return await Component<ITopstepConnectionGrain>().Setup(connection, observer);
     }
 
     /// <summary>
@@ -79,15 +68,6 @@ namespace Topstep
     }
 
     /// <summary>
-    /// Get depth of market when available or just a top of the book
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<DomResponse> GetDom(DomCriteria criteria)
-    {
-      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
-    }
-
-    /// <summary>
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
@@ -106,33 +86,24 @@ namespace Topstep
     }
 
     /// <summary>
-    /// Option chain
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<InstrumentsResponse> GetOptions(OptionCriteria criteria)
-    {
-      return Task.FromResult(new InstrumentsResponse());
-    }
-
-    /// <summary>
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<ITopstepOrdersGrain>();
+      var grain = Component<IOrdersGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await ordersGrain.Orders(criteria);
+        var sourceGrain = Component<ITopstepOrdersGrain>();
+        var response = await sourceGrain.Orders(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Id));
+
+        return response;
       }
 
-      var response = await connectionGrain.Orders(criteria);
-
-      await ordersGrain.Store(response.Data.ToDictionary(o => o.Id));
-
-      return response;
+      return await grain.Orders(criteria);
     }
 
     /// <summary>
@@ -141,28 +112,19 @@ namespace Topstep
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<ITopstepPositionsGrain>();
+      var grain = Component<IPositionsGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await positionsGrain.Positions(criteria);
+        var sourceGrain = Component<ITopstepPositionsGrain>();
+        var response = await sourceGrain.Positions(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
+
+        return response;
       }
 
-      var response = await connectionGrain.Positions(criteria);
-
-      await positionsGrain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
-
-      return response;
-    }
-
-    /// <summary>
-    /// Get all account transactions
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
-    {
-      return Component<ITopstepTransactionsGrain>().Transactions(criteria);
+      return await grain.Positions(criteria);
     }
 
     /// <summary>

@@ -5,17 +5,15 @@ using Core.Grains;
 using Core.Models;
 using IBApi;
 using IBApi.Messages;
-using IBApi.Queries;
 using InteractiveBrokers.Mappers;
 using InteractiveBrokers.Models;
 using Orleans;
-using System;
 using System.Collections.Concurrent;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace InteractiveBrokers
+namespace InteractiveBrokers.Grains
 {
   public interface IInterConnectionGrain : IConnectionGrain
   {
@@ -25,48 +23,6 @@ namespace InteractiveBrokers
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
     Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
-
-    /// <summary>
-    /// List of prices by criteria
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<PricesResponse> PriceGroups(PriceCriteria criteria);
-
-    /// <summary>
-    /// List of prices by criteria
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<PricesResponse> Prices(PriceCriteria criteria);
-
-    /// <summary>
-    /// Get orders
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<OrdersResponse> Orders(OrderCriteria criteria);
-
-    /// <summary>
-    /// Get positions 
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<OrdersResponse> Positions(PositionCriteria criteria);
-
-    /// <summary>
-    /// Get contract definitions
-    /// </summary>
-    /// <param name="criteria"></param>
-    Task<InstrumentsResponse> Options(OptionCriteria criteria);
-
-    /// <summary>
-    /// Send order
-    /// </summary>
-    /// <param name="order"></param>
-    Task<OrderResponse> SendOrder(Core.Models.Order order);
-
-    /// <summary>
-    /// Clear order
-    /// </summary>
-    /// <param name="order"></param>
-    Task<DescriptorResponse> ClearOrder(Core.Models.Order order);
 
     /// <summary>
     /// Sync open balance, order, and positions 
@@ -85,11 +41,6 @@ namespace InteractiveBrokers
     /// IB client
     /// </summary>
     protected InterBroker connector;
-
-    /// <summary>
-    /// Observer
-    /// </summary>
-    protected ITradeObserver observer;
 
     /// <summary>
     /// Asset subscriptions
@@ -112,24 +63,10 @@ namespace InteractiveBrokers
     /// </summary>
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
-    public virtual Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       state = connection;
       observer = grainObserver;
-
-      return Task.FromResult(new StatusResponse
-      {
-        Data = StatusEnum.Active
-      });
-    }
-
-    /// <summary>
-    /// Connect
-    /// </summary>
-    public override async Task<StatusResponse> Connect()
-    {
-      await Disconnect();
-
       connector = new InterBroker
       {
         Port = state.Port,
@@ -152,6 +89,17 @@ namespace InteractiveBrokers
           Data = StatusEnum.Inactive
         };
       }
+
+      var descriptor = this.GetDescriptor();
+      var ordersGrain = GrainFactory.GetGrain<IInterOrdersGrain>(descriptor);
+      var positionsGrain = GrainFactory.GetGrain<IInterPositionsGrain>(descriptor);
+      var orderSenderGrain = GrainFactory.GetGrain<IInterOrderSenderGrain>(descriptor);
+      var transactionsGrain = GrainFactory.GetGrain<IInterTransactionsGrain>(descriptor);
+
+      await ordersGrain.Setup(connection, observer);
+      await positionsGrain.Setup(connection, observer);
+      await orderSenderGrain.Setup(connection, observer);
+      await transactionsGrain.Setup(connection, observer);
 
       foreach (var instrument in state.Account.Instruments.Values)
       {
@@ -244,85 +192,6 @@ namespace InteractiveBrokers
     }
 
     /// <summary>
-    /// List of prices by criteria
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<PricesResponse> Prices(PriceCriteria criteria)
-    {
-      var contract = Upstream.MapContract(criteria.Instrument);
-      var cts = new CancellationTokenSource(state.Timeout);
-      var query = new HistoricalTicksQuery()
-      {
-        Contract = contract,
-        MinDate = criteria.MinDate.Value,
-        MaxDate = criteria.MaxDate.Value,
-        DataType = "BID_ASK",
-        Count = criteria.Count ?? 1
-      };
-
-      var sourceItems = await connector.GetTicks(query, cts.Token);
-      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
-    /// List of prices by criteria
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<PricesResponse> PriceGroups(PriceCriteria criteria)
-    {
-      var cts = new CancellationTokenSource(state.Timeout);
-      var contract = Upstream.MapContract(criteria.Instrument);
-      var maxDate = criteria.MaxDate ?? DateTime.Now;
-      var query = new HistoricalBarsQuery
-      {
-        Contract = contract,
-        MaxDate = maxDate,
-        BarType = criteria.FrameType,
-        DataType = criteria.PriceType,
-        Duration = criteria.DurationType,
-      };
-
-      var sourceItems = await connector.GetBars(query, cts.Token);
-      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
-    /// List options
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<InstrumentsResponse> Options(OptionCriteria criteria)
-    {
-      var instrument = criteria.Instrument;
-      var minDate = criteria.MinDate?.ToString($"yyyyMMdd-HH:mm:ss");
-      var maxDate = (criteria.MaxDate ?? DateTime.Now).ToString($"yyyyMMdd-HH:mm:ss");
-      var contract = Upstream.MapContract(criteria.Instrument);
-      var cts = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetContracts(contract, cts.Token);
-      var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
     /// Sync open balance, order, and positions 
     /// </summary>
     public virtual async Task<Account> AccountSummary()
@@ -336,82 +205,6 @@ namespace InteractiveBrokers
       await Task.Delay(state.Span);
 
       return account;
-    }
-
-    /// <summary>
-    /// Get orders
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Orders(OrderCriteria criteria)
-    {
-      var cts = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetOrders(cts.Token);
-      var items = sourceItems.Select(Downstream.MapOrder).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
-    /// Get positions 
-    /// </summary>
-    /// <param name="criteria"></param>
-    public virtual async Task<OrdersResponse> Positions(PositionCriteria criteria)
-    {
-      var cts = new CancellationTokenSource(state.Timeout);
-      var sourceItems = await connector.GetPositions(state.Account.Descriptor, cts.Token);
-      var items = sourceItems.Where(o => o.Position is not 0).Select(Downstream.MapPosition).ToArray();
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = items
-      };
-    }
-
-    /// <summary>
-    /// Send order
-    /// </summary>
-    /// <param name="order"></param>
-    public virtual async Task<OrderResponse> SendOrder(Core.Models.Order order)
-    {
-      var contract = Upstream.MapContract(order.Operation.Instrument);
-      var (orderMessage, SL, TP) = Upstream.MapOrder(order, state.Account);
-      var (group, braces) = connector.SendOrder(contract, orderMessage, SL, TP);
-
-      order = order with { Operation = order.Operation with { Id = $"{group.OrderId}" } };
-
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = order
-      };
-    }
-
-    /// <summary>
-    /// Clear order
-    /// </summary>
-    /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> ClearOrder(Core.Models.Order order)
-    {
-      var descriptor = this.GetDescriptor();
-      var ordersGrain = GrainFactory.GetGrain<IOrdersGrain>(descriptor);
-
-      connector.ClearOrder(int.Parse(order.Id));
-
-      await ordersGrain.Clear(order);
-      await Task.Delay(state.Span);
-
-      return new()
-      {
-        Data = order.Id
-      };
     }
   }
 }

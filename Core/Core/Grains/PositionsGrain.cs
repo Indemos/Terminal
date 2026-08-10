@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Models;
 using Orleans;
@@ -32,6 +33,11 @@ namespace Core.Grains
 
   public class PositionsGrain : Grain<Dictionary<string, Order>>, IPositionsGrain
   {
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
     /// <summary>
     /// Messenger
     /// </summary>

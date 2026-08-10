@@ -1,11 +1,10 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
 using Schwab.Messages;
 using Schwab.Models;
 using Schwab.Queries;
-using System;
-using System.Diagnostics.Metrics;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +17,8 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   public class SchwabInstrumentGrain : InstrumentGrain, ISchwabInstrumentGrain
@@ -37,9 +37,11 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
       state = connection;
+      observer = grainObserver;
       connector.AccessToken = connection.AccessToken;
 
       return new()

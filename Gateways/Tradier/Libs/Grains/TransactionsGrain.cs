@@ -2,7 +2,6 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using System.Threading;
 using System.Threading.Tasks;
 using Tradier.Models;
 
@@ -14,8 +13,8 @@ namespace Tradier.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   public class TradierTransactionsGrain : TransactionsGrain, ITradierTransactionsGrain
@@ -37,8 +36,6 @@ namespace Tradier.Grains
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      var cts = new CancellationTokenSource(connection.Timeout);
-
       state = connection;
       observer = grainObserver;
       connector = new()
@@ -46,8 +43,6 @@ namespace Tradier.Grains
         Token = connection.AccessToken,
         SessionToken = connection.SessionToken,
       };
-
-      await connector.Connect(cts.Token);
 
       return new()
       {

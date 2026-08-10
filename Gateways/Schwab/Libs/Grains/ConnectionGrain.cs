@@ -20,8 +20,8 @@ namespace Schwab.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(Connection connection, ITradeObserver observer);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   /// <summary>
@@ -45,19 +45,12 @@ namespace Schwab.Grains
     protected IDisposable counter;
 
     /// <summary>
-    /// Observer
-    /// </summary>
-    protected ITradeObserver observer;
-
-    /// <summary>
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      await Disconnect();
-
       state = connection;
       observer = grainObserver;
       connector = new SchwabBroker()
@@ -68,14 +61,28 @@ namespace Schwab.Grains
         RefreshToken = connection.RefreshToken
       };
 
-      var descriptor = this.GetDescriptor();
       var scope = await connector.Authenticate();
       var cts = new CancellationTokenSource(connection.Timeout);
       var account = await connector.GetAccountCode(cts.Token);
-      var ordersGrain = GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor);
-      var positionsGrain = GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor);
-      var orderSenderGrain = GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor);
-      var transactionsGrain = GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor);
+
+      async Task session()
+      {
+        var descriptor = this.GetDescriptor();
+        var scope = await connector.Authenticate();
+
+        connection = connection with { AccessToken = scope?.AccessToken };
+
+        await GrainFactory.GetGrain<ISchwabOrdersGrain>(descriptor).Setup(connection, observer);
+        await GrainFactory.GetGrain<ISchwabPositionsGrain>(descriptor).Setup(connection, observer);
+        await GrainFactory.GetGrain<ISchwabOrderSenderGrain>(descriptor).Setup(connection, observer);
+        await GrainFactory.GetGrain<ISchwabTransactionsGrain>(descriptor).Setup(connection, observer);
+
+        foreach (var o in state.Account.Instruments.Values)
+        {
+          await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
+          await GrainFactory.GetGrain<ISchwabInstrumentGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
+        }
+      }
 
       connection = connection with
       {
@@ -83,36 +90,11 @@ namespace Schwab.Grains
         Account = connection.Account with { Descriptor = account?.FirstOrDefault()?.HashValue }
       };
 
+      await session();
       await connector.Stream(CancellationToken.None);
-      await ordersGrain.Setup(connection);
-      await positionsGrain.Setup(connection);
-      await orderSenderGrain.Setup(connection);
-      await transactionsGrain.Setup(connection, observer);
-
-      foreach (var o in connection.Account.Instruments.Values)
-      {
-        await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection);
-      }
-
-      counter = this.RegisterGrainTimer(async data =>
-      {
-        var scope = await connector.Authenticate();
-
-        connection = connection with { AccessToken = scope?.AccessToken };
-
-        await ordersGrain.Setup(connection);
-        await positionsGrain.Setup(connection);
-        await orderSenderGrain.Setup(connection);
-        await transactionsGrain.Setup(connection, observer);
-
-        foreach (var o in state.Account.Instruments.Values)
-        {
-          await GrainFactory.GetGrain<ISchwabOptionsGrain>(this.GetDescriptor(o.Name)).Setup(connection);
-        }
-
-      }, 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
-
       await Task.WhenAll(connection.Account.Instruments.Values.Select(Subscribe));
+
+      counter = this.RegisterGrainTimer(async data => await session(), 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
 
       return new()
       {

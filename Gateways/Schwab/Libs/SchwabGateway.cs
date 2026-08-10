@@ -36,7 +36,7 @@ namespace Schwab
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
-      SubscribeToUpdates();
+      await Component<ISchwabConnectionGrain>().Disconnect();
 
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Connection()
@@ -48,12 +48,9 @@ namespace Schwab
         Account = Account
       };
 
-      await Component<ISchwabConnectionGrain>().Setup(connection, observer);
+      SubscribeToUpdates();
 
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
+      return await Component<ISchwabConnectionGrain>().Setup(connection, observer);
     }
 
     /// <summary>
@@ -83,46 +80,31 @@ namespace Schwab
     }
 
     /// <summary>
-    /// Get depth of market when available or just a top of the book
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<DomResponse> GetDom(DomCriteria criteria)
-    {
-      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
-    }
-
-    /// <summary>
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> GetPrices(PriceCriteria criteria)
+    public override Task<PricesResponse> GetPrices(PriceCriteria criteria)
     {
-      var grain = Component<IInstrumentGrain>(criteria.Instrument.Name);
-      var instrumentGrain = Component<ISchwabInstrumentGrain>(criteria.Instrument.Name);
-
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        await instrumentGrain.Prices(criteria);
+        return Component<ISchwabInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
       }
 
-      return await grain.Prices(criteria);
+      return base.GetPrices(criteria);
     }
 
     /// <summary>
     /// Bars
     /// </summary>
     /// <param name="criteria"></param>
-    public override async Task<PricesResponse> GetPriceGroups(PriceCriteria criteria)
+    public override Task<PricesResponse> GetPriceGroups(PriceCriteria criteria)
     {
-      var grain = Component<IInstrumentGrain>(criteria.Instrument.Name);
-      var instrumentGrain = Component<ISchwabInstrumentGrain>(criteria.Instrument.Name);
-
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        await instrumentGrain.PriceGroups(criteria);
+        return Component<ISchwabInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
       }
 
-      return await grain.PriceGroups(criteria);
+      return base.GetPriceGroups(criteria);
     }
 
     /// <summary>
@@ -131,7 +113,12 @@ namespace Schwab
     /// <param name="criteria"></param>
     public override Task<InstrumentsResponse> GetOptions(OptionCriteria criteria)
     {
-      return Component<ISchwabOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      if (criteria.Source)
+      {
+        return Component<ISchwabOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      }
+
+      return base.GetOptions(criteria);
     }
 
     /// <summary>
@@ -140,19 +127,19 @@ namespace Schwab
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<ISchwabOrdersGrain>();
+      var grain = Component<IOrdersGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await ordersGrain.Orders(criteria);
+        var sourceGrain = Component<ISchwabOrdersGrain>();
+        var response = await sourceGrain.Orders(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Id));
+
+        return response;
       }
 
-      var response = await connectionGrain.Orders(criteria);
-
-      await ordersGrain.Store(response.Data.ToDictionary(o => o.Id));
-
-      return response;
+      return await base.GetOrders(criteria);
     }
 
     /// <summary>
@@ -161,28 +148,19 @@ namespace Schwab
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<ISchwabPositionsGrain>();
+      var grain = Component<IPositionsGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await positionsGrain.Positions(criteria);
+        var sourceGrain = Component<ISchwabPositionsGrain>();
+        var response = await sourceGrain.Positions(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
+
+        return response;
       }
 
-      var response = await connectionGrain.Positions(criteria);
-
-      await positionsGrain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
-
-      return response;
-    }
-
-    /// <summary>
-    /// Get all account transactions
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
-    {
-      return Component<ISchwabTransactionsGrain>().Transactions(criteria);
+      return await grain.Positions(criteria);
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Models;
 using Core.Services;
@@ -40,6 +41,11 @@ namespace Core.Grains
   /// </summary>
   public class ConnectionGrain : Grain, IConnectionGrain
   {
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
     /// <summary>
     /// HTTP service
     /// </summary>

@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
@@ -16,7 +17,8 @@ namespace Tradier.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    Task<StatusResponse> Setup(Connection connection);
+    /// <param name="grainObserver"></param>
+    Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
   }
 
   public class TradierOrdersGrain : OrdersGrain, ITradierOrdersGrain
@@ -35,18 +37,16 @@ namespace Tradier.Grains
     /// Connect
     /// </summary>
     /// <param name="connection"></param>
-    public virtual async Task<StatusResponse> Setup(Connection connection)
+    /// <param name="grainObserver"></param>
+    public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      var cts = new CancellationTokenSource(connection.Timeout);
-
       state = connection;
+      observer = grainObserver;
       connector = new()
       {
         Token = connection.AccessToken,
         SessionToken = connection.SessionToken,
       };
-
-      await connector.Connect(cts.Token);
 
       return new()
       {

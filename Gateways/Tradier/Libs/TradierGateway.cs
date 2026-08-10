@@ -26,6 +26,8 @@ namespace Tradier
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      await Component<ITradierConnectionGrain>().Disconnect();
+
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Connection()
       {
@@ -34,17 +36,7 @@ namespace Tradier
 
       SubscribeToUpdates();
 
-      await Component<ITradierOrdersGrain>().Setup(connection);
-      await Component<ITradierOptionsGrain>().Setup(connection);
-      await Component<ITradierPositionsGrain>().Setup(connection);
-      await Component<ITradierOrderSenderGrain>().Setup(connection);
-      await Component<ITradierConnectionGrain>().Setup(connection, observer);
-      await Component<ITradierTransactionsGrain>().Setup(connection, observer);
-
-      return new()
-      {
-        Data = StatusEnum.Active
-      };
+      return await Component<ITradierConnectionGrain>().Setup(connection, observer);
     }
 
     /// <summary>
@@ -74,21 +66,17 @@ namespace Tradier
     }
 
     /// <summary>
-    /// Get depth of market when available or just a top of the book
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<DomResponse> GetDom(DomCriteria criteria)
-    {
-      return Component<IDomGrain>(criteria.Instrument.Name).Dom(criteria);
-    }
-
-    /// <summary>
     /// Ticks
     /// </summary>
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPrices(PriceCriteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      if (criteria.Source)
+      {
+        return Component<IInstrumentGrain>(criteria.Instrument.Name).Prices(criteria);
+      }
+
+      return base.GetPrices(criteria);
     }
 
     /// <summary>
@@ -97,7 +85,12 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override Task<PricesResponse> GetPriceGroups(PriceCriteria criteria)
     {
-      return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      if (criteria.Source)
+      {
+        return Component<IInstrumentGrain>(criteria.Instrument.Name).PriceGroups(criteria);
+      }
+
+      return base.GetPriceGroups(criteria);
     }
 
     /// <summary>
@@ -106,7 +99,12 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override Task<InstrumentsResponse> GetOptions(OptionCriteria criteria)
     {
-      return Component<ITradierOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      if (criteria.Source)
+      {
+        return Component<ITradierOptionsGrain>(criteria.Instrument.Name).Options(criteria);
+      }
+
+      return base.GetOptions(criteria);
     }
 
     /// <summary>
@@ -115,19 +113,19 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      var ordersGrain = Component<IOrdersGrain>();
-      var connectionGrain = Component<ITradierOrdersGrain>();
+      var grain = Component<IOrdersGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await ordersGrain.Orders(criteria);
+        var sourceGrain = Component<ITradierOrdersGrain>();
+        var response = await sourceGrain.Orders(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Id));
+
+        return response;
       }
 
-      var response = await connectionGrain.Orders(criteria);
-
-      await ordersGrain.Store(response.Data.ToDictionary(o => o.Id));
-
-      return response;
+      return await base.GetOrders(criteria);
     }
 
     /// <summary>
@@ -136,28 +134,19 @@ namespace Tradier
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      var positionsGrain = Component<IPositionsGrain>();
-      var connectionGrain = Component<ITradierPositionsGrain>();
+      var grain = Component<IPositionsGrain>();
 
-      if (criteria?.Source is not true)
+      if (criteria.Source)
       {
-        return await positionsGrain.Positions(criteria);
+        var sourceGrain = Component<ITradierPositionsGrain>();
+        var response = await sourceGrain.Positions(criteria);
+
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
+
+        return response;
       }
 
-      var response = await connectionGrain.Positions(criteria);
-
-      await positionsGrain.Store(response.Data.ToDictionary(o => o.Operation.Instrument.Name));
-
-      return response;
-    }
-
-    /// <summary>
-    /// Get all account transactions
-    /// </summary>
-    /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
-    {
-      return Component<ITradierTransactionsGrain>().Transactions(criteria);
+      return await base.GetPositions(criteria);
     }
 
     /// <summary>

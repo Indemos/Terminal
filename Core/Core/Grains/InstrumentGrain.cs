@@ -1,3 +1,4 @@
+using Core.Conventions;
 using Core.Extensions;
 using Core.Models;
 using Orleans;
@@ -37,6 +38,11 @@ namespace Core.Grains
 
   public class InstrumentGrain : Grain<Prices>, IInstrumentGrain
   {
+    /// <summary>
+    /// Observer
+    /// </summary>
+    protected ITradeObserver observer;
+
     /// <summary>
     /// Messenger
     /// </summary>
