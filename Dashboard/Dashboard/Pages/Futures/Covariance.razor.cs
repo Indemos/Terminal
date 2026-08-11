@@ -44,6 +44,8 @@ namespace Dashboard.Pages.Futures
 
     int Direction { get; set; } = 0;
     Indexer Scores { get; set; } = new();
+    double? PriceX { get; set; }
+    double? PriceY { get; set; }
 
     const string nameX = "ES";
     const string nameY = "NQ";
@@ -95,7 +97,7 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected async void Render(Instrument instrument, IList<Price> seriesX, IList<Price> seriesY, double spread, double score, double innovation)
+    protected async void Render(Instrument instrument, double spread, double score, double innovation)
     {
       var adapter = Adapter;
       var account = adapter.Account;
@@ -103,6 +105,8 @@ namespace Dashboard.Pages.Futures
       var index = price.Bar.Time.Value;
       var assetX = account.Instruments[nameX];
       var assetY = account.Instruments[nameY];
+      var seriesX = (await adapter.GetPrices(new() { Count = 100, Instrument = assetX })).Data;
+      var seriesY = (await adapter.GetPrices(new() { Count = 100, Instrument = assetY })).Data;
 
       if (seriesX.Count is 0 || seriesY.Count is 0)
       {
@@ -126,37 +130,37 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
-      if (instrument.Name == "NQ") return;
-
       var price = instrument.Price;
       var adapter = Adapter;
       var account = adapter.Account;
       var assetX = account.Instruments[nameX];
       var assetY = account.Instruments[nameY];
-      var seriesX = (await adapter.GetPrices(new() { Count = 100, Instrument = assetX })).Data;
-      var seriesY = (await adapter.GetPrices(new() { Count = 100, Instrument = assetY })).Data;
 
-      if (seriesX.Count is 0 || seriesY.Count is 0)
+      switch (instrument.Name)
+      {
+        case nameX: PriceX = price.Last; break;
+        case nameY: PriceY = price.Last; break;
+      }
+
+      if (instrument.Name == "NQ") return;
+
+      if (PriceX is null || PriceY is null)
       {
         return;
       }
 
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
-      var priceX = seriesX.Last();
-      var priceY = seriesY.Last();
-      var scaleX = Scales[assetX.Name].Update(seriesX);
-      var scaleY = Scales[assetY.Name].Update(seriesY);
 
-      var inX = Math.Log(priceX.Last.Value * assetX.Leverage.Value);
-      var inY = Math.Log(priceY.Last.Value * assetY.Leverage.Value);
+      var inX = Math.Log(PriceX.Value * assetX.Leverage.Value);
+      var inY = Math.Log(PriceY.Value * assetY.Leverage.Value);
       Ratio.Update(inX, inY);
       var spread = 100000 * Ratio.Spread(inX, inY);
       var betas = Ratio.Betas();
 
       Regression.Update(spread);
       var score = Regression.Score(spread);
-      var innovation = Kalman.Update(priceX.Last.Value * assetX.Leverage.Value, [1, priceY.Last.Value * assetY.Leverage.Value]);
+      var innovation = Kalman.Update(PriceX.Value * assetX.Leverage.Value, [1, PriceY.Value * assetY.Leverage.Value]);
 
       if (orders.Count is 0)
       {
@@ -193,7 +197,7 @@ namespace Dashboard.Pages.Futures
         }
       }
 
-      Render(instrument, seriesX, seriesY, spread, score, 0);
+      Render(instrument, spread, score, 0);
     }
   }
 }
