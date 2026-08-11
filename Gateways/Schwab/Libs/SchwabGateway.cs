@@ -65,9 +65,14 @@ namespace Schwab
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(Instrument instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      return Component<ISchwabConnectionGrain>().Subscribe(instrument);
+      var grain = Component<ISchwabConnectionGrain>();
+
+      await grain.Unsubscribe(instrument);
+      await grain.Subscribe(instrument);
+
+      return new StatusResponse { Data = StatusEnum.Active };
     }
 
     /// <summary>
@@ -134,7 +139,7 @@ namespace Schwab
         var sourceGrain = Component<ISchwabOrdersGrain>();
         var response = await sourceGrain.Orders(criteria);
 
-        await grain.Store(response.Data.ToDictionary(o => o.Id));
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Id));
 
         return response;
       }

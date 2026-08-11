@@ -1,4 +1,5 @@
 using Core.Conventions;
+using Core.Enums;
 using Core.Grains;
 using Core.Models;
 using InteractiveBrokers.Grains;
@@ -65,9 +66,14 @@ namespace InteractiveBrokers
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(Instrument instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      return Component<IInterConnectionGrain>().Subscribe(instrument);
+      var grain = Component<IInterConnectionGrain>();
+
+      await grain.Unsubscribe(instrument);
+      await grain.Subscribe(instrument);
+
+      return new StatusResponse { Data = StatusEnum.Active };
     }
 
     /// <summary>
@@ -134,7 +140,7 @@ namespace InteractiveBrokers
         var sourceGrain = Component<IInterOrdersGrain>();
         var response = await sourceGrain.Orders(criteria);
 
-        await grain.Store(response.Data.ToDictionary(o => o.Id));
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Id));
 
         return response;
       }

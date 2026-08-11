@@ -67,36 +67,55 @@ namespace Topstep.Grains
       observer = grainObserver;
       connector = new(connection.Username, connection.Token);
 
-      async Task session()
-      {
-        var descriptor = this.GetDescriptor();
-        var scope = await connector.Validate();
-
-        connector.SetAuthHeader(scope.newToken);
-
-        await GrainFactory.GetGrain<ITopstepOrdersGrain>(descriptor).Validate(scope.newToken);
-        await GrainFactory.GetGrain<ITopstepPositionsGrain>(descriptor).Validate(scope.newToken);
-        await GrainFactory.GetGrain<ITopstepOrderSenderGrain>(descriptor).Validate(scope.newToken);
-        await GrainFactory.GetGrain<ITopstepTransactionsGrain>(descriptor).Validate(scope.newToken);
-
-        foreach (var o in state.Account.Instruments.Values)
-        {
-          await GrainFactory.GetGrain<ITopstepInstrumentGrain>(this.GetDescriptor(o.Name)).Setup(connection, observer);
-        }
-      }
-
+      var descriptor = this.GetDescriptor();
       var response = new StatusResponse();
       var signature = await connector.SignIn();
+      var ordersGrain = GrainFactory.GetGrain<ITopstepOrdersGrain>(descriptor);
+      var positionsGrain = GrainFactory.GetGrain<ITopstepPositionsGrain>(descriptor);
+      var orderSenderGrain = GrainFactory.GetGrain<ITopstepOrderSenderGrain>(descriptor);
+      var actionsGrain = GrainFactory.GetGrain<ITopstepTransactionsGrain>(descriptor);
 
       if (signature.success)
       {
         response = response with { Data = StatusEnum.Active };
       }
 
+      async Task session()
+      {
+        var scope = await connector.Validate();
+
+        connector.SetAuthHeader(scope.newToken);
+
+        await ordersGrain.Validate(scope.newToken);
+        await positionsGrain.Validate(scope.newToken);
+        await orderSenderGrain.Validate(scope.newToken);
+        await actionsGrain.Validate(scope.newToken);
+
+        foreach (var o in state.Account.Instruments.Values)
+        {
+          await GrainFactory
+            .GetGrain<ITopstepInstrumentGrain>(this.GetDescriptor(o.Name))
+            .Validate(scope.newToken);
+        }
+      }
+
+      await ordersGrain.Setup(connection, observer);
+      await positionsGrain.Setup(connection, observer);
+      await orderSenderGrain.Setup(connection, observer);
+      await actionsGrain.Setup(connection, observer);
+
+      foreach (var o in state.Account.Instruments.Values)
+      {
+        await GrainFactory
+          .GetGrain<ITopstepInstrumentGrain>(this.GetDescriptor(o.Name))
+          .Setup(connection, observer);
+      }
+
       accountConnection = connector.CreateUserHubGateway(int.Parse(connection.Account.Descriptor));
       accountConnection.OnOrder += message => observer.StreamOrder(MapOrder(message));
 
       await session();
+      await accountConnection.StartAsync();
       await Task.WhenAll(state.Account.Instruments.Values.Select(Subscribe));
 
       counter = this.RegisterGrainTimer(async data => await session(), 0, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(10));
@@ -109,16 +128,16 @@ namespace Topstep.Grains
     /// </summary>
     public override async Task<StatusResponse> Disconnect()
     {
-      if (accountConnection is not null)
-      {
-        await accountConnection.StopAsync();
-      }
-
-      foreach (var connection in instrumentConnections.Values)
+      foreach (var connection in instrumentConnections?.Values)
       {
         await connection.StopAsync();
       }
 
+      if (accountConnection is not null)
+      {
+        await accountConnection.StopAsync();
+      }
+      
       instrumentConnections?.Clear();
       connections?.ForEach(o => o.Dispose());
       connections?.Clear();
@@ -140,9 +159,9 @@ namespace Topstep.Grains
       var descriptor = this.GetDescriptor();
       var instrumentDescriptor = this.GetDescriptor(instrument.Name);
       var instrumentGrain = GrainFactory.GetGrain<IInstrumentGrain>(instrumentDescriptor);
-      var dataConnection = connector.CreateMarketHubGateway(instrument.Id);
+      var instrumentConnection = connector.CreateMarketHubGateway(instrument.Id);
 
-      dataConnection.OnQuote += async (message, o) =>
+      instrumentConnection.OnQuote += async (message, o) =>
       {
         var group = await instrumentGrain.Send(instrument with
         {
@@ -152,9 +171,31 @@ namespace Topstep.Grains
         await observer.StreamInstrument(group);
       };
 
+      await instrumentConnection.StartAsync();
+
+      instrumentConnections[instrument.Name] = instrumentConnection;
+
       return new()
       {
         Data = StatusEnum.Active
+      };
+    }
+
+    /// <summary>
+    /// Unsubscribe from streams
+    /// </summary>
+    /// <param name="instrument"></param>
+    public override async Task<StatusResponse> Unsubscribe(Instrument instrument)
+    {
+      if (instrumentConnections.TryGetValue(instrument.Name, out var connection))
+      {
+        await connection.StopAsync();
+        instrumentConnections.Remove(instrument.Name);
+      }
+
+      return new()
+      {
+        Data = StatusEnum.Pause
       };
     }
 

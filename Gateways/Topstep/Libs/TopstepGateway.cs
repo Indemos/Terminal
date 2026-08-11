@@ -2,6 +2,7 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
+using Orleans;
 using System.Linq;
 using System.Threading.Tasks;
 using Topstep.Grains;
@@ -53,18 +54,25 @@ namespace Topstep
     /// Subscribe to streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(Instrument instrument)
+    public override async Task<StatusResponse> Subscribe(Instrument instrument)
     {
-      return Component<ITopstepConnectionGrain>().Subscribe(instrument);
+      var grain = Component<ITopstepConnectionGrain>();
+
+      await grain.Unsubscribe(instrument);
+      await grain.Subscribe(instrument);
+
+      return new StatusResponse { Data = StatusEnum.Active };
     }
 
     /// <summary>
     /// Unsubscribe from streams
     /// </summary>
     /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
+    public override async Task<StatusResponse> Unsubscribe(Instrument instrument)
     {
-      return Task.FromResult(new StatusResponse { Data = StatusEnum.Pause });
+      var grain = Component<ITopstepConnectionGrain>();
+
+      return await grain.Unsubscribe(instrument);
     }
 
     /// <summary>
@@ -98,7 +106,7 @@ namespace Topstep
         var sourceGrain = Component<ITopstepOrdersGrain>();
         var response = await sourceGrain.Orders(criteria);
 
-        await grain.Store(response.Data.ToDictionary(o => o.Id));
+        await grain.Store(response.Data.ToDictionary(o => o.Operation.Id));
 
         return response;
       }

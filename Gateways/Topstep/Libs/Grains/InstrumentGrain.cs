@@ -2,8 +2,6 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using System;
-using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -21,6 +19,12 @@ namespace Topstep.Grains
     /// <param name="connection"></param>
     /// <param name="grainObserver"></param>
     Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver);
+
+    /// <summary>
+    /// Validate session token
+    /// </summary>
+    /// <param name="session"></param>
+    Task<StatusResponse> Validate(string session);
   }
 
   public class TopstepInstrumentGrain : InstrumentGrain, ITopstepInstrumentGrain
@@ -45,6 +49,20 @@ namespace Topstep.Grains
       state = connection;
       observer = grainObserver;
       connector = new(connection.Username, connection.Token);
+
+      return new()
+      {
+        Data = StatusEnum.Active
+      };
+    }
+
+    /// <summary>
+    /// Validate session token
+    /// </summary>
+    /// <param name="session"></param>
+    public virtual async Task<StatusResponse> Validate(string session)
+    {
+      connector.SetAuthHeader(session);
 
       return new()
       {
