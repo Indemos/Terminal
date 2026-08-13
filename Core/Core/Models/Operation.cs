@@ -5,11 +5,6 @@ namespace Core.Models
   public record Operation
   {
     /// <summary>
-    /// Id
-    /// </summary>
-    public string Id { get; init; }
-
-    /// <summary>
     /// Size of partially filled contract
     /// </summary>
     public double? Amount { get; init; }

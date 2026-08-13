@@ -1,52 +1,41 @@
-using Core.Conventions;
+using Core.Extensions;
 using Core.Models;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Core.Indicators
 {
-  public class ImbalanceIndicator : Indicator
+  public class ImbalanceIndicator
   {
-    /// <summary>
-    /// Mode
-    /// </summary>
-    public virtual int Mode { get; set; } = 0;
+    protected Dictionary<long, Price> map = new();
 
-    /// <summary>
-    /// Calculate indicator value
-    /// </summary>
-    /// <param name="collection"></param>
-    public override IIndicator Update(IList<Price> collection)
+    public virtual Price Update(long stamp, Price currentPoint)
     {
-      var response = this;
-      var currentPoint = collection.LastOrDefault();
-
-      if (currentPoint is null)
+      var current = map.Get(stamp);
+      var bid = currentPoint.BidSize ?? 0;
+      var ask = currentPoint.AskSize ?? 0;
+      var response = new Price
       {
-        return response;
-      }
-
-      var value = 0.0;
-
-      if (Equals(currentPoint.Bar.Time, Response.Time))
-      {
-        value = Response.Last.Value;
-      }
-
-      switch (Mode)
-      {
-        case 0: value += currentPoint.AskSize.Value - currentPoint.BidSize.Value; break;
-        case 1: value += currentPoint.AskSize.Value; break;
-        case -1: value += currentPoint.BidSize.Value; break;
-      }
-
-      Response = Response with
-      {
-        Last = value,
-        Time = currentPoint.Bar.Time
+        Last = (ask - bid) + (current?.Last ?? 0),
+        Bar = new()
+        {
+          Low = bid + (current?.Bar?.Low ?? 0),
+          High = ask + (current?.Bar?.High ?? 0)
+        }
       };
 
+      map[stamp] = response;
+
       return response;
+    }
+
+    public virtual double Ratio(long stamp)
+    {
+      var current = map.Get(stamp);
+      var bid = current?.Bar?.Low ?? 0;
+      var ask = current?.Bar?.High ?? 0;
+      var sum = bid + ask;
+
+      return sum is 0 ? 0 : (ask - bid) / sum; // [-1,1] imbalance
     }
   }
 }

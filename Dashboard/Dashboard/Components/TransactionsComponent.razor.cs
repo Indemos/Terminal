@@ -65,33 +65,46 @@ namespace Dashboard.Components
     /// <param name="adapters"></param>
     public virtual async void Update(IEnumerable<IGateway> adapters)
     {
-      if (Sync.IsCompleted)
+      if (Sync.IsCompleted is false)
       {
-        var queries = adapters.Select(o => o.GetTransactions(default));
-        var responses = await Task.WhenAll(queries);
-
-        Items.Clear();
-
-        foreach (var response in responses)
-        {
-          foreach (var o in response.Data)
-          {
-            Items.Add(new()
-            {
-              Name = o?.Operation?.Instrument?.Name,
-              Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-              Time = new DateTime(o.Operation.Time.Value),
-              Side = o.Side,
-              Size = o.Operation.Amount ?? 0,
-              OpenPrice = o.Operation.AveragePrice ?? 0,
-              ClosePrice = o.Operation.Price ?? 0,
-              Gain = o.Balance.Current ?? 0
-            });
-          }
-        }
-
-        Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
+        return;
       }
+
+      await (Sync = Render(adapters));
+    }
+
+    /// <summary>
+    /// Update table records 
+    /// </summary>
+    /// <param name="adapters"></param>
+    protected virtual async Task Render(IEnumerable<IGateway> adapters)
+    {
+      var queries = adapters.Select(o => o.GetTransactions(default));
+      var responses = await Task.WhenAll(queries);
+      var items = new List<Row>();
+
+      foreach (var response in responses)
+      {
+        foreach (var o in response.Data)
+        {
+          items.Add(new()
+          {
+            Name = o?.Operation?.Instrument?.Name,
+            Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+            Time = new DateTime(o.Operation.Time.Value),
+            Side = o.Side,
+            Size = o.Operation.Amount ?? 0,
+            OpenPrice = o.Operation.AveragePrice ?? 0,
+            ClosePrice = o.Operation.Price ?? 0,
+            Gain = o.Balance.Current ?? 0
+          });
+        }
+      }
+
+      Items = items;
+
+      await InvokeAsync(StateHasChanged);
+      await Task.Delay(TimeSpan.FromMilliseconds(100));
     }
 
     /// <summary>

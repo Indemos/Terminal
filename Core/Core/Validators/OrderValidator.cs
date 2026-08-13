@@ -12,8 +12,6 @@ namespace Core.Validators
   {
     public OrderValidator(int iteration = 0, int max = 5)
     {
-      RuleFor(o => o.Id).NotEmpty();
-
       When(o => o.Instruction is InstructionEnum.Brace, () =>
       {
         RuleFor(o => o.Orders).Empty();

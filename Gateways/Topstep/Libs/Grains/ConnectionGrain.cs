@@ -227,7 +227,6 @@ namespace Topstep.Grains
 
       var action = new Operation
       {
-        Id = $"{message.id}",
         Amount = message.size,
         Status = OrderStatusEnum.Order,
         Instrument = instrument
@@ -235,7 +234,7 @@ namespace Topstep.Grains
 
       var order = new Order
       {
-        Id = message.customTag,
+        Id = $"{message.id}",
         Operation = action,
         Type = OrderTypeEnum.Market,
         Amount = message.size,

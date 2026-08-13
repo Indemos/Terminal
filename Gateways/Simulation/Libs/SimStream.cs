@@ -10,8 +10,8 @@ namespace Simulation
   /// </summary>
   public class SimStream : IDisposable
   {
-    private readonly LiteDatabase storage;
-    private readonly IEnumerator<Summary> enumerator;
+    protected readonly LiteDatabase storage;
+    protected readonly IEnumerator<Summary> enumerator;
 
     /// <summary>
     /// Name

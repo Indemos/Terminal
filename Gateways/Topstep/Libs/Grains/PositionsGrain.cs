@@ -104,7 +104,6 @@ namespace Topstep.Grains
 
       var operation = new Operation
       {
-        Id = $"{message.id}",
         Amount = volume,
         Instrument = instrument,
         AveragePrice = message.averagePrice,
@@ -118,7 +117,8 @@ namespace Topstep.Grains
         Type = OrderTypeEnum.Market,
         Price = message.averagePrice,
         Time = message.creationTimestamp.Ticks,
-        Side = MapSide(message)
+        Side = MapSide(message),
+        Id = $"{message.id}"
       };
 
       return order;

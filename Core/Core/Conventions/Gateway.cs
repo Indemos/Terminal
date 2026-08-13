@@ -286,7 +286,7 @@ namespace Core.Conventions
     {
       var orders = await GetOrders(criteria);
 
-      return new OrderResponse
+      return new()
       {
         Errors = orders.Errors,
         Data = orders.Data.FirstOrDefault()
@@ -301,7 +301,7 @@ namespace Core.Conventions
     {
       var positions = await GetPositions(criteria);
 
-      return new OrderResponse
+      return new()
       {
         Errors = positions.Errors,
         Data = positions.Data.FirstOrDefault()
@@ -318,7 +318,7 @@ namespace Core.Conventions
         .Values
         .Select(Subscribe));
 
-      return new StatusResponse
+      return new()
       {
         Data = StatusEnum.Active
       };
@@ -334,7 +334,7 @@ namespace Core.Conventions
         .Values
         .Select(Unsubscribe));
 
-      return new StatusResponse
+      return new()
       {
         Data = StatusEnum.Pause
       };

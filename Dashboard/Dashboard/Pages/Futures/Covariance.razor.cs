@@ -86,10 +86,9 @@ namespace Dashboard.Pages.Futures
       Kalman = new(2);
       Ratio = new(100);
       Regression = new(10);
-      Performance = new PerformanceIndicator { Name = "Balance" };
+      Performance = new PerformanceIndicator();
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator
       {
-        Name = name,
         Min = -1,
         Max = 1
       });
@@ -114,18 +113,18 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
-      var scaleX = Scales[assetX.Name].Update(seriesX);
-      var scaleY = Scales[assetY.Name].Update(seriesY);
+      var scaleX = Scales[assetX.Name].Update(seriesX.Last());
+      var scaleY = Scales[assetY.Name].Update(seriesY.Last());
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
       TransactionsView.Update(Adapters.Values);
       DataView.Update(index, nameof(DataView), "Spread", new AreaShape { Y = spread, Component = ComUp });
       ScoreView.Update(index, nameof(ScoreView), "Score", new AreaShape { Y = score, Component = ComUp });
-      IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX.Response.Last, Component = ComUp });
-      IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY.Response.Last, Component = ComDown });
+      IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
+      IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
       PerformanceView.Update(index, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(index, nameof(PerformanceView), "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      PerformanceView.Update(index, nameof(PerformanceView), "PnL", PerformanceView.GetShape<LineShape>(performance, SKColors.OrangeRed));
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)

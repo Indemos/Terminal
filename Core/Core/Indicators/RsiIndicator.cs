@@ -1,57 +1,140 @@
-using Core.Conventions;
-using Core.Extensions;
 using Core.Models;
-using Estimator.Services;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
-namespace Core.Indicators
+public class RsiIndicator
 {
-  public class RsiIndicator : Indicator
+  public int Period { get; set; } = 14;
+
+  // Number of changes processed
+  protected int changeCount;
+  // Sum of gains/losses for initial SMA
+  protected double sumGain;
+  protected double sumLoss;
+  // Current forming avgs
+  protected double avgGain;
+  protected double avgLoss;
+  // Avgs of last closed bar - seed for Wilder
+  protected double prevAvgGain;
+  protected double prevAvgLoss;
+  protected double? prevClose;
+  // Forming bar state for replace
+  protected double currentClose;
+  protected double currentGain;
+  protected double currentLoss;
+  protected long? currentTime;
+  protected bool setup;
+
+  /// <summary>
+  /// Update
+  /// </summary>
+  /// <param name="stamp"></param>
+  /// <param name="price"></param>
+  public virtual double Update(long stamp, Price price)
   {
-    /// <summary>
-    /// Number of bars to average
-    /// </summary>
-    public int Interval { get; set; }
+    var close = price.Last.Value;
 
-    /// <summary>
-    /// Calculate single value
-    /// </summary>
-    /// <param name="collection"></param>
-    public override IIndicator Update(IList<Price> collection)
+    // First bar - no change yet
+
+    if (setup is false)
     {
-      var response = this;
-      var currentPoint = collection.LastOrDefault();
+      currentTime = stamp;
+      currentClose = close;
+      setup = true;
 
-      if (currentPoint is null)
-      {
-        return response;
-      }
-
-      var ups = new List<double>(Interval);
-      var downs = new List<double>(Interval);
-      var interval = Math.Min(Interval, collection.Count);
-
-      for (var i = 1; i < interval; i++)
-      {
-        var nextPrice = collection.ElementAtOrDefault(collection.Count - i);
-        var previousPrice = collection.ElementAtOrDefault(collection.Count - i - 1);
-
-        if (nextPrice is not null && previousPrice is not null)
-        {
-          ups.Add(Math.Max(nextPrice.Last.Value - previousPrice.Last.Value, 0.0));
-          downs.Add(Math.Max(previousPrice.Last.Value - nextPrice.Last.Value, 0.0));
-        }
-      }
-
-      var averageUp = AverageService.SimpleAverage(ups, ups.Count - 1, interval);
-      var averageDown = AverageService.SimpleAverage(downs, downs.Count - 1, interval) as double?;
-      var average = averageDown.Is(0) ? 0 : averageUp / averageDown;
-
-      Response = Response with { Last = 100.0 - 100.0 / (1.0 + average) };
-
-      return response;
+      return 0;
     }
+
+    // Same bar -> replace
+    if (currentTime == stamp)
+    {
+      var change = prevClose == null ? 0 : close - prevClose.Value;
+      var gain = Math.Max(change, 0);
+      var loss = Math.Max(-change, 0);
+
+      // Replace logic
+      if (changeCount <= Period)
+      {
+        // Initial SMA phase: sum = sum - old + new
+        sumGain += gain - currentGain;
+        sumLoss += loss - currentLoss;
+        avgGain = changeCount == 0 ? 0 : sumGain / changeCount;
+        avgLoss = changeCount == 0 ? 0 : sumLoss / changeCount;
+      }
+      else
+      {
+        // Wilder phase: (prevClosed * (n-1) + gain) / n
+        avgGain = (prevAvgGain * (Period - 1) + gain) / Period;
+        avgLoss = (prevAvgLoss * (Period - 1) + loss) / Period;
+      }
+
+      // Update forming values
+      currentGain = gain;
+      currentLoss = loss;
+      currentClose = close;
+
+      // RSI formula
+      return CalcRsi(avgGain, avgLoss);
+    }
+
+    // New bar -> freeze previous forming bar as closed
+    // Its close becomes prevClose for next change
+    prevClose = currentClose;
+
+    // Freeze its avgs as prevClosed if we finished seed
+    if (changeCount >= Period)
+    {
+      // Seed for Wilder
+      prevAvgGain = avgGain;
+      prevAvgLoss = avgLoss;
+    }
+
+    // Now compute change for new bar
+    var newChange = close - prevClose.Value;
+    var newGain = Math.Max(newChange, 0);
+    var newLoss = Math.Max(-newChange, 0);
+
+    // New change
+    changeCount++;
+
+    // Update avgs
+    if (changeCount <= Period)
+    {
+      // Accumulate for SMA seed
+      sumGain += newGain;
+      sumLoss += newLoss;
+      avgGain = sumGain / changeCount;
+      avgLoss = sumLoss / changeCount;
+    }
+    else
+    {
+      // Wilder smoothing
+      avgGain = (prevAvgGain * (Period - 1) + newGain) / Period;
+      avgLoss = (prevAvgLoss * (Period - 1) + newLoss) / Period;
+    }
+
+    // Store new forming bar
+    currentTime = stamp;
+    currentClose = close;
+    currentGain = newGain;
+    currentLoss = newLoss;
+
+    return CalcRsi(avgGain, avgLoss);
+  }
+
+  // RSI calc with edge cases
+  protected static double CalcRsi(double avgGain, double avgLoss)
+  {
+    // No loss = 100, no gain / loss = 50
+
+    if (avgLoss is 0)
+    {
+      return avgGain is 0 ? 50.0 : 100.0;
+    }
+
+    // 100 - 100 / (1 + RS)
+
+    var rs = avgGain / avgLoss;
+
+    return 100.0 - 100.0 / (1.0 + rs);
   }
 }

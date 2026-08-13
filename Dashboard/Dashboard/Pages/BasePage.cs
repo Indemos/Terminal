@@ -34,7 +34,7 @@ namespace Dashboard.Pages
     /// <summary>
     /// Gateways
     /// </summary>
-    public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
+    public virtual Dictionary<string, IGateway> Adapters { get; set; } = new();
 
     /// <summary>
     /// Primary gateway

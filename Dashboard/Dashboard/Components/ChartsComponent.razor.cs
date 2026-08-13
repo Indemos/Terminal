@@ -30,11 +30,6 @@ namespace Dashboard.Components
     [Parameter] public virtual string Name { get; set; }
 
     /// <summary>
-    /// Throttle
-    /// </summary>
-    protected virtual Task Sync { get; set; } = Task.CompletedTask;
-
-    /// <summary>
     /// Upside style
     /// </summary>
     protected virtual Section UpSide { get; set; }
@@ -63,6 +58,11 @@ namespace Dashboard.Components
     /// Labels
     /// </summary>
     public virtual IList<IComposer> Composers { get; set; } = [];
+
+    /// <summary>
+    /// Sync
+    /// </summary>
+    object sync = new();
 
     /// <summary>
     /// Setup views
@@ -140,31 +140,34 @@ namespace Dashboard.Components
     /// <param name="inputs"></param>
     public virtual void Update(long index, string area, string series, params IShape[] inputs)
     {
-      if (Indices.TryGetValue(index, out var currentPoint) is false)
+      lock (sync)
       {
-        currentPoint = new Shape { X = index };
+        if (Indices.TryGetValue(index, out var currentPoint) is false)
+        {
+          currentPoint = new Shape { X = index };
 
-        Shapes.Add(currentPoint);
-        Indices[index] = currentPoint;
+          Shapes.Add(currentPoint);
+          Indices[index] = currentPoint;
+        }
+
+        foreach (var input in inputs)
+        {
+          currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
+          currentPoint.Groups[area].Groups[series] = input;
+        }
+
+        var domain = new Dimension
+        {
+          IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
+        };
+
+        if (Observer.State.Next is SubscriptionEnum.None)
+        {
+          return;
+        }
+
+        View.Update(domain, Shapes);
       }
-
-      foreach (var input in inputs)
-      {
-        currentPoint.Groups[area] = currentPoint.Groups.Get(area) ?? new Shape();
-        currentPoint.Groups[area].Groups[series] = input;
-      }
-
-      var domain = new Dimension
-      {
-        IndexDomain = [Shapes.Count - Math.Max(10, Shapes.Count) - 1, Shapes.Count]
-      };
-
-      if (Observer.State.Next is SubscriptionEnum.None || Sync.IsCompleted is false)
-      {
-        return;
-      }
-
-      Sync = Task.WhenAny(View.Update(domain, Shapes), Task.Delay(TimeSpan.FromSeconds(1)));
     }
 
     /// <summary>

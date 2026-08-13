@@ -57,7 +57,7 @@ namespace Simulation.Grains
         await Subscribe(instrument);
       }
 
-      connections.Add(this.RegisterGrainTimer(async o => await Process(), 0, TimeSpan.Zero, TimeSpan.FromMicroseconds(1)));
+      connections.Add(this.RegisterGrainTimer(o => Process(), 0, TimeSpan.Zero, TimeSpan.FromMicroseconds(1)));
 
       return new StatusResponse { Data = StatusEnum.Active };
     }
@@ -65,7 +65,7 @@ namespace Simulation.Grains
     /// <summary>
     /// Sequential reader loop
     /// </summary>
-    private async Task Process()
+    protected async Task Process()
     {
       try
       {

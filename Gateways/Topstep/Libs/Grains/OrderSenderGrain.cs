@@ -25,7 +25,7 @@ namespace Topstep.Grains
       var orderMessage = MapOrder(order, state.Account);
       var orderResponse = await connector.OrderPlace(orderMessage);
 
-      order = order with { Operation = order.Operation with { Id = $"{orderResponse.orderId}" } };
+      order = order with { Id = $"{orderResponse.orderId}" };
 
       return new()
       {

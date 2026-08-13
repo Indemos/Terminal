@@ -1,63 +1,97 @@
-using Core.Conventions;
-using Core.Extensions;
 using Core.Models;
-using Estimator.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Core.Indicators
 {
-  /// <summary>
-  /// Calculation mode
-  /// </summary>
-  public enum AveragePriceEnum : byte
-  {
-    Bid = 1,
-    Ask = 2,
-    Close = 3
-  }
-
-  public class MaIndicator : Indicator
+  public class EmaIndicator
   {
     /// <summary>
-    /// Number of bars to average
+    /// Period for EMA calculation
     /// </summary>
-    public int Interval { get; set; }
+    public int Period { get; set; } = 15;
+
+    // alpha = 2 / (n+1)
+    protected double weight => 2.0 / (Period + 1);
+    // Count of bars including forming
+    protected int count;
+    // Sum of first Period for SMA seed
+    protected double sum;
+    // Current forming EMA
+    protected double ema;
+    // EMA of last closed bar - seed for Wilder
+    protected double previousEma;
+    // Time of forming bar
+    protected long? currentTime;
+    // Value of forming bar to replace
+    protected double currentValue;
+    // First bar seen
+    protected bool setup;
 
     /// <summary>
-    /// Calculation mode
+    /// Update EMA with new price point
     /// </summary>
-    public AveragePriceEnum Mode { get; set; }
-
-    /// <summary>
-    /// Calculate single value
-    /// </summary>
-    /// <param name="collection"></param>
-    public override IIndicator Update(IList<Price> collection)
+    /// <param name="stamp"></param>
+    /// <param name="point"></param>
+    public virtual double? Update(long stamp, Price point)
     {
-      var response = this;
-      var currentPoint = collection.LastOrDefault();
+      // Extract price
+      var price = point.Last.Value;
 
-      if (currentPoint is null)
+      // Same bar -> replace
+      if (setup && currentTime == stamp)
       {
-        return response;
+        // Recompute EMA with same prevClosedEma but new price
+        if (count <= Period)
+        {
+          // Still in SMA seed phase: replace in sum
+          sum += price - currentValue;
+          ema = sum / count;
+        }
+        else
+        {
+          // EMA phase: EMA = alpha*price + (1-alpha)*prevClosed
+          ema = weight * price + (1 - weight) * previousEma;
+        }
+
+        // Update forming value
+        currentValue = price;
+
+        return ema;
       }
 
-      var value = currentPoint.Last.Value;
-
-      switch (Mode)
+      // New bar -> previous forming bar is now closed
+      if (setup)
       {
-        case AveragePriceEnum.Bid: value = currentPoint.Bid.Value; break;
-        case AveragePriceEnum.Ask: value = currentPoint.Ask.Value; break;
+        // Freeze its EMA as previous closed EMA if we finished seed
+        if (count >= Period)
+        {
+          // This becomes the seed for next bar's EMA
+          previousEma = ema;
+        }
       }
 
-      var interval = Math.Min(Interval, collection.Count);
-      var average = AverageService.LinearWeightAverage([.. collection.Select(o => o.Last.Value)], collection.Count - 1, interval) as double?;
+      // New bar
+      count++;
 
-      Response = Response with { Last = average.Is(0) ? value : average };
+      // Build initial SMA seed
+      if (count <= Period)
+      {
+        // Accumulate sum
+        sum += price;
+        // Seed EMA = SMA
+        ema = sum / count;
+      }
+      else
+      {
+        // Wilder EMA
+        ema = weight * price + (1 - weight) * previousEma;
+      }
 
-      return response;
+      // Store forming bar info
+      currentTime = stamp;
+      currentValue = price;
+      setup = true;
+
+      return ema;
     }
   }
 }

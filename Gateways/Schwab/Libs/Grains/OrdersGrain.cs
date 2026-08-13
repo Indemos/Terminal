@@ -93,7 +93,6 @@ namespace Schwab.Grains
 
       var action = new Operation
       {
-        Id = message.OrderId,
         Amount = message.FilledQuantity,
         Time = message.EnteredTime?.Ticks,
         Status = OrderStatusEnum.Order
@@ -104,6 +103,7 @@ namespace Schwab.Grains
         Type = orderType,
         Price = stopPrice,
         Operation = action,
+        Id = message.OrderId,
         ActivationPrice = activationPrice,
         TimeSpan = MapTimeSpan(message),
         Amount = message.Quantity

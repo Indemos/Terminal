@@ -102,7 +102,6 @@ namespace Topstep.Grains
 
       var action = new Operation
       {
-        Id = $"{message.id}",
         Amount = message.size,
         Time = message.updateTimestamp?.Ticks,
         Status = OrderStatusEnum.Order,
@@ -111,8 +110,8 @@ namespace Topstep.Grains
 
       var order = new Order
       {
-        Id = message.customTag,
         Operation = action,
+        Id = $"{message.id}",
         Type = OrderTypeEnum.Market,
         Amount = message.size,
         Side = MapSide(message)

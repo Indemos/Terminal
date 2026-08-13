@@ -10,7 +10,6 @@ namespace Core.Validators
   {
     public OperationValidator()
     {
-      RuleFor(o => o.Id).Empty();
       RuleFor(o => o.Price).Empty();
       RuleFor(o => o.Amount).Empty();
       RuleFor(o => o.Status).Empty();

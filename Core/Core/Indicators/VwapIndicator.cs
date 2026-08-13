@@ -1,62 +1,51 @@
-using Core.Conventions;
-using Core.Models;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+using Core.Models; 
+using System; 
 
 namespace Core.Indicators
 {
-  public class VwapIndicator : Indicator
+  public class VwapIndicator
   {
-    /// <summary>
-    /// Calculate indicator value
-    /// </summary>
-    /// <param name="collection"></param>
-    public override IIndicator Update(IList<Price> collection)
+    // Number of standard deviations for bands
+    public double Band { get; set; } = 2.0;
+
+    // Cumulative volume: sum(V)
+    protected double cumV;
+    // Cumulative price*volume: sum(TypicalPrice * V)
+    protected double cumPV;
+    // Cumulative price^2*volume: sum(TypicalPrice^2 * V) for variance
+    protected double cumPV2;
+
+    // Called per tick/bar
+    public virtual Price Update(Price point)
     {
-      var response = this;
-      var currentPoint = collection.LastOrDefault();
-
-      if (currentPoint?.Bar is null)
+      if (point.Bar.Low is not double L || point.Bar.High is not double H || point.Bar.Close is not double C)
       {
-        return response;
+        return point;
       }
 
-      var cumPrice = 0.0;
-      var cumVolume = 0.0;
-      var items = new List<(double Price, double Volume)>();
+      var volume = point.Volume ?? 0;
+      var price = (L + H + C) / 3.0;
 
-      Response = Response with { Bar = Response.Bar ?? new() };
+      cumV += volume;
+      cumPV += price * volume;
+      cumPV2 += price * price * volume;
 
-      foreach (var point in collection)
+      // VWAP = sum(P*V) / sum(V)
+      var vwap = cumPV / cumV;
+      // Variance = E[P^2] - E[P]^2, clamp to 0 for floating point
+      var variance = Math.Max(cumPV2 / cumV - vwap * vwap, 0);
+      // Standard deviation = sqrt(variance)
+      var deviation = Math.Sqrt(variance);
+
+      return new()
       {
-        var price = (point.Bar.Low + point.Bar.High + point.Bar.Close).Value / 3.0;
-        var volume = point.Volume ?? (point.BidSize ?? 0 + point.AskSize ?? 0);
-
-        cumPrice += price * volume;
-        cumVolume += volume;
-
-        items.Add((price, volume));
-
-        var average = cumPrice / cumVolume;
-        var variance = items
-            .Select(o => o.Volume * (o.Price - average) * (o.Price - average))
-            .Sum() / cumVolume;
-
-        var deviation = Math.Sqrt(variance);
-
-        Response = Response with
+        Last = vwap,
+        Bar = new()
         {
-          Last = average,
-          Bar = Response.Bar with
-          {
-            High = average + 2.0 * deviation,
-            Low = average - 2.0 * deviation
-          }
-        };
-      }
-
-      return response;
+          High = vwap + Band * deviation,
+          Low = vwap - Band * deviation
+        }
+      };
     }
   }
 }

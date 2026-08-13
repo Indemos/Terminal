@@ -33,7 +33,7 @@ namespace InteractiveBrokers.Grains
       var (orderMessage, SL, TP) = Upstream.MapOrder(order, state.Account);
       var (group, braces) = connector.SendOrder(contract, orderMessage, SL, TP);
 
-      order = order with { Operation = order.Operation with { Id = $"{group.OrderId}" } };
+      order = order with { Id = $"{group.OrderId}" };
 
       await Task.Delay(state.Span);
 

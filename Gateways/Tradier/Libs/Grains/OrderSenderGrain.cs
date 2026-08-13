@@ -62,7 +62,7 @@ namespace Tradier.Grains
 
       if (Equals(response?.Status?.ToUpper(), "OK"))
       {
-        order = order with { Operation = order.Operation with { Id = $"{response?.Id}" } };
+        order = order with { Id = $"{response?.Id}" };
       }
 
       return new()

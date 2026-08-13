@@ -12,7 +12,14 @@ namespace Simulation.Grains
   public interface ISimOrdersGrain : IOrdersGrain
   {
     /// <summary>
-    /// Update order data
+    /// Update order
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <param name="order"></param>
+    Task<DescriptorResponse> Tap(Instrument instrument, Order order);
+
+    /// <summary>
+    /// Update orders
     /// </summary>
     /// <param name="instrument"></param>
     Task<StatusResponse> Tap(Instrument instrument);
@@ -26,6 +33,22 @@ namespace Simulation.Grains
 
   public class SimOrdersGrain : OrdersGrain, ISimOrdersGrain
   {
+    /// <summary>
+    /// Store order
+    /// </summary>
+    /// <param name="order"></param>
+    public override async Task<OrderResponse> Store(Order order)
+    {
+      var response = Order(order, order.Operation.Instrument);
+
+      State[response.Id] = response;
+
+      return new()
+      {
+        Data = response
+      };
+    }
+
     /// <summary>
     /// Send order
     /// </summary>
@@ -59,23 +82,14 @@ namespace Simulation.Grains
     }
 
     /// <summary>
-    /// Update order data
+    /// Update orders
     /// </summary>
     /// <param name="instrument"></param>
     public virtual async Task<StatusResponse> Tap(Instrument instrument)
     {
-      var descriptor = this.GetDescriptor();
-      var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
-
-      foreach (var order in State)
+      foreach (var order in State.Values)
       {
-        var position = IsExecutable(order.Value, instrument);
-
-        if (position is not null)
-        {
-          State.Remove(order.Key);
-          await positionsGrain.Send(position);
-        }
+        await Tap(instrument, order);
       }
 
       return new()
@@ -85,11 +99,34 @@ namespace Simulation.Grains
     }
 
     /// <summary>
+    /// Update orders
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <param name="order"></param>
+    public virtual async Task<DescriptorResponse> Tap(Instrument instrument, Order order)
+    {
+      var descriptor = this.GetDescriptor();
+      var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
+      var position = Process(order, instrument);
+
+      if (position is not null)
+      {
+        State.Remove(order.Id);
+        await positionsGrain.Send(position);
+      }
+
+      return new()
+      {
+        Data = order.Id
+      };
+    }
+
+    /// <summary>
     /// Check if pending order can be executed
     /// </summary>
     /// <param name="order"></param>
     /// <param name="instrument"></param>
-    protected virtual Order IsExecutable(Order order, Instrument instrument)
+    protected virtual Order Process(Order order, Instrument instrument)
     {
       var price = instrument.Price;
 
@@ -130,6 +167,36 @@ namespace Simulation.Grains
     }
 
     /// <summary>
+    /// Store order
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="instrument"></param>
+    protected virtual Order Order(Order order, Instrument instrument)
+    {
+      var response = order with
+      {
+        Id = $"{Guid.NewGuid()}",
+        Operation = order.Operation with
+        {
+          Status = OrderStatusEnum.Order
+        }
+      };
+
+      if (instrument?.Price is not null)
+      {
+        var price = Price(order, instrument);
+
+        return response with
+        {
+          Time = instrument.Price.Time,
+          Price = order.Price ?? price
+        };
+      }
+
+      return response;
+    }
+
+    /// <summary>
     /// Get position
     /// </summary>
     /// <param name="order"></param>
@@ -142,7 +209,6 @@ namespace Simulation.Grains
         Price = order.Price ?? price,
         Operation = order.Operation with
         {
-          Id = order.Id,
           AveragePrice = price,
           Amount = order.Amount,
           Time = instrument.Price.Time,
@@ -171,7 +237,8 @@ namespace Simulation.Grains
       switch (true)
       {
         case true when order.Type is OrderTypeEnum.Stop or OrderTypeEnum.Market or null: return isLong ? ask : bid;
-        case true when order.Type is OrderTypeEnum.Limit: return isLong ?
+        case true when order.Type is OrderTypeEnum.Limit:
+          return isLong ?
           Math.Min(order.Price ?? ask, ask) :
           Math.Max(order.Price ?? bid, bid);
       }

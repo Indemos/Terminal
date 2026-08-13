@@ -64,32 +64,45 @@ namespace Dashboard.Components
     /// <param name="adapters"></param>
     public virtual async void Update(IEnumerable<IGateway> adapters)
     {
-      if (Sync.IsCompleted)
+      if (Sync.IsCompleted is false)
       {
-        var queries = adapters.Select(o => o.GetOrders(default));
-        var responses = await Task.WhenAll(queries);
-
-        Items.Clear();
-
-        foreach (var response in responses)
-        {
-          foreach (var o in response.Data)
-          {
-            Items.Add(new()
-            {
-              Name = o?.Operation?.Instrument?.Name,
-              Type = o.Type,
-              Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
-              Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-              Side = o.Side,
-              Size = o.Amount ?? 0,
-              Price = o.Price ?? 0,
-            });
-          }
-        }
-
-        Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(100));
+        return;
       }
+
+      await (Sync = Render(adapters));
+    }
+
+    /// <summary>
+    /// Update table records 
+    /// </summary>
+    /// <param name="adapters"></param>
+    protected virtual async Task Render(IEnumerable<IGateway> adapters)
+    {
+      var queries = adapters.Select(o => o.GetOrders(default));
+      var responses = await Task.WhenAll(queries);
+      var items = new List<Row>();
+
+      foreach (var response in responses)
+      {
+        foreach (var o in response.Data)
+        {
+          items.Add(new()
+          {
+            Name = o?.Operation?.Instrument?.Name,
+            Type = o.Type,
+            Time = new DateTime(o.Time ?? DateTime.MinValue.Ticks),
+            Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
+            Side = o.Side,
+            Size = o.Amount ?? 0,
+            Price = o.Price ?? 0,
+          });
+        }
+      }
+
+      Items = items;
+
+      await InvokeAsync(StateHasChanged);
+      await Task.Delay(TimeSpan.FromMilliseconds(100));
     }
 
     /// <summary>

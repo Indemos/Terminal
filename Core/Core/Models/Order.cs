@@ -1,5 +1,4 @@
 using Core.Enums;
-using System;
 using System.Collections.Generic;
 
 namespace Core.Models
@@ -9,7 +8,7 @@ namespace Core.Models
     /// <summary>
     /// Client order ID
     /// </summary>
-    public string Id { get; init; } = $"{Guid.NewGuid()}";
+    public string Id { get; init; }
 
     /// <summary>
     /// Group

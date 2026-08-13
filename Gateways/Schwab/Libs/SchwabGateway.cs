@@ -139,7 +139,7 @@ namespace Schwab
         var sourceGrain = Component<ISchwabOrdersGrain>();
         var response = await sourceGrain.Orders(criteria);
 
-        await grain.Store(response.Data.ToDictionary(o => o.Operation.Id));
+        await grain.Store(response.Data.ToDictionary(o => o.Id));
 
         return response;
       }

@@ -99,13 +99,7 @@ namespace Core.Grains
     /// <param name="order"></param>
     public virtual async Task<OrderResponse> Store(Order order)
     {
-      State[order.Id] = order with
-      {
-        Operation = order.Operation with
-        {
-          Status = OrderStatusEnum.Order
-        }
-      };
+      State[order.Id] = order;
 
       return new()
       {

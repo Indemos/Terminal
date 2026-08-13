@@ -109,7 +109,7 @@ namespace Dashboard.Pages.Options
       TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Data", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance.Response, SKColors.OrangeRed));
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance, SKColors.OrangeRed));
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)

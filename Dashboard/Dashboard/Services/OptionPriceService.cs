@@ -1,9 +1,7 @@
 namespace Dashboard.Services
 {
-  using Core.Enums;
   using Estimator.Services;
   using QuantLib;
-  using System;
 
   public class OptionPriceService
   {

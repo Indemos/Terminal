@@ -5,15 +5,15 @@ using System.Threading.Tasks;
 
 namespace Core.Indicators
 {
-  public class PerformanceIndicator : Indicator
+  public class PerformanceIndicator
   {
     /// <summary>
     /// Calculate indicator value
     /// </summary>
     /// <param name="adapters"></param>
-    public async Task<IIndicator> Update(IEnumerable<IGateway> adapters)
+    public async Task<double?> Update(IEnumerable<IGateway> adapters)
     {
-      var sum = 0.0 as double?;
+      double? sum = 0.0;
 
       foreach (var adapter in adapters)
       {
@@ -24,9 +24,7 @@ namespace Core.Indicators
         sum += account.Balance + account.Performance + positionsSum;
       }
 
-      Response = Response with { Last = sum };
-
-      return this;
+      return sum;
     }
   }
 }

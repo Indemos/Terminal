@@ -63,7 +63,6 @@ namespace InteractiveBrokers.Mappers
       var action = new Operation
       {
         Instrument = instrument,
-        Id = $"{message.Order.PermId}",
         Amount = (double)Math.Min(message.Order.FilledQuantity, message.Order.TotalQuantity),
         Time = long.TryParse(message.Order.ActiveStartTime, out var actionTime) ? actionTime : null,
         Status = OrderStatusEnum.Order
@@ -72,11 +71,11 @@ namespace InteractiveBrokers.Mappers
       var order = new Core.Models.Order
       {
         Operation = action,
-        Id = $"{message.OrderId}",
         Type = OrderTypeEnum.Market,
         Side = MapOrderSide(message.Order.Action),
         TimeSpan = MapTimeSpan($"{message.Order.Tif}"),
-        Amount = (double)message.Order.TotalQuantity
+        Amount = (double)message.Order.TotalQuantity,
+        Id = $"{message.Order.PermId}"
       };
 
       switch (message.Order.OrderType)

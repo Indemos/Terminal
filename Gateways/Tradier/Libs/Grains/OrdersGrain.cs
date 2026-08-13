@@ -103,7 +103,6 @@ namespace Tradier.Grains
 
       var action = new Operation
       {
-        Id = $"{message.Id}",
         Amount = message.Quantity,
         Time = message.TransactionDate?.Ticks,
         Status = OrderStatusEnum.Order,

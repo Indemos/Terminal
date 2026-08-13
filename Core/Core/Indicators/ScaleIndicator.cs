@@ -1,23 +1,20 @@
-using Core.Conventions;
 using Core.Extensions;
 using Core.Models;
 using System;
-using System.Collections.Generic;
-using System.Linq;
 
 namespace Core.Indicators
 {
-  public class ScaleIndicator : Indicator
+  public class ScaleIndicator
   {
     /// <summary>
     /// Bottom border of the normalized series
     /// </summary>
-    public double Min { get; set; }
+    public virtual double Min { get; set; }
 
     /// <summary>
     /// Top border of the normalized series
     /// </summary>
-    public double Max { get; set; }
+    public virtual double Max { get; set; }
 
     /// <summary>
     /// Preserve last calculated min value
@@ -32,17 +29,9 @@ namespace Core.Indicators
     /// <summary>
     /// Calculate indicator value
     /// </summary>
-    /// <param name="collection"></param>
-    public override IIndicator Update(IList<Price> collection)
+    /// <param name="items"></param>
+    public virtual double Update(Price currentPoint)
     {
-      var response = this;
-      var currentPoint = collection.LastOrDefault();
-
-      if (currentPoint is null)
-      {
-        return response;
-      }
-
       var value = currentPoint.Last ?? 0.0;
 
       min = Math.Min(min ?? value, value);
@@ -54,9 +43,7 @@ namespace Core.Indicators
         case false: value = Min + (Max - Min) * (value - min.Value) / (max.Value - min.Value); break;
       }
 
-      Response = Response with { Last = value };
-
-      return response;
+      return value;
     }
   }
 }

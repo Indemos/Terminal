@@ -19,7 +19,7 @@ namespace Dashboard.Components
     [Inject] NavigationManager Navigator { get; set; }
 
     [Parameter] public virtual RenderFragment ChildContent { get; set; }
-    [Parameter] public virtual IDictionary<string, IGateway> Adapters { get; set; } = new Dictionary<string, IGateway>();
+    [Parameter] public virtual Dictionary<string, IGateway> Adapters { get; set; } = new();
 
     /// <summary>
     /// Messenger
