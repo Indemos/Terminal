@@ -1,7 +1,7 @@
 using Estimator.Services;
 using System.Collections.Generic;
 
-namespace Core.Tests
+namespace Tests
 {
   public class AverageServiceTests
   {

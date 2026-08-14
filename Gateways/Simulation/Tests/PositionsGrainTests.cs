@@ -12,7 +12,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace Simulation.Prices.Tests
+namespace Tests
 {
   public class Positions : IDisposable
   {

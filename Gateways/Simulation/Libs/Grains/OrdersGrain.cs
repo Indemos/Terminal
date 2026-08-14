@@ -12,13 +12,6 @@ namespace Simulation.Grains
   public interface ISimOrdersGrain : IOrdersGrain
   {
     /// <summary>
-    /// Update order
-    /// </summary>
-    /// <param name="instrument"></param>
-    /// <param name="order"></param>
-    Task<DescriptorResponse> Tap(Instrument instrument, Order order);
-
-    /// <summary>
     /// Update orders
     /// </summary>
     /// <param name="instrument"></param>
@@ -87,7 +80,9 @@ namespace Simulation.Grains
     /// <param name="instrument"></param>
     public virtual async Task<StatusResponse> Tap(Instrument instrument)
     {
-      foreach (var order in State.Values)
+      var orders = State.Values.ToArray();
+
+      foreach (var order in orders)
       {
         await Tap(instrument, order);
       }
@@ -103,16 +98,28 @@ namespace Simulation.Grains
     /// </summary>
     /// <param name="instrument"></param>
     /// <param name="order"></param>
-    public virtual async Task<DescriptorResponse> Tap(Instrument instrument, Order order)
+    protected virtual async Task<DescriptorResponse> Tap(Instrument instrument, Order order)
     {
-      var descriptor = this.GetDescriptor();
-      var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
-      var position = Process(order, instrument);
+      var (update, position) = Process(order, instrument);
+
+      State[update.Id] = update;
 
       if (position is not null)
       {
-        State.Remove(order.Id);
-        await positionsGrain.Send(position);
+        State.Remove(position.Id);
+
+        var descriptor = this.GetDescriptor();
+        var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
+        var response = await positionsGrain.Send(position);
+
+        await SendBraces(position);
+
+        if (response.Transaction is not null)
+        {
+          response.Transaction.Orders.ForEach(o => State.Remove(o.Id));
+          var actionsGrain = GrainFactory.GetGrain<ITransactionsGrain>(descriptor);
+          await actionsGrain.Store(response.Transaction);
+        }
       }
 
       return new()
@@ -126,13 +133,13 @@ namespace Simulation.Grains
     /// </summary>
     /// <param name="order"></param>
     /// <param name="instrument"></param>
-    protected virtual Order Process(Order order, Instrument instrument)
+    protected virtual (Order, Order) Process(Order order, Instrument instrument)
     {
       var price = instrument.Price;
 
       if (Equals(instrument.Name, order.Operation.Instrument.Name) is false)
       {
-        return null;
+        return (order, null);
       }
 
       var isLong = order.Side is OrderSideEnum.Long;
@@ -145,7 +152,7 @@ namespace Simulation.Grains
 
         if (isLongLimit || isShortLimit)
         {
-          order = order with { Type = OrderTypeEnum.Limit };
+          return (order with { Type = OrderTypeEnum.Limit }, null);
         }
       }
 
@@ -160,10 +167,22 @@ namespace Simulation.Grains
 
       if (status)
       {
-        return Position(order, instrument);
+        return (order, Position(order, instrument));
       }
 
-      return null;
+      return (order, null);
+    }
+
+    /// <summary>
+    /// Update SL and TP orders
+    /// </summary>
+    /// <param name="order"></param>
+    protected virtual async Task SendBraces(Order order)
+    {
+      foreach (var brace in order.Orders.Where(o => o.Instruction is InstructionEnum.Brace))
+      {
+        await Send(brace);
+      }
     }
 
     /// <summary>
@@ -173,23 +192,23 @@ namespace Simulation.Grains
     /// <param name="instrument"></param>
     protected virtual Order Order(Order order, Instrument instrument)
     {
+      var subOrders = order
+        .Orders
+        .Select(o => o with { Id = $"{Guid.NewGuid()}" });
+
       var response = order with
       {
         Id = $"{Guid.NewGuid()}",
-        Operation = order.Operation with
-        {
-          Status = OrderStatusEnum.Order
-        }
+        Orders = [.. subOrders],
+        Operation = order.Operation with { Status = OrderStatusEnum.Order }
       };
 
       if (instrument?.Price is not null)
       {
-        var price = Price(order, instrument);
-
         return response with
         {
           Time = instrument.Price.Time,
-          Price = order.Price ?? price
+          Price = order.Price ?? Price(order, instrument)
         };
       }
 

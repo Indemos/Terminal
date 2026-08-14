@@ -19,9 +19,9 @@ namespace Core.Indicators
       {
         var account = adapter.Account;
         var positions = await adapter.GetPositions(default);
-        var positionsSum = positions.Data.Sum(o => o.Balance.Current);
+        var positionsSum = positions.Data.Sum(o => o.Balance.Current ?? 0);
 
-        sum += account.Balance + account.Performance + positionsSum;
+        sum += (account.Balance ?? 0) + (account.Performance ?? 0) + positionsSum;
       }
 
       return sum;

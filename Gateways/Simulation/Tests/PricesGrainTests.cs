@@ -4,11 +4,10 @@ using Core.Tests;
 using Moq;
 using Orleans;
 using Orleans.TestingHost;
-using Simulation.Grains;
 using System;
 using System.Threading.Tasks;
 
-namespace Simulation.Prices.Tests
+namespace Tests
 {
   public class Prices : IDisposable
   {

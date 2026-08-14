@@ -89,7 +89,41 @@ namespace Dashboard.Pages
       var item = index <= 0 ? items.FirstOrDefault()?.X : items.LastOrDefault()?.X;
       var stamp = (long)(items.ElementAtOrDefault(index)?.X ?? item ?? DateTime.Now.Ticks);
 
-      return $"{new DateTime(stamp):yyyy-MM-dd HH:mm}";
+      return $"{new DateTime(stamp):MMM d HH:mm}";
+    }
+
+    /// <summary>
+    /// SL price
+    /// </summary>
+    /// <param name="side"></param>
+    /// <param name="instrument"></param>
+    /// <param name="distance"></param>
+    protected virtual double? SL(OrderSideEnum side, Instrument instrument, double distance)
+    {
+      switch (side)
+      {
+        case OrderSideEnum.Long: return instrument.Price.Bid - distance;
+        case OrderSideEnum.Short: return instrument.Price.Ask + distance;
+      }
+
+      return null;
+    }
+
+    /// <summary>
+    /// SL price
+    /// </summary>
+    /// <param name="side"></param>
+    /// <param name="instrument"></param>
+    /// <param name="distance"></param>
+    protected virtual double? TP(OrderSideEnum side, Instrument instrument, double distance)
+    {
+      switch (side)
+      {
+        case OrderSideEnum.Long: return instrument.Price.Ask + distance;
+        case OrderSideEnum.Short: return instrument.Price.Bid - distance;
+      }
+
+      return null;
     }
 
     /// <summary>
@@ -99,7 +133,15 @@ namespace Dashboard.Pages
     /// <param name="asset"></param>
     /// <param name="side"></param>
     /// <param name="amount"></param>
-    protected virtual async Task OpenPosition(IGateway adapter, Instrument asset, OrderSideEnum side, double amount = 1)
+    /// <param name="SL"></param>
+    /// <param name="TP"></param>
+    protected virtual async Task OpenPosition(
+      IGateway adapter,
+      Instrument asset,
+      OrderSideEnum side,
+      double amount = 1,
+      double? SL = null,
+      double? TP = null)
     {
       var order = new Order
       {
@@ -108,6 +150,42 @@ namespace Dashboard.Pages
         Type = OrderTypeEnum.Market,
         Operation = new() { Instrument = asset }
       };
+
+      if (SL is not null)
+      {
+        order = order with
+        {
+          Orders = [
+            new()
+            {
+              Price = SL,
+              Amount = amount,
+              Type = OrderTypeEnum.Stop,
+              Instruction = InstructionEnum.Brace,
+              Side = side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+              Operation = new() { Instrument = asset }
+            }
+          ]
+        };
+      }
+
+      if (TP is not null)
+      {
+        order = order with
+        {
+          Orders = [
+            new()
+            {
+              Price = TP,
+              Amount = amount,
+              Type = OrderTypeEnum.Limit,
+              Instruction = InstructionEnum.Brace,
+              Side = side is OrderSideEnum.Long ? OrderSideEnum.Short : OrderSideEnum.Long,
+              Operation = new() { Instrument = asset }
+            }
+          ]
+        };
+      }
 
       await adapter.SendOrder(order);
     }

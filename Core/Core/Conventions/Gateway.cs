@@ -367,7 +367,7 @@ namespace Core.Conventions
         {
           Account = Account with
           {
-            Performance = Account.Performance + position.Balance.Current
+            Performance = (Account.Performance ?? 0) + (position.Balance.Current ?? 0)
           };
         }
       };
