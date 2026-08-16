@@ -96,7 +96,7 @@ namespace Dashboard.Components
 
       Items = items;
 
-      await (Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(TimeSpan.FromMilliseconds(100))));
+      await (Sync = InvokeAsync(StateHasChanged));
     }
 
     /// <summary>

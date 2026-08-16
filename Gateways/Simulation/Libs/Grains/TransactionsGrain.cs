@@ -47,7 +47,7 @@ namespace Simulation.Grains
     /// <param name="criteria"></param>
     public override Task<OrdersResponse> Transactions(TransactionCriteria criteria)
     {
-      var count = Math.Min(criteria.Count ?? State.Count, State.Count);
+      var count = Math.Min(criteria?.Count ?? State.Count, State.Count);
 
       return Task.FromResult(new OrdersResponse
       {
