@@ -3,6 +3,7 @@ using Core.Enums;
 using Core.Grains;
 using Core.Models;
 using Simulation.Models;
+using System;
 using System.Threading.Tasks;
 
 namespace Simulation.Grains
@@ -38,6 +39,20 @@ namespace Simulation.Grains
       {
         Data = StatusEnum.Active
       };
+    }
+
+    /// <summary>
+    /// Get transactions
+    /// </summary>
+    /// <param name="criteria"></param>
+    public override Task<OrdersResponse> Transactions(TransactionCriteria criteria)
+    {
+      var count = Math.Min(criteria.Count ?? State.Count, State.Count);
+
+      return Task.FromResult(new OrdersResponse
+      {
+        Data = State.GetRange(State.Count - count, count)
+      });
     }
   }
 }

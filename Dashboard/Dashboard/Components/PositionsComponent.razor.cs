@@ -1,5 +1,6 @@
 using Core.Conventions;
 using Core.Enums;
+using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
 using System;
@@ -63,23 +64,15 @@ namespace Dashboard.Components
     /// Update table records 
     /// </summary>
     /// <param name="adapters"></param>
-    public virtual async void Update(IEnumerable<IGateway> adapters)
+    /// <param name="criteria"></param>
+    public virtual async void Update(IEnumerable<IGateway> adapters, PositionCriteria criteria = default)
     {
       if (Sync.IsCompleted is false)
       {
         return;
       }
 
-      await (Sync = Render(adapters));
-    }
-
-    /// <summary>
-    /// Update table records 
-    /// </summary>
-    /// <param name="adapters"></param>
-    protected virtual async Task Render(IEnumerable<IGateway> adapters)
-    {
-      var queries = adapters.Select(o => o.GetPositions(default));
+      var queries = adapters.Select(o => o.GetPositions(criteria));
       var responses = await Task.WhenAll(queries);
       var items = new List<Row>();
 
@@ -103,8 +96,7 @@ namespace Dashboard.Components
 
       Items = items;
 
-      await InvokeAsync(StateHasChanged);
-      await Task.Delay(TimeSpan.FromMilliseconds(100));
+      await (Sync = Task.WhenAll(InvokeAsync(StateHasChanged), Task.Delay(TimeSpan.FromMilliseconds(100))));
     }
 
     /// <summary>

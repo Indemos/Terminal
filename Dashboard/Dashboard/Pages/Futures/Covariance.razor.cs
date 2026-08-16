@@ -107,7 +107,7 @@ namespace Dashboard.Pages.Futures
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
-      TransactionsView.Update(Adapters.Values);
+      TransactionsView.Update(Adapters.Values, new() { Count = 100 });
       DataView.Update(index, nameof(DataView), "Spread", new AreaShape { Y = spread, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
