@@ -13,12 +13,6 @@ namespace Core.Grains
   public interface ITransactionsGrain : IGrainWithStringKey
   {
     /// <summary>
-    /// Setup
-    /// </summary>
-    /// <param name="observer"></param>
-    Task<StatusResponse> Setup(ITradeObserver observer);
-
-    /// <summary>
     /// Get transactions
     /// </summary>
     /// <param name="criteria"></param>
@@ -66,20 +60,6 @@ namespace Core.Grains
         .GetStream<Message>(string.Empty, Guid.Empty);
 
       await base.OnActivateAsync(cts);
-    }
-
-    /// <summary>
-    /// Setup
-    /// </summary>
-    /// <param name="grainObserver"></param>
-    public virtual Task<StatusResponse> Setup(ITradeObserver grainObserver)
-    {
-      observer = grainObserver;
-
-      return Task.FromResult(new StatusResponse
-      {
-        Data = StatusEnum.Active
-      });
     }
 
     /// <summary>

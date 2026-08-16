@@ -1,5 +1,7 @@
 using Core.Grains;
 using Core.Models;
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
@@ -17,15 +19,27 @@ namespace Simulation.Grains
     /// <param name="criteria"></param>
     public override Task<PricesResponse> Prices(PriceCriteria criteria)
     {
-      var items = State.Items
-        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
-        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
-        .TakeLast(criteria?.Count ?? State.Items.Count)
-        .ToArray();
+      var items = State.Items;
+      var count = Math.Min(criteria?.Count ?? items.Count, items.Count);
+      var response = new List<Price>(count);
+      var minTime = criteria?.MinDate?.Ticks;
+      var maxTime = criteria?.MaxDate?.Ticks;
+
+      for (var i = items.Count - 1; i >= 0 && response.Count < count; i--)
+      {
+        var item = items[i];
+
+        if (minTime.HasValue && item.Time < minTime.Value) break;
+        if (maxTime.HasValue && item.Time > maxTime.Value) continue;
+
+        response.Add(item);
+      }
+
+      response.Reverse();
 
       return Task.FromResult(new PricesResponse
       {
-        Data = items
+        Data = response
       });
     }
 
@@ -35,15 +49,27 @@ namespace Simulation.Grains
     /// <param name="criteria"></param>
     public override Task<PricesResponse> PriceGroups(PriceCriteria criteria)
     {
-      var items = State.ItemGroups
-        .Where(o => criteria?.MinDate is null || o.Time >= criteria.MinDate?.Ticks)
-        .Where(o => criteria?.MaxDate is null || o.Time <= criteria.MaxDate?.Ticks)
-        .TakeLast(criteria?.Count ?? State.ItemGroups.Count)
-        .ToArray();
+      var items = State.ItemGroups;
+      var count = Math.Min(criteria?.Count ?? items.Count, items.Count);
+      var response = new List<Price>(count);
+      var minTime = criteria?.MinDate?.Ticks;
+      var maxTime = criteria?.MaxDate?.Ticks;
+
+      for (var i = items.Count - 1; i >= 0 && response.Count < count; i--)
+      {
+        var item = items[i];
+
+        if (minTime.HasValue && item.Time < minTime.Value) break;
+        if (maxTime.HasValue && item.Time > maxTime.Value) continue;
+
+        response.Add(item);
+      }
+
+      response.Reverse();
 
       return Task.FromResult(new PricesResponse
       {
-        Data = items
+        Data = response
       });
     }
   }

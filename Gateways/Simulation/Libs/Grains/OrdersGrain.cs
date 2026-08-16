@@ -110,15 +110,19 @@ namespace Simulation.Grains
 
         var descriptor = this.GetDescriptor();
         var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
-        var response = await positionsGrain.Send(position);
+        var response = await positionsGrain.Send(Position(position, instrument));
 
-        await SendBraces(position);
+        if (response.Data is not null)
+        {
+          await SendBraces(position);
+        }
 
         if (response.Transaction is not null)
         {
+          var actionsGrain = GrainFactory.GetGrain<ISimTransactionsGrain>(descriptor);
+
           response.Transaction.Orders.ForEach(o => State.Remove(o.Id));
-          var actionsGrain = GrainFactory.GetGrain<ITransactionsGrain>(descriptor);
-          await actionsGrain.Store(response.Transaction);
+          await actionsGrain.Store(Transaction(response.Transaction, instrument));
         }
       }
 
@@ -167,7 +171,7 @@ namespace Simulation.Grains
 
       if (status)
       {
-        return (order, Position(order, instrument));
+        return (order, order);
       }
 
       return (order, null);
@@ -186,7 +190,7 @@ namespace Simulation.Grains
     }
 
     /// <summary>
-    /// Store order
+    /// Get order
     /// </summary>
     /// <param name="order"></param>
     /// <param name="instrument"></param>
@@ -198,12 +202,12 @@ namespace Simulation.Grains
 
       var response = order with
       {
-        Id = $"{Guid.NewGuid()}",
         Orders = [.. subOrders],
+        Id = order.Id ?? $"{Guid.NewGuid()}",
         Operation = order.Operation with { Status = OrderStatusEnum.Order }
       };
 
-      if (instrument?.Price is not null)
+      if (instrument.Price is not null)
       {
         return response with
         {
@@ -223,7 +227,7 @@ namespace Simulation.Grains
     protected virtual Order Position(Order order, Instrument instrument)
     {
       var price = Price(order, instrument);
-      var position = order with
+      var response = order with
       {
         Price = order.Price ?? price,
         Operation = order.Operation with
@@ -239,7 +243,26 @@ namespace Simulation.Grains
         }
       };
 
-      return position;
+      return response;
+    }
+
+    /// <summary>
+    /// Get transaction
+    /// </summary>
+    /// <param name="order"></param>
+    /// <param name="instrument"></param>
+    protected virtual Order Transaction(Order order, Instrument instrument)
+    {
+      var response = order with
+      {
+        Orders = [],
+        Operation = order.Operation with
+        {
+          Status = OrderStatusEnum.Transaction
+        }
+      };
+
+      return response;
     }
 
     /// <summary>

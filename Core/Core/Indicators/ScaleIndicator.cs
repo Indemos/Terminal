@@ -1,4 +1,3 @@
-using Core.Extensions;
 using Core.Models;
 using System;
 
@@ -17,6 +16,13 @@ namespace Core.Indicators
     public virtual double Max { get; set; }
 
     /// <summary>
+    /// Smoothing EWMA factor for min / max calculation
+    /// 1 - no smoothing
+    /// 0 - max smoothing
+    /// </summary>
+    public virtual double Memory { get; set; } = 1;
+
+    /// <summary>
     /// Preserve last calculated min value
     /// </summary>
     protected double? min = null;
@@ -29,21 +35,25 @@ namespace Core.Indicators
     /// <summary>
     /// Calculate indicator value
     /// </summary>
-    /// <param name="items"></param>
+    /// <param name="currentPoint"></param>
     public virtual double Update(Price currentPoint)
     {
       var value = currentPoint.Last ?? 0.0;
 
-      min = Math.Min(min ?? value, value);
-      max = Math.Max(max ?? value, value);
-
-      switch (min.Is(max.Value))
+      if (min is null)
       {
-        case true: value = (Max + Min) / 2.0; break;
-        case false: value = Min + (Max - Min) * (value - min.Value) / (max.Value - min.Value); break;
+        min = value;
+        max = value;
+      }
+      else
+      {
+        min = value < min.Value ? value : min.Value + (1.0 - Memory) * (value - min.Value);
+        max = value > max.Value ? value : max.Value + (1.0 - Memory) * (value - max.Value);
       }
 
-      return value;
+      var scale = Math.Max(Math.Abs(min.Value), Math.Abs(max.Value));
+
+      return scale is 0 ? (Min + Max) / 2.0 : value / scale;
     }
   }
 }

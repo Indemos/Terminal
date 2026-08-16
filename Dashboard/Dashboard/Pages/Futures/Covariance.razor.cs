@@ -29,10 +29,7 @@ namespace Dashboard.Pages.Futures
     }
 
     RatioService Ratio { get; set; }
-    ScoreService Regression { get; set; }
-    KalmanService Kalman { get; set; }
     ChartsComponent DataView { get; set; }
-    ChartsComponent ScoreView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
     ChartsComponent PerformanceView { get; set; }
     TransactionsComponent TransactionsView { get; set; }
@@ -44,8 +41,8 @@ namespace Dashboard.Pages.Futures
 
     int Direction { get; set; } = 0;
     Indexer Scores { get; set; } = new();
-    double? PriceX { get; set; }
-    double? PriceY { get; set; }
+    Price PriceX { get; set; }
+    Price PriceY { get; set; }
 
     const string nameX = "ES";
     const string nameY = "NQ";
@@ -59,12 +56,10 @@ namespace Dashboard.Pages.Futures
     protected override async Task OnView()
     {
       await DataView.Create(nameof(DataView));
-      await ScoreView.Create(nameof(ScoreView));
       await IndicatorsView.Create(nameof(IndicatorsView));
       await PerformanceView.Create(nameof(PerformanceView));
 
       DataView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
-      ScoreView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
       IndicatorsView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
       PerformanceView.Composers.ForEach(o => o.ShowIndex = i => GetDate(o.Items, (int)i));
     }
@@ -83,9 +78,7 @@ namespace Dashboard.Pages.Futures
         }
       };
 
-      Kalman = new(2);
       Ratio = new(100);
-      Regression = new(10);
       Performance = new PerformanceIndicator();
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator
       {
@@ -96,31 +89,26 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected async void Render(Instrument instrument, double spread, double score, double innovation)
+    protected async void Render(Instrument instrument, double spread)
     {
       var adapter = Adapter;
       var account = adapter.Account;
       var price = instrument.Price;
       var index = price.Bar.Time.Value;
-      var assetX = account.Instruments[nameX];
-      var assetY = account.Instruments[nameY];
-      var seriesX = (await adapter.GetPrices(new() { Count = 100, Instrument = assetX })).Data;
-      var seriesY = (await adapter.GetPrices(new() { Count = 100, Instrument = assetY })).Data;
 
-      if (seriesX.Count is 0 || seriesY.Count is 0)
+      if (PriceX is null || PriceY is null)
       {
         return;
       }
 
       var performance = await Performance.Update([adapter]);
-      var scaleX = Scales[assetX.Name].Update(seriesX.Last());
-      var scaleY = Scales[assetY.Name].Update(seriesY.Last());
+      var scaleX = Scales[nameX].Update(PriceX);
+      var scaleY = Scales[nameY].Update(PriceY);
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
       TransactionsView.Update(Adapters.Values);
       DataView.Update(index, nameof(DataView), "Spread", new AreaShape { Y = spread, Component = ComUp });
-      ScoreView.Update(index, nameof(ScoreView), "Score", new AreaShape { Y = score, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
       PerformanceView.Update(index, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
@@ -137,8 +125,8 @@ namespace Dashboard.Pages.Futures
 
       switch (instrument.Name)
       {
-        case nameX: PriceX = price.Last; break;
-        case nameY: PriceY = price.Last; break;
+        case nameX: PriceX = price; break;
+        case nameY: PriceY = price; break;
       }
 
       if (instrument.Name == "NQ") return;
@@ -151,15 +139,10 @@ namespace Dashboard.Pages.Futures
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
 
-      var inX = Math.Log(PriceX.Value * assetX.Leverage.Value);
-      var inY = Math.Log(PriceY.Value * assetY.Leverage.Value);
+      var inX = Math.Log(PriceX.Last.Value * assetX.Leverage.Value);
+      var inY = Math.Log(PriceY.Last.Value * assetY.Leverage.Value);
       Ratio.Update(inX, inY);
       var spread = 100000 * Ratio.Spread(inX, inY);
-      var betas = Ratio.Betas();
-
-      Regression.Update(spread);
-      var score = Regression.Score(spread);
-      var innovation = Kalman.Update(PriceX.Value * assetX.Leverage.Value, [1, PriceY.Value * assetY.Leverage.Value]);
 
       if (orders.Count is 0)
       {
@@ -196,7 +179,7 @@ namespace Dashboard.Pages.Futures
         }
       }
 
-      Render(instrument, spread, score, 0);
+      Render(instrument, spread);
     }
   }
 }

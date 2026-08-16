@@ -456,6 +456,53 @@ namespace Tests
       Assert.Empty(positions);
     }
 
+    [Fact]
+    public async Task TapClosesPositionIncludingOco()
+    {
+      var descriptor = Descriptor;
+      var grain = _cluster.GrainFactory.GetGrain<ISimOrdersGrain>(descriptor);
+      var positionsGrain = _cluster.GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
+
+      var sl = new Order
+      {
+        Amount = 1,
+        Price = 90,
+        Side = OrderSideEnum.Short,
+        Type = OrderTypeEnum.Stop,
+        Instruction = InstructionEnum.Brace,
+        Operation = new() { Instrument = Instrument }
+      };
+
+      // Send and fill entry order → SL gets registered
+      await grain.Send(new Order
+      {
+        Amount = 1,
+        Side = OrderSideEnum.Long,
+        Type = OrderTypeEnum.Market,
+        Operation = new() { Instrument = Instrument },
+        Orders = [sl]
+      });
+
+      await grain.Tap(Instrument with { Price = Price(100, 105) });
+
+      await grain.Send(new Order
+      {
+        Amount = 1,
+        Side = OrderSideEnum.Short,
+        Type = OrderTypeEnum.Market,
+        Operation = new() { Instrument = Instrument },
+        Orders = [sl]
+      });
+
+      await grain.Tap(Instrument with { Price = Price(100, 110) });
+
+      var orders = (await grain.Orders(default)).Data;
+      var positions = (await positionsGrain.Positions(default)).Data;
+
+      Assert.Empty(orders);
+      Assert.Empty(positions);
+    }
+
     // Ordering / state integrity
 
     [Fact]

@@ -192,7 +192,7 @@ namespace Tests
       var descriptor = Descriptor;
       var stamp = DateTime.Now.Ticks;
       var grain = _cluster.GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
-      var actionsGrain = _cluster.GrainFactory.GetGrain<ITransactionsGrain>(descriptor);
+      var actionsGrain = _cluster.GrainFactory.GetGrain<ISimTransactionsGrain>(descriptor);
       var instrument = new Instrument
       {
         Name = "SPY",
@@ -245,7 +245,7 @@ namespace Tests
         .Setup(o => o.StreamOrder(It.IsAny<Order>()))
         .Verifiable();
 
-      await actionsGrain.Setup(observerReference);
+      await actionsGrain.Setup(new(), observerReference);
 
       // Open
 

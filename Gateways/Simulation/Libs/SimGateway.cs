@@ -28,7 +28,7 @@ namespace Simulation
 
       SubscribeToUpdates();
 
-      await Component<ITransactionsGrain>().Setup(observer);
+      await Component<ISimTransactionsGrain>().Setup(connection, observer);
       await Component<ISimConnectionGrain>().Setup(connection, observer);
 
       return new()
@@ -123,7 +123,7 @@ namespace Simulation
     /// <param name="criteria"></param>
     public override Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
     {
-      return Component<ITransactionsGrain>().Transactions(criteria);
+      return Component<ISimTransactionsGrain>().Transactions(criteria);
     }
 
     /// <summary>
