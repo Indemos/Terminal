@@ -67,7 +67,7 @@ namespace InteractiveBrokers.Grains
     {
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetOrders(cts.Token);
-      var items = sourceItems.Select(Downstream.MapOrder).ToArray();
+      var items = sourceItems.Select(Downstream.MapOrder).ToList();
 
       await Task.Delay(state.Span);
 

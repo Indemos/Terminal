@@ -1,17 +1,10 @@
-using System.Collections.Generic;
-
 namespace Core.Models
 {
-  public record AccountResponse
+  public record AccountResponse : Response
   {
     /// <summary>
     /// Data
     /// </summary>
     public Account Data { get; init; }
-
-    /// <summary>
-    /// Errors
-    /// </summary>
-    public IList<string> Errors { get; init; } = [];
   }
 }

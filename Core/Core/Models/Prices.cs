@@ -12,11 +12,11 @@ namespace Core.Models
     /// <summary>
     /// Ticks
     /// </summary>
-    public IList<Price> Items { get; init; } = [];
+    public List<Price> Items { get; init; } = [];
 
     /// <summary>
     /// Ticks aggregated into bars
     /// </summary>
-    public IList<Price> ItemGroups { get; init; } = [];
+    public List<Price> ItemGroups { get; init; } = [];
   }
 }

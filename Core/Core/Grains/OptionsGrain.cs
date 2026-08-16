@@ -67,7 +67,7 @@ namespace Core.Grains
         .OrderBy(o => o.Derivative.ExpirationDate)
         .ThenBy(o => o.Derivative.Strike)
         .ThenBy(o => o.Derivative.Side)
-        .ToArray();
+        .ToList();
 
       return Task.FromResult(new InstrumentsResponse
       {

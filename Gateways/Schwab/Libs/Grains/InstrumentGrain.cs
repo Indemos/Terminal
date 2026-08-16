@@ -65,7 +65,7 @@ namespace Schwab.Grains
 
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceResponse = await connector.GetBars(query, cts.Token);
-      var items = sourceResponse.Bars.Select(MapPrice).ToArray();
+      var items = sourceResponse.Bars.Select(MapPrice).ToList();
 
       return new()
       {

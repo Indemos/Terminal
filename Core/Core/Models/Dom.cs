@@ -7,11 +7,11 @@ namespace Core.Models
     /// <summary>
     /// Asks
     /// </summary>
-    public IList<Price> Asks { get; init; } = [];
+    public List<Price> Asks { get; init; } = [];
 
     /// <summary>
     /// Bids
     /// </summary>
-    public IList<Price> Bids { get; init; } = [];
+    public List<Price> Bids { get; init; } = [];
   }
 }

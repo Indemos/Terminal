@@ -73,6 +73,6 @@ namespace Core.Models
     /// <summary>
     /// List of related orders in the hierarchy
     /// </summary>
-    public IList<Order> Orders { get; init; } = [];
+    public List<Order> Orders { get; init; } = [];
   }
 }

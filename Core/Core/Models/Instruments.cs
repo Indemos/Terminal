@@ -7,6 +7,6 @@ namespace Core.Models
     /// <summary>
     /// Instruments
     /// </summary>
-    public IList<Instrument> Items { get; init; } = [];
+    public List<Instrument> Items { get; init; } = [];
   }
 }

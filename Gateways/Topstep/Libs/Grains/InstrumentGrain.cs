@@ -89,7 +89,7 @@ namespace Topstep.Grains
 
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceResponse = await connector.GetBars(query);
-      var items = sourceResponse.bars.Select(MapPrice).ToArray();
+      var items = sourceResponse.bars.Select(MapPrice).ToList();
 
       return new()
       {
@@ -116,7 +116,7 @@ namespace Topstep.Grains
 
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceResponse = await connector.GetBars(query);
-      var items = sourceResponse.bars.Select(MapPrice).ToArray();
+      var items = sourceResponse.bars.Select(MapPrice).ToList();
 
       return new()
       {

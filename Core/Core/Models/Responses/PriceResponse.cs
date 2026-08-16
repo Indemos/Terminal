@@ -1,17 +1,10 @@
-using System.Collections.Generic;
-
 namespace Core.Models
 {
-  public record PriceResponse
+  public record PriceResponse : Response
   {
     /// <summary>
     /// Data
     /// </summary>
     public Price Data { get; init; }
-
-    /// <summary>
-    /// Errors
-    /// </summary>
-    public IList<string> Errors { get; init; } = [];
   }
 }

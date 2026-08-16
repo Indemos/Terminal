@@ -72,7 +72,7 @@ namespace Core.Grains
     /// <param name="criteria"></param>
     public virtual Task<PricesResponse> Prices(PriceCriteria criteria) => Task.FromResult(new PricesResponse
     {
-      Data = State.Items
+      Data = [.. State.Items]
     });
 
     /// <summary>
@@ -81,7 +81,7 @@ namespace Core.Grains
     /// <param name="criteria"></param>
     public virtual Task<PricesResponse> PriceGroups(PriceCriteria criteria) => Task.FromResult(new PricesResponse
     {
-      Data = State.ItemGroups
+      Data = [.. State.ItemGroups]
     });
 
     /// <summary>

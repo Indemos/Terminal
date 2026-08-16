@@ -2,11 +2,11 @@ using System.Collections.Generic;
 
 namespace Core.Models
 {
-  public record OrdersResponse : Response
+  public record Response
   {
     /// <summary>
-    /// Data
+    /// Errors
     /// </summary>
-    public List<Order> Data { get; init; } = [];
+    public List<string> Errors { get; init; } = [];
   }
 }

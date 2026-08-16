@@ -79,7 +79,7 @@ namespace InteractiveBrokers.Grains
       };
 
       var sourceItems = await connector.GetTicks(query, cts.Token);
-      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
+      var items = sourceItems.Select(Downstream.MapPrice).ToList();
 
       await Task.Delay(state.Span);
 
@@ -108,7 +108,7 @@ namespace InteractiveBrokers.Grains
       };
 
       var sourceItems = await connector.GetBars(query, cts.Token);
-      var items = sourceItems.Select(Downstream.MapPrice).ToArray();
+      var items = sourceItems.Select(Downstream.MapPrice).ToList();
 
       await Task.Delay(state.Span);
 

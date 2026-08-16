@@ -1,8 +1,6 @@
-using System.Collections.Generic;
-
 namespace Core.Models
 {
-  public record OrderResponse
+  public record OrderResponse : Response
   {
     /// <summary>
     /// Data
@@ -13,10 +11,5 @@ namespace Core.Models
     /// Transaction
     /// </summary>
     public Order Transaction { get; init; }
-
-    /// <summary>
-    /// Errors
-    /// </summary>
-    public IList<string> Errors { get; init; } = [];
   }
 }

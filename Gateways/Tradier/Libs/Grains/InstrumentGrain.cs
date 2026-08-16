@@ -71,7 +71,7 @@ namespace Tradier.Grains
 
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceResponse = await connector.GetTimeSales(query, cts.Token);
-      var items = sourceResponse.Items.Select(MapPrice).ToArray();
+      var items = sourceResponse.Items.Select(MapPrice).ToList();
 
       return new()
       {
@@ -96,7 +96,7 @@ namespace Tradier.Grains
 
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceResponse = await connector.GetTimeSales(query, cts.Token);
-      var items = sourceResponse.Items.Select(MapPrice).ToArray();
+      var items = sourceResponse.Items.Select(MapPrice).ToList();
 
       return new()
       {

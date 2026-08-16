@@ -72,7 +72,7 @@ namespace InteractiveBrokers.Grains
       var contract = Upstream.MapContract(criteria.Instrument);
       var cts = new CancellationTokenSource(state.Timeout);
       var sourceItems = await connector.GetContracts(contract, cts.Token);
-      var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToArray();
+      var items = sourceItems.Select(o => Downstream.MapInstrumentType(o.Contract)).ToList();
 
       await Task.Delay(state.Span);
 
