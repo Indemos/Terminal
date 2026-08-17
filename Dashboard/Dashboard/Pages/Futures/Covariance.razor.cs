@@ -40,7 +40,6 @@ namespace Dashboard.Pages.Futures
     Dictionary<string, ScaleIndicator> Scales { get; set; }
 
     int Direction { get; set; } = 0;
-    Indexer Scores { get; set; } = new();
     Price PriceX { get; set; }
     Price PriceY { get; set; }
 
@@ -129,7 +128,7 @@ namespace Dashboard.Pages.Futures
         case nameY: PriceY = price; break;
       }
 
-      if (instrument.Name == "NQ") return;
+      if (instrument.Name == nameY) return;
 
       if (PriceX is null || PriceY is null)
       {

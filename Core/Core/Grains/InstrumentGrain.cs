@@ -90,20 +90,17 @@ namespace Core.Grains
     /// <param name="instrument"></param>
     public virtual Task<Instrument> Send(Instrument instrument)
     {
-      var span = instrument.TimeFrame;
       var nextPrice = instrument.Price;
-      var nextTime = nextPrice.Time.Round(span);
       var currentPrice = State.ItemGroups.LastOrDefault() ?? new Price();
-      var currentTime = currentPrice.Time.Round(span) ?? DateTime.MinValue.Ticks;
-      var price = Combine(nextTime > currentTime ? nextPrice : currentPrice, nextPrice, span);
+      var (price, expansion) = Combine(currentPrice, nextPrice, instrument.TimeFrame);
 
-      if (span is null || nextTime - currentTime >= span.Value.Ticks)
+      if (expansion || State.ItemGroups.Count is 0)
       {
         State.ItemGroups.Add(price);
       }
 
       State.Items.Add(price);
-      State.ItemGroups[State.ItemGroups.Count - 1] = price;
+      State.ItemGroups[^1] = price;
       State = State with { Instrument = instrument with { Price = price } };
 
       return Task.FromResult(State.Instrument);
@@ -114,12 +111,20 @@ namespace Core.Grains
     /// </summary>
     /// <param name="currentPrice"></param>
     /// <param name="nextPrice"></param>
-    /// <param name="nextTime"></param>
-    protected virtual Price Combine(Price currentPrice, Price nextPrice, TimeSpan? nextTime)
+    /// <param name="span"></param>
+    protected virtual (Price, bool) Combine(Price currentPrice, Price nextPrice, TimeSpan? span)
     {
+      var nextTime = nextPrice.Time;
+      var currentTime = currentPrice?.Bar?.Time ?? DateTime.MinValue.Ticks;
+      var expansion = span is null || nextTime - currentTime >= span.Value.Ticks;
       var price = (nextPrice.Last ?? currentPrice.Last).Value;
 
-      return currentPrice with
+      if (expansion)
+      {
+        currentPrice = nextPrice;
+      }
+
+      var group = new Price
       {
         Last = price,
         Time = nextPrice.Time,
@@ -127,15 +132,17 @@ namespace Core.Grains
         Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
         AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
         BidSize = nextPrice.BidSize ?? currentPrice?.BidSize ?? 0.0,
-        Bar = new Bar() with
+        Bar = new() 
         {
           Close = price,
           Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),
           High = Math.Max(price, currentPrice?.Bar?.High ?? price),
           Open = currentPrice?.Bar?.Open ?? price,
-          Time = nextPrice.Time.Round(nextTime)
+          Time = nextPrice.Time.Round(span)
         }
       };
+
+      return (group, expansion);
     }
   }
 }

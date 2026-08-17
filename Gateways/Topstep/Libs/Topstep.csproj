@@ -8,7 +8,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="TopstepBroker" Version="0.0.4" />
+    <PackageReference Include="TopstepBroker" Version="0.0.5" />
   </ItemGroup>
 
   <ItemGroup>
