@@ -198,7 +198,7 @@ namespace Dashboard.Pages
     protected virtual async Task<List<Order>> ClosePosition(IGateway adapter, Func<Order, bool> condition = null)
     {
       var response = new List<Order>();
-      var positions = await adapter.GetPositions(default);
+      var positions = await adapter.GetPositions(new() { });
 
       foreach (var position in positions.Data)
       {

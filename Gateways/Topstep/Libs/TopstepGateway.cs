@@ -2,7 +2,6 @@ using Core.Conventions;
 using Core.Enums;
 using Core.Grains;
 using Core.Models;
-using Orleans;
 using System.Linq;
 using System.Threading.Tasks;
 using Topstep.Grains;
@@ -133,6 +132,27 @@ namespace Topstep
       }
 
       return await grain.Positions(criteria);
+    }
+
+    /// <summary>
+    /// Get transactions
+    /// </summary>
+    /// <param name="criteria"></param>
+    public override async Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
+    {
+      var grain = Component<ITransactionsGrain>();
+
+      if (criteria.Source)
+      {
+        var sourceGrain = Component<ITopstepTransactionsGrain>();
+        var response = await sourceGrain.Transactions(criteria);
+
+        await grain.Store(response.Data);
+
+        return response;
+      }
+
+      return await grain.Transactions(criteria);
     }
 
     /// <summary>
