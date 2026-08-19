@@ -343,17 +343,26 @@ namespace Core.Conventions
     /// <summary>
     /// Descriptor
     /// </summary>
-    /// <param name="instrument"></param>
-    protected virtual string Descriptor(string instrument = null) => instrument is null ?
+    /// <param name="name"></param>
+    protected virtual string Descriptor(string name = null) => name is null ?
       $"{Space}:{Account.Descriptor}" :
-      $"{Space}:{Account.Descriptor}:{instrument}";
+      $"{Space}:{Account.Descriptor}:{name}";
+
+    /// <summary>
+    /// Criteria selector
+    /// <param name="name"></param>
+    /// </summary>
+    protected virtual T Criteria<T>(Criteria criteria) where T : IGrainWithStringKey => criteria is null ?
+      Component<T>($"{typeof(Criteria).Name}") :
+      Component<T>($"{typeof(Criteria).Name}:{criteria with { Source = false }}");
 
     /// <summary>
     /// Grain selector
+    /// <param name="name"></param>
     /// </summary>
-    protected virtual T Component<T>(string instrument = null) where T : IGrainWithStringKey
+    protected virtual T Component<T>(string name = null) where T : IGrainWithStringKey
     {
-      return Connector.GetGrain<T>(Descriptor(instrument));
+      return Connector.GetGrain<T>(Descriptor(name));
     }
 
     /// <summary>

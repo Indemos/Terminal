@@ -132,7 +132,7 @@ namespace Schwab
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      var grain = Component<IOrdersGrain>();
+      var grain = Criteria<IOrdersGrain>(criteria);
 
       if (criteria.Source)
       {
@@ -144,7 +144,7 @@ namespace Schwab
         return response;
       }
 
-      return await base.GetOrders(criteria);
+      return await grain.Orders(criteria);
     }
 
     /// <summary>
@@ -153,7 +153,7 @@ namespace Schwab
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      var grain = Component<IPositionsGrain>();
+      var grain = Criteria<IPositionsGrain>(criteria);
 
       if (criteria.Source)
       {

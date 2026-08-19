@@ -103,18 +103,18 @@ namespace Simulation
     /// Get all account orders
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetOrders(OrderCriteria criteria)
+    public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      return Component<ISimOrdersGrain>().Orders(criteria);
+      return await Component<ISimOrdersGrain>().Orders(criteria);
     }
 
     /// <summary>
     /// Get all account positions
     /// </summary>
     /// <param name="criteria"></param>
-    public override Task<OrdersResponse> GetPositions(PositionCriteria criteria)
+    public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      return Component<ISimPositionsGrain>().Positions(criteria);
+      return await Component<ISimPositionsGrain>().Positions(criteria);
     }
 
     /// <summary>

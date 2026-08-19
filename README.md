@@ -14,7 +14,7 @@ May contain references to other libraries in [this list](https://github.com/Inde
 # Structure
 
 * **Core** - cross-platform .NET Core library with main functionality 
-* **Data** - historical ticks for backtester in ZIP, JSON or Message Pack format + custom parsers
+* **Data** - historical ticks for backtester in Lite DB, ZIP, JSON, Message Pack + custom parsers
 * **Gateways** - gateway implementations for brokers and exchanges, including simulated data
 * **Dashboard** - UI for strategies visualizing orders, positions, and performance metrics 
 
@@ -25,7 +25,6 @@ The core library already implements a set of Orleans grains and services that ca
 * **OptionsGrain** - option chain storage
 * **OrdersGrain** - order manager tracking active orders
 * **PositionsGrain** - position manager tracking open positions
-* **TransactionGrain** - storage for a single distributed transaction
 * **TransactionsGrain** - transactions manager tracking closed positions
 
 # Gateways 
@@ -36,13 +35,14 @@ Already implemented gateways.
 * Topstep
 * Tradier
 * Interactive Brokers
+* Alpaca - in the `gateways` branch
 * Simulation - virtual orders and market data 
 
 In order to create connector for preferred broker, implement interface `IGateway`.
 
 # Trading Strategies
 
-[Examples](https://github.com/Indemos/Terminal/tree/main/Terminal/Pages) of simple trading strategies can be found in `Terminal` catalog.
+[Examples](https://github.com/Indemos/Terminal/tree/main/Terminal/Pages) of simple trading strategies can be found in `Dashboard` pages folder.
 
 # Preview 
 
@@ -51,6 +51,6 @@ In order to create connector for preferred broker, implement interface `IGateway
 # Administration
 
 Orleans dashboard module is used as a simple administration panel to check server health, latency, and internal state of specific grains, e.g. orders and positions. 
-Dashboard is available at `http://localhost:8080`
+Dashboard is available at `http://localhost:5000/processors`
 
 ![](Screens/Dashboard.png)

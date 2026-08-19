@@ -98,7 +98,7 @@ namespace Topstep
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetOrders(OrderCriteria criteria)
     {
-      var grain = Component<IOrdersGrain>();
+      var grain = Criteria<IOrdersGrain>(criteria);
 
       if (criteria.Source)
       {
@@ -119,7 +119,7 @@ namespace Topstep
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetPositions(PositionCriteria criteria)
     {
-      var grain = Component<IPositionsGrain>();
+      var grain = Criteria<IPositionsGrain>(criteria);
 
       if (criteria.Source)
       {
@@ -140,7 +140,7 @@ namespace Topstep
     /// <param name="criteria"></param>
     public override async Task<OrdersResponse> GetTransactions(TransactionCriteria criteria)
     {
-      var grain = Component<ITransactionsGrain>();
+      var grain = Criteria<ITransactionsGrain>(criteria);
 
       if (criteria.Source)
       {

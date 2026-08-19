@@ -130,7 +130,7 @@ namespace Tradier
         return response;
       }
 
-      return await base.GetOrders(criteria);
+      return await grain.Orders(criteria);
     }
 
     /// <summary>
@@ -151,7 +151,7 @@ namespace Tradier
         return response;
       }
 
-      return await base.GetPositions(criteria);
+      return await grain.Positions(criteria);
     }
 
     /// <summary>
