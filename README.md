@@ -44,6 +44,15 @@ In order to create connector for preferred broker, implement interface `IGateway
 
 [Examples](https://github.com/Indemos/Terminal/tree/main/Terminal/Pages) of simple trading strategies can be found in `Dashboard` pages folder.
 
+# Historical quotes 
+
+Historical 1 second quotes for ES and NQ are available at links below. 
+When running simulator, set `Source` property to the folder with files below. 
+Each DB file should have the name of the security being traded, e.g. ES.db and NQ.db respectively.
+
+* [ES](https://1drv.ms/u/c/e7ca1261cd1ac578/IQDb5Gffmz58Q7vBG9BGK-ChAfhSsBxdk8-qBwzaXieVH5M?e=oikxHJ)
+* [NQ](https://1drv.ms/u/c/e7ca1261cd1ac578/IQAo3WQniKWdTqdNmzSfLcL_AQGiLCFJ8eWq67iD8_Kbf8I?e=aUEZ83)
+
 # Preview 
 
 ![](Screens/Preview.png)

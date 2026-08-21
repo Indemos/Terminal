@@ -32,7 +32,12 @@ namespace Simulation
     {
       Name = instrumentName;
       storage = new LiteDatabase(source);
-      enumerator = storage.GetCollection<Summary>("prices").FindAll().GetEnumerator();
+      enumerator = storage
+        .GetCollection<Summary>("prices")
+        .Query()
+        .OrderBy(o => o.Time)
+        .ToEnumerable()
+        .GetEnumerator();
     }
 
     /// <summary>

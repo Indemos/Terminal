@@ -1,5 +1,3 @@
-using Core.Conventions;
-
 namespace Core.Indicators
 {
   /// <summary>

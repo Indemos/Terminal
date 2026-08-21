@@ -13,21 +13,21 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Futures
 {
+  public class Indexer : List<(long, double)>
+  {
+    public new void Add((long, double) item)
+    {
+      if (Count is 0 || item.Item1 > this[^1].Item1)
+      {
+        base.Add(item);
+      }
+
+      this[^1] = item;
+    }
+  }
+
   public partial class Covariance
   {
-    public class Indexer : List<(long, double)>
-    {
-      public new void Add((long, double) item)
-      {
-        if (Count is 0 || item.Item1 > this[^1].Item1)
-        {
-          base.Add(item);
-        }
-
-        this[^1] = item;
-      }
-    }
-
     RatioService Ratio { get; set; }
     ChartsComponent DataView { get; set; }
     ChartsComponent IndicatorsView { get; set; }
@@ -37,7 +37,10 @@ namespace Dashboard.Pages.Futures
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
+    VarianceIndicator Variance { get; set; }
+    VarianceIndicator NormVariance { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
+    Indexer Spreads { get; set; }
 
     int Direction { get; set; } = 0;
     Price PriceX { get; set; }
@@ -77,7 +80,10 @@ namespace Dashboard.Pages.Futures
         }
       };
 
+      Spreads = [];
       Ratio = new(100);
+      Variance = new();
+      NormVariance = new();
       Performance = new PerformanceIndicator();
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator
       {
@@ -88,7 +94,13 @@ namespace Dashboard.Pages.Futures
       return base.OnTrade();
     }
 
-    protected async void Render(Instrument instrument, double spread)
+    protected async void Render(
+      Instrument instrument,
+      double? spread,
+      double? scaleX,
+      double? scaleY,
+      VarianceIndicator variance,
+      VarianceIndicator normVariance)
     {
       var adapter = Adapter;
       var account = adapter.Account;
@@ -101,13 +113,14 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
-      var scaleX = Scales[nameX].Update(PriceX);
-      var scaleY = Scales[nameY].Update(PriceY);
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
       TransactionsView.Update(Adapters.Values, new() { Count = 100 });
-      DataView.Update(index, nameof(DataView), "Spread", new AreaShape { Y = spread, Component = ComUp });
+      DataView.Update(index, nameof(DataView), "Spread", new AreaShape { Y = spread, Component = Com });
+      DataView.Update(index, nameof(DataView), "Spread Up", new LineShape { Y = variance.Deviation * 2, Component = ComUp });
+      DataView.Update(index, nameof(DataView), "Spread Down", new LineShape { Y = -variance.Deviation * 2, Component = ComDown });
+      //DataView.Update(index, nameof(DataView), "Prices", DataView.GetShape<CandleShape>(instrument.Price));
       IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
       PerformanceView.Update(index, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
@@ -135,33 +148,43 @@ namespace Dashboard.Pages.Futures
         return;
       }
 
+      var scaleX = Scales[nameX].Update(PriceX);
+      var scaleY = Scales[nameY].Update(PriceY);
+      var inX = Math.Log(PriceX.Last.Value * assetX.Leverage.Value);
+      var inY = Math.Log(PriceY.Last.Value * assetY.Leverage.Value);
+
+      Ratio.Update(inX, inY);
+
+      var spread = 100000 * Ratio.Spread(inX, inY);
+      var normSpread = 10000 * (scaleX - scaleY);
+
+      //Spreads.Add((price.Bar.Time.Value, sourceSpread));
+
+      //var spread = Spreads.ElementAtOrDefault(Spreads.Count - 2).Item2;
+      var variance = Variance.Update(spread);
+      var normVariance = NormVariance.Update(normSpread);
+
+      var isLong = spread < -variance.Deviation * 2 && normSpread < -normVariance.Deviation * 2;
+      var isShort = spread > variance.Deviation * 2 && normSpread > normVariance.Deviation * 2;
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
 
-      var inX = Math.Log(PriceX.Last.Value * assetX.Leverage.Value);
-      var inY = Math.Log(PriceY.Last.Value * assetY.Leverage.Value);
-      Ratio.Update(inX, inY);
-      var spread = 100000 * Ratio.Spread(inX, inY);
-
       if (orders.Count is 0)
       {
-        var isLong = spread < -5;
-        var isShort = spread > 5;
-
         if (positions.Count is 0)
         {
           switch (true)
           {
             case true when isLong:
               Direction = 1;
-              await OpenPosition(adapter, assetX, OrderSideEnum.Long);
-              await OpenPosition(adapter, assetY, OrderSideEnum.Short);
+              await OpenPosition(adapter, assetX with { Price = PriceX }, OrderSideEnum.Long);
+              await OpenPosition(adapter, assetY with { Price = PriceY }, OrderSideEnum.Short);
               break;
 
             case true when isShort:
               Direction = -1;
-              await OpenPosition(adapter, assetX, OrderSideEnum.Short);
-              await OpenPosition(adapter, assetY, OrderSideEnum.Long);
+              await OpenPosition(adapter, assetX with { Price = PriceX }, OrderSideEnum.Short);
+              await OpenPosition(adapter, assetY with { Price = PriceY }, OrderSideEnum.Long);
               break;
           }
         }
@@ -178,7 +201,9 @@ namespace Dashboard.Pages.Futures
         }
       }
 
-      Render(instrument, spread);
+      Render(instrument, spread, scaleX, scaleY, variance, normVariance);
+
+      //await Task.Delay(100);
     }
   }
 }

@@ -43,11 +43,13 @@ namespace Simulation.Grains
     /// <param name="grainObserver"></param>
     public virtual async Task<StatusResponse> Setup(Connection connection, ITradeObserver grainObserver)
     {
-      await Disconnect();
+      var descriptor = this.GetDescriptor();
 
       state = connection;
       observer = grainObserver;
       cts = new CancellationTokenSource();
+
+      await GrainFactory.GetGrain<ISimTransactionsGrain>(descriptor).Setup(connection, observer);
 
       foreach (var instrument in state.Account.Instruments.Values)
       {

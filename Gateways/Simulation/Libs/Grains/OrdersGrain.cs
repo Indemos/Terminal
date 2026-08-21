@@ -110,19 +110,19 @@ namespace Simulation.Grains
 
         var descriptor = this.GetDescriptor();
         var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
+        var actionsGrain = GrainFactory.GetGrain<ISimTransactionsGrain>(descriptor);
         var response = await positionsGrain.Send(Position(position, instrument));
+
+        if (response.Transaction is not null)
+        {
+          response.Transaction.Orders.ForEach(o => State.Remove(o.Id));
+          await actionsGrain.Store(Transaction(response.Transaction, instrument));
+        }
 
         if (response.Data is not null)
         {
           await SendBraces(position);
-        }
-
-        if (response.Transaction is not null)
-        {
-          var actionsGrain = GrainFactory.GetGrain<ISimTransactionsGrain>(descriptor);
-
-          response.Transaction.Orders.ForEach(o => State.Remove(o.Id));
-          await actionsGrain.Store(Transaction(response.Transaction, instrument));
+          await actionsGrain.Store(Transaction(response.Data, instrument));
         }
       }
 

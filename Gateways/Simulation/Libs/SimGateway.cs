@@ -19,6 +19,8 @@ namespace Simulation
     /// </summary>
     public override async Task<StatusResponse> Connect()
     {
+      await Component<ISimConnectionGrain>().Disconnect();
+
       var observer = Connector.CreateObjectReference<ITradeObserver>(this);
       var connection = new Models.Connection()
       {
@@ -28,7 +30,6 @@ namespace Simulation
 
       SubscribeToUpdates();
 
-      await Component<ISimTransactionsGrain>().Setup(connection, observer);
       await Component<ISimConnectionGrain>().Setup(connection, observer);
 
       return new()

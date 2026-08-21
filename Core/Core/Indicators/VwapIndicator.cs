@@ -10,20 +10,19 @@ namespace Core.Indicators
 
     // Cumulative volume: sum(V)
     protected double cumV;
-    // Cumulative price*volume: sum(TypicalPrice * V)
+    // Cumulative price*volume: sum(Price * V)
     protected double cumPV;
-    // Cumulative price^2*volume: sum(TypicalPrice^2 * V) for variance
+    // Cumulative price^2*volume: sum(Price^2 * V) for variance
     protected double cumPV2;
 
     // Called per tick/bar
     public virtual Price Update(Price point)
     {
-      if (point.Bar.Low is not double L || point.Bar.High is not double H || point.Bar.Close is not double C)
-      {
-        return point;
-      }
-
-      var volume = point.Volume ?? 0;
+      if (point.Bar.Low is not double L ||
+          point.Bar.High is not double H ||
+          point.Bar.Close is not double C ||
+          point.Volume is not double volume) return point;
+    
       var price = (L + H + C) / 3.0;
 
       cumV += volume;
@@ -31,10 +30,11 @@ namespace Core.Indicators
       cumPV2 += price * price * volume;
 
       // VWAP = sum(P*V) / sum(V)
-      var vwap = cumPV / cumV;
       // Variance = E[P^2] - E[P]^2, clamp to 0 for floating point
-      var variance = Math.Max(cumPV2 / cumV - vwap * vwap, 0);
       // Standard deviation = sqrt(variance)
+
+      var vwap = cumPV / cumV;
+      var variance = Math.Max(cumPV2 / cumV - vwap * vwap, 0);
       var deviation = Math.Sqrt(variance);
 
       return new()

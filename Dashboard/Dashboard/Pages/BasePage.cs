@@ -194,11 +194,12 @@ namespace Dashboard.Pages
     /// Close positions
     /// </summary>
     /// <param name="adapter"></param>
+    /// <param name="criteria"></param>
     /// <param name="condition"></param>
-    protected virtual async Task<List<Order>> ClosePosition(IGateway adapter, Func<Order, bool> condition = null)
+    protected virtual async Task<List<Order>> ClosePosition(IGateway adapter, PositionCriteria criteria = null, Func<Order, bool> condition = null)
     {
       var response = new List<Order>();
-      var positions = await adapter.GetPositions(new() { });
+      var positions = await adapter.GetPositions(criteria ?? new() { Source = true });
 
       foreach (var position in positions.Data)
       {

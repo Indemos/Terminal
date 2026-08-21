@@ -128,6 +128,7 @@ namespace Core.Grains
       {
         Last = price,
         Time = nextPrice.Time,
+        Volume = nextPrice.Volume,
         Ask = nextPrice.Ask ?? currentPrice?.Ask ?? price,
         Bid = nextPrice.Bid ?? currentPrice?.Bid ?? price,
         AskSize = nextPrice.AskSize ?? currentPrice?.AskSize ?? 0.0,
