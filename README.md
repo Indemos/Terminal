@@ -44,7 +44,7 @@ In order to create connector for preferred broker, implement interface `IGateway
 
 [Examples](https://github.com/Indemos/Terminal/tree/main/Terminal/Pages) of simple trading strategies can be found in `Dashboard` pages folder.
 
-# Historical quotes 
+# Historical Data 
 
 Historical 1 second quotes for ES and NQ are available at links below. 
 When running simulator, set `Source` property to the folder with files below. 

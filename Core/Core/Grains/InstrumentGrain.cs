@@ -117,7 +117,8 @@ namespace Core.Grains
       var nextTime = nextPrice.Time;
       var currentTime = currentPrice?.Bar?.Time ?? DateTime.MinValue.Ticks;
       var expansion = span is null || nextTime - currentTime >= span.Value.Ticks;
-      var price = (nextPrice.Last ?? currentPrice.Last).Value;
+      var sidePrice = nextPrice.Bid ?? nextPrice?.Ask;
+      var price = (nextPrice.Last ?? currentPrice.Last ?? sidePrice).Value;
 
       if (expansion)
       {

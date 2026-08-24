@@ -15,12 +15,8 @@ namespace Core.Indicators
       var ask = currentPoint.AskSize ?? 0;
       var response = new Price
       {
-        Last = (ask - bid) + (current?.Last ?? 0),
-        Bar = new()
-        {
-          Low = bid + (current?.Bar?.Low ?? 0),
-          High = ask + (current?.Bar?.High ?? 0)
-        }
+        BidSize = bid + (current?.BidSize ?? 0),
+        AskSize = ask + (current?.AskSize ?? 0)
       };
 
       map[stamp] = response;
@@ -31,8 +27,8 @@ namespace Core.Indicators
     public virtual double Ratio(long stamp)
     {
       var current = map.Get(stamp);
-      var bid = current?.Bar?.Low ?? 0;
-      var ask = current?.Bar?.High ?? 0;
+      var bid = current?.BidSize ?? 0;
+      var ask = current?.AskSize ?? 0;
       var sum = bid + ask;
 
       return sum is 0 ? 0 : (ask - bid) / sum; // [-1,1] imbalance
