@@ -5,15 +5,15 @@ namespace Core.Indicators
 {
   public class VwapIndicator
   {
-    // Number of standard deviations for bands
-    public double Band { get; set; } = 2.0;
-
     // Cumulative volume: sum(V)
     protected double cumV;
     // Cumulative price*volume: sum(Price * V)
     protected double cumPV;
     // Cumulative price^2*volume: sum(Price^2 * V) for variance
     protected double cumPV2;
+
+    // Number of standard deviations for bands
+    public double Band { get; set; } = 2.0;
 
     // Called per tick/bar
     public virtual Price Update(Price point)
@@ -42,8 +42,8 @@ namespace Core.Indicators
         Last = vwap,
         Bar = new()
         {
-          High = vwap + Band * deviation,
-          Low = vwap - Band * deviation
+          Low = vwap - Band * deviation,
+          High = vwap + Band * deviation
         }
       };
     }
