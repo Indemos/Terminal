@@ -13,14 +13,14 @@ namespace Core.Indicators
     /// Smaller value results in a smoother average.
     /// Larger value allows for more responsiveness to changes in the input data.
     /// </summary>
-    public virtual double ProcessNoise { get; set; }
+    public virtual double ProcessNoise { get; set; } = 0.00001;
 
     /// <summary>
     /// Observation noise to account for measurement errors or fluctuations in the input data.
     /// Smaller value assumes more confidence in the observed data.
     /// Larger value allows for more uncertainty.
     /// </summary>
-    public virtual double ObservationNoise { get; set; }
+    public virtual double ObservationNoise { get; set; } = 0.01;
 
     /// <summary>
     /// The current mean value of the Kalman Moving Average.
@@ -46,7 +46,7 @@ namespace Core.Indicators
 
       // Kalman gain
       var innovationVariance = variance + ObservationNoise;
-      var gain = variance / innovationVariance;
+      var gain = innovationVariance is 0 ? Mean : (variance / innovationVariance);
 
       // Update
       Mean += gain * (price - Mean);
