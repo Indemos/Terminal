@@ -39,7 +39,10 @@ namespace Dashboard.Pages.Futures
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
     VarianceIndicator Variance { get; set; }
+    HyIndicator Hy { get; set; }
+    KmaIndicator HyKma { get; set; }
     VarianceIndicator NormVariance { get; set; }
+    CrossCorrelationIndicator Correlation { get; set; }
     Dictionary<string, VwapIndicator> Vwaps { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
     Dictionary<string, ScaleIndicator> VwapScales { get; set; }
@@ -54,8 +57,8 @@ namespace Dashboard.Pages.Futures
 
     Dictionary<string, Instrument> Instruments = new()
     {
-      [nameX] = new() { Name = nameX, Leverage = 50, Commission = 3.65, TimeFrame = TimeSpan.FromMinutes(1) },
-      [nameY] = new() { Name = nameY, Leverage = 20, Commission = 3.65, TimeFrame = TimeSpan.FromMinutes(1) },
+      [nameX] = new() { Name = nameX, Leverage = 50, Commission = 3.65 },
+      [nameY] = new() { Name = nameY, Leverage = 20, Commission = 3.65 },
     };
 
     protected override async Task OnView()
@@ -91,10 +94,13 @@ namespace Dashboard.Pages.Futures
       };
 
       Spreads = [];
+      Hy = new(TimeSpan.FromSeconds(60).Ticks, TimeSpan.FromSeconds(30).Ticks, TimeSpan.FromSeconds(10).Ticks);
+      HyKma = new();
       Ratio = new(100);
       Variance = new();
       NormVariance = new();
       Performance = new PerformanceIndicator();
+      Correlation = new CrossCorrelationIndicator();
       Vwaps = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new VwapIndicator());
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator());
       VwapScales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator());
@@ -123,6 +129,7 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
+      //var hykma = HyKma.Update(Hy.LeadBias);
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
@@ -131,8 +138,13 @@ namespace Dashboard.Pages.Futures
       ItemsView.Update(index, nameof(ItemsView), "Spread Up", new LineShape { Y = variance.Deviation * 2, Component = ComUp });
       ItemsView.Update(index, nameof(ItemsView), "Spread Down", new LineShape { Y = -variance.Deviation * 2, Component = ComDown });
       //DataView.Update(index, nameof(DataView), "Prices", DataView.GetShape<CandleShape>(instrument.Price));
-      ScoresView.Update(index, nameof(ScoresView), "X", new LineShape { Y = vwapX, Component = ComUp });
-      ScoresView.Update(index, nameof(ScoresView), "Y", new LineShape { Y = vwapY, Component = ComDown });
+      //ScoresView.Update(index, nameof(ScoresView), "X", new LineShape { Y = vwapX, Component = ComUp });
+      //ScoresView.Update(index, nameof(ScoresView), "Y", new LineShape { Y = vwapY, Component = ComDown });
+      //ScoresView.Update(index, nameof(ScoresView), "Correlation", new LineShape { Y = Correlation.MaxCorrelation, Component = ComUp });
+      //ScoresView.Update(index, nameof(ScoresView), "Bias", new LineShape { Y = Correlation.LeadBias, Component = ComDown });
+      //ScoresView.Update(index, nameof(ScoresView), "Max Correlation", new LineShape { Y = Hy.MaxCorrelation, Component = ComUp });
+      //ScoresView.Update(index, nameof(ScoresView), "Correlation", new LineShape { Y = Hy.CurrentCorrelation, Component = ComDown });
+      ScoresView.Update(index, nameof(ScoresView), "Correlation", new LineShape { Y = Hy.OptimalLag, Component = ComDown });
       IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
       PerformanceView.Update(index, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
@@ -149,8 +161,8 @@ namespace Dashboard.Pages.Futures
 
       switch (instrument.Name)
       {
-        case nameX: PriceX = price; break;
-        case nameY: PriceY = price; break;
+        case nameX: PriceX = price; Hy.UpdateX(PriceX.Time.Value, PriceX.Last.Value); break;
+        case nameY: PriceY = price; Hy.UpdateY(PriceY.Time.Value, PriceY.Last.Value); break;
       }
 
       if (instrument.Name == nameY) return;
@@ -175,6 +187,10 @@ namespace Dashboard.Pages.Futures
       var normSpread = 10000 * (scaleX - scaleY);
       var variance = Variance.Update(spread);
       var normVariance = NormVariance.Update(normSpread);
+      var correlation = Correlation.Update(PriceX.Last.Value, PriceY.Last.Value);
+
+      //Hy.UpdateX(PriceX.Time.Value, PriceX.Last.Value);
+      //Hy.UpdateY(PriceY.Time.Value, PriceY.Last.Value);
 
       var isLong = spread < -variance.Deviation * 2 && normSpread < -normVariance.Deviation * 2;
       var isShort = spread > variance.Deviation * 2 && normSpread > normVariance.Deviation * 2;

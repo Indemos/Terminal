@@ -186,7 +186,6 @@ namespace Schwab.Grains
       {
         Strike = optionMessage.StrikePrice,
         ExpirationDate = optionMessage.ExpirationDate,
-        ExpirationType = Enum.TryParse(optionMessage.ExpirationType, true, out ExpirationTypeEnum o) ? o : null,
         OpenInterest = optionMessage.OpenInterest ?? 0,
         IntrinsicValue = optionMessage.IntrinsicValue ?? 0,
         Volatility = optionMessage.Volatility ?? 0,

@@ -16,6 +16,11 @@ namespace Simulation.Models
     public Dom Dom { get; init; }
 
     /// <summary>
+    /// MBO record
+    /// </summary>
+    public DomOrder Order { get; set; }
+
+    /// <summary>
     /// Reference to the instrument
     /// </summary>
     public Instrument Instrument { get; init; }

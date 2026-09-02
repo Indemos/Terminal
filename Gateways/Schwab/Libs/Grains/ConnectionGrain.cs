@@ -170,8 +170,8 @@ namespace Schwab.Grains
     /// <param name="message"></param>
     protected virtual Dom MapDom(DomMessage message) => new()
     {
-      Bids = [.. message.Bids.Select(MapPrice)],
-      Asks = [.. message.Asks.Select(MapPrice)]
+      //Bids = [.. message.Bids.Select(MapPrice)],
+      //Asks = [.. message.Asks.Select(MapPrice)]
     };
 
     /// <summary>

@@ -31,11 +31,6 @@ namespace Core.Models
     public OptionSideEnum? Side { get; init; }
 
     /// <summary>
-    /// Expiration type
-    /// </summary>
-    public ExpirationTypeEnum? ExpirationType { get; init; }
-
-    /// <summary>
     /// Expiration date
     /// </summary>
     public DateTime? ExpirationDate { get; init; }
