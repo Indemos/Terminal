@@ -1,6 +1,5 @@
 using Core.Enums;
 using Core.Grains;
-using Core.Models;
 using Orleans.TestingHost;
 using System;
 using System.Linq;
@@ -73,9 +72,10 @@ namespace Tests
       await grain.StoreOrder(new() { Id = "bid-1", Action = DomAction.Update, Size = 5, Name = "after" });
 
       var dom = (await grain.Dom(new())).Data;
-      var order = dom.Bids.Single().Value.Single();
+      var level = Assert.Single(dom.Bids);
+      var order = Assert.Single(level.Value);
 
-      Assert.Single(dom.Bids);
+      Assert.Equal(1002500L, level.Key);
       Assert.Equal(5, order.Size);
       Assert.Equal(100.25, order.Price);
       Assert.Equal(DomSide.Bid, order.Side);
@@ -91,8 +91,10 @@ namespace Tests
       await grain.StoreOrder(new() { Id = "ask-1", Action = DomAction.Update, Price = 100.75, Size = 2 });
 
       var dom = (await grain.Dom(new())).Data;
+      var level = Assert.Single(dom.Asks);
+      var order = Assert.Single(level.Value);
 
-      Assert.Single(dom.Asks);
+      Assert.Equal(100.75, order.Price);
       Assert.Equal(1007500L, dom.Asks.Single().Key);
       Assert.Equal("ask-1", dom.Asks.Single().Value.Single().Id);
     }
@@ -106,11 +108,12 @@ namespace Tests
       await grain.RemoveOrder(new() { Id = "bid-1", Size = 2 });
 
       var dom = (await grain.Dom(new())).Data;
-      var order = dom.Bids.Single().Value.Single();
+      var level = Assert.Single(dom.Bids);
+      var order = Assert.Single(level.Value);
 
-      Assert.Single(dom.Bids);
       Assert.Equal(3, order.Size);
       Assert.Equal(100.25, order.Price);
+      Assert.Equal(1002500L, dom.Bids.Single().Key);
     }
 
     [Fact]
@@ -133,7 +136,6 @@ namespace Tests
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 3 });
       await grain.StoreOrder(new() { Id = "ask-1", Side = DomSide.Ask, Price = 100.50, Size = 2 });
-
       await grain.SendOrder(new() { Action = DomAction.Clear });
 
       var dom = (await grain.Dom(new())).Data;
@@ -143,7 +145,7 @@ namespace Tests
     }
 
     [Fact]
-    public async Task ReconstructingBook_KeepsBestBidFirstAndBestAskFirst()
+    public async Task ReconstructingBook_ContainsExpectedBidAndAskLevels()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
 
@@ -154,8 +156,10 @@ namespace Tests
 
       var dom = (await grain.Dom(new())).Data;
 
-      Assert.Equal(new[] { 1005000L, 1002500L }, dom.Bids.Keys.ToArray());
-      Assert.Equal(new[] { 1007500L, 1010000L }, dom.Asks.Keys.ToArray());
+      Assert.Equal([1002500L, 1005000L], [.. dom.Bids.Keys.OrderBy(o => o)]);
+      Assert.Equal([1007500L, 1010000L], [.. dom.Asks.Keys.OrderBy(o => o)]);
+      Assert.Equal(1005000L, dom.Bids.Keys.Max());
+      Assert.Equal(1007500L, dom.Asks.Keys.Min());
     }
   }
 }

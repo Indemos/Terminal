@@ -49,6 +49,8 @@ namespace Core.Grains
 
   public class DomGrain : Grain<Dom>, IDomGrain
   {
+    protected static readonly IComparer<long> DescendingComparer = Comparer<long>.Create((x, y) => y.CompareTo(x));
+
     /// <summary>
     /// Messenger
     /// </summary>
@@ -95,7 +97,12 @@ namespace Core.Grains
       if (dom is not null)
       {
         orderIndex.Clear();
-        State = dom;
+
+        State = new()
+        {
+          Asks = new(dom.Asks ?? []),
+          Bids = new(dom.Bids ?? [], DescendingComparer)
+        };
       }
 
       return Task.FromResult(new StatusResponse
@@ -175,19 +182,19 @@ namespace Core.Grains
         return response;
       }
 
-      var prices = side.GetValueOrDefault(price.Value);
-
-      if (prices is null)
-      {
-        side[price.Value] = prices = new LinkedList<DomOrder>();
-      }
-
       if (domOrder is not null)
       {
         await RemoveOrder(domOrder);
       }
 
-      orderIndex[order.Id] = prices.AddLast(mergeOrder);
+      var chain = side.GetValueOrDefault(price.Value);
+
+      if (chain is null)
+      {
+        side[price.Value] = chain = new LinkedList<DomOrder>();
+      }
+
+      orderIndex[order.Id] = chain.AddLast(mergeOrder);
 
       return response;
     }
@@ -224,12 +231,13 @@ namespace Core.Grains
 
       if (node.List is not null)
       {
-        node.List.Remove(node);
-
+        var chain = node.List;
         var side = Side(domOrder.Side);
         var price = Price(domOrder.Price);
 
-        if (node.List.Count is 0 && price.HasValue && side is not null)
+        chain.Remove(node);
+
+        if (chain.Count is 0 && price.HasValue && side is not null)
         {
           side.Remove(price.Value);
         }
