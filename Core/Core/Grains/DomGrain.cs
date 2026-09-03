@@ -266,10 +266,10 @@ namespace Core.Grains
         {
           Last = order.Price,
           Volume = order.Size,
-          Bid = bids.FirstOrDefault()?.Price,
-          Ask = asks.FirstOrDefault()?.Price,
-          BidSize = bids.Sum(o => o.Size),
-          AskSize = asks.Sum(o => o.Size),
+          Bid = bids?.First?.Value.Price,
+          Ask = asks?.First?.Value.Price,
+          BidSize = bids?.Sum(o => o.Size) ?? 0,
+          AskSize = asks?.Sum(o => o.Size) ?? 0
         }
       };
 

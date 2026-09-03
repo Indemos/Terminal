@@ -95,17 +95,13 @@ namespace Simulation.Grains
 
         if (summaryOrder is not null)
         {
-          switch (summaryOrder.Action is DomAction.Trade)
-          {
-            case true:
-              var instrumentResponse = await domGrain.Trade(summaryOrder);
-              summaryInstrument = instrumentResponse.Data;
-              break;
+          var orderResponse = await domGrain.SendOrder(summaryOrder);
+          summaryOrder = orderResponse.Data;
 
-            case false:
-              var orderResponse = await domGrain.SendOrder(summaryOrder);
-              summaryOrder = orderResponse.Data;
-              break;
+          if (summaryOrder.Action is DomAction.Trade)
+          {
+            var instrumentResponse = await domGrain.Trade(summaryOrder);
+            summaryInstrument = instrumentResponse.Data;
           }
         }
 
