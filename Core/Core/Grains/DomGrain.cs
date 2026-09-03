@@ -4,6 +4,7 @@ using Orleans;
 using Orleans.Streams;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,7 +28,7 @@ namespace Core.Grains
     /// Update DOM with order
     /// </summary>
     /// <param name="order"></param>
-    Task<StatusResponse> SendOrder(DomOrder order);
+    Task<DomOrderResponse> SendOrder(DomOrder order);
 
     /// <summary>
     /// Remove order from the book
@@ -40,6 +41,12 @@ namespace Core.Grains
     /// </summary>
     /// <param name="order"></param>
     Task<DomOrderResponse> StoreOrder(DomOrder order);
+
+    /// <summary>
+    /// Combine trade order with the book
+    /// </summary>
+    /// <param name="order"></param>
+    Task<InstrumentResponse> Trade(DomOrder order);
 
     /// <summary>
     /// Clear state
@@ -115,7 +122,7 @@ namespace Core.Grains
     /// Update DOM with order
     /// </summary>
     /// <param name="order"></param>
-    public virtual async Task<StatusResponse> SendOrder(DomOrder order)
+    public virtual async Task<DomOrderResponse> SendOrder(DomOrder order)
     {
       switch (order.Action)
       {
@@ -127,7 +134,7 @@ namespace Core.Grains
 
       return new()
       {
-        Data = StatusEnum.Active
+        Data = order
       };
     }
 
@@ -147,9 +154,9 @@ namespace Core.Grains
       orderIndex.TryGetValue(order.Id, out var node);
 
       var domOrder = node?.Value;
-      var orderPrice = order.Price ?? domOrder?.Price;
       var orderSide = order.Side ?? domOrder?.Side;
       var orderSize = order.Size ?? domOrder?.Size;
+      var orderPrice = order.Price ?? domOrder?.Price;
 
       if (orderSize <= 0)
       {
@@ -203,10 +210,6 @@ namespace Core.Grains
     /// Remove order from the book
     /// </summary>
     /// <param name="order"></param>
-    /// <summary>
-    /// Remove order from the book or partially reduce its size in place.
-    /// </summary>
-    /// <param name="order"></param>
     public virtual Task<DomOrderResponse> RemoveOrder(DomOrder order)
     {
       var response = new DomOrderResponse();
@@ -246,6 +249,34 @@ namespace Core.Grains
       orderIndex.Remove(domOrder.Id);
 
       return Task.FromResult(response);
+    }
+
+    /// <summary>
+    /// Combine trade order with the book
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual Task<InstrumentResponse> Trade(DomOrder order)
+    {
+      var bids = State.Bids.FirstOrDefault().Value;
+      var asks = State.Asks.FirstOrDefault().Value;
+      var instrument = new Instrument
+      {
+        Name = order.Name,
+        Price = new Price
+        {
+          Last = order.Price,
+          Volume = order.Size,
+          Bid = bids.FirstOrDefault()?.Price,
+          Ask = asks.FirstOrDefault()?.Price,
+          BidSize = bids.Sum(o => o.Size),
+          AskSize = asks.Sum(o => o.Size),
+        }
+      };
+
+      return Task.FromResult(new InstrumentResponse
+      {
+        Data = instrument
+      });
     }
 
     /// <summary>

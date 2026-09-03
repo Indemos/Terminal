@@ -20,6 +20,12 @@ namespace Core.Conventions
     void StreamOrder(Order order);
 
     /// <summary>
+    /// DOM order message
+    /// </summary>
+    /// <param name="order"></param>
+    Task StreamDomOrder(DomOrder order);
+
+    /// <summary>
     /// Price message
     /// </summary>
     /// <param name="instrument"></param>
@@ -37,6 +43,11 @@ namespace Core.Conventions
     /// Order message
     /// </summary>
     Action<Order> OnOrder { get; set; }
+
+    /// <summary>
+    /// DOM order message
+    /// </summary>
+    Func<DomOrder, Task> OnDomOrder { get; set; }
 
     /// <summary>
     /// Trade message
@@ -165,6 +176,11 @@ namespace Core.Conventions
     public virtual Action<Order> OnOrder { get; set; } = o => { };
 
     /// <summary>
+    /// DOM order message
+    /// </summary>
+    public virtual Func<DomOrder, Task> OnDomOrder { get; set; } = o => Task.CompletedTask;
+
+    /// <summary>
     /// Trade message
     /// </summary>
     public virtual Func<Instrument, Task> OnInstrument { get; set; } = o => Task.CompletedTask;
@@ -173,7 +189,13 @@ namespace Core.Conventions
     /// Order message
     /// </summary>
     /// <param name="order"></param>
-    public virtual void StreamOrder(Order order) => OnOrder(order); 
+    public virtual void StreamOrder(Order order) => OnOrder(order);
+
+    /// <summary>
+    /// DOM order message
+    /// </summary>
+    /// <param name="order"></param>
+    public virtual Task StreamDomOrder(DomOrder order) => OnDomOrder(order);
 
     /// <summary>
     /// Price message

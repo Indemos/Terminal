@@ -64,22 +64,49 @@ namespace Tests
     }
 
     [Fact]
-    public async Task StoreOrder_UpdateWithSamePriceAndSide_ReplacesOrderInPlace()
+    public async Task StoreOrder_UpdateWithSamePriceAndSide_LargerSize_RemovesAndAddsOrderAtEndOfLevel()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 3, Name = "before" });
+      await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.25, Size = 4, Name = "other" });
       await grain.StoreOrder(new() { Id = "bid-1", Action = DomAction.Update, Size = 5, Name = "after" });
 
       var dom = (await grain.Dom(new())).Data;
       var level = Assert.Single(dom.Bids);
-      var order = Assert.Single(level.Value);
+      var orders = level.Value.ToList();
 
       Assert.Equal(1002500L, level.Key);
-      Assert.Equal(5, order.Size);
-      Assert.Equal(100.25, order.Price);
-      Assert.Equal(DomSide.Bid, order.Side);
-      Assert.Equal("after", order.Name);
+      Assert.Equal(2, orders.Count);
+      Assert.Equal("bid-2", orders[0].Id);
+      Assert.Equal("bid-1", orders[1].Id);
+      Assert.Equal(5, orders[1].Size);
+      Assert.Equal(100.25, orders[1].Price);
+      Assert.Equal(DomSide.Bid, orders[1].Side);
+      Assert.Equal("after", orders[1].Name);
+    }
+
+    [Fact]
+    public async Task StoreOrder_UpdateWithSamePriceAndSide_SmallerSize_UpdatesOrderInPlace()
+    {
+      var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+
+      await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 5, Name = "before" });
+      await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.25, Size = 4, Name = "other" });
+      await grain.StoreOrder(new() { Id = "bid-1", Action = DomAction.Update, Size = 3, Name = "after" });
+
+      var dom = (await grain.Dom(new())).Data;
+      var level = Assert.Single(dom.Bids);
+      var orders = level.Value.ToList();
+
+      Assert.Equal(1002500L, level.Key);
+      Assert.Equal(2, orders.Count);
+      Assert.Equal("bid-1", orders[0].Id);
+      Assert.Equal("bid-2", orders[1].Id);
+      Assert.Equal(3, orders[0].Size);
+      Assert.Equal(100.25, orders[0].Price);
+      Assert.Equal(DomSide.Bid, orders[0].Side);
+      Assert.Equal("after", orders[0].Name);
     }
 
     [Fact]

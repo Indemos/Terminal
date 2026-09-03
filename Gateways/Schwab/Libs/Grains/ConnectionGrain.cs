@@ -136,7 +136,7 @@ namespace Schwab.Grains
           Price = MapPrice(o)
         });
 
-        await observer.StreamInstrument(group);
+        await observer.StreamInstrument(group.Data);
       });
 
       await connector.SubscribeToDom(instrument.Name, MapDomSubType(instrument), async o =>

@@ -44,7 +44,7 @@ namespace Tests
         .GetGrain<IInstrumentGrain>(Descriptor);
 
       var response = await grain.Send(Instrument with { Price = new() { Last = 100.0 } });
-      var price = response.Price;
+      var price = response.Data.Price;
 
       Assert.Null(price.Time);
       Assert.Null(price.Bar.Time);
@@ -69,7 +69,7 @@ namespace Tests
       await grain.Send(Instrument with { Price = new() { Last = 100.0, Time = 1 } });
 
       var response = await grain.Send(Instrument with { Price = new() { Time = 1 } });
-      var price = response.Price;
+      var price = response.Data.Price;
 
       Assert.Equal(1, price.Time);
       Assert.Equal(1, price.Bar.Time);
@@ -112,7 +112,7 @@ namespace Tests
       await grain.Send(Instrument with { TimeFrame = span, Price = new() { Time = 1, Last = 150 } });
 
       var response = await grain.Send(Instrument with { TimeFrame = span, Price = new() { Time = 1, Last = 70 } });
-      var price = response.Price;
+      var price = response.Data.Price;
 
       Assert.Equal(1, price.Time);
       Assert.Equal(0, price.Bar.Time);
@@ -151,14 +151,14 @@ namespace Tests
       await grain.Send(Instrument with { Price = new() { Time = 1, Last = 200 } });
       await grain.Send(Instrument with { Price = new() { Time = 1, Last = 150 } });
 
-      Assert.Equal(10.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 10 } })).Price.Bar.Low);
-      Assert.Equal(250.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 250 } })).Price.Bar.High);
-      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Bid = 15 } })).Price.Bid);
-      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Ask = 25 } })).Price.Ask);
-      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, BidSize = 15 } })).Price.BidSize);
-      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, AskSize = 25 } })).Price.AskSize);
-      Assert.Equal(2, (await grain.Send(Instrument with { Price = new() { Time = 2, Last = 15 } })).Price.Bar.Time);
-      Assert.Equal(35, (await grain.Send(Instrument with { Price = new() { Time = 3, Last = 35 } })).Price.Bar.Open);
+      Assert.Equal(10.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 10 } })).Data.Price.Bar.Low);
+      Assert.Equal(250.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Last = 250 } })).Data.Price.Bar.High);
+      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Bid = 15 } })).Data.Price.Bid);
+      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, Ask = 25 } })).Data.Price.Ask);
+      Assert.Equal(15.0, (await grain.Send(Instrument with { Price = new() { Time = 1, BidSize = 15 } })).Data.Price.BidSize);
+      Assert.Equal(25.0, (await grain.Send(Instrument with { Price = new() { Time = 1, AskSize = 25 } })).Data.Price.AskSize);
+      Assert.Equal(2, (await grain.Send(Instrument with { Price = new() { Time = 2, Last = 15 } })).Data.Price.Bar.Time);
+      Assert.Equal(35, (await grain.Send(Instrument with { Price = new() { Time = 3, Last = 35 } })).Data.Price.Bar.Open);
     }
 
     [Fact]
@@ -229,7 +229,8 @@ namespace Tests
       };
 
       // Act
-      var result = await grain.Send(instrument);
+      var response = await grain.Send(instrument);
+      var result = response.Data;
 
       // Assert
       Assert.NotNull(result);
@@ -565,7 +566,7 @@ namespace Tests
       });
 
       // Assert
-      Assert.NotNull(result.Price.Bar.Time);
+      Assert.NotNull(result.Data.Price.Bar.Time);
       // The bar time should be rounded based on the timeframe
     }
 
@@ -621,10 +622,11 @@ namespace Tests
         .GetGrain<IInstrumentGrain>(Descriptor);
 
       // Act - First price with no previous state
-      var result = await grain.Send(Instrument with
+      var response = await grain.Send(Instrument with
       {
         Price = new() { Last = 100.0, Time = 1 }
       });
+      var result = response.Data;
 
       // Assert
       Assert.Equal(100.0, result.Price.Last);
@@ -715,7 +717,7 @@ namespace Tests
         .GetGrain<IInstrumentGrain>(Descriptor);
 
       // Act
-      var result = await grain.Send(Instrument with
+      var response = await grain.Send(Instrument with
       {
         Name = "TEST",
         Price = new()
@@ -729,6 +731,7 @@ namespace Tests
           Time = 123456789
         }
       });
+      var result = response.Data;
 
       // Assert
       Assert.Equal("TEST", result.Name);

@@ -21,7 +21,7 @@ namespace Core.Grains
     /// Store instrument
     /// </summary>
     /// <param name="instrument"></param>
-    Task<Instrument> Send(Instrument instrument);
+    Task<InstrumentResponse> Send(Instrument instrument);
 
     /// <summary>
     /// List of prices by criteria
@@ -88,7 +88,7 @@ namespace Core.Grains
     /// Add price to the list
     /// </summary>
     /// <param name="instrument"></param>
-    public virtual Task<Instrument> Send(Instrument instrument)
+    public virtual Task<InstrumentResponse> Send(Instrument instrument)
     {
       var nextPrice = instrument.Price;
       var currentPrice = State.ItemGroups.LastOrDefault() ?? new Price();
@@ -103,7 +103,10 @@ namespace Core.Grains
       State.ItemGroups[^1] = price;
       State = State with { Instrument = instrument with { Price = price } };
 
-      return Task.FromResult(State.Instrument);
+      return Task.FromResult(new InstrumentResponse
+      {
+        Data = State.Instrument
+      });
     }
 
     /// <summary>

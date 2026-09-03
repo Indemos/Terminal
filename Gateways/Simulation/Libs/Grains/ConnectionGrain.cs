@@ -90,17 +90,37 @@ namespace Simulation.Grains
         var positionsGrain = GrainFactory.GetGrain<ISimPositionsGrain>(descriptor);
 
         var summary = stream.Current;
+        var summaryOrder = summary.Order;
+        var summaryInstrument = summary.Instrument;
+
+        if (summaryOrder is not null)
+        {
+          switch (summaryOrder.Action is DomAction.Trade)
+          {
+            case true:
+              var instrumentResponse = await domGrain.Trade(summaryOrder);
+              summaryInstrument = instrumentResponse.Data;
+              break;
+
+            case false:
+              var orderResponse = await domGrain.SendOrder(summaryOrder);
+              summaryOrder = orderResponse.Data;
+              break;
+          }
+        }
+
         var orders = await ordersGrain.Orders(default);
         var positions = await positionsGrain.Positions(default);
         var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
         var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
         var optionsMap = summary.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-
-        var group = await instrumentGrain.Send(summary.Instrument with
+        var groupResponse = await instrumentGrain.Send(summaryInstrument with
         {
           Name = instrument.Name,
           TimeFrame = instrument.TimeFrame
         });
+
+        var group = groupResponse.Data;
 
         await domGrain.Store(summary.Dom);
         await optionsGrain.Store(summary.Options);
@@ -113,6 +133,7 @@ namespace Simulation.Grains
           await positionsGrain.Tap(option);
         }
 
+        await observer.StreamDomOrder(summaryOrder);
         await observer.StreamInstrument(group);
 
         if (stream.MoveNext())

@@ -168,7 +168,7 @@ namespace Topstep.Grains
           Price = MapPrice(o)
         });
 
-        await observer.StreamInstrument(group);
+        await observer.StreamInstrument(group.Data);
       };
 
       await instrumentConnection.StartAsync();

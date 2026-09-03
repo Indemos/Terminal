@@ -107,7 +107,7 @@ namespace Tradier.Grains
           Price = MapPrice(o)
         });
 
-        await observer.StreamInstrument(group);
+        await observer.StreamInstrument(group.Data);
       };
 
       await connector.Subscribe(instrument.Name);
