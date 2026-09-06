@@ -40,6 +40,11 @@ namespace Core.Models
     public double? Price { get; init; }
 
     /// <summary>
+    /// Time stamp
+    /// </summary>
+    public long? Time { get; init; }
+
+    /// <summary>
     /// Side
     /// </summary>
     public DomSide? Side { get; init; }

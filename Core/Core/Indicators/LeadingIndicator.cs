@@ -7,7 +7,7 @@ namespace Core.Indicators
   /// Evaluates asynchronous cross-correlation across a grid of physical time shifts 
   /// to determine true lead-lag without liquidity/tick-frequency bias.
   /// </summary>
-  public class HyIndicator
+  public class LeadingIndicator
   {
     protected struct Interval
     {
@@ -43,7 +43,7 @@ namespace Core.Indicators
     /// <summary>Unshifted contemporaneous correlation (Delta t = 0).</summary>
     public double CurrentCorrelation { get; protected set; }
 
-    public HyIndicator(long timeWindow, long maxLag, long step, int capacity = 1024)
+    public LeadingIndicator(long timeWindow, long maxLag, long step, int capacity = 1024)
     {
       MaxLag = maxLag;
       Frame = timeWindow;
@@ -179,14 +179,14 @@ namespace Core.Indicators
     {
       if (count == group.Length)
       {
-        var newBuf = new Interval[group.Length * 2];
+        var copy = new Interval[group.Length * 2];
 
         for (int i = 0; i < count; i++)
         {
-          newBuf[i] = group[(max + i) % group.Length];
+          copy[i] = group[(max + i) % group.Length];
         }
 
-        group = newBuf;
+        group = copy;
         min = count;
         max = 0;
       }

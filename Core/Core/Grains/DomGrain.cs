@@ -264,6 +264,7 @@ namespace Core.Grains
         Name = order.Name,
         Price = new Price
         {
+          Time = order.Time,
           Last = order.Price,
           Volume = order.Size,
           Bid = bids?.First?.Value.Price,

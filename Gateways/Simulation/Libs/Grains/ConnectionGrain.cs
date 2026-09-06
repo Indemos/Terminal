@@ -105,32 +105,36 @@ namespace Simulation.Grains
           }
         }
 
-        var orders = await ordersGrain.Orders(default);
-        var positions = await positionsGrain.Positions(default);
-        var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
-        var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
-        var optionsMap = summary.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-        var groupResponse = await instrumentGrain.Send(summaryInstrument with
+        if (summaryInstrument is not null)
         {
-          Name = instrument.Name,
-          TimeFrame = instrument.TimeFrame
-        });
+          var orders = await ordersGrain.Orders(default);
+          var positions = await positionsGrain.Positions(default);
+          var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
+          var optionsMap = summary.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
+          var groupResponse = await instrumentGrain.Send(summaryInstrument with
+          {
+            Name = instrument.Name,
+            TimeFrame = instrument.TimeFrame
+          });
 
-        var group = groupResponse.Data;
+          var group = groupResponse.Data;
 
-        await domGrain.Store(summary.Dom);
-        await optionsGrain.Store(summary.Options);
-        await ordersGrain.Tap(group);
-        await positionsGrain.Tap(group);
+          await domGrain.Store(summary.Dom);
+          await optionsGrain.Store(summary.Options);
+          await ordersGrain.Tap(group);
+          await positionsGrain.Tap(group);
 
-        foreach (var option in optionsMap)
-        {
-          await ordersGrain.Tap(option);
-          await positionsGrain.Tap(option);
+          foreach (var option in optionsMap)
+          {
+            await ordersGrain.Tap(option);
+            await positionsGrain.Tap(option);
+          }
+
+          await observer.StreamInstrument(group);
         }
 
         await observer.StreamDomOrder(summaryOrder);
-        await observer.StreamInstrument(group);
 
         if (stream.MoveNext())
         {
