@@ -39,7 +39,7 @@ namespace Dashboard.Pages.Futures
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
     VarianceIndicator Variance { get; set; }
-    HyIndicator Hy { get; set; }
+    LeadingIndicator Hy { get; set; }
     KmaIndicator HyKma { get; set; }
     VarianceIndicator NormVariance { get; set; }
     CrossCorrelationIndicator Correlation { get; set; }
@@ -94,7 +94,7 @@ namespace Dashboard.Pages.Futures
       };
 
       Spreads = [];
-      Hy = new(TimeSpan.FromSeconds(60).Ticks, TimeSpan.FromSeconds(30).Ticks, TimeSpan.FromSeconds(10).Ticks);
+      Hy = new(TimeSpan.FromSeconds(60).Ticks, TimeSpan.FromSeconds(30).Ticks, TimeSpan.FromMilliseconds(100).Ticks);
       HyKma = new();
       Ratio = new(100);
       Variance = new();
