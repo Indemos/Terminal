@@ -100,15 +100,6 @@ namespace Dashboard.Components
     }
 
     /// <summary>
-    /// Value to shape
-    /// </summary>
-    /// <param name="value"></param>
-    public virtual IShape GetShape<T>(double? value, SKColor? color = null) where T : IShape, new()
-    {
-      return GetShape<T>(new Price { Last = value }, color);
-    }
-
-    /// <summary>
     /// Point to shape
     /// </summary>
     /// <param name="price"></param>

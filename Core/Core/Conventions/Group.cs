@@ -13,8 +13,8 @@ namespace Core.Groups
     /// <summary>
     /// Combine price into bar
     /// </summary>
-    /// <param name="instrument"
-    Instrument Send(Instrument instrument);
+    /// <param name="price"></param>
+    Price Update(Price price);
   }
 
   public abstract class Group : IGroup
@@ -27,7 +27,7 @@ namespace Core.Groups
     /// <summary>
     /// Combine
     /// </summary>
-    /// <param name="instrument"></param>
-    public abstract Instrument Send(Instrument instrument);
+    /// <param name="price"></param>
+    public abstract Price Update(Price price);
   }
 }

@@ -35,7 +35,10 @@ public class AtrIndicator
   /// <param name="price"></param>
   public virtual double Update(long stamp, Price price)
   {
-    if (price.Bar.Low is not double L || price.Bar.High is not double H || price.Bar.Close is not double C)
+    if (price.Bar is null ||
+        price.Bar.Low is not double L ||
+        price.Bar.High is not double H ||
+        price.Bar.Close is not double C)
     {
       return atr;
     }
@@ -81,7 +84,6 @@ public class AtrIndicator
   protected double UpdateRange(double H, double L, double C, bool isReplace)
   {
     var response = 0.0;
-    // TrueRange: first bar high-low, else max of high-low, high-prevClose, low-prevClose
     var tr = previousClose is null ? H - L : Math.Max(H - L, Math.Max(
       Math.Abs(H - previousClose.Value),
       Math.Abs(L - previousClose.Value)));
@@ -99,7 +101,7 @@ public class AtrIndicator
     }
     else
     {
-      // Wilder formula: (prevClosed*(n-1) + TR) / n
+      // Wilder formula: (prevClosed * (n - 1) + TR) / n
       response = (previousAtr * (Period - 1) + tr) / Period;
     }
 

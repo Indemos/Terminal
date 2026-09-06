@@ -5,7 +5,7 @@ using System.Linq;
 
 namespace Core.Groups
 {
-  public abstract class TimeGroup : Group, IGroup
+  public class TimeGroup : Group, IGroup
   {
     /// <summary>
     /// Time frame for grouping prices
@@ -15,12 +15,11 @@ namespace Core.Groups
     /// <summary>
     /// Add price to the list
     /// </summary>
-    /// <param name="instrument"></param>
-    public override Instrument Send(Instrument instrument)
+    /// <param name="nextPrice"></param>
+    public override Price Update(Price nextPrice)
     {
-      var nextPrice = instrument.Price;
       var currentPrice = Items.LastOrDefault() ?? new Price();
-      var (price, expansion) = Combine(currentPrice, nextPrice);
+      var (price, expansion) = Group(currentPrice, nextPrice);
 
       if (expansion || Items.Count is 0)
       {
@@ -29,7 +28,7 @@ namespace Core.Groups
 
       Items[^1] = price;
 
-      return instrument with { Price = price };
+      return price;
     }
 
     /// <summary>
@@ -38,7 +37,7 @@ namespace Core.Groups
     /// <param name="currentPrice"></param>
     /// <param name="nextPrice"></param>
     /// <param name="span"></param>
-    protected virtual (Price, bool) Combine(Price currentPrice, Price nextPrice)
+    protected virtual (Price, bool) Group(Price currentPrice, Price nextPrice)
     {
       var nextTime = nextPrice.Time;
       var currentTime = currentPrice?.Bar?.Time ?? DateTime.MinValue.Ticks;

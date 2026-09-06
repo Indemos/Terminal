@@ -13,19 +13,6 @@ using System.Threading.Tasks;
 
 namespace Dashboard.Pages.Futures
 {
-  public class Indexer : List<(long, double)>
-  {
-    public new void Add((long, double) item)
-    {
-      if (Count is 0 || item.Item1 > this[^1].Item1)
-      {
-        base.Add(item);
-      }
-
-      this[^1] = item;
-    }
-  }
-
   public partial class Covariance
   {
     RatioService Ratio { get; set; }
@@ -46,7 +33,6 @@ namespace Dashboard.Pages.Futures
     Dictionary<string, VwapIndicator> Vwaps { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
     Dictionary<string, ScaleIndicator> VwapScales { get; set; }
-    Indexer Spreads { get; set; }
 
     int Direction { get; set; } = 0;
     Price PriceX { get; set; }
@@ -93,7 +79,6 @@ namespace Dashboard.Pages.Futures
         }
       };
 
-      Spreads = [];
       Hy = new(TimeSpan.FromSeconds(60).Ticks, TimeSpan.FromSeconds(30).Ticks, TimeSpan.FromMilliseconds(100).Ticks);
       HyKma = new();
       Ratio = new(100);
@@ -147,7 +132,7 @@ namespace Dashboard.Pages.Futures
       IndicatorsView.Update(index, nameof(IndicatorsView), "X", new LineShape { Y = scaleX, Component = ComUp });
       IndicatorsView.Update(index, nameof(IndicatorsView), "Y", new LineShape { Y = scaleY, Component = ComDown });
       PerformanceView.Update(index, nameof(PerformanceView), "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(index, nameof(PerformanceView), "PnL", PerformanceView.GetShape<LineShape>(performance, SKColors.OrangeRed));
+      PerformanceView.Update(index, nameof(PerformanceView), "PnL", new LineShape { Y = performance, Component = ComDown });
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)

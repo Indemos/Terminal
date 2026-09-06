@@ -4,7 +4,6 @@ using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
 using Schwab;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -71,7 +70,7 @@ namespace Dashboard.Pages.Gateways
       TransactionsView.Update(Adapters.Values);
       DataView.Update(price.Bar.Time.Value, "Prices", "Bars", DataView.GetShape<CandleShape>(price));
       PerformanceView.Update(price.Time.Value, "Performance", "Balance", new AreaShape { Y = account.Balance + account.Performance });
-      PerformanceView.Update(price.Time.Value, "Performance", "PnL", PerformanceView.GetShape<LineShape>(performance, SKColors.OrangeRed));
+      PerformanceView.Update(price.Time.Value, "Performance", "PnL", new LineShape { Y = performance, Component = ComDown });
     }
 
     protected override async Task OnTradeUpdate(Instrument instrument)
