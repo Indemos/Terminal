@@ -27,7 +27,7 @@ namespace Dashboard.Pages.Options
     PerformanceIndicator Performance { get; set; }
     Dictionary<string, Instrument> Instruments => new()
     {
-      ["SPY"] = new Instrument { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) }
+      ["SPY"] = new Instrument { Name = "SPY" }
     };
 
     protected override async Task OnView()

@@ -35,7 +35,7 @@ namespace Dashboard.Pages.Options
     OptionPriceService PriceService { get; set; } = new(RiskRate, DivRate, IV);
     Dictionary<string, Instrument> Instruments => new()
     {
-      ["SPY"] = new Instrument { Name = "SPY", TimeFrame = TimeSpan.FromMinutes(1) }
+      ["SPY"] = new Instrument { Name = "SPY" }
     };
 
     DateTime CurDate(Price point)

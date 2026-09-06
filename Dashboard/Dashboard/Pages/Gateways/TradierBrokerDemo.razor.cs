@@ -28,7 +28,6 @@ namespace Dashboard.Pages.Gateways
       {
         Name = "SPY",
         Type = InstrumentEnum.Shares,
-        TimeFrame = TimeSpan.FromMinutes(1)
       }
     };
 

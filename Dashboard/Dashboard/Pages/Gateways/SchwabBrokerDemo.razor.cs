@@ -29,7 +29,6 @@ namespace Dashboard.Pages.Gateways
         Name = "/ESH26",
         Exchange = "CME",
         Type = InstrumentEnum.Futures,
-        TimeFrame = TimeSpan.FromMinutes(1),
         Basis = new Instrument { Name = "ES" }
       }
     };

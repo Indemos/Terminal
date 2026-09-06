@@ -1,5 +1,4 @@
 using Core.Enums;
-using System;
 
 namespace Core.Models
 {
@@ -44,11 +43,6 @@ namespace Core.Models
     /// Price change within one tick
     /// </summary>
     public double? StepValue { get; init; } = 0.01;
-
-    /// <summary>
-    /// Aggregation period for the quotes
-    /// </summary>
-    public TimeSpan? TimeFrame { get; init; }
 
     /// <summary>
     /// Instrument type

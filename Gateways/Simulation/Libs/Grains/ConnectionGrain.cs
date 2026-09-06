@@ -112,12 +112,7 @@ namespace Simulation.Grains
           var ordersMap = orders.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var positionsMap = positions.Data.GroupBy(o => o.Operation.Instrument.Name).ToDictionary(o => o.Key);
           var optionsMap = summary.Options.Where(o => ordersMap.ContainsKey(o.Name) || positionsMap.ContainsKey(o.Name));
-          var groupResponse = await instrumentGrain.Send(summaryInstrument with
-          {
-            Name = instrument.Name,
-            TimeFrame = instrument.TimeFrame
-          });
-
+          var groupResponse = await instrumentGrain.Send(summaryInstrument with { Name = instrument.Name });
           var group = groupResponse.Data;
 
           await domGrain.Store(summary.Dom);

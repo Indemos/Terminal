@@ -13,10 +13,5 @@ namespace Core.Models
     /// Ticks
     /// </summary>
     public List<Price> Items { get; init; } = [];
-
-    /// <summary>
-    /// Ticks aggregated into bars
-    /// </summary>
-    public List<Price> ItemGroups { get; init; } = [];
   }
 }

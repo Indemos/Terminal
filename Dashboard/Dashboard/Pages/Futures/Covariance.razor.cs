@@ -121,7 +121,7 @@ namespace Dashboard.Pages.Futures
       var adapter = Adapter;
       var account = adapter.Account;
       var price = instrument.Price;
-      var index = price.Bar.Time.Value;
+      var index = price.Time.Value;
 
       if (PriceX is null || PriceY is null)
       {
@@ -129,7 +129,6 @@ namespace Dashboard.Pages.Futures
       }
 
       var performance = await Performance.Update([adapter]);
-      //var hykma = HyKma.Update(Hy.LeadBias);
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);

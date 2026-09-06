@@ -18,7 +18,8 @@ namespace Core.Indicators
     // Called per tick/bar
     public virtual Price Update(Price point)
     {
-      if (point.Bar.Low is not double L ||
+      if (point.Bar is null ||
+          point.Bar.Low is not double L ||
           point.Bar.High is not double H ||
           point.Bar.Close is not double C ||
           point.Volume is not double volume) return point;

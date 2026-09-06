@@ -29,7 +29,6 @@ namespace Dashboard.Pages.Gateways
         Name = "MES",
         Id = "CON.F.US.MES.U26",
         Type = InstrumentEnum.Futures,
-        TimeFrame = TimeSpan.FromSeconds(1)
       }
     };
 
