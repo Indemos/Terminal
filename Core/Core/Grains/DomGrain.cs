@@ -25,6 +25,12 @@ namespace Core.Grains
     Task<StatusResponse> Store(Dom dom);
 
     /// <summary>
+    /// Update instrument
+    /// </summary>
+    /// <param name="instrument"></param>
+    Task<StatusResponse> StoreInstrument(Instrument instrument);
+
+    /// <summary>
     /// Update DOM with order
     /// </summary>
     /// <param name="order"></param>
@@ -56,7 +62,10 @@ namespace Core.Grains
 
   public class DomGrain : Grain<Dom>, IDomGrain
   {
-    protected static readonly IComparer<long> DescendingComparer = Comparer<long>.Create((x, y) => y.CompareTo(x));
+    /// <summary>
+    /// Instrument
+    /// </summary>
+    protected Instrument instrument;
 
     /// <summary>
     /// Messenger
@@ -101,16 +110,23 @@ namespace Core.Grains
     /// <param name="dom"></param>
     public virtual Task<StatusResponse> Store(Dom dom)
     {
-      if (dom is not null)
-      {
-        orderIndex.Clear();
+      State = dom;
+      orderIndex.Clear();
 
-        State = new()
-        {
-          Asks = new(dom.Asks ?? []),
-          Bids = new(dom.Bids ?? [], DescendingComparer)
-        };
-      }
+      return Task.FromResult(new StatusResponse
+      {
+        Data = StatusEnum.Active
+      });
+    }
+
+    /// <summary>
+    /// Update instrument
+    /// </summary>
+    /// <param name="instrument"></param>
+    /// <returns></returns>
+    public virtual Task<StatusResponse> StoreInstrument(Instrument instrument)
+    {
+      this.instrument = instrument;
 
       return Task.FromResult(new StatusResponse
       {
@@ -318,7 +334,7 @@ namespace Core.Grains
     {
       if (price is not null)
       {
-        return (long)Math.Round(price.Value * 10000);
+        return (long)Math.Round((price / instrument.StepSize).Value);
       }
 
       return null;

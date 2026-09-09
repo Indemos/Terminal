@@ -53,10 +53,13 @@ namespace Simulation.Grains
 
       foreach (var instrument in state.Account.Instruments.Values)
       {
-        var source = Path.Combine(state.Source, $"{instrument.Name}.db");
-        var stream = docs[instrument.Name] = new SimStream(source, instrument.Name);
+        var name = instrument.Name;
+        var instrumentDescriptor = this.GetDescriptor(name);
+        var source = Path.Combine(state.Source, $"{name}.db");
+        var stream = docs[name] = new SimStream(source, name);
 
         await Subscribe(instrument);
+        await GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor).StoreInstrument(instrument);
       }
 
       connections.Add(this.RegisterGrainTimer(o => Process(), 0, TimeSpan.Zero, TimeSpan.FromMicroseconds(1)));
@@ -105,6 +108,16 @@ namespace Simulation.Grains
           }
         }
 
+        if (summary.Dom is not null)
+        {
+          await domGrain.Store(summary.Dom);
+        }
+
+        if (summary.Options is not null)
+        {
+          await optionsGrain.Store(summary.Options);
+        }
+
         if (summaryInstrument is not null)
         {
           var orders = await ordersGrain.Orders(default);
@@ -115,8 +128,6 @@ namespace Simulation.Grains
           var groupResponse = await instrumentGrain.Send(summaryInstrument with { Name = instrument.Name });
           var group = groupResponse.Data;
 
-          await domGrain.Store(summary.Dom);
-          await optionsGrain.Store(summary.Options);
           await ordersGrain.Tap(group);
           await positionsGrain.Tap(group);
 

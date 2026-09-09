@@ -1,5 +1,6 @@
 using Core.Enums;
 using Core.Grains;
+using Core.Models;
 using Orleans.TestingHost;
 using System;
 using System.Linq;
@@ -29,10 +30,13 @@ namespace Tests
       _cluster.StopAllSilos();
     }
 
+    private static Task SeedInstrument(IDomGrain grain) => grain.StoreInstrument(new Instrument { StepSize = 0.01 });
+
     [Fact]
     public async Task StoreOrder_AddsBidAndAskOrders_ToExpectedSidesAndLevels()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 3 });
       await grain.StoreOrder(new() { Id = "ask-1", Side = DomSide.Ask, Price = 100.50, Size = 2 });
@@ -41,8 +45,8 @@ namespace Tests
 
       Assert.Single(dom.Bids);
       Assert.Single(dom.Asks);
-      Assert.Equal(1002500L, dom.Bids.Single().Key);
-      Assert.Equal(1005000L, dom.Asks.Single().Key);
+      Assert.Equal(10025L, dom.Bids.Single().Key);
+      Assert.Equal(10050L, dom.Asks.Single().Key);
       Assert.Equal(3, dom.Bids.Single().Value.Single().Size);
       Assert.Equal(2, dom.Asks.Single().Value.Single().Size);
     }
@@ -51,6 +55,7 @@ namespace Tests
     public async Task StoreOrder_MultipleOrdersSameLevel_PreservesInsertionOrder()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 1, Index = 1 });
       await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.25, Size = 2, Index = 2 });
@@ -67,6 +72,7 @@ namespace Tests
     public async Task StoreOrder_UpdateWithSamePriceAndSide_LargerSize_RemovesAndAddsOrderAtEndOfLevel()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 3, Name = "before" });
       await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.25, Size = 4, Name = "other" });
@@ -76,7 +82,7 @@ namespace Tests
       var level = Assert.Single(dom.Bids);
       var orders = level.Value.ToList();
 
-      Assert.Equal(1002500L, level.Key);
+      Assert.Equal(10025L, level.Key);
       Assert.Equal(2, orders.Count);
       Assert.Equal("bid-2", orders[0].Id);
       Assert.Equal("bid-1", orders[1].Id);
@@ -90,6 +96,7 @@ namespace Tests
     public async Task StoreOrder_UpdateWithSamePriceAndSide_SmallerSize_UpdatesOrderInPlace()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 5, Name = "before" });
       await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.25, Size = 4, Name = "other" });
@@ -99,7 +106,7 @@ namespace Tests
       var level = Assert.Single(dom.Bids);
       var orders = level.Value.ToList();
 
-      Assert.Equal(1002500L, level.Key);
+      Assert.Equal(10025L, level.Key);
       Assert.Equal(2, orders.Count);
       Assert.Equal("bid-1", orders[0].Id);
       Assert.Equal("bid-2", orders[1].Id);
@@ -113,6 +120,7 @@ namespace Tests
     public async Task StoreOrder_UpdateToDifferentPrice_MovesOrderToNewLevel()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "ask-1", Side = DomSide.Ask, Price = 100.50, Size = 2 });
       await grain.StoreOrder(new() { Id = "ask-1", Action = DomAction.Update, Price = 100.75, Size = 2 });
@@ -122,7 +130,7 @@ namespace Tests
       var order = Assert.Single(level.Value);
 
       Assert.Equal(100.75, order.Price);
-      Assert.Equal(1007500L, dom.Asks.Single().Key);
+      Assert.Equal(10075L, dom.Asks.Single().Key);
       Assert.Equal("ask-1", dom.Asks.Single().Value.Single().Id);
     }
 
@@ -130,6 +138,7 @@ namespace Tests
     public async Task RemoveOrder_WithPartialSize_ReducesExistingOrder()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 5 });
       await grain.RemoveOrder(new() { Id = "bid-1", Size = 2 });
@@ -140,13 +149,14 @@ namespace Tests
 
       Assert.Equal(3, order.Size);
       Assert.Equal(100.25, order.Price);
-      Assert.Equal(1002500L, dom.Bids.Single().Key);
+      Assert.Equal(10025L, dom.Bids.Single().Key);
     }
 
     [Fact]
     public async Task RemoveOrder_RemovesLastOrder_DeletesPriceLevel()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "ask-1", Side = DomSide.Ask, Price = 100.50, Size = 2 });
       await grain.RemoveOrder(new() { Id = "ask-1" });
@@ -160,6 +170,7 @@ namespace Tests
     public async Task SendOrder_Clear_RemovesAllBookState()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 3 });
       await grain.StoreOrder(new() { Id = "ask-1", Side = DomSide.Ask, Price = 100.50, Size = 2 });
@@ -175,6 +186,7 @@ namespace Tests
     public async Task ReconstructingBook_ContainsExpectedBidAndAskLevels()
     {
       var grain = _cluster.GrainFactory.GetGrain<IDomGrain>(Descriptor);
+      await SeedInstrument(grain);
 
       await grain.StoreOrder(new() { Id = "bid-1", Side = DomSide.Bid, Price = 100.25, Size = 1 });
       await grain.StoreOrder(new() { Id = "bid-2", Side = DomSide.Bid, Price = 100.50, Size = 1 });
@@ -183,10 +195,10 @@ namespace Tests
 
       var dom = (await grain.Dom(new())).Data;
 
-      Assert.Equal([1002500L, 1005000L], [.. dom.Bids.Keys.OrderBy(o => o)]);
-      Assert.Equal([1007500L, 1010000L], [.. dom.Asks.Keys.OrderBy(o => o)]);
-      Assert.Equal(1005000L, dom.Bids.Keys.Max());
-      Assert.Equal(1007500L, dom.Asks.Keys.Min());
+      Assert.Equal([10025L, 10050L], [.. dom.Bids.Keys.OrderBy(o => o)]);
+      Assert.Equal([10075L, 10100L], [.. dom.Asks.Keys.OrderBy(o => o)]);
+      Assert.Equal(10050L, dom.Bids.Keys.Max());
+      Assert.Equal(10075L, dom.Asks.Keys.Min());
     }
   }
 }
