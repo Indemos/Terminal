@@ -36,7 +36,6 @@ namespace Core.Groups
     /// </summary>
     /// <param name="currentPrice"></param>
     /// <param name="nextPrice"></param>
-    /// <param name="span"></param>
     protected virtual (Price, bool) Group(Price currentPrice, Price nextPrice)
     {
       var nextTime = nextPrice.Time;

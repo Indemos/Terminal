@@ -12,7 +12,7 @@ namespace Core.Groups
     public virtual double Close { get; protected set; }
     public virtual double Price { get; protected set; }
 
-    protected virtual Price Last => Items.LastOrDefault() ?? new Price();
+    protected virtual Price Last => Items.LastOrDefault() ?? null;
 
     protected bool setup;
 
@@ -25,7 +25,7 @@ namespace Core.Groups
     {
       var price = nextPrice?.Last ?? nextPrice?.Bid ?? nextPrice?.Ask;
 
-      if (price is null || Size <= 0 || double.IsFinite(price.Value) is false)
+      if (price is null)
       {
         return Last;
       }

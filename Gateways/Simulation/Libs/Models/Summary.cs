@@ -6,6 +6,11 @@ namespace Simulation.Models
   public record Summary
   {
     /// <summary>
+    /// ID
+    /// </summary>
+    public int Id { get; init; }
+
+    /// <summary>
     /// Depth of market
     /// </summary>
     public long Time { get; init; }

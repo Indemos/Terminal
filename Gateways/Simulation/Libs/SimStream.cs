@@ -10,18 +10,18 @@ namespace Simulation
   /// </summary>
   public class SimStream : IDisposable
   {
-    protected readonly LiteDatabase storage;
-    protected readonly IEnumerator<Summary> enumerator;
+    protected LiteDatabase storage;
+    protected IEnumerator<Summary> enumerator;
 
     /// <summary>
     /// Name
     /// </summary>
-    public string Name { get; }
+    public virtual string Name { get; }
 
     /// <summary>
     /// Current position
     /// </summary>
-    public Summary Current => enumerator.Current;
+    public virtual Summary Current => enumerator.Current;
 
     /// <summary>
     /// Constructor
@@ -35,7 +35,7 @@ namespace Simulation
       enumerator = storage
         .GetCollection<Summary>("prices")
         .Query()
-        .OrderBy(o => o.Time)
+        .OrderBy(o => o.Id)
         .ToEnumerable()
         .GetEnumerator();
     }
@@ -44,12 +44,12 @@ namespace Simulation
     /// Iterate
     /// </summary>
     /// <returns></returns>
-    public bool MoveNext() => enumerator.MoveNext();
+    public virtual bool MoveNext() => enumerator.MoveNext();
 
     /// <summary>
     /// Dispose
     /// </summary>
-    public void Dispose()
+    public virtual void Dispose()
     {
       enumerator.Dispose();
       storage.Dispose();

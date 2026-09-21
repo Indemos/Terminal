@@ -3,15 +3,12 @@ using Core.Enums;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
-using Dashboard.Services;
 using Simulation;
-using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
 using System.Threading.Tasks;
-using Lib = QuantLib;
 
 namespace Dashboard.Pages.Options
 {
@@ -32,7 +29,6 @@ namespace Dashboard.Pages.Options
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
-    OptionPriceService PriceService { get; set; } = new(RiskRate, DivRate, IV);
     Dictionary<string, Instrument> Instruments => new()
     {
       ["SPY"] = new Instrument { Name = "SPY" }

@@ -74,14 +74,12 @@ namespace Dashboard.Components
 
       if (setup)
       {
-        Observer.Update += state =>
+        Observer.Update += async state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
-            Clear();
+            await Clear();
           }
-
-          return Task.CompletedTask;
         };
       }
     }
@@ -183,11 +181,12 @@ namespace Dashboard.Components
     /// <summary>
     /// Clear points
     /// </summary>
-    public virtual void Clear()
+    public virtual async Task Clear()
     {
       Shapes.Clear();
       Indices.Clear();
-      View.Update(new Dimension { IndexDomain = [0, 0] }, Shapes);
+
+      await View.Update(new() { IndexDomain = [0, 0] }, Shapes);
     }
 
     /// <summary>

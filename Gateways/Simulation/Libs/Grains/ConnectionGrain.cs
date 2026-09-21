@@ -53,18 +53,60 @@ namespace Simulation.Grains
 
       foreach (var instrument in state.Account.Instruments.Values)
       {
-        var name = instrument.Name;
-        var instrumentDescriptor = this.GetDescriptor(name);
-        var source = Path.Combine(state.Source, $"{name}.db");
-        var stream = docs[name] = new SimStream(source, name);
+        if (docs.ContainsKey(instrument.Name) is false)
+        {
+          var name = instrument.Name;
+          var instrumentDescriptor = this.GetDescriptor(name);
+          var source = Path.Combine(state.Source, $"{name}.db");
+          var stream = docs[name] = new SimStream(source, name);
 
-        await Subscribe(instrument);
-        await GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor).StoreInstrument(instrument);
+          await Subscribe(instrument);
+          await GrainFactory.GetGrain<IDomGrain>(instrumentDescriptor).StoreInstrument(instrument);
+
+          if (stream.MoveNext())
+          {
+            queue.Enqueue(streams[instrument.Name] = stream, stream.Current.Time);
+          }
+        }
       }
 
       connections.Add(this.RegisterGrainTimer(o => Process(), 0, TimeSpan.Zero, TimeSpan.FromMicroseconds(1)));
 
       return new StatusResponse { Data = StatusEnum.Active };
+    }
+
+    /// <summary>
+    /// Disconnect
+    /// </summary>
+    public override Task<StatusResponse> Disconnect()
+    {
+      cts?.Cancel();
+      cts?.Dispose();
+      streams?.Clear();
+      docs?.Values?.ForEach(o => o.Dispose());
+      docs?.Clear();
+
+      return Task.FromResult(new StatusResponse { Data = StatusEnum.Inactive });
+    }
+
+    /// <summary>
+    /// Subscribe
+    /// </summary>
+    /// <param name="instrument"></param>
+    public override Task<StatusResponse> Subscribe(Instrument instrument)
+    {
+      streams[instrument.Name] = docs[instrument.Name];
+      return Task.FromResult(new StatusResponse { Data = StatusEnum.Active });
+    }
+
+    /// <summary>
+    /// Unsubscribe
+    /// </summary>
+    /// <param name="instrument"></param>
+    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
+    {
+      streams.TryRemove(instrument.Name, out var _);
+      return Task.FromResult(new StatusResponse { Data = StatusEnum.Pause });
     }
 
     /// <summary>
@@ -74,14 +116,15 @@ namespace Simulation.Grains
     {
       try
       {
-        var queueResponse = queue.TryDequeue(out var stream, out var _);
-        var streamResponse = streams.ContainsKey(stream?.Name ?? string.Empty);
+        var queueResponse = queue.TryPeek(out var s, out var _);
+        var streamResponse = streams.ContainsKey(s?.Name ?? string.Empty);
 
         if (queueResponse is false || streamResponse is false)
         {
           return;
         }
 
+        var stream = queue.Dequeue();
         var descriptor = this.GetDescriptor();
         var instrument = state.Account.Instruments[stream.Name];
         var instrumentDescriptor = this.GetDescriptor(instrument.Name);
@@ -147,51 +190,10 @@ namespace Simulation.Grains
           queue.Enqueue(stream, stream.Current.Time);
         }
       }
-      catch (Exception) { }
-    }
-
-    /// <summary>
-    /// Disconnect
-    /// </summary>
-    public override Task<StatusResponse> Disconnect()
-    {
-      cts?.Cancel();
-      cts?.Dispose();
-      streams?.Clear();
-      docs?.Values?.ForEach(o => o.Dispose());
-      docs?.Clear();
-
-      return Task.FromResult(new StatusResponse { Data = StatusEnum.Inactive });
-    }
-
-    /// <summary>
-    /// Subscribe
-    /// </summary>
-    /// <param name="instrument"></param>
-    public override Task<StatusResponse> Subscribe(Instrument instrument)
-    {
-      if (streams.ContainsKey(instrument.Name) is false)
+      catch (Exception e)
       {
-        var stream = docs[instrument.Name];
-
-        if (stream.MoveNext())
-        {
-          queue.Enqueue(streams[instrument.Name] = stream, stream.Current.Time);
-        }
+        Console.WriteLine(e);
       }
-
-      return Task.FromResult(new StatusResponse { Data = StatusEnum.Active });
-    }
-
-    /// <summary>
-    /// Unsubscribe
-    /// </summary>
-    /// <param name="instrument"></param>
-    public override Task<StatusResponse> Unsubscribe(Instrument instrument)
-    {
-      streams.TryRemove(instrument.Name, out var _);
-
-      return Task.FromResult(new StatusResponse { Data = StatusEnum.Pause });
     }
   }
 }

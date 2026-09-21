@@ -8,11 +8,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Estimator" Version="1.1.2" />
+    <PackageReference Include="Estimator" Version="1.1.6" />
     <PackageReference Include="FluentValidation" Version="12.1.1" />
-    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.2.2" />
-    <PackageReference Include="Microsoft.Orleans.Serialization.MessagePack" Version="10.2.2" />
-    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.2.2" />
+    <PackageReference Include="Microsoft.Orleans.Sdk" Version="10.3.1" />
+    <PackageReference Include="Microsoft.Orleans.Serialization.MessagePack" Version="10.3.1" />
+    <PackageReference Include="Microsoft.Orleans.Streaming" Version="10.3.1" />
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageReference Include="System.Interactive" Version="7.0.1" />
   </ItemGroup>

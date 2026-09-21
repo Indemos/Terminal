@@ -39,7 +39,7 @@ namespace Dashboard.Components
     /// <summary>
     /// Views
     /// </summary>
-    public virtual void Clear() => ChartsView.Clear();
+    public virtual async Task Clear() => await ChartsView.Clear();
 
     /// <summary>
     /// Views
@@ -56,14 +56,12 @@ namespace Dashboard.Components
 
       if (setup)
       {
-        Observer.Update += state =>
+        Observer.Update += async state =>
         {
           if (state.Previous is SubscriptionEnum.Progress && state.Next is SubscriptionEnum.None)
           {
-            Clear();
+            await Clear();
           }
-
-          return Task.CompletedTask;
         };
       }
     }
@@ -134,7 +132,10 @@ namespace Dashboard.Components
         return (price - inputModel.Price) * inputModel.Amount * direction;
       }
 
-      var optionSide = Enum.GetName(inputModel.Side.GetType(), inputModel.Side);
+      var optionSide = inputModel.Side is OptionSideEnum.Call ?
+        Estimator.Services.OptionService.OptionSideEnum.Call :
+        Estimator.Services.OptionService.OptionSideEnum.Put;
+
       var days = Math.Max((inputModel.Date - date).Value.TotalDays / 250.0, double.Epsilon);
       var estimate = OptionService.Price(optionSide, price, inputModel.Strike, days, 0.25, 0.05, 0);
 

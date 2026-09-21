@@ -1,0 +1,14 @@
+@inherits BasePage
+
+@page "/futures/orders"
+
+<ControlsComponent Adapters="Adapters">
+  <ChartsComponent Name="Prices" @ref="DataView" />
+  <ChartsComponent Name="Scores" @ref="ScoreView" />
+  <ChartsComponent Name="Indicators" @ref="IndicatorsView" />
+  <ChartsComponent Name="Performance" @ref="PerformanceView" />
+  <OrdersComponent Name="Orders" @ref="OrdersView" />
+  <PositionsComponent Name="Positions" @ref="PositionsView" />
+  <TransactionsComponent Name="Transactions" @ref="TransactionsView" />
+  <StatementsComponent Name="Statements" Adapters="Adapters" @ref="StatementsView" />
+</ControlsComponent>

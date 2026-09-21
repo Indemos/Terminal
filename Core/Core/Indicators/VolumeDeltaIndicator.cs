@@ -6,7 +6,7 @@ namespace Core.Indicators
   /// <summary>
   /// Cumulative Volume Delta (CVD) Indicator
   /// </summary>
-  public class CvdIndicator
+  public class VolumeDeltaIndicator
   {
     /// <summary>
     /// The current cumulative volume delta value.
@@ -29,10 +29,10 @@ namespace Core.Indicators
       // 2. Update the global running total
       switch (order.Side)
       {
-        // Ask = Aggressive Buyer = Positive Delta
-        // Bid = Aggressive Seller = Negative Delta
-        case DomSide.Ask: Value += order.Size.Value; break;
-        case DomSide.Bid: Value -= order.Size.Value; break;
+        // Bid = Aggressive Buyer = Negative Delta
+        // Ask = Aggressive Seller = Positive Delta
+        case DomSide.Bid: Value += order.Size.Value; break;
+        case DomSide.Ask: Value -= order.Size.Value; break;
       }
 
       return Value;

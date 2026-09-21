@@ -5,24 +5,41 @@ using System.Linq;
 
 namespace Core.Indicators
 {
+  public enum ImbalanceMode
+  {
+    Delta,
+    Volume
+  }
+
   /// <summary>
   /// Order Imbalance Indicator
   /// </summary>
-  public class OrderImbalanceIndicator
+  public class ImbalanceIndicator
   {
+    public ImbalanceMode Mode { get; set; } = ImbalanceMode.Volume;
+
     /// <summary>
     /// Calculate
     /// </summary>
     /// <param name="dom"></param>
     /// <param name="count"></param>
-    public virtual double Update(Dom dom, int? count)
+    public virtual double? Update(Dom dom, int? count)
     {
       if (dom is null)
       {
         return 0;
       }
 
-      return Sum(dom.Bids, count ?? 0) - Sum(dom.Asks, count ?? 0);
+      var bids = Sum(dom.Bids, count ?? 0);
+      var asks = Sum(dom.Asks, count ?? 0);
+
+      switch (Mode)
+      {
+        case ImbalanceMode.Volume: return bids + asks;
+        case ImbalanceMode.Delta: return (bids - asks) / (bids + asks + 1e-9);
+      }
+
+      return null;
     }
 
     /// <summary>
