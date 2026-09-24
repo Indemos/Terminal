@@ -21,7 +21,7 @@ namespace Core.Groups
       var currentPrice = Items.LastOrDefault() ?? new Price();
       var (price, expansion) = Group(currentPrice, nextPrice);
 
-      if (expansion || Items.Count is 0)
+      if (expansion)
       {
         Items.Add(price);
       }
