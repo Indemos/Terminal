@@ -1,10 +1,12 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace Core.Extensions
 {
   public static class DateTimeExtensions
   {
-    private static readonly DateTimeOffset MinUnix = new(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
+    private const long UnixEpochTicks = 621355968000000000L; // 1970-01-01 UTC
+    private const long TicksPerMicrosecond = 10L; // 1 tick = 100ns
 
     /// <summary>
     /// Round by interval
@@ -48,40 +50,61 @@ namespace Core.Extensions
     /// <param name="input"></param>
     public static DateTime ToDateTime(this long input)
     {
-      if (input is 0) return DateTime.MinValue; // 0000-00-00
+      if (input is 0) return DateTime.MinValue;
 
-      var now = DateTimeOffset.UtcNow;
+      var minTicks = 0L;
       var minRange = long.MaxValue;
+      var nowTicks = DateTime.UtcNow.Ticks;
+      var spread = DateTime.MaxValue.Ticks - DateTime.MinValue.Ticks;
 
-      DateTimeOffset response = default;
-
-      void Compare(Func<DateTimeOffset> version)
+      void Consider(long version)
       {
-        try
+        // Fast range check without branch for overflow
+        if (version < DateTime.MinValue.Ticks || version > DateTime.MaxValue.Ticks)
         {
-          var date = version();
-          var range = Math.Abs((date - now).Ticks); // closest to now wins
-
-          if (range < minRange)
-          {
-            minRange = range;
-            response = date;
-          }
+          return;
         }
-        catch { }
+
+        var range = version - nowTicks;
+
+        if (range < 0) range = -range;
+        if (range < minRange) { minRange = range; minTicks = version; }
       }
 
-      if (input >= DateTime.MinValue.Ticks && input <= DateTime.MaxValue.Ticks)
+      // 1. Input is already ticks
+      Consider(input);
+
+      // 2. seconds: ticks = epoch + input * TicksPerSecond bounds computed from Min/Max, no hardcoded numbers
+      var minSec = (DateTime.MinValue.Ticks - UnixEpochTicks) / TimeSpan.TicksPerSecond;
+      var maxSec = (DateTime.MaxValue.Ticks - UnixEpochTicks) / TimeSpan.TicksPerSecond;
+
+      if (input >= minSec && input <= maxSec)
       {
-        Compare(() => new DateTimeOffset(new DateTime(input, DateTimeKind.Utc)));
+        Consider(UnixEpochTicks + input * TimeSpan.TicksPerSecond);
       }
 
-      Compare(() => DateTimeOffset.FromUnixTimeSeconds(input));
-      Compare(() => DateTimeOffset.FromUnixTimeMilliseconds(input));
-      Compare(() => MinUnix.AddTicks(input * 10));  // us
-      Compare(() => MinUnix.AddTicks(input / 100)); // ns
+      // 3. milliseconds
+      var minMs = (DateTime.MinValue.Ticks - UnixEpochTicks) / TimeSpan.TicksPerMillisecond;
+      var maxMs = (DateTime.MaxValue.Ticks - UnixEpochTicks) / TimeSpan.TicksPerMillisecond;
 
-      return minRange == long.MaxValue ? DateTime.MinValue : response.UtcDateTime;
+      if (input >= minMs && input <= maxMs)
+      {
+        Consider(UnixEpochTicks + input * TimeSpan.TicksPerMillisecond);
+      }
+
+      // 4. microseconds: 10 ticks = 1us
+      var minUs = (DateTime.MinValue.Ticks - UnixEpochTicks) / TicksPerMicrosecond;
+      var maxUs = (DateTime.MaxValue.Ticks - UnixEpochTicks) / TicksPerMicrosecond;
+
+      if (input >= minUs && input <= maxUs)
+      {
+        Consider(UnixEpochTicks + input * TicksPerMicrosecond);
+      }
+
+      // 5. nanoseconds: 1 tick = 100ns
+      Consider(UnixEpochTicks + input / 100L);
+
+      return minRange == long.MaxValue ? DateTime.MinValue : new DateTime(minTicks, DateTimeKind.Utc);
     }
   }
 }

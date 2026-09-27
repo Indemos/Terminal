@@ -214,7 +214,7 @@ namespace Simulation.Grains
       {
         return response with
         {
-          Time = instrument.Price.Time,
+          Time = order.Time ?? instrument.Price.Time,
           Price = order.Price ?? Price(order, instrument)
         };
       }
