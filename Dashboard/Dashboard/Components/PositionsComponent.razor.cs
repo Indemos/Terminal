@@ -1,5 +1,6 @@
 using Core.Conventions;
 using Core.Enums;
+using Core.Extensions;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -84,7 +85,7 @@ namespace Dashboard.Components
           {
             Name = o?.Operation?.Instrument?.Name,
             Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
-            Time = new DateTime(o.Operation.Time ?? DateTime.MinValue.Ticks),
+            Time = (o.Operation.Time ?? DateTime.MinValue.Ticks).ToDateTime(),
             Side = o.Side,
             Size = o.Operation.Amount ?? 0,
             OpenPrice = o.Operation.AveragePrice ?? 0,

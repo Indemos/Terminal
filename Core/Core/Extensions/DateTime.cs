@@ -4,6 +4,8 @@ namespace Core.Extensions
 {
   public static class DateTimeExtensions
   {
+    private static readonly DateTimeOffset MinUnix = new(1970, 1, 1, 0, 0, 0, TimeSpan.Zero);
+
     /// <summary>
     /// Round by interval
     /// </summary>
@@ -44,14 +46,42 @@ namespace Core.Extensions
     /// Date without time
     /// </summary>
     /// <param name="input"></param>
-    public static DateOnly? AsDate(this DateTime? input)
+    public static DateTime ToDateTime(this long input)
     {
-      if (input is null)
+      if (input is 0) return DateTime.MinValue; // 0000-00-00
+
+      var now = DateTimeOffset.UtcNow;
+      var minRange = long.MaxValue;
+
+      DateTimeOffset response = default;
+
+      void Compare(Func<DateTimeOffset> version)
       {
-        return null;
+        try
+        {
+          var date = version();
+          var range = Math.Abs((date - now).Ticks); // closest to now wins
+
+          if (range < minRange)
+          {
+            minRange = range;
+            response = date;
+          }
+        }
+        catch { }
       }
 
-      return DateOnly.FromDateTime(input.Value);
+      if (input >= DateTime.MinValue.Ticks && input <= DateTime.MaxValue.Ticks)
+      {
+        Compare(() => new DateTimeOffset(new DateTime(input, DateTimeKind.Utc)));
+      }
+
+      Compare(() => DateTimeOffset.FromUnixTimeSeconds(input));
+      Compare(() => DateTimeOffset.FromUnixTimeMilliseconds(input));
+      Compare(() => MinUnix.AddTicks(input * 10));  // us
+      Compare(() => MinUnix.AddTicks(input / 100)); // ns
+
+      return minRange == long.MaxValue ? DateTime.MinValue : response.UtcDateTime;
     }
   }
 }

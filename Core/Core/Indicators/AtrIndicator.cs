@@ -3,17 +3,10 @@ using System;
 
 public class AtrIndicator
 {
-  /// <summary>
-  /// Number of bars for Wilder smoothing
-  /// </summary>
-  public int Period { get; set; } = 15;
-
   // Count of TRs seen including current forming bar
   protected int rangeCount;
   // Sum of first Period TRs to build initial SMA
   protected double sum;
-  // Current ATR value including forming bar
-  protected double atr;
   // ATR of last fully closed bar, used as seed for Wilder
   protected double previousAtr;
   // Close of last fully closed bar, used for TrueRange
@@ -29,6 +22,14 @@ public class AtrIndicator
   protected bool setup;
 
   /// <summary>
+  /// Number of bars for Wilder smoothing
+  /// </summary>
+  public virtual int Period { get; set; } = 15;
+
+  // Current value
+  public virtual double Value { get; protected set; }
+
+  /// <summary>
   /// Called every tick, stamp is bar time
   /// </summary>
   /// <param name="stamp"></param>
@@ -40,7 +41,7 @@ public class AtrIndicator
         price.Bar.High is not double H ||
         price.Bar.Close is not double C)
     {
-      return atr;
+      return Value;
     }
 
     // Check if we already have a forming bar
@@ -49,7 +50,7 @@ public class AtrIndicator
       // Same timestamp means intrabar update of same bar
       if (currentTime == stamp)
       {
-        return atr = UpdateRange(H, L, C, isReplace: true);
+        return Value = UpdateRange(H, L, C, isReplace: true);
       }
 
       // Final close of forming bar becomes previous close for next TR
@@ -59,19 +60,19 @@ public class AtrIndicator
       if (rangeCount >= Period)
       {
         // This is the seed for Wilder smoothing on next bar
-        previousAtr = atr;
+        previousAtr = Value;
       }
     }
 
     // New bar path
     // Compute TR for new bar and update count/sum/ATR
-    atr = UpdateRange(H, L, C, isReplace: false);
+    Value = UpdateRange(H, L, C, isReplace: false);
     // Store time of this new forming bar
     currentTime = stamp;
     // Mark that we have a forming bar now
     setup = true;
 
-    return atr;
+    return Value;
   }
 
   /// <summary>

@@ -100,9 +100,12 @@ namespace Simulation.Grains
     /// <param name="order"></param>
     protected virtual async Task<DescriptorResponse> Tap(Instrument instrument, Order order)
     {
-      var (update, position) = Process(order, instrument);
+      var (update, position) = Process(instrument, order);
 
-      State[update.Id] = update;
+      if (State.ContainsKey(update.Id))
+      {
+        State[update.Id] = Order(update, instrument);
+      }
 
       if (position is not null)
       {
@@ -135,9 +138,9 @@ namespace Simulation.Grains
     /// <summary>
     /// Check if pending order can be executed
     /// </summary>
-    /// <param name="order"></param>
     /// <param name="instrument"></param>
-    protected virtual (Order, Order) Process(Order order, Instrument instrument)
+    /// <param name="order"></param>
+    protected virtual (Order, Order) Process(Instrument instrument, Order order)
     {
       var price = instrument.Price;
 

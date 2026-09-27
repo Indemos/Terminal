@@ -1,5 +1,6 @@
 using Core.Conventions;
 using Core.Enums;
+using Core.Extensions;
 using Core.Models;
 using Core.Services;
 using Microsoft.AspNetCore.Components;
@@ -83,7 +84,7 @@ namespace Dashboard.Components
           {
             Name = o?.Operation?.Instrument?.Name,
             Type = o.Type,
-            Time = new DateTime(o.Time ?? DateTime.MinValue.Ticks),
+            Time = (o.Time ?? DateTime.MinValue.Ticks).ToDateTime(),
             Group = o?.Operation?.Instrument?.Basis?.Name ?? o?.Operation?.Instrument?.Name,
             Side = o.Side,
             Size = o.Amount ?? 0,

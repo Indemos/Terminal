@@ -91,7 +91,7 @@ namespace Dashboard.Components
           Value = o.Balance.Current ?? 0,
           Time = new DateTime(o.Operation.Time.Value),
           Direction = o.Side is OrderSideEnum.Long ? 1 : -1,
-          Commission = o.Operation.Instrument.Commission.Value * 2
+          Commission = o.Operation.Instrument.Commission.Value
         });
       }
 

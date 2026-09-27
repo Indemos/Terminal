@@ -4,19 +4,12 @@ namespace Core.Indicators
 {
   public class EmaIndicator
   {
-    /// <summary>
-    /// Period for EMA calculation
-    /// </summary>
-    public int Period { get; set; } = 15;
-
     // alpha = 2 / (n+1)
-    protected double weight => 2.0 / (Period + 1);
+    protected double W => 2.0 / (Period + 1);
     // Count of bars including forming
     protected int count;
     // Sum of first Period for SMA seed
     protected double sum;
-    // Current forming EMA
-    protected double ema;
     // EMA of last closed bar - seed for Wilder
     protected double previousEma;
     // Time of forming bar
@@ -25,6 +18,14 @@ namespace Core.Indicators
     protected double currentValue;
     // First bar seen
     protected bool setup;
+
+    /// <summary>
+    /// Period for EMA calculation
+    /// </summary>
+    public virtual int Period { get; set; } = 15;
+
+    // Current EMA
+    public virtual double Value { get; protected set; }
 
     /// <summary>
     /// Update EMA with new price point
@@ -44,18 +45,18 @@ namespace Core.Indicators
         {
           // Still in SMA seed phase: replace in sum
           sum += price - currentValue;
-          ema = sum / count;
+          Value = sum / count;
         }
         else
         {
-          // EMA phase: EMA = alpha*price + (1-alpha)*prevClosed
-          ema = weight * price + (1 - weight) * previousEma;
+          // EMA phase: EMA = alpha * price + (1 - alpha) * previousEma
+          Value = W * price + (1 - W) * previousEma;
         }
 
         // Update forming value
         currentValue = price;
 
-        return ema;
+        return Value;
       }
 
       // New bar -> previous forming bar is now closed
@@ -65,7 +66,7 @@ namespace Core.Indicators
         if (count >= Period)
         {
           // This becomes the seed for next bar's EMA
-          previousEma = ema;
+          previousEma = Value;
         }
       }
 
@@ -78,12 +79,12 @@ namespace Core.Indicators
         // Accumulate sum
         sum += price;
         // Seed EMA = SMA
-        ema = sum / count;
+        Value = sum / count;
       }
       else
       {
         // Wilder EMA
-        ema = weight * price + (1 - weight) * previousEma;
+        Value = W * price + (1 - W) * previousEma;
       }
 
       // Store forming bar info
@@ -91,7 +92,7 @@ namespace Core.Indicators
       currentValue = price;
       setup = true;
 
-      return ema;
+      return Value;
     }
   }
 }

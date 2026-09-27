@@ -98,31 +98,31 @@ namespace Dashboard.Pages
     /// SL price
     /// </summary>
     /// <param name="side"></param>
-    /// <param name="instrument"></param>
+    /// <param name="price"></param>
     /// <param name="distance"></param>
-    protected virtual double? SL(OrderSideEnum side, Instrument instrument, double distance)
+    protected virtual double? SL(OrderSideEnum side, Price price, double distance)
     {
       switch (side)
       {
-        case OrderSideEnum.Long: return instrument.Price.Bid - distance;
-        case OrderSideEnum.Short: return instrument.Price.Ask + distance;
+        case OrderSideEnum.Long: return price.Bid - distance;
+        case OrderSideEnum.Short: return price.Ask + distance;
       }
 
       return null;
     }
 
     /// <summary>
-    /// SL price
+    /// TP price
     /// </summary>
     /// <param name="side"></param>
-    /// <param name="instrument"></param>
+    /// <param name="price"></param>
     /// <param name="distance"></param>
-    protected virtual double? TP(OrderSideEnum side, Instrument instrument, double distance)
+    protected virtual double? TP(OrderSideEnum side, Price price, double distance)
     {
       switch (side)
       {
-        case OrderSideEnum.Long: return instrument.Price.Ask + distance;
-        case OrderSideEnum.Short: return instrument.Price.Bid - distance;
+        case OrderSideEnum.Long: return price.Ask + distance;
+        case OrderSideEnum.Short: return price.Bid - distance;
       }
 
       return null;
@@ -157,7 +157,7 @@ namespace Dashboard.Pages
       {
         order = order with
         {
-          Orders = [
+          Orders = [..order.Orders,
             new()
             {
               Price = SL,
@@ -175,7 +175,7 @@ namespace Dashboard.Pages
       {
         order = order with
         {
-          Orders = [
+          Orders = [..order.Orders,
             new()
             {
               Price = TP,

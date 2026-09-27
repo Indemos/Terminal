@@ -32,6 +32,11 @@ namespace Core.Indicators
     public virtual int Period { get; set; } = 10;
 
     /// <summary>
+    /// Current value
+    /// </summary>
+    public virtual double? Value { get; protected set; }
+
+    /// <summary>
     /// Use logarithmic returns for calculation.
     /// Logarithmic returns require positive values.
     /// If false, arithmetic differences are used instead.
@@ -46,7 +51,7 @@ namespace Core.Indicators
     /// <summary>
     /// Rolling window to track historical prices.
     /// </summary>
-    protected readonly Queue<double> items = new();
+    protected Queue<double> items = new();
 
     /// <summary>
     /// Calculate the normalized value.
@@ -69,8 +74,8 @@ namespace Core.Indicators
       // 3. Calculate based on Mode
       switch (Mode)
       {
-        case ScaleMode.Mean: return Math.Tanh(Step(value));
-        case ScaleMode.Pin: return Step(value);
+        case ScaleMode.Mean: return Value = Math.Tanh(Step(value));
+        case ScaleMode.Pin: return Value = Step(value);
       }
 
       return null;

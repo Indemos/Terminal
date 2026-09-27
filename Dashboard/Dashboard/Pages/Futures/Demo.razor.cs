@@ -30,8 +30,6 @@ namespace Dashboard.Pages.Futures
     TimeGroup SpanDay { get; set; }
     TimeGroup SpanMin { get; set; }
     TimeGroup SpanHour { get; set; }
-    RenkoGroup SpanRenko { get; set; }
-
     int PosDirection { get; set; }
     int Direction { get; set; }
 
@@ -72,7 +70,6 @@ namespace Dashboard.Pages.Futures
       SpanDay = new() { TimeFrame = TimeSpan.FromDays(1) };
       SpanMin = new() { TimeFrame = TimeSpan.FromMinutes(1) };
       SpanHour = new() { TimeFrame = TimeSpan.FromHours(1) };
-      SpanRenko = new() { Size = 1 };
 
       return base.OnTrade();
     }
@@ -84,7 +81,6 @@ namespace Dashboard.Pages.Futures
       var price = instrument.Price;
       var index = price.Time.Value;
       var performance = await Performance.Update([adapter]);
-      var spanRenko = SpanRenko.Items.LastOrDefault();
 
       OrdersView.Update(Adapters.Values);
       PositionsView.Update(Adapters.Values);
@@ -108,14 +104,15 @@ namespace Dashboard.Pages.Futures
       var spanDay = SpanDay.Update(price);
       var spanMin = SpanMin.Update(price);
       var spanHour = SpanHour.Update(price);
-      var spanRenko = SpanRenko.Update(price);
 
       var isMinLong = spanMin.Bar.Close > spanMin.Bar.Open;
       var isMinShort = spanMin.Bar.Close < spanMin.Bar.Open;
+      var isDayLong = spanDay.Bar.Close > spanDay.Bar.Open;
+      var isDayShort = spanDay.Bar.Close < spanDay.Bar.Open;
       var isHourLong = spanHour.Bar.Close > spanHour.Bar.Open;
       var isHourShort = spanHour.Bar.Close < spanHour.Bar.Open;
-      var isLong = isMinLong && isHourLong && spanDay.Bar.Close > spanDay.Bar.Open;
-      var isShort = isMinShort && isHourShort && spanDay.Bar.Close < spanDay.Bar.Open;
+      var isLong = isMinLong && isHourLong && isDayLong;
+      var isShort = isMinShort && isHourShort && isDayShort;
 
       if (positions.Count is 0)
       {

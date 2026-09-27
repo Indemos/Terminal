@@ -10,7 +10,10 @@ namespace Core.Indicators
     /// <summary>
     /// Number of bars to average
     /// </summary>
-    public int Period { get; set; }
+    public virtual int Period { get; set; }
+
+    // Current value
+    public virtual double? Value { get; protected set; }
 
     /// <summary>
     /// Calculate single value
@@ -43,7 +46,7 @@ namespace Core.Indicators
       var averageUp = sumUp / count;
       var averageDown = sumDown / count;
 
-      return averageDown.Is(0) ?
+      return Value = averageDown.Is(0) ?
         averageUp.Is(0) ? 50.0 : 100.0 :
         100.0 - 100.0 / (1.0 + averageUp / averageDown);
     }

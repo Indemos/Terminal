@@ -25,7 +25,7 @@ namespace Core.Indicators
     /// <summary>
     /// The current mean value of the Kalman Moving Average.
     /// </summary>
-    public virtual double Mean { get; protected set; }
+    public virtual double Value { get; protected set; }
 
     /// <summary>
     /// Calculate
@@ -38,7 +38,7 @@ namespace Core.Indicators
         variance = 1.0;
         setup = true;
 
-        return Mean = price;
+        return Value = price;
       }
 
       // Predict
@@ -46,15 +46,15 @@ namespace Core.Indicators
 
       // Kalman gain
       var innovationVariance = variance + ObservationNoise;
-      var gain = innovationVariance is 0 ? Mean : (variance / innovationVariance);
+      var gain = innovationVariance is 0 ? Value : (variance / innovationVariance);
 
       // Update
-      Mean += gain * (price - Mean);
+      Value += gain * (price - Value);
 
       // Update variance
       variance *= (1.0 - gain);
 
-      return Mean;
+      return Value;
     }
   }
 }

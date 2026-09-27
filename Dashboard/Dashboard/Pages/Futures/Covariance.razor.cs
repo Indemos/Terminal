@@ -1,5 +1,6 @@
 using Canvas.Core.Shapes;
 using Core.Enums;
+using Core.Groups;
 using Core.Indicators;
 using Core.Models;
 using Dashboard.Components;
@@ -24,13 +25,19 @@ namespace Dashboard.Pages.Futures
     PositionsComponent PositionsView { get; set; }
     StatementsComponent StatementsView { get; set; }
     PerformanceIndicator Performance { get; set; }
-    VarianceIndicator Variance { get; set; }
-    VarianceIndicator ScaleVariance { get; set; }
+    VarianceService Variance { get; set; }
+    VarianceService ScaleVariance { get; set; }
+    ScoreService Score { get; set; }
+    Dictionary<string, VwapIndicator> Vwaps { get; set; }
     Dictionary<string, ScaleIndicator> Scales { get; set; }
+    Dictionary<string, VarianceService> Variances { get; set; }
+    TimeGroup TimeBars { get; set; }
 
     int Direction { get; set; } = 0;
     Price PriceX { get; set; }
     Price PriceY { get; set; }
+    double? PrevPriceX { get; set; }
+    double? PrevPriceY { get; set; }
 
     const string nameX = "ES";
     const string nameY = "NQ";
@@ -70,11 +77,15 @@ namespace Dashboard.Pages.Futures
 
       PriceX = null;
       PriceY = null;
+      Score = new(15);
       Variance = new();
+      Performance = new();
       ScaleVariance = new();
       Spread = new(2, 0.00001, 0.01);
-      Performance = new PerformanceIndicator();
+      TimeBars = new() { TimeFrame = TimeSpan.FromMinutes(1) };
       Scales = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new ScaleIndicator { Mode = ScaleMode.Pin, Period = 10000 });
+      Variances = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new VarianceService());
+      Vwaps = adapter.Account.Instruments.Keys.ToDictionary(o => o, name => new VwapIndicator());
 
       return base.OnTrade();
     }
@@ -84,8 +95,8 @@ namespace Dashboard.Pages.Futures
       double? spread,
       double? scaleX,
       double? scaleY,
-      VarianceIndicator variance,
-      VarianceIndicator scaleVariance)
+      VarianceService variance,
+      VarianceService scaleVariance)
     {
       if (PriceX is null || PriceY is null)
       {
@@ -109,7 +120,7 @@ namespace Dashboard.Pages.Futures
       ItemsView.Update(index, nameof(ItemsView), "Spread Up", new LineShape { Y = variance.Deviation * 2, Component = ComUp });
       ItemsView.Update(index, nameof(ItemsView), "Spread Down", new LineShape { Y = -variance.Deviation * 2, Component = ComDown });
 
-      ScoresView.Update(index, nameof(ScoresView), "Spread", new AreaShape { Y = scaleSpread, Component = ComUp });
+      ScoresView.Update(index, nameof(ScoresView), "Spread", new AreaShape { Y = scaleSpread, Component = Com });
       ScoresView.Update(index, nameof(ScoresView), "Spread Up", new LineShape { Y = scaleVariance.Deviation * 2, Component = ComUp });
       ScoresView.Update(index, nameof(ScoresView), "Spread Down", new LineShape { Y = -scaleVariance.Deviation * 2, Component = ComDown });
 
@@ -119,8 +130,8 @@ namespace Dashboard.Pages.Futures
 
     protected override async Task OnTradeUpdate(Instrument instrument)
     {
-      var price = instrument.Price;
       var adapter = Adapter;
+      var price = instrument.Price;
       var account = adapter.Account;
       var assetX = account.Instruments[nameX];
       var assetY = account.Instruments[nameY];
@@ -138,11 +149,13 @@ namespace Dashboard.Pages.Futures
         return;
       }
 
-      var inX = Math.Log(PriceX.Last.Value);
-      var inY = Math.Log(PriceY.Last.Value);
+      var varX = Vwaps[nameX].Update(PriceX).Last;
+      var varY = Vwaps[nameY].Update(PriceY).Last;
+      var pX = Math.Log(PriceX.Last.Value / varX.Value);
+      var pY = Math.Log(PriceY.Last.Value / varY.Value);
       var scaleX = 10000 * Scales[nameX].Update(PriceX).Value;
       var scaleY = 10000 * Scales[nameY].Update(PriceY).Value;
-      var spread = Spread.Update(scaleX, 1, scaleY);
+      var spread = Spread.Update(pX, 1, pY);
       var scaleSpread = scaleX - scaleY;
 
       if (spread is null)
@@ -150,13 +163,33 @@ namespace Dashboard.Pages.Futures
         return;
       }
 
-      //var betas = Ratio.Betas();
-      var variance = Variance.Update(spread.Value);
+      var barCount = TimeBars.Items.Count;
+      var pr = TimeBars.Update(price);
+      var scoreSpread = Score.Update(spread.Value);
+      var variance = Variance.Update(scoreSpread);
       var scaleVariance = ScaleVariance.Update(scaleSpread);
-      var isLong = spread < -variance.Deviation * 2 && scaleSpread < -scaleVariance.Deviation;
-      var isShort = spread > variance.Deviation * 2 && scaleSpread > scaleVariance.Deviation;
       var orders = (await adapter.GetOrders(default)).Data;
       var positions = (await adapter.GetPositions(default)).Data;
+
+      var isLong = false;
+      var isShort = false;
+      var isCommonLong = false;
+      var isCommonShort = false;
+
+      switch (true)
+      {
+        // Convergence
+        case true when PriceX.Last < varX && PriceY.Last > varY && scaleSpread < 0 && scoreSpread < -variance.Deviation * 2: isLong = true; break;
+        case true when PriceX.Last > varX && PriceY.Last < varY && scaleSpread > 0 && scoreSpread > variance.Deviation * 2: isShort = true; break;
+
+        // Double reversal
+        //case true when PriceX.Last < varX && PriceY.Last < varY && PriceX.Last > PrevPriceX && PriceY.Last > PrevPriceY: isCommonLong = true; break;
+        //case true when PriceX.Last > varX && PriceY.Last > varY && PriceX.Last < PrevPriceX && PriceY.Last < PrevPriceY: isCommonShort = true; break;
+
+        // Trend
+        //case true when PriceX.Last < varX && PriceY.Last < varY && PriceX.Last < PrevPriceX && PriceY.Last < PrevPriceY && Math.Abs(spread.Value) < variance.Deviation: isCommonShort = true; break;
+        //case true when PriceX.Last > varX && PriceY.Last > varY && PriceX.Last > PrevPriceX && PriceY.Last > PrevPriceY && Math.Abs(spread.Value) < variance.Deviation: isCommonLong = true; break;
+      }
 
       if (orders.Count is 0)
       {
@@ -175,22 +208,37 @@ namespace Dashboard.Pages.Futures
               await OpenPosition(adapter, assetX with { Price = PriceX }, OrderSideEnum.Short);
               await OpenPosition(adapter, assetY with { Price = PriceY }, OrderSideEnum.Long);
               break;
+
+            case true when isCommonLong:
+              Direction = 1;
+              await OpenPosition(adapter, assetX with { Price = PriceX }, OrderSideEnum.Long);
+              await OpenPosition(adapter, assetY with { Price = PriceY }, OrderSideEnum.Long);
+              break;
+
+            case true when isCommonShort:
+              Direction = -1;
+              await OpenPosition(adapter, assetX with { Price = PriceX }, OrderSideEnum.Short);
+              await OpenPosition(adapter, assetY with { Price = PriceY }, OrderSideEnum.Short);
+              break;
           }
         }
 
         if (positions.Count is not 0)
         {
-          var closeLong = Direction is 1 && spread > 0;
-          var closeShort = Direction is -1 && spread < 0;
+          var closeLong = Direction is 1 && isShort;
+          var closeShort = Direction is -1 && isLong;
 
-          if (closeLong || closeShort)
+          if (closeLong || closeShort || Math.Abs(scoreSpread) > variance.Deviation * 3)
           {
             await ClosePosition(adapter);
           }
         }
       }
 
-      Render(instrument, spread, scaleX, scaleY, variance, scaleVariance);
+      PrevPriceX = PriceX.Last;
+      PrevPriceY = PriceY.Last;
+
+      Render(instrument, scoreSpread, scaleX, scaleY, variance, scaleVariance);
     }
   }
 }

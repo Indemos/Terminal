@@ -21,7 +21,7 @@ namespace Core.Groups
       var currentPrice = Items.LastOrDefault() ?? new Price();
       var (price, expansion) = Group(currentPrice, nextPrice);
 
-      if (expansion)
+      if (expansion || Items.Count is 0)
       {
         Items.Add(price);
       }
@@ -64,7 +64,7 @@ namespace Core.Groups
           Low = Math.Min(price, currentPrice?.Bar?.Low ?? price),
           High = Math.Max(price, currentPrice?.Bar?.High ?? price),
           Open = currentPrice?.Bar?.Open ?? price,
-          Time = nextPrice.Time.Round(TimeFrame)
+          Time = nextTime.Round(TimeFrame)
         }
       };
 

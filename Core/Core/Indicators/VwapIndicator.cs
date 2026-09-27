@@ -11,8 +11,15 @@ public class VwapIndicator
   protected double? cumPV2 = 0;
 
   // Number of standard deviations for bands
-  public double Band { get; set; } = 2.0;
+  public virtual double Band { get; set; } = 2.0;
 
+  // Current VWAP value
+  public virtual Price Value { get; protected set; }
+
+  /// <summary>
+  /// Recalculate for new observation. 
+  /// </summary>
+  /// <param name="price"></param>
   public virtual Price Update(Price price)
   {
     if (price.Volume <= 0)
@@ -32,7 +39,7 @@ public class VwapIndicator
     var variance = cumPV2 / cumV - vwap * vwap;
     var deviation = Math.Sqrt(variance.Value);
 
-    return new()
+    return Value = new()
     {
       Last = vwap,
       Bar = new()

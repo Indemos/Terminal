@@ -7,8 +7,9 @@ namespace Core.Indicators
 {
   public enum ImbalanceMode
   {
-    Delta,
-    Volume
+    Ratio,
+    Volume,
+    MicroPrice
   }
 
   /// <summary>
@@ -16,7 +17,15 @@ namespace Core.Indicators
   /// </summary>
   public class ImbalanceIndicator
   {
-    public ImbalanceMode Mode { get; set; } = ImbalanceMode.Volume;
+    /// <summary>
+    /// Mode
+    /// </summary>
+    public ImbalanceMode Mode { get; set; } = ImbalanceMode.MicroPrice;
+
+    /// <summary>
+    /// Current value
+    /// </summary>
+    public double? Value { get; protected set; }
 
     /// <summary>
     /// Calculate
@@ -35,11 +44,14 @@ namespace Core.Indicators
 
       switch (Mode)
       {
-        case ImbalanceMode.Volume: return bids + asks;
-        case ImbalanceMode.Delta: return (bids - asks) / (bids + asks + 1e-9);
+        case ImbalanceMode.Volume: return Value = bids + asks;
+        case ImbalanceMode.Ratio: return Value = (bids - asks) / (bids + asks + 1e-9);
       }
 
-      return null;
+      var bestBid = dom.Bids.First();
+      var bestAsk = dom.Asks.First();
+
+      return Value = (bids * bestAsk.Key + asks * bestBid.Key) / (bids + asks + 1e-9);
     }
 
     /// <summary>
