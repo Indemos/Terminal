@@ -1,5 +1,7 @@
 using Core.Models; 
-using System; 
+using System;
+
+namespace Core.Indicators;
 
 public class AtrIndicator
 {

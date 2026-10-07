@@ -254,8 +254,8 @@ namespace Simulation.Grains
       return order.Balance with
       {
         Current = balance,
-        Min = Math.Min(order.Balance.Min ?? 0, balance),
-        Max = Math.Max(order.Balance.Max ?? 0, balance)
+        Min = Math.Min(order.Balance.Min ?? balance, balance),
+        Max = Math.Max(order.Balance.Max ?? balance, balance)
       };
     }
 

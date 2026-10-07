@@ -1,6 +1,8 @@
 using Core.Models;
 using System;
 
+namespace Core.Indicators;
+
 public class VwapIndicator
 {
   // Cumulative volume: sum(V)

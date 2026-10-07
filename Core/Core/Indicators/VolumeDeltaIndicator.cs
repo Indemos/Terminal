@@ -1,41 +1,40 @@
 using Core.Enums;
 using Core.Models;
 
-namespace Core.Indicators
+namespace Core.Indicators;
+
+/// <summary>
+/// Cumulative Volume Delta (CVD) Indicator
+/// </summary>
+public class VolumeDeltaIndicator
 {
   /// <summary>
-  /// Cumulative Volume Delta (CVD) Indicator
+  /// The current cumulative volume delta value.
   /// </summary>
-  public class VolumeDeltaIndicator
+  public virtual double Value { get; protected set; }
+
+  /// <summary>
+  /// Calculate
+  /// </summary>
+  /// <param name="order">The DOM order event</param>
+  /// <returns>The updated CVD value</returns>
+  public virtual double Update(DomOrder order)
   {
-    /// <summary>
-    /// The current cumulative volume delta value.
-    /// </summary>
-    public virtual double Value { get; protected set; }
-
-    /// <summary>
-    /// Calculate
-    /// </summary>
-    /// <param name="order">The DOM order event</param>
-    /// <returns>The updated CVD value</returns>
-    public virtual double Update(DomOrder order)
+    // 1. Must be Trade only. Ignore resting order additions / modifications / cancels.
+    if (order.Action is DomAction.Trade is false || order.Size is null)
     {
-      // 1. Must be Trade only. Ignore resting order additions / modifications / cancels.
-      if (order.Action is DomAction.Trade is false || order.Size is null)
-      {
-        return Value;
-      }
-
-      // 2. Update the global running total
-      switch (order.Side)
-      {
-        // Bid = Aggressive Buyer = Negative Delta
-        // Ask = Aggressive Seller = Positive Delta
-        case DomSide.Bid: Value += order.Size.Value; break;
-        case DomSide.Ask: Value -= order.Size.Value; break;
-      }
-
       return Value;
     }
+
+    // 2. Update the global running total
+    switch (order.Side)
+    {
+      // Bid = Aggressive Buyer = Negative Delta
+      // Ask = Aggressive Seller = Positive Delta
+      case DomSide.Bid: Value += order.Size.Value; break;
+      case DomSide.Ask: Value -= order.Size.Value; break;
+    }
+
+    return Value;
   }
 }
